@@ -1,0 +1,114 @@
+"use client";
+
+import React, { ReactNode, useEffect, useState } from "react";
+import { useAppDispatch } from "../../_stores/hooks";
+import { setUser } from "../../_stores/mainSlice";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth, db } from "../../../firebase-config";
+import { useRouter, usePathname } from "next/navigation";
+import Button from "../../_components/Button";
+import { collection, query, where, getDocs, DocumentData } from "firebase/firestore";
+import Image from "next/image";
+
+type Props = {
+  children: (userName: string | null) => ReactNode;
+};
+
+export default function StudentLayout({ children }: Props) {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in. Now check if they are a registered student.
+        const phone = user.phoneNumber;
+        let studentData: DocumentData | null = null;
+        
+        // Firebase phone numbers include the country code, but our DB stores it locally.
+        // This is a bit brittle. Let's assume +855 and convert back.
+        // A better long-term solution would be to store phone numbers consistently.
+        const localPhone = phone ? phone.replace('+855', '0') : '';
+
+        const studentsRef = collection(db, "students");
+        const q = query(studentsRef, where("phone", "==", localPhone));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            studentData = querySnapshot.docs[0].data();
+        }
+
+        if (studentData) {
+            // Student is valid
+            const fetchedUserName = studentData.fullName;
+            setUserName(fetchedUserName);
+            dispatch(
+              setUser({
+                name: fetchedUserName,
+                email: null,
+                avatar: null,
+                uid: user.uid,
+                role: "student",
+              })
+            );
+        } else {
+            // A user is authed with Firebase, but not in our students DB. Log them out.
+             await signOut(auth);
+             dispatch(setUser(null));
+             router.replace("/login");
+        }
+
+      } else {
+        // User is signed out.
+        dispatch(setUser(null));
+        if (pathname.startsWith('/student')) {
+            router.replace("/login");
+        }
+      }
+      setIsAuthLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [dispatch, router, pathname]);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    dispatch(setUser(null));
+    router.push('/login');
+  };
+
+  if (isAuthLoading) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-slate-900">
+            <p className="text-lg dark:text-white">Loading Student Portal...</p>
+        </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-slate-800">
+      <nav className="bg-gray-50 dark:bg-slate-900 shadow-md">
+        <div className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-2">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center space-x-3">
+              <span className="text-xl font-bold dark:text-white">Student Portal</span>
+              <Image src="/rodwell_logo.png" alt="Rodwell Logo" width={60} height={60} />
+            </div>
+            <div>
+              <Button color="danger" label="Logout" onClick={handleLogout} outline />
+            </div>
+          </div>
+        </div>
+      </nav>
+      <main>
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          {children(userName)}
+        </div>
+      </main>
+    </div>
+  );
+} 
