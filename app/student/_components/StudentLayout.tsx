@@ -38,12 +38,12 @@ export default function StudentLayout({ children }: Props) {
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
-            studentData = querySnapshot.docs[0].data();
-        }
-
-        if (studentData) {
+            const studentDoc = querySnapshot.docs[0];
+            studentData = studentDoc.data();
+            
             // Student is valid
             const fetchedUserName = studentData.fullName;
+            const studentDocId = studentDoc.id;
             setUserName(fetchedUserName);
             dispatch(
               setUser({
@@ -51,6 +51,7 @@ export default function StudentLayout({ children }: Props) {
                 email: null,
                 avatar: null,
                 uid: user.uid,
+                studentDocId: studentDocId,
                 role: "student",
               })
             );

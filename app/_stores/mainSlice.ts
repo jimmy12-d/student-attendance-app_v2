@@ -7,6 +7,7 @@ export interface User {
   email: string | null;
   avatar: string | null;
   uid?: string; // Optional: Store Firebase UID if needed
+  studentDocId?: string; // Firestore document ID from 'students' collection
   role?: 'admin' | 'student'; // Add role property
 }
 
@@ -15,6 +16,7 @@ export interface MainState {
   userEmail: string | null;
   userAvatar: string | null;
   userUid?: string | null; // Optional: For Firebase UID
+  studentDocId?: string | null; // Firestore document ID
   userRole?: 'admin' | 'student' | null; // Add role to state
   isFieldFocusRegistered: boolean;
   // You might add an isAuthenticated flag here, updated by onAuthStateChanged,
@@ -27,6 +29,7 @@ const initialState: MainState = {
   userEmail: null,
   userAvatar: null,
   userUid: null,
+  studentDocId: null,
   userRole: null, // Default role to null
 
   /* Field focus with ctrl+k (to register only once) */
@@ -43,6 +46,7 @@ export const mainSlice = createSlice({
         state.userEmail = action.payload.email;
         state.userAvatar = action.payload.avatar;
         state.userUid = action.payload.uid; // Store UID if provided
+        state.studentDocId = action.payload.studentDocId;
         state.userRole = action.payload.role; // Store role
       } else {
         // Reset user state on logout
@@ -50,6 +54,7 @@ export const mainSlice = createSlice({
         state.userEmail = null;
         state.userAvatar = null;
         state.userUid = null;
+        state.studentDocId = null;
         state.userRole = null;
       }
     },
