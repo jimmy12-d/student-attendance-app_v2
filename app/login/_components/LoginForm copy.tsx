@@ -1,25 +1,27 @@
 // app/login/_components/LoginForm.tsx
 "use client";
 
-import React, { useState, useEffect, useRef } from "react"; // <-- Import useRef
-import Button from "../../_components/Button";
-import Buttons from "../../_components/Buttons";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
+import Button from "../../_components/Button"; // Verify path
+import Buttons from "../../_components/Buttons"; // Verify path
+import { useRouter } from "next/navigation"; // For redirection
 
+// Firebase imports for Google Sign-In & Phone Auth
 import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-} from "firebase/auth";
-import { auth, db } from "../../../firebase-config";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+} from "firebase/auth"; // Added signOut
+import { auth, db } from "../../../firebase-config"; // Adjust path, ensure db is exported from firebase-config
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"; // For checking authorization
 import { mdiGoogle, mdiCellphoneMessage } from "@mdi/js";
 import Icon from "../../_components/Icon";
 
+// Redux imports to set user state
 import { useAppDispatch } from "../../_stores/hooks";
-import { setUser } from "../../_stores/mainSlice";
+import { setUser } from "../../_stores/mainSlice"; // Ensure this path and action are correct
 
 const LoginForm = () => {
   const router = useRouter();
@@ -27,51 +29,37 @@ const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // State for phone auth
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [showOtpInput, setShowOtpInput] = useState(false);
-  
-  // Create a ref for the reCAPTCHA container
-  const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
-  // Set up reCAPTCHA verifier using the ref
+  // Set up reCAPTCHA verifier
   useEffect(() => {
-    // Make sure we have a container and that the verifier hasn't been created yet.
-    if (recaptchaContainerRef.current && !window.recaptchaVerifier) {
+    // This timeout ensures the container is in the DOM.
+    setTimeout(() => {
       try {
-        const verifier = new RecaptchaVerifier(
-          auth,
-          recaptchaContainerRef.current, // <-- Pass the element directly
-          {
+        if (!window.recaptchaVerifier) {
+          window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
             size: "invisible",
             callback: (response: any) => {
+              // reCAPTCHA solved, allow signInWithPhoneNumber.
               console.log("reCAPTCHA solved");
             },
             "expired-callback": () => {
+              // Response expired. Ask user to solve reCAPTCHA again.
               setError("reCAPTCHA response expired. Please try again.");
             },
-          }
-        );
-        window.recaptchaVerifier = verifier;
-      } catch (e: any) {
+          });
+          window.recaptchaVerifier.render(); // Render the verifier
+        }
+      } catch (e) {
         console.error("Error setting up reCAPTCHA", e);
-        setError(`Could not set up reCAPTCHA: ${e.message}`);
+        setError("Could not set up reCAPTCHA. Please refresh and try again.");
       }
-    }
-
-    // This cleanup function is important for single-page apps
-    // It will destroy the reCAPTCHA instance when the component unmounts
-    return () => {
-      if (window.recaptchaVerifier) {
-        // As of firebase v9+, RecaptchaVerifier doesn't have a direct clear/destroy method.
-        // Unsetting it should be sufficient for most cases, or re-render on demand.
-        // For more complex scenarios, you might need to manage the lifecycle more carefully.
-        window.recaptchaVerifier = undefined;
-      }
-    };
+    }, 1000);
   }, [auth]);
-
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -91,10 +79,12 @@ const LoginForm = () => {
         return;
       }
 
+      // **** CHECK IF USER IS AUTHORIZED ****
       const authorizedUserRef = doc(db, "authorizedUsers", firebaseUser.email);
       const authorizedUserSnap = await getDoc(authorizedUserRef);
 
       if (authorizedUserSnap.exists()) {
+        // User is authorized (Admin)
         console.log("User is authorized:", firebaseUser.email);
         dispatch(
           setUser({
@@ -102,22 +92,27 @@ const LoginForm = () => {
             email: firebaseUser.email,
             avatar: firebaseUser.photoURL,
             uid: firebaseUser.uid,
-            role: "admin",
+            role: "admin", // Set role as admin
           })
         );
-        router.push("/dashboard");
+        router.push("/dashboard"); // Redirect to dashboard
+        // No need to setIsLoading(false) here as it redirects
       } else {
+        // User is NOT authorized
         console.warn("User is NOT authorized:", firebaseUser.email);
         setError(`Access Denied. Your Google account (${firebaseUser.email}) is not authorized for this application.`);
-        await signOut(auth);
+        await signOut(auth); // Sign them out of the Firebase session
         setIsLoading(false);
       }
+      // **** END OF AUTHORIZATION CHECK ****
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Google Sign-In Error:", error);
+      // Handle specific errors like 'auth/popup-closed-by-user' gracefully
       if (error.code === 'auth/popup-closed-by-user') {
         setError("Sign-in process was cancelled.");
       } else if (error.code === 'auth/cancelled-popup-request') {
+        // Ignore this error or treat as cancellation if another popup was opened.
         console.log("Popup request was cancelled, possibly due to another popup.")
       }
       else {
@@ -136,10 +131,13 @@ const LoginForm = () => {
       return;
     }
 
+    // Prepare phone number for Firebase (E.164 format)
     let phoneForAuth = "";
     if (phone.startsWith("+")) {
+      // Already in E.164 format
       phoneForAuth = phone;
     } else if (/^0\d{8,}$/.test(phone)) {
+      // Local number starting with 0 -> convert to +855 (Cambodia) without leading 0
       phoneForAuth = "+855" + phone.slice(1);
     } else {
       setError("Invalid phone number format. Use local format like 0712345678 or include country code e.g. +855712345678.");
@@ -149,20 +147,12 @@ const LoginForm = () => {
 
     try {
       const verifier = window.recaptchaVerifier;
-      // This will render the invisible reCAPTCHA widget if it hasn't been already
-      if (!verifier) {
-        setError("reCAPTCHA verifier is not initialized. Please refresh the page and try again.");
-        setIsLoading(false);
-        return;
-      }
-      await verifier.render(); 
-
       const result = await signInWithPhoneNumber(auth, phoneForAuth, verifier);
       setConfirmationResult(result);
       setShowOtpInput(true);
-      setError(null);
+      setError(null); // Clear previous errors
     } catch (error: any) {
-      console.error("Full Phone Sign-In Error Object:", error);
+      console.error("Full Phone Sign-In Error Object:", error); // Log the whole object
       let errorMessage = "Failed to send OTP. Please check the phone number.";
 
       if (error.code) {
@@ -177,6 +167,7 @@ const LoginForm = () => {
              errorMessage = "reCAPTCHA verification failed. Please refresh the page and try again.";
              break;
           default:
+            // This will show us the exact error from Firebase
             errorMessage = `An unexpected error occurred: ${error.message} (code: ${error.code})`;
         }
       } else {
@@ -197,37 +188,41 @@ const LoginForm = () => {
     }
 
     try {
+      // 1. Confirm OTP
       const result = await confirmationResult.confirm(otp);
       const firebaseUser = result.user;
       console.log("OTP Verified for:", firebaseUser.phoneNumber);
 
+      // 2. Check if phone number exists in 'students' collection
+      // The `phone` state variable holds the number as entered by the user, e.g., "0712777404"
       const studentsRef = collection(db, "students");
       const q = query(studentsRef, where("phone", "==", phone));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
-        console.warn(`User with phone ${phone} is not registered.`);
+        // 3a. If student not found
+        console.warn(`User with phone ${phone} is not registered in 'students' collection.`);
         setError("This phone number is not registered as a student.");
-        await signOut(auth);
-
-        setShowOtpInput(false);
-        setOtp("");
+        await signOut(auth); // Sign them out of the Firebase session
+        setShowOtpInput(false); // Go back to phone input
+        setOtp(""); // Clear OTP input
       } else {
+        // 3b. If student found
         const studentData = querySnapshot.docs[0].data();
         console.log("Student found:", studentData.fullName);
 
         dispatch(
           setUser({
-            name: studentData.fullName,
-            email: null,
-            avatar: null,
+            name: studentData.fullName, // Use full name from DB
+            email: null, // Students don't have email login
+            avatar: null, // No avatar for phone users
             uid: firebaseUser.uid,
-            role: "student",
+            role: "student", // Set role as student
           })
         );
-        router.push("/student/dashboard");
+        router.push("/student/dashboard"); // Redirect to a student-specific dashboard
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("OTP Verification or Student Check Error:", error);
       setError(error.message || "Failed to verify OTP. Please try again.");
     }
@@ -236,8 +231,7 @@ const LoginForm = () => {
 
   return (
     <>
-      {/* Attach the ref to this div. No need for an ID anymore. */}
-      <div ref={recaptchaContainerRef} className="fixed bottom-0 right-0"></div>
+      <div id="recaptcha-container" className="fixed bottom-0 right-0"></div>
 
       <h1 className="text-3xl font-bold text-center mb-8">Welcome Back</h1>
       
@@ -268,6 +262,7 @@ const LoginForm = () => {
         <hr className="flex-grow border-t border-gray-300" />
       </div>
 
+      {/* Student Login */}
       <div className="p-6 border rounded-lg">
         <h2 className="text-xl font-semibold text-center mb-4">Student Login</h2>
         {!showOtpInput ? (

@@ -1,3 +1,4 @@
+// import './polyfills.js'; // <-- ADD THIS AS THE VERY FIRST LINE
 import type { Metadata } from "next";
 import "../css/main.css";
 import StoreProvider from "./_stores/StoreProvider";
