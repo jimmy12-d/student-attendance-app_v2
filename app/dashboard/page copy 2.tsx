@@ -168,7 +168,7 @@ export default function DashboardPage() {
       // Get the definitive status using the centralized logic
       const result = getStudentDailyStatus(
         student,
-        todayStr,
+        todayStr.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD string
         attendanceRecord,
         allClassConfigs,
         approvedPermissionsForStudent
