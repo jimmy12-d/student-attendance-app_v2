@@ -2,7 +2,13 @@
 
 import React from 'react';
 import StudentLayout from '../_components/StudentLayout';
-import { PermissionRequestForm } from './_components/PermissionRequestForm';
+import dynamic from 'next/dynamic';
+
+// Dynamically import the PermissionRequestForm with ssr disabled
+const PermissionRequestForm = dynamic(
+  () => import('./_components/PermissionRequestForm').then(mod => mod.PermissionRequestForm),
+  { ssr: false }
+);
 
 const StudentDashboard = () => {
   return (
@@ -18,4 +24,4 @@ const StudentDashboard = () => {
   );
 };
 
-export default StudentDashboard; 
+export default StudentDashboard;
