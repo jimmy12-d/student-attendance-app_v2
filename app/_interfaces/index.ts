@@ -47,7 +47,9 @@ export type ColorButtonKey =
   | "danger"
   | "warning"
   | "info"
-  | "void";
+  | "void"
+  | "glowing-purple"
+  | "glowing-red";
 
 export type BgKey = "purplePink" | "pinkRed";
 

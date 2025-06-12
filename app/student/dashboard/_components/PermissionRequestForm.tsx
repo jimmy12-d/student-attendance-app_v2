@@ -8,22 +8,28 @@ import Button from '../../../_components/Button';
 import FormField from '../../../_components/FormField';
 import { Field, Form, Formik, ErrorMessage } from "formik";
 import * as Yup from 'yup';
+import CustomSingleSelectDropdown from '../../../_components/CustomSingleSelectDropdown';
 
-export const PermissionRequestForm = () => {
+type Props = {
+  onSuccess?: () => void;
+};
+
+export const PermissionRequestForm = ({ onSuccess }: Props) => {
   const [formStatus, setFormStatus] = useState({ message: '', type: '' });
   const studentDocId = useAppSelector((state) => state.main.studentDocId);
   const studentAuthUid = useAppSelector((state) => state.main.userUid);
   const userName = useAppSelector((state) => state.main.userName);
 
+  const reasonOptions = [
+    { value: 'Sickness', label: 'Sickness' },
+    { value: 'Family Event', label: 'Family Event' },
+    { value: 'Appointment', label: 'Appointment' },
+  ];
+
   const validationSchema = Yup.object().shape({
     permissionStartDate: Yup.date().required('Start date is required'),
     duration: Yup.number().min(1, 'Duration must be at least 1 day').required('Duration is required'),
-    reason: Yup.string().required('Please select a reason'),
-    customReason: Yup.string().when('reason', {
-      is: 'Other',
-      then: (schema) => schema.required('Please specify your reason'),
-      otherwise: (schema) => schema.notRequired(),
-    }),
+    reason: Yup.string().required('Please select or specify a reason'),
     details: Yup.string()
       .required('Details are required')
       .test(
@@ -41,19 +47,17 @@ export const PermissionRequestForm = () => {
       return;
     }
 
-    const { permissionStartDate, duration, reason, customReason, details } = values;
+    const { permissionStartDate, duration, reason, details } = values;
 
     const startDate = new Date(permissionStartDate);
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + duration - 1);
 
-    const finalReason = reason === 'Other' ? customReason : reason;
-
     const newPermissionRequest = {
       studentId: studentDocId,
-      studentAuthUid: studentAuthUid,
+      authUid: studentAuthUid,
       studentName: userName,
-      reason: finalReason,
+      reason: reason,
       details: details,
       permissionStartDate: startDate.toISOString().split('T')[0],
       permissionEndDate: endDate.toISOString().split('T')[0],
@@ -72,10 +76,12 @@ export const PermissionRequestForm = () => {
           permissionStartDate: '',
           duration: 1,
           reason: '',
-          customReason: '',
           details: '',
         }
       });
+      if (onSuccess) {
+        setTimeout(onSuccess, 1500); 
+      }
     } catch (error: any) {
       console.error('Error submitting permission request:', error);
       setFormStatus({ message: 'An error occurred while submitting your request. Please try again.', type: 'error' });
@@ -84,7 +90,7 @@ export const PermissionRequestForm = () => {
   };
 
   return (
-    <div className="bg-gray-50 dark:bg-slate-900 shadow-lg rounded-lg p-6 mt-8 max-w-2xl mx-auto">
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg">
       <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">
         Request Permission for Absence
       </h2>
@@ -93,13 +99,12 @@ export const PermissionRequestForm = () => {
           permissionStartDate: '',
           duration: 1,
           reason: '',
-          customReason: '',
           details: '',
         }}
         validationSchema={validationSchema}
         onSubmit={handleSubmit}
       >
-        {({ values, isSubmitting }) => (
+        {({ values, isSubmitting, setFieldValue }) => (
           <Form className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField label="Start Date" labelFor="permissionStartDate">
@@ -116,23 +121,15 @@ export const PermissionRequestForm = () => {
 
             <FormField label="Reason" labelFor="reason">
               {(fieldData) => (
-                <Field as="select" id="reason" name="reason" {...fieldData}>
-                  <option value="">Select a reason</option>
-                  <option value="Sickness">Sickness</option>
-                  <option value="Family Event">Family Event</option>
-                  <option value="Appointment">Appointment</option>
-                  <option value="Other">Other</option>
-                </Field>
+                <CustomSingleSelectDropdown
+                  options={reasonOptions}
+                  selectedValue={values.reason}
+                  onChange={(value) => setFieldValue('reason', value)}
+                  fieldData={fieldData}
+                  id="reason"
+                />
               )}
             </FormField>
-
-            {values.reason === 'Other' && (
-              <FormField label="Please Specify" labelFor="customReason">
-                {(fieldData) => (
-                  <Field id="customReason" name="customReason" type="text" {...fieldData} placeholder="Your reason here..." />
-                )}
-              </FormField>
-            )}
 
             <FormField label="Details (min. 10 words)" labelFor="details" hasTextareaHeight>
               {(fieldData) => (

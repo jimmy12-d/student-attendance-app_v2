@@ -190,7 +190,7 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
           onStudentAdded(initialData.id);
         }
       } else {
-        const docRef = await addDoc(collection(db, "students"), { ...studentData, createdAt: serverTimestamp() });
+        const docRef = await addDoc(collection(db, "students"), { ...studentData, authUid: '', createdAt: serverTimestamp() });
         if (onStudentAdded) {
           onStudentAdded(docRef.id);
         }

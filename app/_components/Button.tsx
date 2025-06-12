@@ -41,6 +41,35 @@ export default function Button({
   onClick,
   ...props
 }: Props) {
+
+  if (color === 'glowing-purple') {
+    const outerClasses = "relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-purple-600 to-blue-500 dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80";
+    const innerClasses = `relative inline-flex items-center bg-white dark:bg-slate-900 rounded-md ${small ? 'px-3 py-1 text-sm' : 'px-5 py-2.5'}`;
+
+    return (
+      <button className={outerClasses} onClick={onClick} disabled={disabled}>
+        <span className={innerClasses}>
+          {icon && <Icon path={icon} size={iconSize} />}
+          {label && <span className={icon ? "ml-2" : ""}>{label}</span>}
+        </span>
+      </button>
+    );
+  }
+
+  if (color === 'glowing-red') {
+    const outerClasses = "relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-red-500 to-orange-500 dark:text-white focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 shadow-lg shadow-red-500/50 dark:shadow-lg dark:shadow-red-800/80";
+    const innerClasses = `relative inline-flex items-center bg-white dark:bg-slate-900 rounded-md ${small ? 'px-3 py-1 text-sm' : 'px-5 py-2.5'}`;
+
+    return (
+      <button className={outerClasses} onClick={onClick} disabled={disabled}>
+        <span className={innerClasses}>
+          {icon && <Icon path={icon} size={iconSize} />}
+          {label && <span className={icon ? "ml-2" : ""}>{label}</span>}
+        </span>
+      </button>
+    );
+  }
+
   const componentClass = [
     "inline-flex",
     "justify-center",

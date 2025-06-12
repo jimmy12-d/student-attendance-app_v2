@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from "react"; // <-- Import useRef
 import Button from "../../_components/Button";
 import Buttons from "../../_components/Buttons";
 import { useRouter } from "next/navigation";
+import { auth, db } from "../../../firebase-config"; // Import auth and db directly
 
 import {
   GoogleAuthProvider,
@@ -13,7 +14,7 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
 } from "firebase/auth";
-import { auth, db } from "../../../firebase-config";
+// No longer import db/auth directly
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { mdiGoogle, mdiCellphoneMessage } from "@mdi/js";
 import Icon from "../../_components/Icon";
@@ -199,21 +200,27 @@ const LoginForm = () => {
     try {
       const result = await confirmationResult.confirm(otp);
       const firebaseUser = result.user;
-      console.log("OTP Verified for:", firebaseUser.phoneNumber);
+      console.log("OTP Verified for UID:", firebaseUser.uid);
 
+      // --- THIS IS THE CORRECTED QUERY ---
+      // Query the students collection to find the document where the 'authUid' field matches the user's UID.
       const studentsRef = collection(db, "students");
-      const q = query(studentsRef, where("phone", "==", phone));
+      const q = query(studentsRef, where("authUid", "==", firebaseUser.uid));
       const querySnapshot = await getDocs(q);
+      // --- END OF CORRECTION ---
 
       if (querySnapshot.empty) {
-        console.warn(`User with phone ${phone} is not registered.`);
-        setError("This phone number is not registered as a student.");
+        console.warn(`User with UID ${firebaseUser.uid} is not registered as a student.`);
+        setError("Your user account is not registered as a student. Please contact administration.");
         await signOut(auth);
 
         setShowOtpInput(false);
         setOtp("");
       } else {
-        const studentData = querySnapshot.docs[0].data();
+        // Since we expect only one match, we take the first document from the results.
+        const studentDoc = querySnapshot.docs[0];
+        const studentData = studentDoc.data();
+        const studentDocId = studentDoc.id; 
         console.log("Student found:", studentData.fullName);
 
         dispatch(
@@ -222,6 +229,7 @@ const LoginForm = () => {
             email: null,
             avatar: null,
             uid: firebaseUser.uid,
+            studentDocId: studentDocId,
             role: "student",
           })
         );

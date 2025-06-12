@@ -83,7 +83,7 @@ export default function ManageGracePeriodsPage() { // Renamed for clarity
       // Refresh local student data to show the update immediately
       setStudents(prevStudents =>
         prevStudents.map(s =>
-          s.id === studentId ? { ...s, gracePeriodMinutes: newGraceMinutes } : s
+          s.id === studentId ? { ...s, gracePeriodMinutes: newGraceMinutes ?? undefined } : s
         )
       );
     } catch (err) {

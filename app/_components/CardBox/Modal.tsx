@@ -9,12 +9,12 @@ import OverlayLayer from "../OverlayLayer";
 
 type Props = {
   title: string;
-  buttonColor: ColorButtonKey;
-  buttonLabel: string;
+  buttonColor?: ColorButtonKey;
+  buttonLabel?: string;
   isActive: boolean;
   children: ReactNode;
   modalClassName?: string;
-  onConfirm: () => void;
+  onConfirm?: () => void;
   onCancel?: () => void;
 };
 
@@ -32,25 +32,26 @@ const CardBoxModal = ({
     return null;
   }
 
-  const footer = (
-    <Buttons type="justify-end">
-      <Button
-        label={buttonLabel}
-        color={buttonColor}
-        onClick={onConfirm}
-        isGrouped
-      />
-      {!!onCancel && (
+  const footer =
+    onConfirm && buttonLabel && buttonColor ? (
+      <Buttons type="justify-end">
         <Button
-          label="Cancel"
+          label={buttonLabel}
           color={buttonColor}
-          outline
-          onClick={onCancel}
+          onClick={onConfirm}
           isGrouped
         />
-      )}
-    </Buttons>
-  );
+        {!!onCancel && (
+          <Button
+            label="Cancel"
+            color={buttonColor}
+            outline
+            onClick={onCancel}
+            isGrouped
+          />
+        )}
+      </Buttons>
+    ) : null;
 
   return (
     <OverlayLayer
