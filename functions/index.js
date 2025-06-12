@@ -1,98 +1,49 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
-
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
-
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
-
 admin.initializeApp();
 
-exports.createStudent = functions.https.onCall(async (data, context) => {
-  // 1. Authenticate the request: Ensure the user calling this function is an admin.
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-        "unauthenticated",
-        "The function must be called while authenticated.",
-    );
-  }
-  
-  // Check if the user is an authorized admin by looking them up in the authorizedUsers collection.
-  const adminEmail = context.auth.token.email;
-  const adminUserRef = admin.firestore().collection("authorizedUsers").doc(adminEmail);
-  const adminUserSnap = await adminUserRef.get();
+exports.linkStudentOnCreate = functions.auth.user().onCreate(async (user) => {
+  const logger = functions.logger;
 
-  if (!adminUserSnap.exists) {
-    throw new functions.https.HttpsError(
-        "permission-denied",
-        "You must be an admin to perform this action.",
-    );
+  if (!user.phoneNumber) {
+    logger.log(`User ${user.uid} created without a phone number. Exiting function.`);
+    return null;
   }
 
-  // 2. Validate the incoming data from the form.
-  const {fullName, phone, className, shift} = data;
-  if (!fullName || !phone || !className || !shift) {
-    throw new functions.https.HttpsError(
-        "invalid-argument",
-        "The function must be called with all required fields: fullName, phone, className, shift.",
-    );
-  }
-  
-  // Format the phone number to the E.164 standard required by Firebase Auth.
-  let phoneForAuth = "";
-  if (phone.startsWith("+")) {
-    phoneForAuth = phone;
-  } else if (/^0\d{8,9}$/.test(phone)) {
-    phoneForAuth = "+855" + phone.slice(1);
-  } else {
-    throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Invalid phone number format provided.",
-    );
-  }
+  const localPhoneNumber = user.phoneNumber.replace("+855", "0");
+  logger.log(`New user created: UID=<span class="math-inline">\{user\.uid\}, Phone\=</span>{user.phoneNumber}, LocalPhone=${localPhoneNumber}`);
+
+  const db = admin.firestore();
+  const studentsRef = db.collection("students");
+
+  // This query now robustly checks for a student with a matching phone 
+  // where authUid is either not set (null) or is an empty string.
+  const studentQuery = studentsRef
+    .where("phone", "==", localPhoneNumber)
+    .where("authUid", "in", [null, ""])
+    .limit(1);
 
   try {
-    // 3. Create the user in Firebase Authentication.
-    const userRecord = await admin.auth().createUser({
-      phoneNumber: phoneForAuth,
-      displayName: fullName,
-    });
-    
-    // 4. Create the corresponding student document in Firestore, using the new UID as the document ID.
-    const studentData = {
-      fullName,
-      phone, // Store the original, local phone number format
-      class: className,
-      shift,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
+    const querySnapshot = await studentQuery.get();
 
-    await admin.firestore().collection("students").doc(userRecord.uid).set(studentData);
-
-    // 5. Return a success message.
-    return {
-      status: "success",
-      message: `Successfully created student ${fullName} with UID: ${userRecord.uid}`,
-      uid: userRecord.uid,
-    };
-  } catch (error) {
-    console.error("Error creating student:", error);
-    if (error.code === "auth/phone-number-already-exists") {
-      throw new functions.https.HttpsError("already-exists", "A user with this phone number already exists.");
+    if (querySnapshot.empty) {
+      logger.warn(`No unlinked student record found for phone number: ${localPhoneNumber}. UID: ${user.uid}`);
+      return null;
     }
-    // Throw a generic error for other issues.
-    throw new functions.https.HttpsError("internal", "An unexpected error occurred while creating the student.");
+
+    const studentDoc = querySnapshot.docs[0];
+    logger.log(`Found matching student document: ${studentDoc.id}`);
+
+    await studentDoc.ref.update({
+      authUid: user.uid,
+    });
+
+    logger.log(`Successfully linked student ${studentDoc.id} to auth user ${user.uid}.`);
+    return { result: `Student ${studentDoc.id} linked to user ${user.uid}.` };
+  } catch (error) {
+    logger.error("Error linking student to auth user:", error);
+    // You can check the logs for this error if problems continue.
+    return null;
   }
 });

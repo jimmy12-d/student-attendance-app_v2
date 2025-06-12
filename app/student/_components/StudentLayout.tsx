@@ -25,16 +25,15 @@ export default function StudentLayout({ children }: Props) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // User is signed in. Now check if they are a registered student.
-        const phone = user.phoneNumber;
+        const uid = user.uid;
         let studentData: DocumentData | null = null;
         
         // Firebase phone numbers include the country code, but our DB stores it locally.
         // This is a bit brittle. Let's assume +855 and convert back.
         // A better long-term solution would be to store phone numbers consistently.
-        const localPhone = phone ? phone.replace('+855', '0') : '';
 
         const studentsRef = collection(db, "students");
-        const q = query(studentsRef, where("phone", "==", localPhone));
+        const q = query(studentsRef, where("authUid", "==", uid)); // Query by authUid
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
