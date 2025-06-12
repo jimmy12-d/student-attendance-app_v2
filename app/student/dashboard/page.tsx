@@ -1,13 +1,21 @@
 "use client";
 
 import React from 'react';
-import StudentLayout from '../_components/StudentLayout';
 import dynamic from 'next/dynamic';
+import { PermissionRequestForm } from './_components/PermissionRequestForm';
 
-// Dynamically import the PermissionRequestForm with ssr disabled
-const PermissionRequestForm = dynamic(
-  () => import('./_components/PermissionRequestForm').then(mod => mod.PermissionRequestForm),
-  { ssr: false }
+// Dynamically import StudentLayout and disable server-side rendering
+const StudentLayout = dynamic(
+  () => import('../_components/StudentLayout'),
+  { 
+    ssr: false,
+    // You can provide a loading component to show while the layout is loading
+    loading: () => (
+        <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-slate-900">
+            <p className="text-lg dark:text-white">Loading Student Portal...</p>
+        </div>
+    )
+  }
 );
 
 const StudentDashboard = () => {

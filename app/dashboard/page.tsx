@@ -19,9 +19,12 @@ import { collection, getDocs, query, orderBy, where, Timestamp } from "firebase/
 import { Student, PermissionRecord } from "../_interfaces";
 
 // Import the new section components
-import MonthlyAbsencesSection from "./_components/MonthlyAbsencesSection"; // Adjust path
-import MonthlyLatesSection from "./_components/MonthlyLatesSection";     // Adjust path
-import ConsecutiveAbsencesSection from "./_components/ConsecutiveAbsencesSection"; // Adjust path
+// Dynamically import the section components with SSR disabled
+import dynamic from 'next/dynamic';
+
+const MonthlyAbsencesSection = dynamic(() => import("./_components/MonthlyAbsencesSection"), { ssr: false, loading: () => <p>Loading monthly absences...</p> });
+const MonthlyLatesSection = dynamic(() => import("./_components/MonthlyLatesSection"), { ssr: false, loading: () => <p>Loading monthly lates...</p> });
+const ConsecutiveAbsencesSection = dynamic(() => import("./_components/ConsecutiveAbsencesSection"), { ssr: false, loading: () => <p>Loading consecutive absences...</p> });
 
 // Import utils
 import { AllClassConfigs, ClassShiftConfigs, getCurrentYearMonthString,LATE_WINDOW_DURATION_MINUTES } from "./_lib/configForAttendanceLogic";
