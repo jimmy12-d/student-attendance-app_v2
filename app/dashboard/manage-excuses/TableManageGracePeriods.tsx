@@ -100,7 +100,7 @@ const TableManageGracePeriods: React.FC<Props> = ({
               <th>Class</th>
               <th>Shift</th>
               <th>Late Period</th>
-              <th className="w-1/4 md:w-1/3">Set Grace Period</th> 
+              <th className="w-1/4 md:w-1/3">Set Late Period</th> 
             </tr>
           </thead>
           <tbody>

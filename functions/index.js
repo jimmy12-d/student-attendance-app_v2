@@ -39,7 +39,6 @@ exports.linkStudentOnCreate = functions.region("asia-southeast1").auth.user().on
   }
 });
 
-
 // CORRECTED: This is a "Callable" function again.
 exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
   if (!context.auth) {
@@ -60,7 +59,6 @@ exports.generateAttendancePasscode = functions.region("asia-southeast1").https.o
   functions.logger.log(`Generated passcode ${passcode} for UID: ${uid}`);
   return { passcode: passcode };
 });
-
 
 // CORRECTED: This is the optimized "Callable" function.
 exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
@@ -126,7 +124,17 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
     const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
     const shiftStartTimeDate = new Date();
     shiftStartTimeDate.setHours(startHour, startMinute, 0, 0);
-    const graceMinutes = 15;
+    // Use gracePeriodMinutes from studentData if set, else default to 15
+    let graceMinutes = 15;
+    if (
+      typeof studentData.gracePeriodMinutes === 'number' && !isNaN(studentData.gracePeriodMinutes)
+    ) {
+      graceMinutes = studentData.gracePeriodMinutes;
+    } else if (
+      typeof studentData.gracePeriodMinutes === 'string' && studentData.gracePeriodMinutes.trim() !== '' && !isNaN(Number(studentData.gracePeriodMinutes))
+    ) {
+      graceMinutes = Number(studentData.gracePeriodMinutes);
+    }
     const onTimeDeadline = new Date(shiftStartTimeDate);
     onTimeDeadline.setMinutes(shiftStartTimeDate.getMinutes() + graceMinutes);
     if (new Date() > onTimeDeadline) {
