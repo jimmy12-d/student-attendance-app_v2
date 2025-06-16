@@ -7,7 +7,7 @@ import { Student } from "../../_interfaces";
 import Button from "../../_components/Button";
 import Buttons from "../../_components/Buttons";
 import CardBoxModal from "../../_components/CardBox/Modal";
-import StudentQRCode from "./StudentQRCode";
+import StudentQRCode from "../../student/_components/StudentQRCode";
 
 import { toPng } from 'html-to-image';
 
@@ -39,80 +39,9 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
   const offscreenQrContainerRef = useRef<HTMLDivElement>(null);
   const [studentToDownload, setStudentToDownload] = useState<Student | null>(null);
 
-  const handleShowQrCode = (student: Student) => {
-    setSelectedStudentForQr(student);
-    setIsQrModalActive(true);
-  };
-
-  const handleDownloadQR = async (student: Student) => {
-    if (!student) return;
-    setStudentToDownload(student);
-
-    setTimeout(async () => {
-      if (offscreenQrContainerRef.current && offscreenQrContainerRef.current.firstChild) {
-        const nodeToCapture = offscreenQrContainerRef.current.firstChild as HTMLElement;
-        try {
-          const dataUrl = await toPng(nodeToCapture, {
-            cacheBust: true,
-            pixelRatio: 2,
-            style: {
-                display: 'inline-block',
-                backgroundColor: 'white',
-            },
-          });
-          const link = document.createElement('a');
-          link.download = `${student.fullName.replace(/\s+/g, '_')}_QR.png`;
-          link.href = dataUrl;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        } catch (err) {
-          console.error('QR Code download failed:', err);
-          alert('Failed to download QR code as PNG. See console for details.');
-        } finally {
-          setStudentToDownload(null);
-        }
-      } else {
-        console.error('Off-screen QR node not found for capture. Ref or firstChild is null.');
-        alert('Failed to prepare QR code for download. Please try again.');
-        setStudentToDownload(null);
-      }
-    }, 150);
-  };
 
   return (
     <>
-      {/* Modal for Viewing QR Code */}
-      <CardBoxModal
-        title={`Stduent's QR`}
-        buttonColor="info"
-        buttonLabel="Done"
-        isActive={isQrModalActive}
-        onConfirm={() => setIsQrModalActive(false)}
-      >
-        {selectedStudentForQr && (
-          <div className="flex flex-col items-center justify-center w-full">
-            <StudentQRCode
-              studentName={selectedStudentForQr.fullName}
-              qrSize={200}
-            />
-          </div>
-        )}
-      </CardBoxModal>
-
-      {/* Off-screen rendering container */}
-      <div
-        ref={offscreenQrContainerRef}
-        style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
-        aria-hidden="true"
-      >
-        {studentToDownload && (
-          <StudentQRCode
-            studentName={studentToDownload.fullName}
-            qrSize={300}
-          />
-        )}
-      </div>
 
       <div className="overflow-x-auto">
         <table>
@@ -121,7 +50,6 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
               <th>Name</th>
               <th>Class</th>
               <th className="w-32">Shift</th>
-              <th className="whitespace-nowrap px-2 md:px-4 w-auto md:w-40">QR Actions</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -132,24 +60,6 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
                 <td data-label="Name">{student.fullName}</td>
                 <td data-label="Class">{student.class}</td>
                 <td data-label="Shift" className="w-32">{student.shift}</td>
-                <td data-label="QR Actions" className="whitespace-nowrap">
-                  <Buttons>
-                    <Button
-                      color="info"
-                      icon={mdiQrcode}
-                      onClick={() => handleShowQrCode(student)}
-                      small
-                      isGrouped
-                    />
-                    <Button
-                      
-                      icon={mdiDownload}
-                      onClick={() => handleDownloadQR(student)}
-                      small
-                      isGrouped
-                    />
-                  </Buttons>
-                </td>
                 <td className="before:hidden lg:w-1 whitespace-nowrap">
                   <Buttons type="justify-start lg:justify-end" noWrap>
                     <Button color="success" icon={mdiPencil} onClick={() => onEdit(student)} small isGrouped />

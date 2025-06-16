@@ -34,23 +34,23 @@ const CardBoxModal = ({
 
   const footer =
     onConfirm && buttonLabel && buttonColor ? (
-      <Buttons type="justify-end">
+    <Buttons type="justify-end">
+      <Button
+        label={buttonLabel}
+        color={buttonColor}
+        onClick={onConfirm}
+        isGrouped
+      />
+      {!!onCancel && (
         <Button
-          label={buttonLabel}
+          label="Cancel"
           color={buttonColor}
-          onClick={onConfirm}
+          outline
+          onClick={onCancel}
           isGrouped
         />
-        {!!onCancel && (
-          <Button
-            label="Cancel"
-            color={buttonColor}
-            outline
-            onClick={onCancel}
-            isGrouped
-          />
-        )}
-      </Buttons>
+      )}
+    </Buttons>
     ) : null;
 
   return (

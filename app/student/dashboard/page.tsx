@@ -7,7 +7,7 @@ import { useAppSelector } from '../../_stores/hooks';
 import Button from '../../_components/Button';
 import { mdiQrcode, mdiFileDocumentPlusOutline } from '@mdi/js';
 import CardBoxModal from '../../_components/CardBox/Modal';
-import StudentQRCode from '../../dashboard/students/StudentQRCode';
+import StudentQRCode from '../_components/StudentQRCode';
 
 // Dynamically import StudentLayout and disable server-side rendering
 const StudentLayout = dynamic(
@@ -28,6 +28,7 @@ const StudentDashboard = () => {
   const [isPermissionModalActive, setIsPermissionModalActive] = useState(false);
   const studentDocId = useAppSelector((state) => state.main.studentDocId);
   const studentName = useAppSelector((state) => state.main.userName);
+  const studentUid = useAppSelector((state) => state.main.userUid);
 
   const handlePermissionSuccess = () => {
     setIsPermissionModalActive(false);
@@ -44,11 +45,12 @@ const StudentDashboard = () => {
             isActive={isQrModalActive}
             onConfirm={() => setIsQrModalActive(false)}
           >
-            {studentDocId && studentName && (
+            {studentDocId && studentName && typeof studentUid === 'string' && (
               <div className="flex flex-col items-center justify-center w-full">
                 <p className="mb-4 text-center">Scan this code for attendance.</p>
                 <StudentQRCode
                   studentName={studentName}
+                  studentUid={studentUid}
                   qrSize={200}
                 />
               </div>

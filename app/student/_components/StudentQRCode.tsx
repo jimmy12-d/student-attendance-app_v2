@@ -1,45 +1,46 @@
-// app/dashboard/students/StudentQRCode.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from "qrcode.react";
-import RodwellLogo from "../../_components/JustboilLogo";
-import Button from '../../_components/Button'; // Assuming Button component path
+import RodwellLogo from '../../_components/JustboilLogo';
+import Button from '../../_components/Button';
 
 // Import Firebase and Functions SDK
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { app as firebaseApp } from "../../../firebase-config"; // Ensure you have 'app' exported from your config
+import { app as firebaseApp } from "../../../firebase-config";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../../firebase-config";
 
-// Props for the component. studentId is no longer needed.
 interface Props {
   studentName?: string;
+  studentUid: string;
   qrSize?: number; 
 }
 
 const StudentQRCode: React.FC<Props> = ({
   studentName,
+  studentUid,
   qrSize = 200,
 }) => {
-  // --- NEW: State for handling the dynamic token ---
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(60);
+  const [scanStatus, setScanStatus] = useState<'present' | 'late' | null>(null);
   
-  // Calculate logo size relative to QR code size, same as before
   const logoDimension = Math.floor(qrSize * 0.25);
 
-  // --- NEW: Function to call the Cloud Function and get a token ---
   const generateToken = async () => {
     setIsLoading(true);
     setError(null);
     setQrCodeData(null);
+    setScanStatus(null);
     
     try {
-      const functions = getFunctions(firebaseApp, "asia-southeast1"); // <-- ADD REGION HERE
+      const functions = getFunctions(firebaseApp, "asia-southeast1");
       const generateAttendancePasscode = httpsCallable(functions, 'generateAttendancePasscode');
       const result: any = await generateAttendancePasscode();
-      setQrCodeData(result.data.passcode); // <-- Get 'passcode' from the result
+      setQrCodeData(result.data.passcode);
       setCountdown(60);
     } catch (err: any) {
       console.error("Error generating token:", err);
@@ -49,21 +50,96 @@ const StudentQRCode: React.FC<Props> = ({
     }
   };
 
-  // --- NEW: Effect for the countdown timer ---
   useEffect(() => {
     if (!qrCodeData || countdown <= 0) {
-      if (qrCodeData) setQrCodeData(null); // Clear expired QR code
+      if (qrCodeData) setQrCodeData(null);
       return;
-    };
+    }
 
     const timerId = setInterval(() => {
       setCountdown((prev) => prev - 1);
     }, 1000);
 
-    return () => clearInterval(timerId); // Cleanup timer
+    return () => clearInterval(timerId);
   }, [qrCodeData, countdown]);
 
-  // --- NEW: Render a button if there is no QR code yet ---
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    if (qrCodeData) {
+      const fetchAttendanceStatus = async () => {
+        try {
+          const dateStr = new Date().toISOString().split('T')[0];
+          const attendanceRef = collection(db, "attendance");
+          const q = query(attendanceRef, where("date", "==", dateStr), where("authUid", "==", studentUid));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            const attendanceData = querySnapshot.docs[0].data();
+            setScanStatus(attendanceData.status);
+            setQrCodeData(null);
+            return true; // Attendance found
+          }
+          return false; // No attendance found
+        } catch (err) {
+          console.error("Error fetching attendance status:", err);
+          setError("Failed to fetch attendance status.");
+          return false;
+        }
+      };
+
+      // Check immediately
+      fetchAttendanceStatus().then((found) => {
+        if (!found) {
+          // If not found, start polling every 2 seconds
+          intervalId = setInterval(async () => {
+            const found = await fetchAttendanceStatus();
+            if (found) {
+              clearInterval(intervalId);
+            }
+          }, 2000);
+        }
+      });
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [qrCodeData, studentUid]);
+
+  // --- NEW: On mount, check if already marked for today ---
+  useEffect(() => {
+    const checkAttendanceStatus = async () => {
+      try {
+        const dateStr = new Date().toISOString().split('T')[0];
+        const attendanceRef = collection(db, "attendance");
+        const q = query(attendanceRef, where("date", "==", dateStr), where("authUid", "==", studentUid));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const attendanceData = querySnapshot.docs[0].data();
+          setScanStatus(attendanceData.status);
+        }
+      } catch (err) {
+        // Optionally handle error
+      }
+    };
+    checkAttendanceStatus();
+  }, [studentUid]);
+
+  if (scanStatus) {
+    return (
+      <div className={`text-center p-8 rounded-lg ${scanStatus === 'present' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+        <p className="text-lg font-bold">
+          {scanStatus === 'present' ? 'Present!' : 'Late!'}
+        </p>
+        <p className="mt-2">
+          {studentName} is marked {scanStatus}.
+        </p>
+      </div>
+    );
+  }
+
   if (!qrCodeData) {
     return (
       <div className="text-center p-8">
@@ -79,7 +155,6 @@ const StudentQRCode: React.FC<Props> = ({
     );
   }
 
-  // --- EXISTING UI: This renders when a token is successfully fetched ---
   return (
     <div className="inline-block rounded-xl overflow-hidden shadow-lg bg-white">
       <div className="bg-purple-800 p-2 text-center">
@@ -99,7 +174,7 @@ const StudentQRCode: React.FC<Props> = ({
           }}
         >
           <QRCodeSVG
-            value={qrCodeData} // <-- Use the dynamic qrToken here
+            value={qrCodeData}
             size={qrSize - 16} 
             bgColor={"#ffffff"}
             fgColor={"#000000"}
@@ -129,7 +204,6 @@ const StudentQRCode: React.FC<Props> = ({
             />
           </div>
         </div>
-         {/* --- NEW: Display the countdown timer --- */}
         <p className="mt-2 font-mono text-sm text-gray-700">
           Code expires in: <span className="font-bold">{countdown}</span>s
         </p>
@@ -138,4 +212,4 @@ const StudentQRCode: React.FC<Props> = ({
   );
 };
 
-export default StudentQRCode;
+export default StudentQRCode; 

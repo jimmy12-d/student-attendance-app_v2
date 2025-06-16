@@ -126,7 +126,7 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
     const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
     const shiftStartTimeDate = new Date();
     shiftStartTimeDate.setHours(startHour, startMinute, 0, 0);
-    const graceMinutes = 5;
+    const graceMinutes = 15;
     const onTimeDeadline = new Date(shiftStartTimeDate);
     onTimeDeadline.setMinutes(shiftStartTimeDate.getMinutes() + graceMinutes);
     if (new Date() > onTimeDeadline) {
