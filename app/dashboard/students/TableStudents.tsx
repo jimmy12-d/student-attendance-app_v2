@@ -93,7 +93,6 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
         {selectedStudentForQr && (
           <div className="flex flex-col items-center justify-center w-full">
             <StudentQRCode
-              studentId={selectedStudentForQr.id}
               studentName={selectedStudentForQr.fullName}
               qrSize={200}
             />
@@ -109,11 +108,8 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
       >
         {studentToDownload && (
           <StudentQRCode
-            studentId={studentToDownload.id}
             studentName={studentToDownload.fullName}
             qrSize={300}
-            logoSizePercentage={0.25}
-            isForDownloadCapture={true} 
           />
         )}
       </div>

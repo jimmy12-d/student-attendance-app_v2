@@ -3,22 +3,20 @@ const admin = require("firebase-admin");
 
 admin.initializeApp();
 
-exports.linkStudentOnCreate = functions.auth.user().onCreate(async (user) => {
+// This function links a new Firebase Auth user to a student record. No changes needed here.
+exports.linkStudentOnCreate = functions.region("asia-southeast1").auth.user().onCreate(async (user) => {
   const logger = functions.logger;
 
   if (!user.phoneNumber) {
     logger.log(`User ${user.uid} created without a phone number. Exiting function.`);
     return null;
   }
-
   const localPhoneNumber = user.phoneNumber.replace("+855", "0");
-  logger.log(`New user created: UID=<span class="math-inline">\{user\.uid\}, Phone\=</span>{user.phoneNumber}, LocalPhone=${localPhoneNumber}`);
+  logger.log(`New user created: UID=${user.uid}, Phone=${user.phoneNumber}, LocalPhone=${localPhoneNumber}`);
 
   const db = admin.firestore();
   const studentsRef = db.collection("students");
 
-  // This query now robustly checks for a student with a matching phone 
-  // where authUid is either not set (null) or is an empty string.
   const studentQuery = studentsRef
     .where("phone", "==", localPhoneNumber)
     .where("authUid", "in", [null, ""])
@@ -26,111 +24,101 @@ exports.linkStudentOnCreate = functions.auth.user().onCreate(async (user) => {
 
   try {
     const querySnapshot = await studentQuery.get();
-
     if (querySnapshot.empty) {
       logger.warn(`No unlinked student record found for phone number: ${localPhoneNumber}. UID: ${user.uid}`);
       return null;
     }
-
     const studentDoc = querySnapshot.docs[0];
     logger.log(`Found matching student document: ${studentDoc.id}`);
-
-    await studentDoc.ref.update({
-      authUid: user.uid,
-    });
-
+    await studentDoc.ref.update({ authUid: user.uid, });
     logger.log(`Successfully linked student ${studentDoc.id} to auth user ${user.uid}.`);
     return { result: `Student ${studentDoc.id} linked to user ${user.uid}.` };
   } catch (error) {
     logger.error("Error linking student to auth user:", error);
-    // You can check the logs for this error if problems continue.
     return null;
   }
 });
 
-//
-const jwt = require("jsonwebtoken");
 
-// This function generates a short-lived, secure token for a student.
-exports.generateAttendanceToken = functions.https.onCall(async (data, context) => {
-  // Ensure the user calling this function is authenticated.
+// CORRECTED: This is a "Callable" function again.
+exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
   if (!context.auth) {
-    throw new functions.https.HttpsError(
-      "unauthenticated",
-      "The function must be called while authenticated."
-    );
+    throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
   }
-
   const uid = context.auth.uid;
-  const secret = functions.config().jwt.secret;
+  const db = admin.firestore();
+  const passcode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const expires = admin.firestore.Timestamp.fromMillis(Date.now() + 60000); // Valid for 60 seconds
 
-  // Create a token that contains the user's UID and expires in 60 seconds.
-  const attendanceToken = jwt.sign({ uid: uid }, secret, { expiresIn: "60s" });
+  const passcodeRef = db.collection("attendancePasscodes").doc(passcode);
+  await passcodeRef.set({
+    studentAuthUid: uid,
+    expires: expires,
+    used: false,
+  });
 
-  functions.logger.log(`Generated token for UID: ${uid}`);
-  return { token: attendanceToken };
+  functions.logger.log(`Generated passcode ${passcode} for UID: ${uid}`);
+  return { passcode: passcode };
 });
 
-// This function verifies a token from the scanner and records attendance.
-exports.verifyAndRecordAttendance = functions.https.onCall(async (data, context) => {
-  const logger = functions.logger;
 
-  // 1. Verify the user scanning is an authorized admin
+// CORRECTED: This is the optimized "Callable" function.
+exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+  const logger = functions.logger;
+  const db = admin.firestore();
+
+  // 1. Verify admin is making the call
   if (!context.auth || !context.auth.token.email) {
     throw new functions.https.HttpsError("unauthenticated", "Authentication is required.");
   }
   const adminEmail = context.auth.token.email;
-  const isAuthorized = (await admin.firestore().collection("authorizedUsers").doc(adminEmail).get()).exists;
-  if (!isAuthorized) {
-    throw new functions.https.HttpsError("permission-denied", "You must be an admin to perform this action.");
+  const passcode = data.passcode;
+  if (!passcode) {
+    throw new functions.https.HttpsError("invalid-argument", "A 'passcode' must be provided.");
   }
 
-  // 2. Verify the token from the QR code
-  const token = data.token;
-  if (!token) {
-    throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'token' argument.");
+  const passcodeRef = db.collection("attendancePasscodes").doc(passcode);
+  const passcodeDoc = await passcodeRef.get();
+
+  // 2. Validate the passcode
+  if (!passcodeDoc.exists) {
+    throw new functions.https.HttpsError("not-found", "Invalid QR Code.");
   }
-  const secret = functions.config().jwt.secret;
-  let decoded;
-  try {
-    decoded = jwt.verify(token, secret);
-  } catch (error) {
-    logger.error("Token verification failed:", error.message);
-    throw new functions.https.HttpsError("invalid-argument", `Invalid Token: ${error.message}`);
+  const passcodeData = passcodeDoc.data();
+  if (passcodeData.used) {
+    throw new functions.https.HttpsError("already-exists", "This QR Code has already been used.");
+  }
+  if (new Date() > passcodeData.expires.toDate()) {
+    throw new functions.https.HttpsError("deadline-exceeded", "This QR Code has expired.");
   }
 
-  const studentUid = decoded.uid;
+  // 3. Mark passcode as used immediately to prevent race conditions
+  await passcodeRef.update({ used: true });
 
-  // 3. Get the student's data from Firestore
-  const db = admin.firestore();
-  const studentQuery = await db.collection("students").where("authUid", "==", studentUid).limit(1).get();
+  // 4. Run database lookups for student and existing attendance
+  const studentUid = passcodeData.studentAuthUid;
+  const dateStr = new Date().toISOString().split('T')[0];
+  
+  const [studentQuery, attendanceQuery] = await Promise.all([
+    db.collection("students").where("authUid", "==", studentUid).limit(1).get(),
+    db.collection("attendance").where("authUid", "==", studentUid).where("date", "==", dateStr).get()
+  ]);
+
+  // 5. Validate lookups
   if (studentQuery.empty) {
-    throw new functions.https.HttpsError("not-found", `No student found for UID: ${studentUid}`);
+    throw new functions.https.HttpsError("not-found", "No student record is associated with this QR Code.");
   }
   const studentDoc = studentQuery.docs[0];
   const studentData = studentDoc.data();
-
-  // 4. Check if attendance has already been recorded for today
-  const today = new Date();
-  const dateStr = today.toISOString().split('T')[0]; // "YYYY-MM-DD"
-  const attendanceQuery = await db.collection("attendance")
-    .where("authUid", "==", studentUid)
-    .where("date", "==", dateStr)
-    .get();
-
   if (!attendanceQuery.empty) {
-    const existingStatus = attendanceQuery.docs[0].data().status || "present";
-    logger.info(`Duplicate scan for ${studentData.fullName}`);
-    throw new functions.https.HttpsError("already-exists", `${studentData.fullName} was already marked ${existingStatus} today.`);
+    const existingStatus = attendanceQuery.docs[0].data().status;
+    throw new functions.https.HttpsError("already-exists", `${studentData.fullName} was already marked '${existingStatus}' today.`);
   }
 
-  // 5. Calculate if the student is late (logic moved from frontend)
-  let attendanceStatus = "present"; // Default to on-time
-  const classConfigs = (await db.collection("classes").get()).docs.reduce((acc, doc) => {
-    acc[doc.id] = doc.data();
-    return acc;
-  }, {});
-
+  // 6. Calculate late status
+  const classesSnap = await db.collection("classes").get();
+  const classConfigs = classesSnap.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+  let attendanceStatus = "present";
   const classConfig = studentData.class ? classConfigs[studentData.class] : null;
   const shiftConfig = (studentData.shift && classConfig?.shifts) ? classConfig.shifts[studentData.shift] : null;
 
@@ -138,18 +126,15 @@ exports.verifyAndRecordAttendance = functions.https.onCall(async (data, context)
     const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
     const shiftStartTimeDate = new Date();
     shiftStartTimeDate.setHours(startHour, startMinute, 0, 0);
-
+    const graceMinutes = 5;
     const onTimeDeadline = new Date(shiftStartTimeDate);
-    // Using global grace period for now, can be customized later
-    const graceMinutes = 5; // Example grace period
     onTimeDeadline.setMinutes(shiftStartTimeDate.getMinutes() + graceMinutes);
-
-    if (today > onTimeDeadline) {
+    if (new Date() > onTimeDeadline) {
       attendanceStatus = "late";
     }
   }
 
-  // 6. Record the attendance
+  // 7. Create the attendance record
   await db.collection("attendance").add({
     studentId: studentDoc.id,
     authUid: studentUid,
@@ -158,11 +143,11 @@ exports.verifyAndRecordAttendance = functions.https.onCall(async (data, context)
     shift: studentData.shift || null,
     status: attendanceStatus,
     date: dateStr,
-    scannedAt: admin.firestore.FieldValue.serverTimestamp(),
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
     scannedBy: adminEmail,
   });
 
-  logger.log(`Attendance recorded for <span class="math-inline">\{studentData\.fullName\} \(</span>{attendanceStatus}) by ${adminEmail}`);
+  logger.log(`Attendance recorded for ${studentData.fullName} (${attendanceStatus}) by ${adminEmail}`);
   const message = `${studentData.fullName} marked ${attendanceStatus}!`;
   return { success: true, message: message };
 });

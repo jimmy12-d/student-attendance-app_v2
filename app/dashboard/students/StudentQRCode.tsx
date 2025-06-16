@@ -21,7 +21,7 @@ const StudentQRCode: React.FC<Props> = ({
   qrSize = 200,
 }) => {
   // --- NEW: State for handling the dynamic token ---
-  const [qrToken, setQrToken] = useState<string | null>(null);
+  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(60);
@@ -33,14 +33,14 @@ const StudentQRCode: React.FC<Props> = ({
   const generateToken = async () => {
     setIsLoading(true);
     setError(null);
-    setQrToken(null);
+    setQrCodeData(null);
     
     try {
-      const functions = getFunctions(firebaseApp);
-      const generateAttendanceToken = httpsCallable(functions, 'generateAttendanceToken');
-      const result: any = await generateAttendanceToken();
-      setQrToken(result.data.token);
-      setCountdown(60); // Reset countdown on new token
+      const functions = getFunctions(firebaseApp, "asia-southeast1"); // <-- ADD REGION HERE
+      const generateAttendancePasscode = httpsCallable(functions, 'generateAttendancePasscode');
+      const result: any = await generateAttendancePasscode();
+      setQrCodeData(result.data.passcode); // <-- Get 'passcode' from the result
+      setCountdown(60);
     } catch (err: any) {
       console.error("Error generating token:", err);
       setError(err.message || "Could not generate QR Code.");
@@ -51,8 +51,8 @@ const StudentQRCode: React.FC<Props> = ({
 
   // --- NEW: Effect for the countdown timer ---
   useEffect(() => {
-    if (!qrToken || countdown <= 0) {
-      if (qrToken) setQrToken(null); // Clear expired QR code
+    if (!qrCodeData || countdown <= 0) {
+      if (qrCodeData) setQrCodeData(null); // Clear expired QR code
       return;
     };
 
@@ -61,10 +61,10 @@ const StudentQRCode: React.FC<Props> = ({
     }, 1000);
 
     return () => clearInterval(timerId); // Cleanup timer
-  }, [qrToken, countdown]);
+  }, [qrCodeData, countdown]);
 
   // --- NEW: Render a button if there is no QR code yet ---
-  if (!qrToken) {
+  if (!qrCodeData) {
     return (
       <div className="text-center p-8">
         <p className="mb-4 text-gray-600 dark:text-gray-400">Click the button to generate a temporary QR code for attendance.</p>
@@ -99,7 +99,7 @@ const StudentQRCode: React.FC<Props> = ({
           }}
         >
           <QRCodeSVG
-            value={qrToken} // <-- Use the dynamic qrToken here
+            value={qrCodeData} // <-- Use the dynamic qrToken here
             size={qrSize - 16} 
             bgColor={"#ffffff"}
             fgColor={"#000000"}

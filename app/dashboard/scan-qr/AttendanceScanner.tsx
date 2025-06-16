@@ -14,7 +14,7 @@ const FEEDBACK_DISPLAY_MS = 4000;
 
 const AttendanceScanner: React.FC = () => {
   // State management
-  const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error' | 'info' | 'warning', text: string } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,6 +22,15 @@ const AttendanceScanner: React.FC = () => {
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const cooldownRef = useRef(false);
   const successSoundRef = useRef<HTMLAudioElement | null>(null);
+
+  // Add humorous late messages
+  const lateHumorMessages = [
+    "You're late, but at least you're here!",
+    "Better late than never, right?",
+    "Did you bring coffee for everyone?",
+    "Fashionably late, as always!",
+    "The early bird gets the worm, but the late one gets... this message!"
+  ];
 
   // --- Audio Setup ---
   useEffect(() => {
@@ -35,37 +44,42 @@ const AttendanceScanner: React.FC = () => {
     successSoundRef.current?.play().catch(e => console.warn("Audio play error:", e));
   }, []);
 
-  const showFeedback = useCallback((type: 'success' | 'error' | 'info', text: string) => {
+  const showFeedback = useCallback((type: 'success' | 'error' | 'info' | 'warning', text: string) => {
     setFeedbackMessage({ type, text });
     setTimeout(() => setFeedbackMessage(null), FEEDBACK_DISPLAY_MS);
   }, []);
 
   // --- Core Scan Logic ---
   const onScanSuccess = useCallback(async (decodedText: string) => {
-    if (cooldownRef.current) return;
+    if (cooldownRef.current) return; // Exit if in cooldown
 
     cooldownRef.current = true;
     setIsLoading(true);
 
-    if (decodedText.split('.').length !== 3) {
-      showFeedback('error', 'Invalid QR format. Please scan a secure student QR code.');
-      setIsLoading(false);
-      setTimeout(() => { cooldownRef.current = false; }, SCAN_COOLDOWN_MS);
-      return;
-    }
+    // The incorrect JWT check has been removed. We now send the code directly to the backend.
 
     try {
-      const functions = getFunctions(firebaseApp);
-      const verifyAndRecordAttendance = httpsCallable(functions, 'verifyAndRecordAttendance');
-      const result: any = await verifyAndRecordAttendance({ token: decodedText });
+      const functions = getFunctions(firebaseApp, "asia-southeast1"); // <-- ADD REGION HERE
+      const redeemAttendancePasscode = httpsCallable(functions, 'redeemAttendancePasscode');
+      
+      // Call the cloud function with the scanned passcode
+      const result: any = await redeemAttendancePasscode({ passcode: decodedText });
       
       playSuccessSound();
-      showFeedback('success', result.data.message);
+      // Check for 'late' in the message (case-insensitive)
+      if (typeof result.data.message === 'string' && result.data.message.toLowerCase().includes('late')) {
+        // Pick a random humor message
+        const humor = lateHumorMessages[Math.floor(Math.random() * lateHumorMessages.length)];
+        showFeedback('warning', `${result.data.message} 😅 ${humor}`);
+      } else {
+        showFeedback('success', result.data.message); // Display success message from function
+      }
     } catch (err: any) {
-      console.error('Error verifying attendance:', err);
+      console.error('Error redeeming passcode:', err);
       showFeedback('error', `Scan Failed: ${err.message}`);
     } finally {
       setIsLoading(false);
+      // Restart cooldown timer after processing
       setTimeout(() => { cooldownRef.current = false; }, SCAN_COOLDOWN_MS);
     }
   }, [playSuccessSound, showFeedback]);
@@ -88,7 +102,7 @@ const AttendanceScanner: React.FC = () => {
 
     const config: Html5QrcodeCameraScanConfig = {
       fps: 10,
-      qrbox: { width: 250, height: 250 },
+      qrbox: { width: 400, height: 400 },
       // Removed experimentalFeatures as it is not supported by the type
     };
 
@@ -147,6 +161,7 @@ const AttendanceScanner: React.FC = () => {
           ${feedbackMessage.type === 'success' ? 'bg-green-100 text-green-800 border-green-300' : ''}
           ${feedbackMessage.type === 'error' ? 'bg-red-100 text-red-800 border-red-300' : ''}
           ${feedbackMessage.type === 'info' ? 'bg-blue-100 text-blue-800 border-blue-300' : ''}
+          ${feedbackMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : ''}
         `}>
           {feedbackMessage.text}
         </div>

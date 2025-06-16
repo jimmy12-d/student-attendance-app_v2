@@ -1,17 +1,28 @@
+// app/dashboard/record/page.tsx (NEW REAL-TIME VERSION)
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { mdiClipboardListOutline } from "@mdi/js"; // Added mdiTrashCan for modal if needed
+import React, { useState, useEffect } from "react";
+import { mdiClipboardListOutline, mdiTrashCan } from "@mdi/js";
 import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
 import CardBox from "../../_components/CardBox";
-import CardBoxModal from "../../_components/CardBox/Modal"; // Import Modal
+import CardBoxModal from "../../_components/CardBox/Modal";
 import NotificationBar from "../../_components/NotificationBar";
 import TableAttendance, { AttendanceRecord } from "./TableAttendance";
-import { Student } from "../../_interfaces"; // Import your Student interface
+import { Student } from "../../_interfaces";
 
 import { db } from "../../../firebase-config";
-import { collection, getDocs, query, orderBy, Timestamp, doc, deleteDoc } from "firebase/firestore"; // Added doc, deleteDoc
+// VVVV  IMPORT onSnapshot, query, and orderBy  VVVV
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  doc,
+  deleteDoc,
+  getDocs,
+  Timestamp
+} from "firebase/firestore";
 
 export default function AttendanceRecordPage() {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
@@ -22,49 +33,58 @@ export default function AttendanceRecordPage() {
   const [isDeleteModalActive, setIsDeleteModalActive] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<AttendanceRecord | null>(null);
 
-  const fetchAttendanceRecords = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // 1. Fetch all student data first and create a map for easy lookup
-      const studentsSnapshot = await getDocs(collection(db, "students"));
-      const studentsMap = new Map<string, Student>();
-      studentsSnapshot.forEach(docSnap => {
-        studentsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() } as Student);
-      });
-      const recordsQuery = query(
-        collection(db, "attendance"),
-        orderBy("date", "desc"),
-        orderBy("timestamp", "desc")
-      );
-      const attendanceSnapshot = await getDocs(recordsQuery);
-      const recordsData = attendanceSnapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        const student = studentsMap.get(data.studentId); // Get current student details
-
-        return {
-          id: docSnap.id,
-          studentName: student ? student.fullName : (data.studentName || 'Unknown Student'),
-          class: data.class,
-          shift: data.shift,
-          status: data.status || 'Unknown',
-          date: data.date,
-          timestamp: data.timestamp,
-        } as AttendanceRecord;
-      });
-      setAttendanceRecords(recordsData);
-    } catch (err) {
-      console.error("Error fetching attendance records: ", err);
-      setError("Failed to fetch attendance records. Please try again.");
-    }
-    setLoading(false);
-  }, []);
-
   useEffect(() => {
-    fetchAttendanceRecords();
-  }, [fetchAttendanceRecords]);
+    setLoading(true);
 
-  // Handlers for delete functionality
+    const fetchAndListen = async () => {
+        // First, get a static map of all students. 
+        // This is efficient if your student list doesn't change often.
+        const studentsSnapshot = await getDocs(collection(db, "students"));
+        const studentsMap = new Map<string, Student>();
+        studentsSnapshot.forEach(docSnap => {
+            studentsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() } as Student);
+        });
+
+        const recordsCollection = collection(db, "attendance");
+        // Create a query to order records by timestamp, with the newest ones first
+        const q = query(recordsCollection, orderBy("timestamp", "desc"));
+
+        // Set up the real-time listener on the attendance collection
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedRecords: AttendanceRecord[] = querySnapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                const student = studentsMap.get(data.studentId); // Look up student from our map
+
+                return {
+                    id: docSnap.id,
+                    studentName: student ? student.fullName : (data.studentName || 'Unknown'),
+                    studentId: data.studentId,
+                    class: student ? student.class : (data.class || 'N/A'),
+                    shift: student ? student.shift : (data.shift || 'N/A'),
+                    status: data.status || 'Unknown',
+                    date: data.date,
+                    timestamp: data.timestamp, // Ensure this field name is correct
+                } as AttendanceRecord;
+            });
+            setAttendanceRecords(fetchedRecords);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error with real-time listener: ", error);
+            setError("Failed to listen for attendance updates.");
+            setLoading(false);
+        });
+
+        // Return a cleanup function to unsubscribe from the listener when the component unmounts
+        return unsubscribe;
+    };
+
+    const unsubscribePromise = fetchAndListen();
+
+    return () => {
+        unsubscribePromise.then(unsubscribe => unsubscribe && unsubscribe());
+    };
+  }, []); // Empty array ensures the listener is set up only once
+
   const handleOpenDeleteModal = (record: AttendanceRecord) => {
     setRecordToDelete(record);
     setIsDeleteModalActive(true);
@@ -74,16 +94,19 @@ export default function AttendanceRecordPage() {
     if (!recordToDelete) return;
     try {
       await deleteDoc(doc(db, "attendance", recordToDelete.id));
-      setAttendanceRecords(prevRecords => prevRecords.filter(r => r.id !== recordToDelete.id));
-      // Optionally, show a success notification
+      // No need to manually update state, onSnapshot will handle the update automatically!
     } catch (err) {
-      console.error("Error deleting attendance record: ", err);
-      setError("Failed to delete record. Please try again.");
-      // Optionally, show an error notification
+      console.error("Error deleting record: ", err);
+      showFeedback('error', 'Failed to delete record.');
     }
     setIsDeleteModalActive(false);
     setRecordToDelete(null);
   };
+
+  // Dummy showFeedback function if you don't have one
+  const showFeedback = (type: string, message: string) => {
+      alert(message);
+  }
 
   return (
     <SectionMain>
@@ -102,19 +125,14 @@ export default function AttendanceRecordPage() {
       <CardBox className="mb-6 rounded-lg shadow" hasTable>
         {loading ? (
           <p className="p-6 text-center">Loading records...</p>
-        ) : attendanceRecords.length === 0 && !error ? (
-          <NotificationBar color="warning" icon={mdiClipboardListOutline}>
-            No attendance records found.
-          </NotificationBar>
         ) : (
           <TableAttendance
             records={attendanceRecords}
-            onDeleteRecord={handleOpenDeleteModal} // Pass the handler here
+            onDeleteRecord={handleOpenDeleteModal}
           />
         )}
       </CardBox>
 
-      {/* Delete Confirmation Modal */}
       {recordToDelete && (
         <CardBoxModal
           title="Confirm Delete"
@@ -122,24 +140,9 @@ export default function AttendanceRecordPage() {
           buttonLabel="Delete"
           isActive={isDeleteModalActive}
           onConfirm={handleConfirmDelete}
-          onCancel={() => {
-            setIsDeleteModalActive(false);
-            setRecordToDelete(null);
-          }}
+          onCancel={() => setIsDeleteModalActive(false)}
         >
-          <p>Are you sure you want to delete the attendance record for</p>
-          <p>
-            <b>{recordToDelete.studentName}</b> on{" "}
-            <b>
-              {recordToDelete.date && typeof recordToDelete.date === "object" && (recordToDelete.date as object) instanceof Date
-                ? (recordToDelete.date as Date).toLocaleDateString()
-                : recordToDelete.date && typeof ((recordToDelete.date as unknown as Timestamp)?.toDate) === "function"
-                ? (recordToDelete.date as unknown as Timestamp).toDate().toLocaleDateString()
-                : String(recordToDelete.date)}
-            </b>
-            ?
-          </p>
-          <p className="mt-2 text-sm text-gray-600">This action cannot be undone.</p>
+          <p>Are you sure you want to delete this record?</p>
         </CardBoxModal>
       )}
     </SectionMain>
