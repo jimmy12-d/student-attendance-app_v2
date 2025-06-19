@@ -55,124 +55,121 @@ exports.requestStudentLink = functions.region("asia-southeast1").https.onRequest
   });
 });
 
-// The following functions are not being used in the current flow,
-// but they are left here for future reference.
+exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+  }
+  const uid = context.auth.uid;
+  const db = admin.firestore();
+  const passcode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const expires = admin.firestore.Timestamp.fromMillis(Date.now() + 60000); // Valid for 60 seconds
 
-// exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
-//   if (!context.auth) {
-//     throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
-//   }
-//   const uid = context.auth.uid;
-//   const db = admin.firestore();
-//   const passcode = Math.random().toString(36).substring(2, 8).toUpperCase();
-//   const expires = admin.firestore.Timestamp.fromMillis(Date.now() + 60000); // Valid for 60 seconds
+  const passcodeRef = db.collection("attendancePasscodes").doc(passcode);
+  await passcodeRef.set({
+    studentAuthUid: uid,
+    expires: expires,
+    used: false,
+  });
 
-//   const passcodeRef = db.collection("attendancePasscodes").doc(passcode);
-//   await passcodeRef.set({
-//     studentAuthUid: uid,
-//     expires: expires,
-//     used: false,
-//   });
+  functions.logger.log(`Generated passcode ${passcode} for UID: ${uid}`);
+  return { passcode: passcode };
+});
 
-//   functions.logger.log(`Generated passcode ${passcode} for UID: ${uid}`);
-//   return { passcode: passcode };
-// });
+exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+  const logger = functions.logger;
+  const db = admin.firestore();
 
-// exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
-//   const logger = functions.logger;
-//   const db = admin.firestore();
+  // 1. Verify admin is making the call
+  if (!context.auth || !context.auth.token.email) {
+    throw new functions.https.HttpsError("unauthenticated", "Authentication is required.");
+  }
+  const adminEmail = context.auth.token.email;
+  const passcode = data.passcode;
+  if (!passcode) {
+    throw new functions.https.HttpsError("invalid-argument", "A 'passcode' must be provided.");
+  }
 
-//   // 1. Verify admin is making the call
-//   if (!context.auth || !context.auth.token.email) {
-//     throw new functions.https.HttpsError("unauthenticated", "Authentication is required.");
-//   }
-//   const adminEmail = context.auth.token.email;
-//   const passcode = data.passcode;
-//   if (!passcode) {
-//     throw new functions.https.HttpsError("invalid-argument", "A 'passcode' must be provided.");
-//   }
+  const passcodeRef = db.collection("attendancePasscodes").doc(passcode);
+  const passcodeDoc = await passcodeRef.get();
 
-//   const passcodeRef = db.collection("attendancePasscodes").doc(passcode);
-//   const passcodeDoc = await passcodeRef.get();
+  // 2. Validate the passcode
+  if (!passcodeDoc.exists) {
+    throw new functions.https.HttpsError("not-found", "Invalid QR Code.");
+  }
+  const passcodeData = passcodeDoc.data();
+  if (passcodeData.used) {
+    throw new functions.https.HttpsError("already-exists", "This QR Code has already been used.");
+  }
+  if (new Date() > passcodeData.expires.toDate()) {
+    throw new functions.https.HttpsError("deadline-exceeded", "This QR Code has expired.");
+  }
 
-//   // 2. Validate the passcode
-//   if (!passcodeDoc.exists) {
-//     throw new functions.https.HttpsError("not-found", "Invalid QR Code.");
-//   }
-//   const passcodeData = passcodeDoc.data();
-//   if (passcodeData.used) {
-//     throw new functions.https.HttpsError("already-exists", "This QR Code has already been used.");
-//   }
-//   if (new Date() > passcodeData.expires.toDate()) {
-//     throw new functions.https.HttpsError("deadline-exceeded", "This QR Code has expired.");
-//   }
+  // 3. Mark passcode as used immediately to prevent race conditions
+  await passcodeRef.update({ used: true });
 
-//   // 3. Mark passcode as used immediately to prevent race conditions
-//   await passcodeRef.update({ used: true });
-
-//   // 4. Run database lookups for student and existing attendance
-//   const studentUid = passcodeData.studentAuthUid;
-//   const dateStr = new Date().toISOString().split('T')[0];
+  // 4. Run database lookups for student and existing attendance
+  const studentUid = passcodeData.studentAuthUid;
+  const dateStr = new Date().toISOString().split('T')[0];
   
-//   const [studentQuery, attendanceQuery] = await Promise.all([
-//     db.collection("students").where("authUid", "==", studentUid).limit(1).get(),
-//     db.collection("attendance").where("authUid", "==", studentUid).where("date", "==", dateStr).get()
-//   ]);
+  const [studentQuery, attendanceQuery] = await Promise.all([
+    db.collection("students").where("authUid", "==", studentUid).limit(1).get(),
+    db.collection("attendance").where("authUid", "==", studentUid).where("date", "==", dateStr).get()
+  ]);
 
-//   // 5. Validate lookups
-//   if (studentQuery.empty) {
-//     throw new functions.https.HttpsError("not-found", "No student record is associated with this QR Code.");
-//   }
-//   const studentDoc = studentQuery.docs[0];
-//   const studentData = studentDoc.data();
-//   if (!attendanceQuery.empty) {
-//     const existingStatus = attendanceQuery.docs[0].data().status;
-//     throw new functions.https.HttpsError("already-exists", `${studentData.fullName} was already marked '${existingStatus}' today.`);
-//   }
+  // 5. Validate lookups
+  if (studentQuery.empty) {
+    throw new functions.https.HttpsError("not-found", "No student record is associated with this QR Code.");
+  }
+  const studentDoc = studentQuery.docs[0];
+  const studentData = studentDoc.data();
+  if (!attendanceQuery.empty) {
+    const existingStatus = attendanceQuery.docs[0].data().status;
+    throw new functions.https.HttpsError("already-exists", `${studentData.fullName} was already marked '${existingStatus}' today.`);
+  }
 
-//   // 6. Calculate late status
-//   const classesSnap = await db.collection("classes").get();
-//   const classConfigs = classesSnap.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
-//   let attendanceStatus = "present";
-//   const classConfig = studentData.class ? classConfigs[studentData.class] : null;
-//   const shiftConfig = (studentData.shift && classConfig?.shifts) ? classConfig.shifts[studentData.shift] : null;
+  // 6. Calculate late status
+  const classesSnap = await db.collection("classes").get();
+  const classConfigs = classesSnap.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+  let attendanceStatus = "present";
+  const classConfig = studentData.class ? classConfigs[studentData.class] : null;
+  const shiftConfig = (studentData.shift && classConfig?.shifts) ? classConfig.shifts[studentData.shift] : null;
 
-//   if (shiftConfig && shiftConfig.startTime) {
-//     const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
-//     const shiftStartTimeDate = new Date();
-//     shiftStartTimeDate.setHours(startHour, startMinute, 0, 0);
-//     // Use gracePeriodMinutes from studentData if set, else default to 15
-//     let graceMinutes = 15;
-//     if (
-//       typeof studentData.gracePeriodMinutes === 'number' && !isNaN(studentData.gracePeriodMinutes)
-//     ) {
-//       graceMinutes = studentData.gracePeriodMinutes;
-//     } else if (
-//       typeof studentData.gracePeriodMinutes === 'string' && studentData.gracePeriodMinutes.trim() !== '' && !isNaN(Number(studentData.gracePeriodMinutes))
-//     ) {
-//       graceMinutes = Number(studentData.gracePeriodMinutes);
-//     }
-//     const onTimeDeadline = new Date(shiftStartTimeDate);
-//     onTimeDeadline.setMinutes(shiftStartTimeDate.getMinutes() + graceMinutes);
-//     if (new Date() > onTimeDeadline) {
-//       attendanceStatus = "late";
-//     }
-//   }
+  if (shiftConfig && shiftConfig.startTime) {
+    const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
+    const shiftStartTimeDate = new Date();
+    shiftStartTimeDate.setHours(startHour, startMinute, 0, 0);
+    // Use gracePeriodMinutes from studentData if set, else default to 15
+    let graceMinutes = 15;
+    if (
+      typeof studentData.gracePeriodMinutes === 'number' && !isNaN(studentData.gracePeriodMinutes)
+    ) {
+      graceMinutes = studentData.gracePeriodMinutes;
+    } else if (
+      typeof studentData.gracePeriodMinutes === 'string' && studentData.gracePeriodMinutes.trim() !== '' && !isNaN(Number(studentData.gracePeriodMinutes))
+    ) {
+      graceMinutes = Number(studentData.gracePeriodMinutes);
+    }
+    const onTimeDeadline = new Date(shiftStartTimeDate);
+    onTimeDeadline.setMinutes(shiftStartTimeDate.getMinutes() + graceMinutes);
+    if (new Date() > onTimeDeadline) {
+      attendanceStatus = "late";
+    }
+  }
 
-//   // 7. Create the attendance record
-//   await db.collection("attendance").add({
-//     studentId: studentDoc.id,
-//     authUid: studentUid,
-//     studentName: studentData.fullName,
-//     class: studentData.class || null,
-//     shift: studentData.shift || null,
-//     status: attendance.status,
-//     date: dateStr,
-//     timestamp: admin.firestore.FieldValue.serverTimestamp(),
-//     scannedBy: adminEmail,
-//   });
+  // 7. Create the attendance record
+  await db.collection("attendance").add({
+    studentId: studentDoc.id,
+    authUid: studentUid,
+    studentName: studentData.fullName,
+    class: studentData.class || null,
+    shift: studentData.shift || null,
+    status: attendance.status,
+    date: dateStr,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    scannedBy: adminEmail,
+  });
 
-//   functions.logger.log(`Attendance recorded for ${studentData.fullName} (${attendanceStatus}) by ${adminEmail}`);
-//   const message = `${studentData.fullName} marked ${attendanceStatus}!`;
-//   return { success: true, message: message };
-// });
+  functions.logger.log(`Attendance recorded for ${studentData.fullName} (${attendanceStatus}) by ${adminEmail}`);
+  const message = `${studentData.fullName} marked ${attendanceStatus}!`;
+  return { success: true, message: message };
+});
