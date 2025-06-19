@@ -95,6 +95,7 @@ const TableAttendance = ({ records, onDeleteRecord, perPage = 10 }: Props) => {
                     record.status.toLowerCase() === 'present' ? 'bg-green-200 text-green-800' :
                     record.status.toLowerCase() === 'late' ? 'bg-yellow-200 text-yellow-800 border border-yellow-300' :
                     record.status.toLowerCase() === 'absent' ? 'bg-red-200 text-red-800' : // Kept your existing absent style
+                    record.status.toLowerCase() === 'permission' ? 'bg-purple-200 text-purple-800' :
                     'bg-gray-100 text-gray-800' // Default for other statuses
                   }`}>
                     {record.status.charAt(0).toUpperCase() + record.status.slice(1)}

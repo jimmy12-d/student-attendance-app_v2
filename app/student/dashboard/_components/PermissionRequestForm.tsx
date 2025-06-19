@@ -90,10 +90,8 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg">
-      <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">
-        Request Permission for Absence
-      </h2>
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg mr-3 mb-4">
+
       <Formik
         initialValues={{
           permissionStartDate: '',
@@ -106,7 +104,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
       >
         {({ values, isSubmitting, setFieldValue }) => (
           <Form className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField label="Start Date" labelFor="permissionStartDate">
                 {(fieldData) => (
                   <Field id="permissionStartDate" name="permissionStartDate" type="date" {...fieldData} />
@@ -117,7 +115,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
                   <Field id="duration" name="duration" type="number" min="1" {...fieldData} />
                 )}
               </FormField>
-            </div>
+            
 
             <FormField label="Reason" labelFor="reason">
               {(fieldData) => (
@@ -136,7 +134,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
                 <Field id="details" name="details" as="textarea" {...fieldData} placeholder="Please provide specific details about your absence..." />
               )}
             </FormField>
-            
+            </div>
             <ErrorMessage name="details" component="div" className="text-red-500 text-sm mt-1" />
 
             <div className="flex justify-end">

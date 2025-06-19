@@ -158,10 +158,10 @@ const AttendanceScanner: React.FC = () => {
 
       {feedbackMessage && (
         <div className={`text-center p-3 my-3 rounded-md text-base font-medium border
-          ${feedbackMessage.type === 'success' ? 'bg-green-100 text-green-800 border-green-300' : ''}
-          ${feedbackMessage.type === 'error' ? 'bg-red-100 text-red-800 border-red-300' : ''}
-          ${feedbackMessage.type === 'info' ? 'bg-blue-100 text-blue-800 border-blue-300' : ''}
-          ${feedbackMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : ''}
+          ${feedbackMessage.type === 'success' ? 'bg-green-100 text-green-800 border-green-200' : ''}
+          ${feedbackMessage.type === 'error' ? 'bg-red-100 text-red-800 border-red-200' : ''}
+          ${feedbackMessage.type === 'info' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
+          ${feedbackMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''}
         `}>
           {feedbackMessage.text}
         </div>

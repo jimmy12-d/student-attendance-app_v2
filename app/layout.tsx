@@ -64,6 +64,9 @@ export default function RootLayout({
             gtag('config', 'UA-130795909-1');
           `}
         </Script>
+        <head>
+          <link rel="icon" href="/rodwell_logo.png" type="image/png" />
+        </head>
         <body
           className={`bg-gray-50 dark:bg-slate-800 dark:text-slate-100 antialiased`}
         >

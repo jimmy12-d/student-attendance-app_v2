@@ -37,7 +37,7 @@ const ConsecutiveAbsencesSection: React.FC<Props> = ({ students, attendanceRecor
       // Pre-filter attendance for the current student to pass to the calculation function
       const studentAttendance = attendanceRecords.filter(att => att.studentId === student.id);
       const studentPermissions = approvedPermissions.filter(p => p.studentId === student.id);
-      const result = calculateConsecutiveAbsences(student, studentAttendance, allClassConfigs, studentPermissions,14); // Check last 14 days
+      const result = calculateConsecutiveAbsences(student, studentAttendance, allClassConfigs, studentPermissions,20); // Check last 20 days
       
       if (result.count >= 2) {
         warnings.push({

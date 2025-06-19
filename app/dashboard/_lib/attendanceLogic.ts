@@ -112,7 +112,7 @@ export const calculateConsecutiveAbsences = (
   allAttendanceRecordsForStudent: RawAttendanceRecord[],
   allClassConfigs: AllClassConfigs | null,
   approvedPermissions: PermissionRecord[],
-  lookBackDays: number = 7 // Let's default to a 7-day lookback for recent streaks
+  lookBackDays: number = 20 // Let's default to a 7-day lookback for recent streaks
 ): { count: number; details: string } => {
     
     let consecutiveAbsences = 0;
