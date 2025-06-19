@@ -30,3 +30,8 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# Misc
+/node_modules
+/functions/node_modules
+functions/sheet_key.json
