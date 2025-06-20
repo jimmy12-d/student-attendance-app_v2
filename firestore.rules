@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- HELPER FUNCTION ---
+    // Checks if the user is an admin.
+    function isAuthorizedUser() {
+      return request.auth != null &&
+          exists(/databases/$(database)/documents/authorizedUsers/$(request.auth.token.email));
+    }
+
+
+    // --- COLLECTION RULES ---
+
+    match /students/{studentId} {
+      // READ: An admin or the student owner can read.
+      allow read: if isAuthorizedUser() || (request.auth != null && request.auth.uid == resource.data.authUid);
+
+      // CREATE/DELETE: Only admins can create or delete student records.
+      allow create, delete: if isAuthorizedUser();
+      
+      // UPDATE: An admin can update anything. A user can update a record
+      // ONLY to link their authUid for the first time.
+      allow update: if isAuthorizedUser() ||
+                     (request.auth != null &&
+                      resource.data.authUid == '' &&
+                      request.resource.data.authUid == request.auth.uid);
+    }
+
+    match /attendance/{attendanceId} {
+      // Only admins can create or update attendance records.
+      allow create, update: if isAuthorizedUser();
+    }
+  }
+} 

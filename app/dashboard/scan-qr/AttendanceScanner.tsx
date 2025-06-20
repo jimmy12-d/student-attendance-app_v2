@@ -35,7 +35,7 @@ const AttendanceScanner: React.FC = () => {
   // --- Audio Setup ---
   useEffect(() => {
     if (typeof Audio !== "undefined") {
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+        const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
       successSoundRef.current = new Audio(`${basePath}/success_sound_2.mp3`);
     }
   }, []);
@@ -86,12 +86,12 @@ const AttendanceScanner: React.FC = () => {
 
   // --- UPDATED onScanFailure ---
   // This now ignores the common "No QR code found" messages to keep the console clean.
-  const onScanFailure = useCallback((errorMessage: string) => {
+    const onScanFailure = useCallback((errorMessage: string) => {
     if (errorMessage.includes("No QR code found") || errorMessage.includes("NotFound")) {
       return; // This is expected, do nothing.
     }
-    console.warn(`QR Scan Failure: ${errorMessage}`);
-  }, []);
+      console.warn(`QR Scan Failure: ${errorMessage}`);
+    }, []); 
 
   // --- CAMERA CONTROL ---
   const handleStartScan = useCallback(() => {
@@ -123,7 +123,7 @@ const AttendanceScanner: React.FC = () => {
   }, []);
   
   // Cleanup effect to stop the camera when the component is removed
-  useEffect(() => {
+useEffect(() => {
     return () => {
       if (html5QrCodeRef.current?.isScanning) {
         handleStopScan();
@@ -145,7 +145,7 @@ const AttendanceScanner: React.FC = () => {
         <div className="flex items-center justify-center -mt-10 mb-6">
           <p className="text-gray-400 text-center">Camera is off.</p>
         </div>
-      )}
+        )}
 
       <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 mb-6">
         <button onClick={handleStartScan} disabled={isScanning || isLoading} className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75 disabled:opacity-60 transition duration-150 ease-in-out">
@@ -163,7 +163,7 @@ const AttendanceScanner: React.FC = () => {
           ${feedbackMessage.type === 'info' ? 'bg-blue-100 text-blue-800 border-blue-200' : ''}
           ${feedbackMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''}
         `}>
-          {feedbackMessage.text}
+            {feedbackMessage.text}
         </div>
       )}
     </CardBox>

@@ -41,15 +41,16 @@ const StudentDashboard = () => {
   const studentUid = useAppSelector((state) => state.main.userUid);
   const studentDocId = useAppSelector((state) => state.main.studentDocId);
 
-  // State for progress bar
+  // State for progress bar & new seat info
   const [progressStatus, setProgressStatus] = useState("No Registered");
+  const [seatInfo, setSeatInfo] = useState<string | null>(null);
   const [isProgressLoading, setIsProgressLoading] = useState(true);
 
   // State for student's recent activity
   const [recentRecords, setRecentRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch progress status
+  // Fetch progress status and seat info
   useEffect(() => {
     const fetchProgress = async () => {
       setIsProgressLoading(true);
@@ -74,6 +75,7 @@ const StudentDashboard = () => {
         if (!response.ok) throw new Error("Failed to fetch progress");
         const data = await response.json();
         if (data.status) setProgressStatus(data.status);
+        if (data.seat) setSeatInfo(String(data.seat)); // Store seat info as a string
       } catch (error) {
         console.error("Error fetching progress:", error);
       } finally {
@@ -209,6 +211,10 @@ const StudentDashboard = () => {
     }
   };
 
+  // Parse room and seat from seatInfo
+  const room = seatInfo && seatInfo.length >= 2 ? seatInfo.substring(0, 2) : '?';
+  const seat = seatInfo && seatInfo.length >= 4 ? seatInfo.substring(2, 4) : '?';
+
   return (
     <StudentLayout>
       {(userName) => (
@@ -225,14 +231,46 @@ const StudentDashboard = () => {
           <div className="p-4 max-w-2xl mx-auto">
 
             {/* Progress Bar Section */}
-            {isProgressLoading ? (
-              <div className="bg-slate-900 rounded-2xl p-6 text-center my-6">
-                <p className="text-white font-semibold animate-pulse">Loading Mock Exam Progress...</p>
-              </div>
-            ) : (
-              <ProgressBar status={progressStatus} loading={isProgressLoading} />
-            )}
+            <ProgressBar status={progressStatus} loading={isProgressLoading} />
             
+            {/* New Room and Seat Widgets - Only show after loading is complete */}
+            {!isProgressLoading && (
+              <div className="grid grid-cols-2 gap-2 mb-6 mt-6">
+                {/* Room Widget */}
+                <div className="relative h-32">
+                  <Image
+                    src="/door.png"
+                    alt="Room"
+                    width={80}
+                    height={80}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 -ml-5"
+                  />
+                  <div className="relative bg-slate-900 rounded-2xl h-full ml-6 px-3 py-1 flex flex-col justify-between items-end">
+                    <span className="font-semibold text-white">Room</span>
+                    <span className={`text-5xl font-bold text-white ${progressStatus === 'No Registered' ? 'animate-bounce-subtle' : ''}`}>
+                      {progressStatus === 'No Registered' ? '?' : room}
+                    </span>
+                  </div>
+                </div>
+                {/* Seat Widget */}
+                <div className="relative h-32">
+                  <Image
+                    src="/school-desk (2).png"
+                    alt="Seat"
+                    width={80}
+                    height={80}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10"
+                  />
+                  <div className="relative bg-slate-900 rounded-2xl h-full ml-6  px-3 py-1 flex flex-col justify-between items-end">
+                  <span className="font-semibold text-white">Seat</span>
+                    <span className={`text-5xl font-bold text-white ${progressStatus !== 'Paid Star' ? 'animate-bounce-subtle' : ''}`}>
+                      {progressStatus !== 'Paid Star' ? '?' : seat}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 2. Activity Feed */}
             <div className='mb-6'>
               <h2 className="text-xl font-bold mb-4">Activity</h2>
