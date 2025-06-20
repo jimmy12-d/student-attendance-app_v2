@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
+import ProgressBar from '../_components/ProgressBar';
 
 // Firebase and Data Handling
 import { db } from '../../../firebase-config';
@@ -38,10 +39,50 @@ const StudentDashboard = () => {
   // Get student info from Redux store
   const studentName = useAppSelector((state) => state.main.userName);
   const studentUid = useAppSelector((state) => state.main.userUid);
+  const studentDocId = useAppSelector((state) => state.main.studentDocId);
+
+  // State for progress bar
+  const [progressStatus, setProgressStatus] = useState("No Registered");
+  const [isProgressLoading, setIsProgressLoading] = useState(true);
 
   // State for student's recent activity
   const [recentRecords, setRecentRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Fetch progress status
+  useEffect(() => {
+    const fetchProgress = async () => {
+      setIsProgressLoading(true);
+      if (!studentDocId) {
+        setIsProgressLoading(false);
+        return;
+      }
+
+      const sheetApiUrl = process.env.NEXT_PUBLIC_SHEET_API_URL;
+      const secretKey = process.env.NEXT_PUBLIC_SHEET_SECRET;
+
+      if (!sheetApiUrl || !secretKey) {
+        console.error("Sheet API URL or Secret Key is not defined in environment variables.");
+        setIsProgressLoading(false);
+        return;
+      }
+
+      const fullUrl = `${sheetApiUrl}?student_id=${studentDocId}&secret=${secretKey}`;
+      
+      try {
+        const response = await fetch(fullUrl);
+        if (!response.ok) throw new Error("Failed to fetch progress");
+        const data = await response.json();
+        if (data.status) setProgressStatus(data.status);
+      } catch (error) {
+        console.error("Error fetching progress:", error);
+      } finally {
+        setIsProgressLoading(false);
+      }
+    };
+
+    fetchProgress();
+  }, [studentDocId]);
 
   // Fetch recent attendance records for the last 10 school days
   useEffect(() => {
@@ -182,6 +223,15 @@ const StudentDashboard = () => {
         
           {/* --- NEW UI Inspired by Cash App --- */}
           <div className="p-4 max-w-2xl mx-auto">
+
+            {/* Progress Bar Section */}
+            {isProgressLoading ? (
+              <div className="bg-slate-900 rounded-2xl p-6 text-center my-6">
+                <p className="text-white font-semibold animate-pulse">Loading Mock Exam Progress...</p>
+              </div>
+            ) : (
+              <ProgressBar status={progressStatus} loading={isProgressLoading} />
+            )}
             
             {/* 2. Activity Feed */}
             <div className='mb-6'>

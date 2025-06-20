@@ -94,9 +94,14 @@ export default function StudentLayout({ children }: Props) {
       <nav className="bg-gray-50 dark:bg-slate-900 shadow-md">
         <div className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-2">
           <div className="flex items-center justify-between h-20">
-            <div className="flex items-center space-x-3">
-              <span className="text-xl font-bold dark:text-white">Student Portal, {userName}</span>
-              <Image src="/rodwell_logo.png" alt="Rodwell Logo" width={60} height={60} />
+            <div className="flex items-center flex-1 min-w-0">
+              <Image src="/rodwell_logo.png" alt="Rodwell Logo" width={60} height={60} className="mr-4" />
+              <div className="flex flex-col justify-center">
+                <span className="text-xl font-bold dark:text-white truncate">Student Portal</span>
+                {userName && (
+                  <span className="text-base text-gray-700 dark:text-gray-300 truncate">{userName}</span>
+                )}
+              </div>
             </div>
             <div>
               <Button color="danger" label="Logout" onClick={handleLogout} outline />
