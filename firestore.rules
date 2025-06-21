@@ -28,6 +28,16 @@ service cloud.firestore {
                       request.resource.data.authUid == request.auth.uid);
     }
 
+    match /classes/{classId} {
+      // Allow any authenticated user to read class information.
+      allow read: if request.auth != null;
+    }
+
+    match /examSettings/{settingId} {
+      // Allow any authenticated user to read exam settings.
+      allow read: if request.auth != null;
+    }
+
     match /attendance/{attendanceId} {
       // Only admins can create or update attendance records.
       allow create, update: if isAuthorizedUser();

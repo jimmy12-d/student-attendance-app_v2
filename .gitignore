@@ -35,3 +35,5 @@ yarn-error.log*
 /node_modules
 /functions/node_modules
 functions/sheet_key.json
+
+firestore-upload/

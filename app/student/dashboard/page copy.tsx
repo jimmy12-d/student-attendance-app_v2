@@ -1,17 +1,14 @@
 // app/student/dashboard/page.tsx
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import ProgressBar from '../_components/ProgressBar';
-import ExamTabs from '../_components/ExamTabs';
-import CircularProgress from '../_components/CircularProgress';
-import ScoreCard from '../_components/ScoreCard';
 
 // Firebase and Data Handling
 import { db } from '../../../firebase-config';
-import { collection, query, where, onSnapshot, getDocs, orderBy, limit, Timestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay } from '../../dashboard/_lib/attendanceLogic';
 import { Student, PermissionRecord } from '../../_interfaces';
@@ -25,10 +22,6 @@ import Icon from '../../_components/Icon';
 import CardBoxModal from '../../_components/CardBox/Modal';
 import { PermissionRequestForm } from './_components/PermissionRequestForm';
 import StudentQRCode from '../_components/StudentQRCode';
-
-// Define types for our data
-type ExamSettings = { [subject: string]: { maxScore: number } };
-type ExamScores = { [subject: string]: number };
 
 // Dynamically import StudentLayout
 const StudentLayout = dynamic(
@@ -56,13 +49,6 @@ const StudentDashboard = () => {
   // State for student's recent activity
   const [recentRecords, setRecentRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // State for the mock exam results
-  const TABS = useMemo(() => ["mock1", "mock2"], []);
-  const [selectedTab, setSelectedTab] = useState(TABS[0]);
-  const [examSettings, setExamSettings] = useState<ExamSettings>({});
-  const [examScores, setExamScores] = useState<ExamScores>({});
-  const [isExamLoading, setIsExamLoading] = useState(true);
 
   // Fetch progress status and seat info
   useEffect(() => {
@@ -193,82 +179,6 @@ const StudentDashboard = () => {
     };
   }, [studentUid]);
 
-  // Fetch Mock 1/2 results and settings
-  useEffect(() => {
-    if (!studentDocId) return;
-
-    const fetchExamData = async () => {
-      setIsExamLoading(true);
-
-      try {
-        // 1. Get student's class to determine their type (e.g., "Grade 12 Science")
-        const studentRef = doc(db, 'students', studentDocId);
-        const studentSnap = await getDoc(studentRef);
-        if (!studentSnap.exists()) throw new Error("Student document not found");
-        const studentData = studentSnap.data();
-        const studentClass = studentData.class;
-
-        // Find the class document by its name, not by ID
-        const classQuery = query(collection(db, 'classes'), where('name', '==', studentClass), limit(1));
-        const classQuerySnapshot = await getDocs(classQuery);
-
-        if (classQuerySnapshot.empty) {
-          // Add a more informative error message
-          console.error(`Class document not found for name: "${studentClass}"`);
-          throw new Error("Class document not found");
-        }
-        
-        const classSnap = classQuerySnapshot.docs[0];
-        const studentClassType = classSnap.data().type;
-        
-        // 2. Fetch the grading rules (max scores) for that class type and mock
-        const settingsQuery = query(
-          collection(db, "examSettings"),
-          where("type", "==", studentClassType),
-          where("mock", "==", selectedTab)
-        );
-        const settingsSnapshot = await getDocs(settingsQuery);
-        const fetchedSettings: ExamSettings = {};
-        settingsSnapshot.forEach(doc => {
-          const data = doc.data();
-          fetchedSettings[data.subject] = { maxScore: data.maxScore };
-        });
-        setExamSettings(fetchedSettings);
-        
-        // --- TEMPORARY DEBUGGING ---
-        console.log("[Debug] Settings from Firestore:", fetchedSettings);
-
-        // 3. Fetch the student's scores from Google Sheets
-        const sheetApiUrl = process.env.NEXT_PUBLIC_SHEET_API_URL;
-        const secretKey = process.env.NEXT_PUBLIC_SHEET_SECRET;
-        const scoresUrl = `${sheetApiUrl}?student_id=${studentDocId}&secret=${secretKey}&exam_name=${selectedTab}`;
-        const scoresResponse = await fetch(scoresUrl);
-        const scoresData = await scoresResponse.json();
-        
-        // --- TEMPORARY DEBUGGING ---
-        console.log("[Debug] Scores object from Google Sheet:", scoresData);
-
-        // Treat empty/null scores as 0
-        const processedScores: ExamScores = {};
-        if (scoresData.scores) {
-          Object.keys(fetchedSettings).forEach(subject => {
-            processedScores[subject] = Number(scoresData.scores[subject]) || 0;
-          });
-        }
-        setExamScores(processedScores);
-
-      } catch (error) {
-        console.error(`Error fetching data for ${selectedTab}:`, error);
-        setExamSettings({});
-        setExamScores({});
-      } finally {
-        setIsExamLoading(false);
-      }
-    };
-
-    fetchExamData();
-  }, [studentDocId, selectedTab]);
-
   const handlePermissionSuccess = () => {
     setIsPermissionModalActive(false);
   };
@@ -300,35 +210,6 @@ const StudentDashboard = () => {
         return { badge: 'bg-gray-100 text-gray-800', icon: 'bg-gray-500' };
     }
   };
-
-  // Helper function to calculate grade
-  const calculateGrade = (score: number, maxScore: number): string => {
-    if (maxScore === 0) return 'N/A';
-    const percentage = score / maxScore;
-    if (percentage >= 0.9) return 'A';
-    if (percentage >= 0.8) return 'B';
-    if (percentage >= 0.7) return 'C';
-    if (percentage >= 0.6) return 'D';
-    if (percentage >= 0.5) return 'E';
-    return 'F';
-  };
-
-  // Calculate totals and grades using useMemo for performance
-  const examResults = useMemo(() => {
-    const subjects = Object.keys(examSettings);
-    let totalScore = 0;
-    let totalMaxScore = 0;
-
-    subjects.forEach(subject => {
-      totalScore += examScores[subject] || 0;
-      totalMaxScore += examSettings[subject].maxScore || 0;
-    });
-    
-    const totalPercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
-    const totalGrade = calculateGrade(totalScore, totalMaxScore);
-
-    return { subjects, totalScore, totalMaxScore, totalPercentage, totalGrade };
-  }, [examSettings, examScores]);
 
   // Parse room and seat from seatInfo
   const room = seatInfo && seatInfo.length >= 2 ? seatInfo.substring(0, 2) : '?';
@@ -390,42 +271,64 @@ const StudentDashboard = () => {
               </div>
             )}
 
-            <hr className="my-8 border-slate-800" />
+            {/* For Future Dev */}
+            {/* 2. Activity Feed */}
+            {/* <div className='mb-6'>
+              <h2 className="text-xl font-bold mb-4">Activity</h2>
+              {loading ? <p className="text-center text-gray-500">Loading activity...</p> : (
+                <div className="bg-slate-900 rounded-2xl p-2">
+                  <div className="max-h-[240px] overflow-y-auto pr-1">
+                    {recentRecords.length > 0 ? recentRecords.map(record => {
+                      const styles = getStatusStyles(record.status);
+                      const statusText = record.status.charAt(0).toUpperCase() + record.status.slice(1);
+                      const dateOnRight = record.status === 'absent' || record.status === 'permission'
+                        ? formatDate(new Date(record.date.replace(/-/g, '\/')))
+                        : formatDate(record.timestamp);
 
-            {/* Mock 1 & 2 Results Section */}
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Previous Mock Exams</h2>
-              <ExamTabs tabs={TABS} selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
+                      let timeText: React.ReactNode = null;
+                      if (record.status === 'present' || record.status === 'late') {
+                        timeText = <p className="text-sm text-gray-400 mt-1">{formatTime(record.timestamp)}</p>;
+                      }
 
-              {isExamLoading ? (
-                <div className="text-center text-gray-400 p-8">Loading scores...</div>
-              ) : (
-                <div className="space-y-6">
-                  {Object.keys(examSettings).length > 0 ? (
-                    <>
-                      <CircularProgress
-                        percentage={examResults.totalPercentage}
-                        totalScore={examResults.totalScore}
-                        grade={examResults.totalGrade}
-                      />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {examResults.subjects.map(subject => (
-                          <ScoreCard
-                            key={subject}
-                            subject={subject}
-                            score={examScores[subject] || 0}
-                            maxScore={examSettings[subject].maxScore}
-                            grade={calculateGrade(examScores[subject] || 0, examSettings[subject].maxScore)}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center text-gray-400 p-8">No results found for this exam.</div>
-                  )}
+                      return (
+                        <div key={record.id} className="flex items-start justify-between p-3 hover:bg-slate-700 rounded-lg transition-colors">
+                          <div>
+                            <span className={`px-2 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${styles.badge}`}>
+                              {statusText}
+                            </span>
+                            {timeText}
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">{dateOnRight}</p>
+                          </div>
+                        </div>
+                      )
+                    }) : <p className="text-center text-gray-500 p-6">No recent activity.</p>}
+                  </div>
                 </div>
               )}
-            </div>
+            </div> */}
+            {/* 3. Primary Action Buttons */}
+            {/* <div className="grid grid-cols-2 gap-6 mb-10">
+              <button onClick={() => setIsPermissionModalActive(true)} className="relative bg-slate-900 p-4 rounded-2xl text-left hover:bg-slate-700 transition-colors h-40 flex flex-col justify-between">
+                <div>
+                  <Icon path={mdiChevronRight} size={24} className="absolute top-4 right-4 text-gray-500" />
+                  <span className="font-semibold text-lg">Permission Form</span>
+                </div>
+                <div className="flex justify-center mt-1">
+                  <Image src="/add-document.png" alt="Request Absence" width={100} height={100} />
+                </div>
+              </button>
+              <button onClick={() => setIsQrModalActive(true)} className="relative bg-slate-900 p-4 rounded-2xl text-left hover:bg-slate-700 transition-colors h-40 flex flex-col justify-between">
+                <div>
+                  <Icon path={mdiChevronRight} size={24} className="absolute top-4 right-4 text-gray-500" />
+                  <span className="font-semibold text-lg">Generate QR</span>
+                </div>
+                <div className="flex justify-center mt-1">
+                  <Image src="/qr-code.png" alt="Scan QR" width={100} height={100} />
+                </div>
+              </button>
+            </div> */}
 
           </div>
         </>

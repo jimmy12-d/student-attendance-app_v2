@@ -15,7 +15,7 @@ const statusConfig = {
   },
   "Paid Star": {
     percent: 100,
-    message: "Payment Confirmed! You're all set.",
+    message: "Star has been Paid! Good Luck on the Exam.",
     color: "text-green-500",
     bar: "bg-green-500",
   },
