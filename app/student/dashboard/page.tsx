@@ -63,6 +63,7 @@ const StudentDashboard = () => {
   const [examSettings, setExamSettings] = useState<ExamSettings>({});
   const [examScores, setExamScores] = useState<ExamScores>({});
   const [isExamLoading, setIsExamLoading] = useState(true);
+  const [studentClassType, setStudentClassType] = useState<string | null>(null);
 
   // Fetch progress status and seat info
   useEffect(() => {
@@ -213,18 +214,18 @@ const StudentDashboard = () => {
         const classQuerySnapshot = await getDocs(classQuery);
 
         if (classQuerySnapshot.empty) {
-          // Add a more informative error message
           console.error(`Class document not found for name: "${studentClass}"`);
           throw new Error("Class document not found");
         }
         
         const classSnap = classQuerySnapshot.docs[0];
-        const studentClassType = classSnap.data().type;
+        const fetchedClassType = classSnap.data().type;
+        setStudentClassType(fetchedClassType);
         
         // 2. Fetch the grading rules (max scores) for that class type and mock
         const settingsQuery = query(
           collection(db, "examSettings"),
-          where("type", "==", studentClassType),
+          where("type", "==", fetchedClassType),
           where("mock", "==", selectedTab)
         );
         const settingsSnapshot = await getDocs(settingsQuery);
@@ -313,15 +314,28 @@ const StudentDashboard = () => {
     return 'F';
   };
 
+  // Define the canonical subject order and relabeling maps
+  const SUBJECT_ORDER = useMemo(() => ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'english'], []);
+  const SOCIAL_STUDIES_LABELS: { [key: string]: string } = useMemo(() => ({
+    math: 'Khmer',
+    khmer: 'Math',
+    chemistry: 'History',
+    physics: 'Moral',
+    biology: 'Geometry',
+    history: 'Earth',
+    english: 'English',
+  }), []);
+
   // Calculate totals and grades using useMemo for performance
   const examResults = useMemo(() => {
+    // Base the calculation on all subjects available for the student's class type.
     const subjects = Object.keys(examSettings);
     let totalScore = 0;
     let totalMaxScore = 0;
 
     subjects.forEach(subject => {
-      totalScore += examScores[subject] || 0;
-      totalMaxScore += examSettings[subject].maxScore || 0;
+      totalScore += examScores[subject] || 0; // Add student's score, or 0 if not present.
+      totalMaxScore += examSettings[subject]?.maxScore || 0;
     });
     
     const totalPercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
@@ -331,8 +345,12 @@ const StudentDashboard = () => {
   }, [examSettings, examScores]);
 
   // Parse room and seat from seatInfo
-  const room = seatInfo && seatInfo.length >= 2 ? seatInfo.substring(0, 2) : '?';
-  const seat = seatInfo && seatInfo.length >= 4 ? seatInfo.substring(2, 4) : '?';
+  const { room, seat } = useMemo(() => {
+    if (!seatInfo) return { room: null, seat: null };
+    const room = seatInfo.length >= 2 ? seatInfo.substring(0, 2) : '?';
+    const seat = seatInfo.length >= 4 ? seatInfo.substring(2, 4) : '?';
+    return { room, seat };
+  }, [seatInfo]);
 
   return (
     <StudentLayout>
@@ -403,21 +421,38 @@ const StudentDashboard = () => {
                 <div className="space-y-6">
                   {Object.keys(examSettings).length > 0 ? (
                     <>
-                      <CircularProgress
-                        percentage={examResults.totalPercentage}
-                        totalScore={examResults.totalScore}
-                        grade={examResults.totalGrade}
-                      />
+                      <div className="flex flex-col items-center p-6 bg-slate-900 rounded-2xl">
+                        <div className="relative">
+                          <CircularProgress percentage={examResults.totalPercentage} />
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-4xl font-bold text-white">{examResults.totalScore}</span>
+                            <span className="text-lg text-gray-400">Total Score</span>
+                          </div>
+                        </div>
+                        <div className="mt-4 text-center">
+                          <span className="text-2xl font-bold text-purple-400">Grade: {examResults.totalGrade}</span>
+                        </div>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {examResults.subjects.map(subject => (
-                          <ScoreCard
-                            key={subject}
-                            subject={subject}
-                            score={examScores[subject] || 0}
-                            maxScore={examSettings[subject].maxScore}
-                            grade={calculateGrade(examScores[subject] || 0, examSettings[subject].maxScore)}
-                          />
-                        ))}
+                        {SUBJECT_ORDER.map(subjectKey => {
+                          // Only render if a score exists for this subject in the ordered list
+                          if (examScores.hasOwnProperty(subjectKey)) {
+                            const displayLabel = studentClassType === 'Grade 12 Social'
+                              ? SOCIAL_STUDIES_LABELS[subjectKey] || subjectKey
+                              : subjectKey;
+
+                            return (
+                              <ScoreCard
+                                key={subjectKey}
+                                subject={displayLabel}
+                                score={examScores[subjectKey]}
+                                maxScore={examSettings[subjectKey]?.maxScore || 0}
+                                grade={calculateGrade(examScores[subjectKey], examSettings[subjectKey]?.maxScore || 0)}
+                              />
+                            );
+                          }
+                          return null;
+                        })}
                       </div>
                     </>
                   ) : (

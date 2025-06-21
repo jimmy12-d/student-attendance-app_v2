@@ -9,6 +9,15 @@ type Props = {
 };
 
 const ExamTabs = ({ tabs, selectedTab, setSelectedTab }: Props) => {
+  const formatTabName = (name: string) => {
+    if (name && name.startsWith('mock')) {
+      const number = name.substring(4);
+      return `Mock ${number}`;
+    }
+    // Fallback for any other tab names
+    return name ? name.charAt(0).toUpperCase() + name.slice(1) : '';
+  };
+
   return (
     <div className="mb-6 border-b-2 border-slate-700">
       <nav className="-mb-0.5 flex space-x-6">
@@ -24,7 +33,7 @@ const ExamTabs = ({ tabs, selectedTab, setSelectedTab }: Props) => {
               }
             `}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {formatTabName(tab)}
           </button>
         ))}
       </nav>

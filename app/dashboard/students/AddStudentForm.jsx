@@ -78,12 +78,14 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
         } else {
           querySnapshot.forEach(doc => {
             const data = doc.data();
-            // Assuming doc.id is the class name like "10A" and data includes 'name' and 'shifts'
-            fetchedClassConfigs[doc.id] = { name: data.name, shifts: data.shifts || {} };
-            dropdownOpts.push({
-              value: doc.id, // Use doc.id (class name) as value
-              label: data.name || doc.id, // Use data.name or doc.id as label
-            });
+            if (data.name) { // Ensure the class has a name
+              // Use the full name (e.g., "Class 12A") as the key and value
+              fetchedClassConfigs[data.name] = { name: data.name, shifts: data.shifts || {} };
+              dropdownOpts.push({
+                value: data.name, // Use the full name as the value
+                label: data.name, // Use the full name as the label
+              });
+            }
           });
         }
         setAllClassData(fetchedClassConfigs);
@@ -119,41 +121,24 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
       }));
       setDynamicShiftOptions(newShiftOptions);
 
-      // Determine the target shift
-      let targetShift = ''; // Default to empty
-
-      if (isEditMode && initialData && initialData.class === studentClass) {
-        // We are in edit mode, and the current studentClass is the one from initialData.
-        // Prioritize initialData.shift if it's valid for this class.
-        if (shiftKeys.includes(initialData.shift)) {
-          targetShift = initialData.shift;
-        } else if (shiftKeys.length === 1) {
-          // If initialData.shift is not valid (e.g., data inconsistency) but there's only one option, use it.
-          targetShift = shiftKeys[0];
-        }
-        // If initialData.shift is not valid and there are multiple options, targetShift remains '' (user must select)
-      } else {
-        // This is for 'add' mode or when class has been changed by the user in 'edit' mode.
-        if (shiftKeys.length === 1) {
-          targetShift = shiftKeys[0]; // Auto-select if only one option
-        } else if (shiftKeys.includes(shift)) {
-          // If current shift state is valid for the newly selected class, keep it.
-          targetShift = shift;
-        }
-        // Otherwise, targetShift remains '', prompting user selection.
+      // If we are in edit mode and the class hasn't been changed by the user yet
+      if (isEditMode && initialData?.class === studentClass && shiftKeys.includes(initialData.shift)) {
+        setShift(initialData.shift);
       }
-      
-      // Only update shift state if it's different, to avoid unnecessary re-renders/loops
-      if (shift !== targetShift) {
-        setShift(targetShift);
+      // If there's only one possible shift for the selected class, auto-select it.
+      else if (shiftKeys.length === 1) {
+        setShift(shiftKeys[0]);
       }
-
+      // If the currently selected shift is not valid for the new class, reset it.
+      else if (!shiftKeys.includes(shift)) {
+        setShift('');
+      }
     } else {
-      // Selected class has no shifts defined in allClassData
+      // Selected class has no shifts defined or data is not ready
       setDynamicShiftOptions([]);
       setShift('');
     }
-  }, [studentClass, allClassData]);
+  }, [studentClass, allClassData, isEditMode, initialData, loadingClasses]);
 
   const filteredClassOptions = useMemo(() => {
     if (!classSearchTerm.trim()) {
@@ -170,7 +155,7 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
     setError(null);
 
     if (!fullName || !studentClass || !shift) {
-      setError("Full Name, Class, Phone, and Shift are required.");
+      setError("Full Name, Class, and Shift are required.");
       setLoading(false);
       return;
     }
@@ -179,7 +164,7 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
       const studentData = {
         fullName,
         phone,
-        class: studentClass,
+        class: studentClass, // studentClass is now always the full name, e.g., "Class 12A"
         shift,
       };
 

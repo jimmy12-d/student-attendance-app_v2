@@ -1,15 +1,11 @@
 // app/dashboard/students/TableStudents.tsx
 "use client";
 
-import { mdiQrcode, mdiPencil, mdiTrashCan, mdiDownload } from "@mdi/js";
-import React, { useState, useRef } from "react";
+import { mdiPencil, mdiTrashCan } from "@mdi/js";
+import React from "react";
 import { Student } from "../../_interfaces";
 import Button from "../../_components/Button";
 import Buttons from "../../_components/Buttons";
-import CardBoxModal from "../../_components/CardBox/Modal";
-import StudentQRCode from "../../student/_components/StudentQRCode";
-
-import { toPng } from 'html-to-image';
 
 type Props = {
   students: Student[];
@@ -17,51 +13,79 @@ type Props = {
   onDelete: (student: Student) => void;
 };
 
-const TableStudents = ({ students, onEdit, onDelete }: Props) => {
-  const perPage = 5;
-  const [currentPage, setCurrentPage] = useState(0);
+// Phone formatting utility
+const formatPhoneNumber = (phone: string | undefined | null): string => {
+  if (!phone) return 'N/A';
+  const cleaned = ('' + phone).replace(/\D/g, '');
 
-  // **** MOVE THESE CALCULATIONS INSIDE THE COMPONENT ****
-  const studentsPaginated = students.slice(
-    perPage * currentPage,
-    perPage * (currentPage + 1)
+  let digits = cleaned;
+  // Standardize to 10 digits if it's a 9-digit number missing the leading 0
+  if (digits.length === 9 && !digits.startsWith('0')) {
+    digits = '0' + digits;
+  }
+  
+  // Format 10-digit numbers (0XX-XXX-XXXX)
+  if (digits.length === 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  }
+
+  // Format 9-digit numbers (0XX-XXX-XXX)
+  if (digits.length === 9) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}`;
+  }
+  
+  return phone; // Return original if it doesn't match formats
+};
+
+const TableStudents = ({ students, onEdit, onDelete }: Props) => {
+  // Filter out students who are missing a class property to prevent 'undefined' groups
+  const validStudents = students.filter(student => student.class);
+
+  // 1. Group students by class, then by shift
+  const groupedStudents = validStudents.reduce((acc, student) => {
+    const { class: studentClass, shift } = student;
+    if (!acc[studentClass]) {
+      acc[studentClass] = { Morning: [], Afternoon: [] };
+    }
+    // Ensure shift is either 'Morning' or 'Afternoon' to avoid adding to wrong keys
+    if (shift === 'Morning' || shift === 'Afternoon') {
+      acc[studentClass][shift].push(student);
+    }
+    return acc;
+  }, {} as Record<string, { Morning: Student[]; Afternoon: Student[] }>);
+
+  // Sort students by fullName within each class and shift
+  for (const classGroup of Object.values(groupedStudents)) {
+    classGroup.Morning.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    classGroup.Afternoon.sort((a, b) => a.fullName.localeCompare(b.fullName));
+  }
+
+  // 2. Get a sorted list of unique class names
+  const sortedClasses = Object.keys(groupedStudents).sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
   );
 
-  const numPages = Math.ceil(students.length / perPage);
-  const pagesList: number[] = [];
-  for (let i = 0; i < numPages; i++) {
-    pagesList.push(i);
-  }
-  // ******************************************************
-
-  const [isQrModalActive, setIsQrModalActive] = useState(false);
-  const [selectedStudentForQr, setSelectedStudentForQr] = useState<Student | null>(null);
-  const offscreenQrContainerRef = useRef<HTMLDivElement>(null);
-  const [studentToDownload, setStudentToDownload] = useState<Student | null>(null);
-
-
-  return (
-    <>
-
-      <div className="overflow-x-auto">
-        <table>
+  // Helper component for rendering a table for a specific class/shift
+  const ClassTable = ({ studentList }: { studentList: Student[] }) => (
+    studentList.length > 0 ? (
+      <div>
+        <table className="w-full">
           <thead>
-            <tr>
-              <th>Name</th>
-              <th>Class</th>
-              <th className="w-32">Shift</th>
-              <th>Actions</th>
+            <tr className="bg-gray-100 dark:bg-slate-700">
+              <th className="p-2 text-left w-12">Nº</th>
+              <th className="p-2 text-left">Name</th>
+              <th className="p-2 text-left">Phone</th>
+              <th className="p-2 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {/* Ensure studentsPaginated is used here */}
-            {studentsPaginated.map((student: Student) => (
-              <tr key={student.id}>
-                <td data-label="Name">{student.fullName}</td>
-                <td data-label="Class">{student.class}</td>
-                <td data-label="Shift" className="w-32">{student.shift}</td>
-                <td className="before:hidden lg:w-1 whitespace-nowrap">
-                  <Buttons type="justify-start lg:justify-end" noWrap>
+            {studentList.map((student, index) => (
+              <tr key={student.id} className="border-b border-gray-100 dark:border-slate-800">
+                <td className="p-2 text-center">{index + 1}</td>
+                <td data-label="Name" className="p-2">{student.fullName}</td>
+                <td data-label="Phone" className="p-2">{formatPhoneNumber(student.phone)}</td>
+                <td className="p-2 before:hidden whitespace-nowrap text-right">
+                  <Buttons type="justify-end" noWrap>
                     <Button color="success" icon={mdiPencil} onClick={() => onEdit(student)} small isGrouped />
                     <Button color="danger" icon={mdiTrashCan} onClick={() => onDelete(student)} small isGrouped />
                   </Buttons>
@@ -71,30 +95,44 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
           </tbody>
         </table>
       </div>
-      {/* Pagination */}
-      <div className="p-3 lg:px-6 border-t border-gray-100 dark:border-slate-800">
-        <div className="flex flex-col md:flex-row items-center justify-between py-3 md:py-0">
-          <Buttons>
-            {/* Ensure pagesList is used here */}
-            {pagesList.map((page) => (
-              <Button
-                key={page}
-                active={page === currentPage}
-                label={(page + 1).toString()}
-                color={page === currentPage ? "lightDark" : "whiteDark"}
-                small
-                onClick={() => setCurrentPage(page)}
-                isGrouped
-              />
-            ))}
-          </Buttons>
-          {/* Ensure numPages is used here */}
-          <small className="mt-6 md:mt-0">
-            Page {currentPage + 1} of {numPages} (Total: {students.length} students)
-          </small>
-        </div>
+    ) : (
+      <div className="text-center text-gray-500 dark:text-gray-400 py-4 h-full flex items-center justify-center">No students</div>
+    )
+  );
+
+  return (
+    <div className="space-y-6 bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+      {/* Titles */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-8">
+        <h2 className="text-2xl font-bold text-center">Morning Shift</h2>
+        <h2 className="text-2xl font-bold text-center">Afternoon Shift</h2>
       </div>
-    </>
+
+      <hr className="border-slate-200 dark:border-slate-800" />
+
+      {/* Class Rows */}
+      {sortedClasses.map((className) => (
+        <div key={className} className="grid grid-cols-1 lg:grid-cols-2 lg:gap-8 items-stretch">
+          
+          {/* Morning Card */}
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-4 flex flex-col">
+            <h3 className="font-bold text-lg mb-3 text-center">{className}</h3>
+            <div className="flex-grow">
+              <ClassTable studentList={groupedStudents[className].Morning} />
+            </div>
+          </div>
+
+          {/* Afternoon Card */}
+          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-4 flex flex-col">
+            <h3 className="font-bold text-lg mb-3 text-center">{className}</h3>
+            <div className="flex-grow">
+              <ClassTable studentList={groupedStudents[className].Afternoon} />
+            </div>
+          </div>
+
+        </div>
+      ))}
+    </div>
   );
 };
 
