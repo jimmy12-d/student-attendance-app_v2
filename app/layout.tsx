@@ -4,6 +4,7 @@ import "../css/main.css";
 import StoreProvider from "./_stores/StoreProvider";
 import Script from "next/script";
 import DarkModeInit from "./_components/DarkModeInit";
+import { useAppSelector } from './_stores/hooks'
 
 const title = `Rodwell Attendance`;
 
@@ -19,9 +20,9 @@ const imageWidth = "1920";
 const imageHeight = "960";
 
 export const metadata: Metadata = {
-  title,
-  description,
-  icons: "/admin-one-react-tailwind/favicon.png",
+  title: 'Rodwell College Student Portal',
+  description: 'Student portal for Rodwell College',
+  icons: "/favicon.png",
   twitter: {
     card: "summary_large_image",
     title,
