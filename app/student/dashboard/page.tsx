@@ -97,19 +97,19 @@ const StudentDashboard = () => {
         return;
       }
 
-      const sheetApiUrl = process.env.NEXT_PUBLIC_SHEET_API_URL;
       const secretKey = process.env.NEXT_PUBLIC_SHEET_SECRET;
 
-      if (!sheetApiUrl || !secretKey) {
-        console.error("Sheet API URL or Secret Key is not defined in environment variables.");
+      if (!secretKey) {
+        console.error("Secret Key is not defined in environment variables.");
         setIsProgressLoading(false);
         return;
       }
 
-      const fullUrl = `${sheetApiUrl}?student_id=${studentDocId}&secret=${secretKey}`;
+      // Use our new API route instead of calling Google Apps Script directly
+      const apiUrl = `/api/sheet-data?student_id=${studentDocId}&secret=${secretKey}`;
       
       try {
-        const response = await fetch(fullUrl);
+        const response = await fetch(apiUrl);
         if (!response.ok) throw new Error("Failed to fetch progress");
         const data = await response.json();
         if (data.status) setProgressStatus(data.status);
@@ -261,11 +261,9 @@ const StudentDashboard = () => {
         });
         setExamSettings(fetchedSettings);
 
-
-        // 3. Fetch the student's scores from Google Sheets
-        const sheetApiUrl = process.env.NEXT_PUBLIC_SHEET_API_URL;
+        // 3. Fetch the student's scores using our new API route
         const secretKey = process.env.NEXT_PUBLIC_SHEET_SECRET;
-        const scoresUrl = `${sheetApiUrl}?student_id=${studentDocId}&secret=${secretKey}&exam_name=${selectedTab}`;
+        const scoresUrl = `/api/sheet-data?student_id=${studentDocId}&secret=${secretKey}&exam_name=${selectedTab}`;
         const scoresResponse = await fetch(scoresUrl);
         const scoresData = await scoresResponse.json();
         
