@@ -38,6 +38,11 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
 
+    match /examControls/{controlId} {
+      // Only admins can read or change exam controls.
+      allow read, write: if isAuthorizedUser();
+    }
+
     match /attendance/{attendanceId} {
       // Only admins can create or update attendance records.
       allow create, update: if isAuthorizedUser();

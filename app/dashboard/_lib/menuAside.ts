@@ -44,6 +44,11 @@ const menuAside: MenuAsideItem[] = [
     label: "Late Permission",
     icon: mdiAccountClockOutline, // Choose an appropriate icon
   },
+  {
+    href: "/dashboard/mock-exams", // Path to your new page
+    label: "Mock Control",
+    icon: mdiAccountClockOutline, // Choose an appropriate icon
+  },
 
 ];
 

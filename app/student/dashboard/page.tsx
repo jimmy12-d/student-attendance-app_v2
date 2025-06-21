@@ -25,6 +25,7 @@ import Icon from '../../_components/Icon';
 import CardBoxModal from '../../_components/CardBox/Modal';
 import { PermissionRequestForm } from './_components/PermissionRequestForm';
 import StudentQRCode from '../_components/StudentQRCode';
+import useCountUp from '../../_hooks/useCountUp';
 
 // Define types for our data
 type ExamSettings = { [subject: string]: { maxScore: number } };
@@ -42,6 +43,7 @@ const StudentLayout = dynamic(
 const StudentDashboard = () => {
   const [isQrModalActive, setIsQrModalActive] = useState(false);
   const [isPermissionModalActive, setIsPermissionModalActive] = useState(false);
+  const resultsRef = React.useRef<HTMLDivElement>(null);
 
   // Get student info from Redux store
   const studentName = useAppSelector((state) => state.main.userName);
@@ -58,12 +60,33 @@ const StudentDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   // State for the mock exam results
-  const TABS = useMemo(() => ["mock1", "mock2"], []);
-  const [selectedTab, setSelectedTab] = useState(TABS[0]);
+  const [availableTabs, setAvailableTabs] = useState(['mock1', 'mock2']);
+  const [selectedTab, setSelectedTab] = useState('mock1');
   const [examSettings, setExamSettings] = useState<ExamSettings>({});
   const [examScores, setExamScores] = useState<ExamScores>({});
   const [isExamLoading, setIsExamLoading] = useState(true);
   const [studentClassType, setStudentClassType] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check if Mock 3 results are published
+    const fetchExamControls = async () => {
+      const controlDocRef = doc(db, 'examControls', 'mock3');
+      const docSnap = await getDoc(controlDocRef);
+      if (docSnap.exists() && docSnap.data().isPublished) {
+        setAvailableTabs(['mock1', 'mock2', 'mock3']);
+      } else {
+        setAvailableTabs(['mock1', 'mock2']);
+      }
+    };
+    fetchExamControls();
+  }, []);
+
+  const handleTabChange = (tab: string) => {
+    // Only allow tab change if not currently loading
+    if (!isExamLoading) {
+      setSelectedTab(tab);
+    }
+  };
 
   // Fetch progress status and seat info
   useEffect(() => {
@@ -199,6 +222,8 @@ const StudentDashboard = () => {
     if (!studentDocId) return;
 
     const fetchExamData = async () => {
+      // Capture scroll position before loading
+      const scrollY = window.scrollY;
       setIsExamLoading(true);
 
       try {
@@ -235,9 +260,7 @@ const StudentDashboard = () => {
           fetchedSettings[data.subject] = { maxScore: data.maxScore };
         });
         setExamSettings(fetchedSettings);
-        
-        // --- TEMPORARY DEBUGGING ---
-        console.log("[Debug] Settings from Firestore:", fetchedSettings);
+
 
         // 3. Fetch the student's scores from Google Sheets
         const sheetApiUrl = process.env.NEXT_PUBLIC_SHEET_API_URL;
@@ -246,9 +269,6 @@ const StudentDashboard = () => {
         const scoresResponse = await fetch(scoresUrl);
         const scoresData = await scoresResponse.json();
         
-        // --- TEMPORARY DEBUGGING ---
-        console.log("[Debug] Scores object from Google Sheet:", scoresData);
-
         // Treat empty/null scores as 0
         const processedScores: ExamScores = {};
         if (scoresData.scores) {
@@ -264,11 +284,28 @@ const StudentDashboard = () => {
         setExamScores({});
       } finally {
         setIsExamLoading(false);
+        // Use a timeout to ensure the scroll position is restored AFTER the render cycle.
+        setTimeout(() => {
+          window.scrollTo(0, scrollY);
+        }, 0);
       }
     };
 
     fetchExamData();
   }, [studentDocId, selectedTab]);
+
+  // This effect ensures the user's scroll position is maintained after tab changes.
+  useEffect(() => {
+    if (!isExamLoading && resultsRef.current) {
+      // Get the top position of the results section
+      const topPos = resultsRef.current.getBoundingClientRect().top + window.scrollY;
+      
+      // If user has scrolled past the top of the results section, keep them there.
+      if (window.scrollY > topPos) {
+        resultsRef.current.scrollIntoView({ block: 'start', behavior: 'instant' });
+      }
+    }
+  }, [isExamLoading, selectedTab]);
 
   const handlePermissionSuccess = () => {
     setIsPermissionModalActive(false);
@@ -334,8 +371,20 @@ const StudentDashboard = () => {
     let totalMaxScore = 0;
 
     subjects.forEach(subject => {
-      totalScore += examScores[subject] || 0; // Add student's score, or 0 if not present.
-      totalMaxScore += examSettings[subject]?.maxScore || 0;
+      const score = examScores[subject] || 0;
+      
+      // English is an optional bonus subject
+      if (subject.toLowerCase() === 'english') {
+        // Only add points if the score is above 25
+        if (score > 25) {
+          totalScore += (score - 25);
+        }
+        // Do NOT add to totalMaxScore
+      } else {
+        // For all other subjects, add to both totals
+        totalScore += score;
+        totalMaxScore += examSettings[subject]?.maxScore || 0;
+      }
     });
     
     const totalPercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
@@ -343,6 +392,8 @@ const StudentDashboard = () => {
 
     return { subjects, totalScore, totalMaxScore, totalPercentage, totalGrade };
   }, [examSettings, examScores]);
+
+  const animatedTotalScore = useCountUp(examResults.totalScore, 3000, [selectedTab]);
 
   // Parse room and seat from seatInfo
   const { room, seat } = useMemo(() => {
@@ -392,7 +443,7 @@ const StudentDashboard = () => {
                 {/* Seat Widget */}
                 <div className="relative h-32">
                   <Image
-                    src="/school-desk (2).png"
+                    src="/school-desk.png"
                     alt="Seat"
                     width={80}
                     height={80}
@@ -408,60 +459,56 @@ const StudentDashboard = () => {
               </div>
             )}
 
-            <hr className="my-8 border-slate-800" />
+            <hr className="my-4 border-slate-800" />
 
             {/* Mock 1 & 2 Results Section */}
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Previous Mock Exams</h2>
-              <ExamTabs tabs={TABS} selectedTab={selectedTab} setSelectedTab={setSelectedTab} />
-
-              {isExamLoading ? (
-                <div className="text-center text-gray-400 p-8">Loading scores...</div>
-              ) : (
-                <div className="space-y-6">
-                  {Object.keys(examSettings).length > 0 ? (
-                    <>
-                      <div className="flex flex-col items-center p-6 bg-slate-900 rounded-2xl">
-                        <div className="relative">
-                          <CircularProgress percentage={examResults.totalPercentage} />
-                          <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-4xl font-bold text-white">{examResults.totalScore}</span>
-                            <span className="text-lg text-gray-400">Total Score</span>
-                          </div>
-                        </div>
-                        <div className="mt-4 text-center">
-                          <span className="text-2xl font-bold text-purple-400">Grade: {examResults.totalGrade}</span>
+            <h2 className="text-xl font-bold">Mock Exam Results</h2>
+            <ExamTabs tabs={availableTabs} selectedTab={selectedTab} setSelectedTab={handleTabChange} disabled={isExamLoading} />
+            {isExamLoading ? (
+              <div className="text-center text-gray-400 p-8">Loading scores...</div>
+            ) : (
+              <div className="space-y-6">
+                {Object.keys(examSettings).length > 0 ? (
+                  <>
+                    <div className="flex flex-col items-center p-6 bg-slate-900 rounded-2xl">
+                      <div className="relative">
+                        <CircularProgress percentage={examResults.totalPercentage} />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-4xl font-bold text-white">{animatedTotalScore}</span>
+                          <span className="text-lg text-gray-400">Total Score</span>
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {SUBJECT_ORDER.map(subjectKey => {
-                          // Only render if a score exists for this subject in the ordered list
-                          if (examScores.hasOwnProperty(subjectKey)) {
-                            const displayLabel = studentClassType === 'Grade 12 Social'
-                              ? SOCIAL_STUDIES_LABELS[subjectKey] || subjectKey
-                              : subjectKey;
-
-                            return (
-                              <ScoreCard
-                                key={subjectKey}
-                                subject={displayLabel}
-                                score={examScores[subjectKey]}
-                                maxScore={examSettings[subjectKey]?.maxScore || 0}
-                                grade={calculateGrade(examScores[subjectKey], examSettings[subjectKey]?.maxScore || 0)}
-                              />
-                            );
-                          }
-                          return null;
-                        })}
+                      <div className="mt-4 text-center">
+                        <span className="text-2xl font-bold text-purple-400">Grade: {examResults.totalGrade}</span>
                       </div>
-                    </>
-                  ) : (
-                    <div className="text-center text-gray-400 p-8">No results found for this exam.</div>
-                  )}
-                </div>
-              )}
-            </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {SUBJECT_ORDER.map(subjectKey => {
+                        // Only render if a score exists for this subject in the ordered list
+                        if (examScores.hasOwnProperty(subjectKey)) {
+                          const displayLabel = studentClassType === 'Grade 12 Social'
+                            ? SOCIAL_STUDIES_LABELS[subjectKey] || subjectKey
+                            : subjectKey;
 
+                          return (
+                            <ScoreCard
+                              key={subjectKey}
+                              subject={displayLabel}
+                              score={examScores[subjectKey]}
+                              maxScore={examSettings[subjectKey]?.maxScore || 0}
+                              grade={calculateGrade(examScores[subjectKey], examSettings[subjectKey]?.maxScore || 0)}
+                            />
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center text-gray-400 p-8">No results found for this exam.</div>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}

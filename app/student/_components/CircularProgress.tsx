@@ -1,18 +1,33 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 type Props = {
   percentage: number;
 };
 
 const CircularProgress = ({ percentage }: Props) => {
+  const [animatedPercentage, setAnimatedPercentage] = useState(0);
+
+  useEffect(() => {
+    // Reset animation immediately if percentage changes, to prepare for new animation
+    setAnimatedPercentage(0);
+
+    const timeoutId = setTimeout(() => {
+      setAnimatedPercentage(percentage);
+    }, 150); // A slightly longer delay to ensure a clean reset
+
+    // Cleanup function to cancel the timeout if the component re-renders
+    // or the 'percentage' dependency changes before the timeout completes.
+    return () => clearTimeout(timeoutId);
+  }, [percentage]);
+
   const radius = 50;
   const strokeWidth = 10;
   const normalizedRadius = radius - strokeWidth / 2;
   const circumference = normalizedRadius * 2 * Math.PI;
-  // Clamp percentage between 0 and 100 to prevent visual bugs
-  const clampedPercentage = Math.max(0, Math.min(100, percentage));
+  // Use the animated percentage for calculation
+  const clampedPercentage = Math.max(0, Math.min(100, animatedPercentage));
   const strokeDashoffset = circumference - (clampedPercentage / 100) * circumference;
 
   return (
@@ -38,7 +53,8 @@ const CircularProgress = ({ percentage }: Props) => {
           fill="transparent"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference + ' ' + circumference}
-          style={{ strokeDashoffset, transition: 'stroke-dashoffset 0.5s ease-out' }}
+          style={{ strokeDashoffset }}
+          className="transition-[stroke-dashoffset] duration-1000 ease-out"
           r={radius}
           cx="60"
           cy="60"

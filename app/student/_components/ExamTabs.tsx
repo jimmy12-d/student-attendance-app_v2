@@ -6,9 +6,10 @@ type Props = {
   tabs: string[];
   selectedTab: string;
   setSelectedTab: (tab: string) => void;
+  disabled?: boolean;
 };
 
-const ExamTabs = ({ tabs, selectedTab, setSelectedTab }: Props) => {
+const ExamTabs = ({ tabs, selectedTab, setSelectedTab, disabled = false }: Props) => {
   const formatTabName = (name: string) => {
     if (name && name.startsWith('mock')) {
       const number = name.substring(4);
@@ -25,12 +26,14 @@ const ExamTabs = ({ tabs, selectedTab, setSelectedTab }: Props) => {
           <button
             key={tab}
             onClick={() => setSelectedTab(tab)}
+            disabled={disabled}
             className={`py-4 px-1 inline-flex items-center gap-2 text-sm font-medium transition-all
               ${
                 selectedTab === tab
                   ? 'border-b-2 border-purple-500 text-purple-400'
                   : 'border-b-2 border-transparent text-gray-400 hover:text-purple-400'
               }
+              ${disabled ? 'cursor-not-allowed opacity-50' : ''}
             `}
           >
             {formatTabName(tab)}

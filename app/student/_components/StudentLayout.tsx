@@ -7,6 +7,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "../../../firebase-config";
 import { useRouter, usePathname } from "next/navigation";
 import Button from "../../_components/Button";
+import CardBoxModal from "../../_components/CardBox/Modal";
 import { collection, query, where, getDocs, DocumentData } from "firebase/firestore";
 import Image from "next/image";
 
@@ -20,6 +21,8 @@ export default function StudentLayout({ children }: Props) {
   const pathname = usePathname();
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [userName, setUserName] = useState<string | null>(null);
+  const [userClass, setUserClass] = useState<string | null>(null);
+  const [isLogoutModalActive, setIsLogoutModalActive] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -42,8 +45,10 @@ export default function StudentLayout({ children }: Props) {
             
             // Student is valid
             const fetchedUserName = studentData.fullName;
+            const fetchedUserClass = studentData.class;
             const studentDocId = studentDoc.id;
             setUserName(fetchedUserName);
+            setUserClass(fetchedUserClass);
             dispatch(
               setUser({
                 name: fetchedUserName,
@@ -79,6 +84,11 @@ export default function StudentLayout({ children }: Props) {
     await signOut(auth);
     dispatch(setUser(null));
     router.push('/login');
+    setIsLogoutModalActive(false);
+  };
+
+  const handleCancelLogout = () => {
+    setIsLogoutModalActive(false);
   };
 
   if (isAuthLoading) {
@@ -90,30 +100,48 @@ export default function StudentLayout({ children }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-800">
-      <nav className="bg-gray-50 dark:bg-slate-900 shadow-md">
-        <div className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-2">
-          <div className="flex items-center justify-between h-20">
-            <div className="flex items-center flex-1 min-w-0">
-              <Image src="/rodwell_logo.png" alt="Rodwell Logo" width={60} height={60} className="mr-4" />
-              <div className="flex flex-col justify-center">
-                <span className="text-xl font-bold dark:text-white truncate">Student Portal</span>
-                {userName && (
-                  <span className="text-base text-gray-700 dark:text-gray-300 truncate">{userName}</span>
-                )}
+    <>
+      <CardBoxModal
+        title="Confirm Logout"
+        buttonColor="danger"
+        buttonLabel="Confirm"
+        isActive={isLogoutModalActive}
+        onConfirm={handleLogout}
+        onCancel={handleCancelLogout}
+      >
+        <p>Are you sure you want to log out?</p>
+      </CardBoxModal>
+
+      <div className="min-h-screen bg-white dark:bg-slate-800">
+        <nav className="bg-gray-50 dark:bg-slate-900 shadow-md">
+          <div className="max-w-7xl mx-auto px-2 sm:px-2 lg:px-2">
+            <div className="flex items-center justify-between h-20">
+              <div className="flex items-center flex-1 min-w-0">
+                <Image src="/rodwell_logo.png" alt="Rodwell Logo" width={60} height={60} className="mr-4" />
+                <div className="flex flex-col justify-center">
+                  <span className="text-xl font-bold dark:text-white truncate">Student Portal</span>
+                  {userName && (
+                    <div className="flex flex-col">
+                      <span className="text-base text-gray-700 dark:text-gray-300 truncate">{userName}</span>
+                      {userClass && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{userClass}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <Button color="danger" label="Logout" onClick={() => setIsLogoutModalActive(true)} outline />
               </div>
             </div>
-            <div>
-              <Button color="danger" label="Logout" onClick={handleLogout} outline />
-            </div>
           </div>
-        </div>
-      </nav>
-      <main>
-        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          {children(userName)}
-        </div>
-      </main>
-    </div>
+        </nav>
+        <main>
+          <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            {children(userName)}
+          </div>
+        </main>
+      </div>
+    </>
   );
 } 
