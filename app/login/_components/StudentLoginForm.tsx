@@ -67,10 +67,8 @@ const StudentLoginForm = () => {
     return () => clearInterval(timer); // Cleanup the interval on component unmount
   }, [showOtpInput, countdown]);
 
-  const handlePhoneSignIn = async (isResend = false) => {
-    if (!isResend) {
-      setIsLoading(true);
-    }
+  const handlePhoneSignIn = async () => {
+    setIsLoading(true);
     setError(null);
     if (!phone) {
       setError("Please enter your phone number.");
@@ -90,19 +88,18 @@ const StudentLoginForm = () => {
     }
 
     try {
-      const verifier = window.recaptchaVerifier;
-      if (!verifier) {
-        throw new Error("reCAPTCHA verifier is not initialized.");
-      }
+      // Use the existing verifier if it's there, or create a new one.
+      const verifier = window.recaptchaVerifier || new RecaptchaVerifier(auth, recaptchaContainerRef.current, { size: 'invisible' });
+      
+      // Explicitly render the verifier. This forces it to "check in" with Google.
+      // It returns a widget ID, but we don't need to use it.
       await verifier.render();
+      console.log("reCAPTCHA verifier rendered explicitly.");
 
       const result = await signInWithPhoneNumber(auth, phoneForAuth, verifier);
       setConfirmationResult(result);
       setShowOtpInput(true);
       setError(null);
-      // Reset timer on new OTP request
-      setCountdown(OTP_EXPIRATION_SECONDS);
-      setIsResendActive(false);
     } catch (error: any) {
       let errorMessage = "Failed to send OTP. Please check the phone number and try again.";
       if (error.code) {
@@ -122,15 +119,13 @@ const StudentLoginForm = () => {
       }
       setError(errorMessage);
     } finally {
-      if (!isResend) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   };
 
   const handleResendClick = () => {
     // Simply call the phone sign-in logic again, indicating it's a resend
-    handlePhoneSignIn(true);
+    handlePhoneSignIn();
   };
 
   const handleOtpSubmit = async () => {

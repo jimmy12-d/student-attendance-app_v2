@@ -22,13 +22,15 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // This code runs only in the browser and initializes App Check.
 if (typeof window !== 'undefined') {
-  // Pass the ID of the reCAPTCHA container and your site key.
-  // This tells Firebase to use the v2 Invisible badge.
-  const appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV2Provider('recaptcha-container', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY),
-    isTokenAutoRefreshEnabled: true
-  });
-  console.log("Firebase App Check explicitly initialized with reCAPTCHA v2.");
+  try {
+    const appCheck = initializeAppCheck(app, {
+      provider: new ReCaptchaV2Provider('recaptcha-container', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY),
+      isTokenAutoRefreshEnabled: true
+    });
+    console.log("Firebase App Check explicitly initialized with reCAPTCHA v2.");
+  } catch (error) {
+    console.error("Failed to initialize Firebase App Check:", error);
+  }
 }
 
 const auth = getAuth(app);
