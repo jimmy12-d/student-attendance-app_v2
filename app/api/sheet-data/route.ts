@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
     const secret = searchParams.get('secret');
     const examName = searchParams.get('exam_name');
 
+    console.log('API Route called with params:', { studentId, secret, examName });
+
     // Validate required parameters
     if (!studentId || !secret) {
       return NextResponse.json(
@@ -18,6 +20,7 @@ export async function GET(request: NextRequest) {
     // Get the Google Apps Script URL from environment variables
     const sheetApiUrl = process.env.NEXT_PUBLIC_SHEET_API_URL;
     if (!sheetApiUrl) {
+      console.error('NEXT_PUBLIC_SHEET_API_URL not found in environment variables');
       return NextResponse.json(
         { error: 'Sheet API URL not configured' },
         { status: 500 }
@@ -42,21 +45,30 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    console.log('Google Apps Script response status:', response.status);
+    console.log('Google Apps Script response headers:', Object.fromEntries(response.headers.entries()));
+
+    // Get the response text first to see what we're actually receiving
+    const responseText = await response.text();
+    console.log('Google Apps Script raw response:', responseText.substring(0, 500)); // First 500 chars
+
     if (!response.ok) {
       throw new Error(`Google Apps Script responded with status: ${response.status}`);
     }
 
-    const data = await response.json();
+    // Try to parse as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse response as JSON:', parseError);
+      throw new Error(`Invalid JSON response from Google Apps Script: ${responseText.substring(0, 200)}`);
+    }
 
-    // Return the data with CORS headers
-    return NextResponse.json(data, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+    console.log('Google Apps Script parsed data:', data);
+
+    // Return the data
+    return NextResponse.json(data);
 
   } catch (error) {
     console.error('Error in sheet-data API route:', error);

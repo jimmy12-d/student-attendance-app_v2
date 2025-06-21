@@ -14,6 +14,8 @@ import Buttons from "../../_components/Buttons";
 import FormField from "../../_components/FormField";
 import OtpInput from "../../_components/OtpInput";
 
+const OTP_EXPIRATION_SECONDS = 120; // 2 minutes
+
 const StudentLoginForm = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -24,6 +26,8 @@ const StudentLoginForm = () => {
   const [otp, setOtp] = useState("");
   const [confirmationResult, setConfirmationResult] = useState<any>(null);
   const [showOtpInput, setShowOtpInput] = useState(false);
+  const [countdown, setCountdown] = useState(OTP_EXPIRATION_SECONDS);
+  const [isResendActive, setIsResendActive] = useState(false);
   
   const recaptchaContainerRef = useRef<HTMLDivElement>(null);
 
@@ -44,8 +48,29 @@ const StudentLoginForm = () => {
     };
   }, []);
 
-  const handlePhoneSignIn = async () => {
-    setIsLoading(true);
+  // This useEffect hook manages the countdown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (showOtpInput && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prevCountdown) => prevCountdown - 1);
+      }, 1000);
+    } else if (countdown === 0) {
+      setIsResendActive(true); // Enable the "Resend" button
+      if (confirmationResult) {
+        // Optional: clear confirmationResult to prevent using expired code
+        setConfirmationResult(null);
+      }
+    }
+
+    return () => clearInterval(timer); // Cleanup the interval on component unmount
+  }, [showOtpInput, countdown]);
+
+  const handlePhoneSignIn = async (isResend = false) => {
+    if (!isResend) {
+      setIsLoading(true);
+    }
     setError(null);
     if (!phone) {
       setError("Please enter your phone number.");
@@ -75,6 +100,9 @@ const StudentLoginForm = () => {
       setConfirmationResult(result);
       setShowOtpInput(true);
       setError(null);
+      // Reset timer on new OTP request
+      setCountdown(OTP_EXPIRATION_SECONDS);
+      setIsResendActive(false);
     } catch (error: any) {
       let errorMessage = "Failed to send OTP. Please check the phone number and try again.";
       if (error.code) {
@@ -94,8 +122,15 @@ const StudentLoginForm = () => {
       }
       setError(errorMessage);
     } finally {
-      setIsLoading(false);
+      if (!isResend) {
+        setIsLoading(false);
+      }
     }
+  };
+
+  const handleResendClick = () => {
+    // Simply call the phone sign-in logic again, indicating it's a resend
+    handlePhoneSignIn(true);
   };
 
   const handleOtpSubmit = async () => {
@@ -103,6 +138,12 @@ const StudentLoginForm = () => {
     setError(null);
     if (!otp) {
       setError("Please enter the OTP.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!confirmationResult) {
+      setError("OTP has expired. Please request a new one.");
       setIsLoading(false);
       return;
     }
@@ -202,7 +243,7 @@ const StudentLoginForm = () => {
                   onChange={(e) => setPhone(e.target.value)}
                 />
                 <Button
-                  onClick={handlePhoneSignIn}
+                  onClick={() => handlePhoneSignIn()}
                   label={isLoading ? "Sending..." : "Get OTP"}
                   color="info"
                   disabled={isLoading}
@@ -215,29 +256,36 @@ const StudentLoginForm = () => {
       ) : (
         <div className="space-y-4">
           <FormField>
-            {() => (
-              <OtpInput
-                length={6}
-                onComplete={setOtp}
-              />
-            )}
+            <OtpInput value={otp} onChange={setOtp} onComplete={handleOtpSubmit} />
           </FormField>
-          <div className="flex flex-col items-center gap-y-2">
+          
+          <div className="text-center text-sm text-gray-500 my-4">
+            {countdown > 0 ? (
+              <span>
+                Time remaining: <span className="font-semibold">{String(Math.floor(countdown / 60)).padStart(2, '0')}:{String(countdown % 60).padStart(2, '0')}</span>
+              </span>
+            ) : (
+              <span className="text-red-500">OTP has expired.</span>
+            )}
+          </div>
+
+          <Buttons>
             <Button
               onClick={handleOtpSubmit}
-              label={isLoading ? "Verifying..." : "Verify & Sign In"}
               color="success"
-              disabled={isLoading || otp.length !== 6}
-              className="w-full"
+              label="Verify OTP"
+              disabled={isLoading || otp.length < 6}
+              fullWidth
             />
+          </Buttons>
+          <div className="mt-4">
             <Button
-              onClick={() => {
-                setShowOtpInput(false);
-                setError(null);
-                setOtp("");
-              }}
-              label="Use a different number"
-              color="void"
+              onClick={handleResendClick}
+              label="Resend OTP"
+              color="info"
+              outline
+              small
+              disabled={!isResendActive}
             />
           </div>
         </div>

@@ -30,22 +30,37 @@ exports.requestStudentLink = functions.region("asia-southeast1").https.onRequest
       console.log(`Link request for UID: ${uid}, Phone: ${phone}, LocalPhone: ${localPhoneNumber}`);
       
       const db = admin.firestore();
-      const studentQuery = db.collection("students")
+      const studentsRef = db.collection("students");
+
+      // Step 1: Try to find a student with this phone number that is NOT yet linked.
+      const unlinkedQuery = studentsRef
         .where("phone", "==", localPhoneNumber)
         .where("authUid", "in", [null, ""])
         .limit(1);
+      
+      let querySnapshot = await unlinkedQuery.get();
 
-      const querySnapshot = await studentQuery.get();
-
+      // Step 2: If no unlinked student is found, check if a student with this phone number
+      // exists at all (meaning they might be linked to an old, different authUid).
       if (querySnapshot.empty) {
-        console.warn(`No unlinked student record found for phone number: ${localPhoneNumber}.`);
+        console.log(`No unlinked student found for ${localPhoneNumber}. Checking for any student with this number to re-link.`);
+        const relinkQuery = studentsRef
+          .where("phone", "==", localPhoneNumber)
+          .limit(1);
+        querySnapshot = await relinkQuery.get();
+      }
+
+      // Step 3: Now, process the result.
+      if (querySnapshot.empty) {
+        console.warn(`No student record found for phone number: ${localPhoneNumber} for linking or re-linking.`);
         res.status(404).send({error: "No student record found for your phone number."});
         return;
       }
 
       const studentDoc = querySnapshot.docs[0];
+      // Overwrite the authUid with the new one. This works for both initial linking and re-linking.
       await studentDoc.ref.update({ authUid: uid });
-      console.log(`Successfully linked student ${studentDoc.id} to auth user ${uid}.`);
+      console.log(`Successfully linked/re-linked student ${studentDoc.id} to auth user ${uid}.`);
       res.status(200).send({success: true, message: "Account linked successfully."});
 
     } catch (error) {

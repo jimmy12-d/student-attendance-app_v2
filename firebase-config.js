@@ -4,6 +4,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { initializeAppCheck, ReCaptchaV2Provider } from "firebase/app-check";
 
 // Your web app's Firebase configuration
 // For security, it's highly recommended to use environment variables
@@ -18,6 +19,17 @@ const firebaseConfig = {
 
 // Initialize Firebase only once
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// This code runs only in the browser and initializes App Check.
+if (typeof window !== 'undefined') {
+  // Pass the ID of the reCAPTCHA container and your site key.
+  // This tells Firebase to use the v2 Invisible badge.
+  const appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaV2Provider('recaptcha-container', process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY),
+    isTokenAutoRefreshEnabled: true
+  });
+  console.log("Firebase App Check explicitly initialized with reCAPTCHA v2.");
+}
 
 const auth = getAuth(app);
 const db = getFirestore(app);
