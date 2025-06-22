@@ -4,56 +4,152 @@ const cors = require("cors")({origin: true});
 
 admin.initializeApp();
 
-// Reverted to a simpler V1 function syntax to resolve deployment errors.
-exports.requestStudentLink = functions.region("asia-southeast1").https.onRequest((req, res) => {
-  // Use the CORS middleware
-  cors(req, res, async () => {
-    // 1. Manually check for auth token.
-    if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
-      console.error('No Firebase ID token was passed as a Bearer token in the Authorization header.');
-      res.status(403).send('Unauthorized');
-      return;
-    }
-    const idToken = req.headers.authorization.split('Bearer ')[1];
-    
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      const uid = decodedToken.uid;
-      const phone = decodedToken.phone_number;
+// You will need to install a third-party SMS service provider's package
+// e.g., `npm install twilio` in the `functions` directory
+// const twilio = require("twilio");
+// const twilioClient = new twilio(functions.config().twilio.sid, functions.config().twilio.token);
 
-      if (!phone) {
-        res.status(400).send({error: "The authenticated user does not have a phone number."});
-        return;
-      }
-      
-      const localPhoneNumber = phone.replace("+855", "0");
-      console.log(`Link request for UID: ${uid}, Phone: ${phone}, LocalPhone: ${localPhoneNumber}`);
-      
-      const db = admin.firestore();
-      const studentQuery = db.collection("students")
-        .where("phone", "==", localPhoneNumber)
-        .where("authUid", "in", [null, ""])
+const db = admin.firestore();
+
+// --- Helper function for phone number normalization ---
+const normalizePhone = (phoneNumber) => {
+    let normalizedPhone;
+    if (phoneNumber.startsWith('+855')) {
+        normalizedPhone = '0' + phoneNumber.substring(4);
+    } else if (phoneNumber.startsWith('0')) {
+        normalizedPhone = phoneNumber;
+    } else if (phoneNumber.length >= 8 && phoneNumber.length <= 9 && !phoneNumber.startsWith('0')) {
+        normalizedPhone = '0' + phoneNumber;
+    } else {
+        normalizedPhone = phoneNumber;
+    }
+    return normalizedPhone;
+}
+
+exports.sendLinkOtp = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+    
+    const uid = context.auth.uid;
+    const phoneNumber = data.phoneNumber;
+
+    if (!phoneNumber) {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'phoneNumber' argument.");
+    }
+
+    const normalizedPhone = normalizePhone(phoneNumber);
+
+    // 1. Check if a student with this phone number exists and is unlinked
+    const studentQuery = db.collection("students").where("phone", "==", normalizedPhone).limit(1);
+    const studentSnapshot = await studentQuery.get();
+    
+    if (studentSnapshot.empty) {
+        throw new functions.https.HttpsError("not-found", "No student record found for this phone number.");
+    }
+    
+    const studentData = studentSnapshot.docs[0].data();
+    if (studentData.authUid) {
+        throw new functions.https.HttpsError("already-exists", "This phone number is already linked to an account.");
+    }
+
+    // 2. Generate and save a temporary OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = admin.firestore.Timestamp.fromMillis(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+
+    const otpRef = db.collection("otpLinks").doc(uid);
+    await otpRef.set({
+        phoneNumber: normalizedPhone,
+        otp: otp,
+        expires: expires,
+    });
+
+    // 3. Send the OTP via a third-party SMS service
+    // !! IMPORTANT !! You must integrate your own SMS provider here.
+    try {
+        // const message = await twilioClient.messages.create({
+        //     body: `Your verification code is ${otp}`,
+        //     to: `+855${normalizedPhone.substring(1)}`, // E.164 format for Twilio
+        //     from: functions.config().twilio.from_number,
+        // });
+        // functions.logger.log("OTP Sent:", message.sid);
+        functions.logger.log(`[PRETEND SMS] Sending OTP ${otp} to ${normalizedPhone}`);
+    } catch (error) {
+        functions.logger.error("Failed to send OTP SMS:", error);
+        throw new functions.https.HttpsError("internal", "Could not send verification code.");
+    }
+    
+    return { success: true };
+});
+
+exports.linkAccount = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+    }
+
+    const uid = context.auth.uid;
+    const email = context.auth.token.email;
+    const phoneNumber = data.phoneNumber;
+    const otp = data.otp;
+
+    if (!phoneNumber || !otp) {
+        throw new functions.https.HttpsError("invalid-argument", "The function must be called with 'phoneNumber' and 'otp' arguments.");
+    }
+
+    if (!email) {
+        throw new functions.https.HttpsError("invalid-argument", "The user's email is not available.");
+    }
+
+    const normalizedPhone = normalizePhone(phoneNumber);
+
+    // 1. Verify the OTP
+    const otpRef = db.collection("otpLinks").doc(uid);
+    const otpDoc = await otpRef.get();
+
+    if (!otpDoc.exists) {
+        throw new functions.https.HttpsError("not-found", "No OTP was requested. Please request a code first.");
+    }
+
+    const otpData = otpDoc.data();
+    const isExpired = new Date() > otpData.expires.toDate();
+
+    if (otpData.phoneNumber !== normalizedPhone || otpData.otp !== otp || isExpired) {
+        if (isExpired) {
+            throw new functions.https.HttpsError("deadline-exceeded", "The verification code has expired. Please request a new one.");
+        }
+        throw new functions.https.HttpsError("permission-denied", "The verification code is incorrect.");
+    }
+    
+    // 2. Find the matching student (we already know they exist from the sendOtp step, but re-query for safety)
+    const studentQuery = db.collection("students")
+        .where("phone", "==", normalizedPhone)
+        .where("authUid", "in", [null, "", undefined])
         .limit(1);
 
-      const querySnapshot = await studentQuery.get();
+    const querySnapshot = await studentQuery.get();
 
-      if (querySnapshot.empty) {
-        console.warn(`No unlinked student record found for phone number: ${localPhoneNumber}.`);
-        res.status(404).send({error: "No student record found for your phone number."});
-        return;
-      }
-
-      const studentDoc = querySnapshot.docs[0];
-      await studentDoc.ref.update({ authUid: uid });
-      console.log(`Successfully linked student ${studentDoc.id} to auth user ${uid}.`);
-      res.status(200).send({success: true, message: "Account linked successfully."});
-
-    } catch (error) {
-      console.error('Error while verifying Firebase ID token or linking student:', error);
-      res.status(403).send('Unauthorized');
+    if (querySnapshot.empty) {
+        // This should theoretically never happen if the OTP was verified correctly
+        throw new functions.https.HttpsError("not-found", `No unlinked student record found for phone number: ${normalizedPhone}.`);
     }
-  });
+
+    const studentDoc = querySnapshot.docs[0];
+
+    // 3. Link the account and delete the OTP
+    await studentDoc.ref.update({ authUid: uid, email: email });
+    await otpRef.delete(); // Clean up the used OTP
+    
+    console.log(`Successfully linked student ${studentDoc.id} (phone: ${normalizedPhone}) to auth user ${uid}.`);
+
+    return { success: true };
 });
+
+// This function is no longer needed with the new Google Sign-In flow.
+/*
+exports.requestStudentLink = functions.region("asia-southeast1").https.onRequest((req, res) => {
+// ... function content
+});
+*/
 
 exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
   if (!context.auth) {

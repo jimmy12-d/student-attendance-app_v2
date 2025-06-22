@@ -56,7 +56,7 @@ export default function RootLayout({
           src="https://www.googletagmanager.com/gtag/js?id=UA-130795909-1"
           strategy="afterInteractive"
         />
-
+        <script src="https://www.google.com/recaptcha/enterprise.js" async defer/>
         <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];

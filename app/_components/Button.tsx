@@ -20,6 +20,7 @@ type Props = {
   disabled?: boolean;
   roundedFull?: boolean;
   isGrouped?: boolean;
+  children?: React.ReactNode;
   onClick?: (e: React.MouseEvent) => void;
 };
 
@@ -38,6 +39,7 @@ export default function Button({
   active = false,
   disabled = false,
   roundedFull = false,
+  children,
   onClick,
   ...props
 }: Props) {
@@ -106,9 +108,13 @@ export default function Button({
 
   const componentChildren = (
     <>
-      {icon && <Icon path={icon} size={iconSize} />}
-      {label && (
-        <span className={small && icon ? "px-1" : "px-2"}>{label}</span>
+      {children || (
+        <>
+          {icon && <Icon path={icon} size={iconSize} />}
+          {label && (
+            <span className={small && icon ? "px-1" : "px-2"}>{label}</span>
+          )}
+        </>
       )}
     </>
   );

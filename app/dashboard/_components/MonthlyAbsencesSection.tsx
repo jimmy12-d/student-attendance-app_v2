@@ -60,8 +60,6 @@ const MonthlyAbsencesSection: React.FC<Props> = ({ students, attendanceRecords, 
     setMonthlyAbsenceWarningList(warnings.sort((a,b) => b.value - a.value).slice(0,5));
     setIsLoading(false);
 
-    console.log("Monthly Absences Warnings:", approvedPermissions); // Debugging log to check the warnings generated
-
   }, [students, attendanceRecords, selectedMonthValue, selectedMonthLabel]);
 
   if (isLoading) {
