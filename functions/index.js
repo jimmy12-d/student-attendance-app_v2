@@ -1,155 +1,137 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const cors = require("cors")({origin: true});
 
+// Initialize the Firebase Admin SDK
 admin.initializeApp();
-
-// You will need to install a third-party SMS service provider's package
-// e.g., `npm install twilio` in the `functions` directory
-// const twilio = require("twilio");
-// const twilioClient = new twilio(functions.config().twilio.sid, functions.config().twilio.token);
-
-const db = admin.firestore();
 
 // --- Helper function for phone number normalization ---
 const normalizePhone = (phoneNumber) => {
-    let normalizedPhone;
+    if (!phoneNumber) return "";
     if (phoneNumber.startsWith('+855')) {
-        normalizedPhone = '0' + phoneNumber.substring(4);
-    } else if (phoneNumber.startsWith('0')) {
-        normalizedPhone = phoneNumber;
-    } else if (phoneNumber.length >= 8 && phoneNumber.length <= 9 && !phoneNumber.startsWith('0')) {
-        normalizedPhone = '0' + phoneNumber;
-    } else {
-        normalizedPhone = phoneNumber;
+        return '0' + phoneNumber.substring(4);
     }
-    return normalizedPhone;
-}
+    if (phoneNumber.length >= 8 && phoneNumber.length <= 9 && !phoneNumber.startsWith('0')) {
+        return '0' + phoneNumber;
+    }
+    return phoneNumber;
+};
 
-exports.sendLinkOtp = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+
+// =================================================================
+// NEW SECURE FUNCTIONS FOR ACCOUNT LINKING
+// =================================================================
+
+// NEW FUNCTION #1: Sends an OTP to a phone number to begin the linking process.
+exports.sendAccountLinkOtp = functions
+  .region("asia-southeast1")
+  .https.onCall(async (data, context) => {
     if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+      throw new functions.https.HttpsError("unauthenticated", "Please sign in first.");
     }
-    
-    const uid = context.auth.uid;
-    const phoneNumber = data.phoneNumber;
 
+    const phoneNumber = data.phoneNumber;
     if (!phoneNumber) {
-        throw new functions.https.HttpsError("invalid-argument", "The function must be called with a 'phoneNumber' argument.");
+      throw new functions.https.HttpsError("invalid-argument", "Phone number is required.");
     }
 
     const normalizedPhone = normalizePhone(phoneNumber);
-
-    // 1. Check if a student with this phone number exists and is unlinked
-    const studentQuery = db.collection("students").where("phone", "==", normalizedPhone).limit(1);
-    const studentSnapshot = await studentQuery.get();
     
-    if (studentSnapshot.empty) {
-        throw new functions.https.HttpsError("not-found", "No student record found for this phone number.");
+    // 1. Check if a student with this phone number exists AND is NOT already linked
+    const studentsRef = admin.firestore().collection("students");
+    const studentQuery = await studentsRef.where("phone", "==", normalizedPhone).limit(1).get();
+
+    if (studentQuery.empty) {
+      throw new functions.https.HttpsError("not-found", "This phone number is not registered with any student. Please contact a Rodwell Admin for assistance.");
     }
-    
-    const studentData = studentSnapshot.docs[0].data();
-    if (studentData.authUid) {
-        throw new functions.https.HttpsError("already-exists", "This phone number is already linked to an account.");
+    const studentDoc = studentQuery.docs[0];
+    if (studentDoc.data().authUid) {
+        throw new functions.https.HttpsError("already-exists", "This student profile is already linked to a login account.");
     }
 
-    // 2. Generate and save a temporary OTP
+    // 2. Generate a random 6-digit code
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = admin.firestore.Timestamp.fromMillis(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+    const expires = admin.firestore.Timestamp.fromMillis(Date.now() + (10 * 60 * 1000)); // 10 minute expiry
 
-    const otpRef = db.collection("otpLinks").doc(uid);
-    await otpRef.set({
+    // 3. Store the OTP in a temporary document for verification later
+    const linkAttemptRef = admin.firestore().collection("link_attempts").doc(context.auth.uid);
+    await linkAttemptRef.set({
+        authUid: context.auth.uid,
         phoneNumber: normalizedPhone,
         otp: otp,
         expires: expires,
     });
+    
+    // 4. Send the SMS using the Twilio Extension
+    const e164Phone = `+855${normalizedPhone.substring(1)}`;
+    await admin.firestore().collection("messages").add({
+        to: e164Phone,
+        body: `Your Rodwell College verification code is: ${otp}`
+    });
 
-    // 3. Send the OTP via a third-party SMS service
-    // !! IMPORTANT !! You must integrate your own SMS provider here.
-    try {
-        // const message = await twilioClient.messages.create({
-        //     body: `Your verification code is ${otp}`,
-        //     to: `+855${normalizedPhone.substring(1)}`, // E.164 format for Twilio
-        //     from: functions.config().twilio.from_number,
-        // });
-        // functions.logger.log("OTP Sent:", message.sid);
-        functions.logger.log(`[PRETEND SMS] Sending OTP ${otp} to ${normalizedPhone}`);
-    } catch (error) {
-        functions.logger.error("Failed to send OTP SMS:", error);
-        throw new functions.https.HttpsError("internal", "Could not send verification code.");
+    console.log(`Sent link OTP to ${e164Phone} for user ${context.auth.uid}`);
+    // For development, we return the OTP to the client to make testing easier.
+    // In production, you should remove the 'otp' field from the return object.
+    return { success: true, otp: otp, expires: expires.toMillis() };
+  });
+
+
+// NEW FUNCTION #2: Verifies the OTP and securely connects the student record.
+// Note: I have renamed your 'linkAccount' to 'verifyAndConnectAccount' to match the frontend code.
+exports.verifyAndConnectAccount = functions
+  .region("asia-southeast1")
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "Please sign in first.");
     }
     
-    return { success: true };
-});
-
-exports.linkAccount = functions.region("asia-southeast1").https.onCall(async (data, context) => {
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
-    }
-
-    const uid = context.auth.uid;
-    const email = context.auth.token.email;
-    const phoneNumber = data.phoneNumber;
-    const otp = data.otp;
+    const { phoneNumber, otp } = data;
+    const { uid, token } = context.auth;
 
     if (!phoneNumber || !otp) {
-        throw new functions.https.HttpsError("invalid-argument", "The function must be called with 'phoneNumber' and 'otp' arguments.");
+      throw new functions.https.HttpsError("invalid-argument", "Phone number and OTP are required.");
     }
 
-    if (!email) {
-        throw new functions.https.HttpsError("invalid-argument", "The user's email is not available.");
+    const linkAttemptRef = admin.firestore().collection("link_attempts").doc(uid);
+    const linkAttemptSnap = await linkAttemptRef.get();
+
+    if (!linkAttemptSnap.exists) {
+        throw new functions.https.HttpsError("not-found", "Verification failed. Please request a new code.");
+    }
+
+    const attempt = linkAttemptSnap.data();
+
+    // 1. Verify the data is correct and not expired
+    if (attempt.otp !== otp) {
+        throw new functions.https.HttpsError("invalid-argument", "The code you entered is incorrect.");
+    }
+    if (Date.now() > attempt.expires.toMillis()) {
+        await linkAttemptRef.delete(); // Clean up expired attempt
+        throw new functions.https.HttpsError("deadline-exceeded", "The verification code has expired. Please request a new code.");
     }
 
     const normalizedPhone = normalizePhone(phoneNumber);
-
-    // 1. Verify the OTP
-    const otpRef = db.collection("otpLinks").doc(uid);
-    const otpDoc = await otpRef.get();
-
-    if (!otpDoc.exists) {
-        throw new functions.https.HttpsError("not-found", "No OTP was requested. Please request a code first.");
-    }
-
-    const otpData = otpDoc.data();
-    const isExpired = new Date() > otpData.expires.toDate();
-
-    if (otpData.phoneNumber !== normalizedPhone || otpData.otp !== otp || isExpired) {
-        if (isExpired) {
-            throw new functions.https.HttpsError("deadline-exceeded", "The verification code has expired. Please request a new one.");
-        }
-        throw new functions.https.HttpsError("permission-denied", "The verification code is incorrect.");
-    }
     
-    // 2. Find the matching student (we already know they exist from the sendOtp step, but re-query for safety)
-    const studentQuery = db.collection("students")
-        .where("phone", "==", normalizedPhone)
-        .where("authUid", "in", [null, "", undefined])
-        .limit(1);
+    // 2. Data is valid, so find the student and link them
+    const studentsRef = admin.firestore().collection("students");
+    const studentQuery = await studentsRef.where("phone", "==", normalizedPhone).limit(1).get();
 
-    const querySnapshot = await studentQuery.get();
-
-    if (querySnapshot.empty) {
-        // This should theoretically never happen if the OTP was verified correctly
-        throw new functions.https.HttpsError("not-found", `No unlinked student record found for phone number: ${normalizedPhone}.`);
+    if (studentQuery.empty) {
+        throw new functions.https.HttpsError("not-found", "Student profile not found. Contact administration.");
     }
 
-    const studentDoc = querySnapshot.docs[0];
+    const studentDoc = studentQuery.docs[0];
+    await studentDoc.ref.update({ 
+      authUid: uid,
+      email: token.email || null 
+    }); 
 
-    // 3. Link the account and delete the OTP
-    await studentDoc.ref.update({ authUid: uid, email: email });
-    await otpRef.delete(); // Clean up the used OTP
-    
-    console.log(`Successfully linked student ${studentDoc.id} (phone: ${normalizedPhone}) to auth user ${uid}.`);
+    // 3. Clean up by deleting the temporary attempt document
+    await linkAttemptRef.delete();
 
+    console.log(`Successfully linked authUid ${uid} to student ${studentDoc.id}`);
     return { success: true };
-});
+  });
 
-// This function is no longer needed with the new Google Sign-In flow.
-/*
-exports.requestStudentLink = functions.region("asia-southeast1").https.onRequest((req, res) => {
-// ... function content
-});
-*/
 
 exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
   if (!context.auth) {

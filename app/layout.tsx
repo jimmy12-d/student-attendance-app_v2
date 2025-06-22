@@ -2,6 +2,7 @@
 import type { Metadata } from "next";
 import "../css/main.css";
 import StoreProvider from "./_stores/StoreProvider";
+import AppCheckProvider from "./_components/AppCheckProvider";
 import Script from "next/script";
 import DarkModeInit from "./_components/DarkModeInit";
 import { useAppSelector } from './_stores/hooks'
@@ -50,31 +51,37 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <StoreProvider>
-      <html lang="en" className="style-basic dark">
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=UA-130795909-1"
-          strategy="afterInteractive"
-        />
-        <script src="https://www.google.com/recaptcha/enterprise.js" async defer/>
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'UA-130795909-1');
-          `}
-        </Script>
-        <head>
-          <link rel="icon" href="/rodwell_logo.png" type="image/png" />
-        </head>
-        <body
-          className={`bg-gray-50 dark:bg-slate-800 dark:text-slate-100 antialiased`}
-        >
-          <DarkModeInit />
-          {children}
-        </body>
-      </html>
-    </StoreProvider>
+    <AppCheckProvider>
+      <StoreProvider>
+        <html lang="en" className="style-basic dark">
+          <head>
+            <link rel="icon" href="/rodwell_logo.png" type="image/png" />
+            <Script 
+              src={`https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`}
+              strategy="beforeInteractive"
+            />
+          </head>
+          <body
+            className={`bg-gray-50 dark:bg-slate-800 dark:text-slate-100 antialiased`}
+          >
+            <DarkModeInit />
+            {children}
+            
+            <Script
+              src="https://www.googletagmanager.com/gtag/js?id=UA-130795909-1"
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', 'UA-130795909-1');
+              `}
+            </Script>
+          </body>
+        </html>
+      </StoreProvider>
+    </AppCheckProvider>
   );
 }
