@@ -82,16 +82,7 @@ const LinkAccountPage = () => {
         const result = await sendOtpFunction({ phoneNumber: phone });
 
         if ((result.data as any).success) {
-            const receivedOtp = (result.data as any).otp;
-            const receivedExpires = (result.data as any).expires;
-            
-            if (receivedOtp) {
-              console.log("DEV ONLY: Received OTP:", receivedOtp);
-              setOtp(receivedOtp); // Auto-fill the OTP for testing
-            }
-            if (receivedExpires) {
-              setExpiryTime(receivedExpires);
-            }
+            // The OTP is now sent via SMS, not returned to the client
             setStep("otp");
             setError(null);
         } else {
@@ -202,43 +193,23 @@ const LinkAccountPage = () => {
                     Enter the 6-digit code we sent to <strong>{phone}</strong>.
                 </p>
                 <div className="flex justify-center mb-4">
-                  <OtpInput length={6} onChange={setOtp} />
+                  <OtpInput length={6} onChange={(value) => setOtp(value)} />
                 </div>
                 
-                {countdown > 0 ? (
-                  <p className="text-center text-sm text-gray-500 dark:text-gray-400 mb-6">
-                    Code expires in {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
-                  </p>
-                ) : (
-                  <p className="text-center text-sm text-red-500 mb-6">
-                    Code has expired. Please request a new one.
-                  </p>
-                )}
-
-                <Buttons className="mt-4 mb-2 gap-x-4" type="justify-center">
+                <Buttons className="mt-8 mb-2 gap-x-4" type="justify-center">
                     <Button
                         onClick={handleLinkAccount}
                         label={isLoading ? "Verifying & Linking..." : "Verify & Link"}
                         color="success"
-                        disabled={isLoading || countdown === 0}
+                        disabled={isLoading}
                     />
-                    {countdown > 0 ? (
-                      <Button
+                    <Button
                         onClick={() => { setStep('phone'); setError(null); setOtp(''); }}
                         label="Change Number"
                         color="lightDark"
                         outline
                         disabled={isLoading}
-                      />
-                    ) : (
-                      <Button
-                        onClick={handleSendOtp}
-                        label={isLoading ? "Resending..." : "Resend Code"}
-                        color="info"
-                        outline
-                        disabled={isLoading}
-                      />
-                    )}
+                    />
                 </Buttons>
             </>
         )}

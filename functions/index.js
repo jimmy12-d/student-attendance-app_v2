@@ -1,8 +1,15 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const { Vonage } = require('@vonage/server-sdk');
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
+
+// Initialize the Vonage SDK
+const vonage = new Vonage({
+  apiKey: functions.config().vonage.key,
+  apiSecret: functions.config().vonage.secret,
+});
 
 // --- Helper function for phone number normalization ---
 const normalizePhone = (phoneNumber) => {
@@ -61,17 +68,22 @@ exports.sendAccountLinkOtp = functions
         expires: expires,
     });
     
-    // 4. Send the SMS using the Twilio Extension
-    const e164Phone = `+855${normalizedPhone.substring(1)}`;
-    await admin.firestore().collection("messages").add({
-        to: e164Phone,
-        body: `Your Rodwell College verification code is: ${otp}`
-    });
+    // 4. Send the SMS directly using the Vonage SDK
+    const from = "Rodwell Learning Center";
+    const to = `+855${normalizedPhone.substring(1)}`;
+    const text = `Your Rodwell Learning Center verification code is: ${otp}`;
 
-    console.log(`Sent link OTP to ${e164Phone} for user ${context.auth.uid}`);
-    // For development, we return the OTP to the client to make testing easier.
-    // In production, you should remove the 'otp' field from the return object.
-    return { success: true, otp: otp, expires: expires.toMillis() };
+    try {
+      await vonage.sms.send({to, from, text});
+      console.log(`Successfully sent OTP to ${to} via Vonage.`);
+    } catch (err) {
+        console.error("Failed to send SMS via Vonage:", err);
+        // It's often better not to throw an error back to the client here,
+        // as they can't do anything about it. We log it for debugging.
+        // The OTP is still saved, so they can potentially verify it if they receive it late.
+    }
+
+    return { success: true };
   });
 
 
