@@ -51,7 +51,7 @@ export type ColorButtonKey =
   | "glowing-purple"
   | "glowing-red";
 
-export type BgKey = "purplePink" | "pinkRed";
+export type BgKey = "purplePink" | "pinkRed" | "white";
 
 export type TrendType =
   | "up"

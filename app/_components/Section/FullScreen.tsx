@@ -6,6 +6,7 @@ import {
   gradientBgPurplePink,
   gradientBgDark,
   gradientBgPinkRed,
+  gradientBgWhite,
 } from "../../_lib/colors";
 import { useAppSelector } from "../../_stores/hooks";
 
@@ -25,6 +26,8 @@ export default function SectionFullScreen({ bg, children }: Props) {
     componentClass += gradientBgPurplePink;
   } else if (bg === "pinkRed") {
     componentClass += gradientBgPinkRed;
+  } else if (bg === "white") {
+    componentClass += gradientBgWhite;
   }
 
   return <div className={componentClass}>{children}</div>;

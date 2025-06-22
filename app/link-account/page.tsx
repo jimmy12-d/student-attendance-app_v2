@@ -147,9 +147,10 @@ const LinkAccountPage = () => {
 
         {step === "phone" ? (
             <>
-                <p className="text-center mb-6">
-                To complete your setup, please enter the phone number you originally registered with the school. We'll send you a confirmation code.
+                <p className="text-center mb-6 px-2">
+                Enter the phone number you registered with the school. We'll send you a confirmation code.
                 </p>
+
                 <div className="px-4">
                     <FormField label="Registered Phone Number" labelFor="phone">
                         {() => (
@@ -169,14 +170,29 @@ const LinkAccountPage = () => {
                           </div>
                         )}
                     </FormField>
-                    <Buttons className="mt-8 mb-2" type="justify-center">
-                        <Button
-                            onClick={handleSendOtp}
-                            label={isLoading ? "Sending Code..." : "Send Code"}
-                            color="info"
-                            disabled={isLoading}
-                        />
-                    </Buttons>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Your account will be linked to {auth.currentUser?.email}.
+                    </p>
+                    <div className="flex justify-center gap-x-2">
+                        <Buttons className="mt-4 mb-2" type="justify-center">
+                            <Button
+                                onClick={handleSendOtp}
+                                label={isLoading ? "Sending Code..." : "Send Code"}
+                                color="info"    
+                                disabled={isLoading}
+                            />
+                        </Buttons>
+                        <div></div>
+                        <Buttons className="mt-4 mb-2 gap-x-4" type="justify-center">
+                            <Button
+                                onClick={() => router.push('/login')}
+                                label="Go Back"
+                                color="lightDark"
+                                outline
+                                disabled={isLoading}
+                            />
+                        </Buttons>
+                    </div>
                 </div>
             </>
            
