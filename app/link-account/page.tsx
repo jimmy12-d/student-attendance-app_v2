@@ -101,28 +101,26 @@ const LinkAccountPage = () => {
                   </div>
                 )}
             </FormField>
-          
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                Your account will be linked to: <span className="font-semibold">{user.email}</span>
-              </p>
-            <div className="flex col-auto gap-4">
-                <Buttons className="mt-6 mb-2" type="justify-center">
-                    <Button
-                        onClick={handleLinkAccount}
-                        label={isLoading ? "Linking Account..." : "Link Account"}
-                        color="success"
-                        disabled={isLoading}
-                    />
-                </Buttons>
-                <Buttons className="mt-6 mb-2" type="justify-center">
-                    <Button
-                        onClick={() => window.history.back()}
-                        label="Go Back"
-                        color="info"
-                        outline
-                    />
-                </Buttons>
-            </div>
+
+            <p className="text-xs text-center mt-4 text-gray-600 dark:text-gray-400">
+                This will link the phone number to: <span className="font-semibold">{user.email}</span>
+            </p>
+            
+            <Buttons className="mt-8 mb-2" type="justify-center">
+                <Button
+                    onClick={handleLinkAccount}
+                    label={isLoading ? "Linking Account..." : "Link Account"}
+                    color="success"
+                    disabled={isLoading}
+                />
+                <Button
+                    onClick={() => auth.signOut().then(() => router.push('/login'))}
+                    label="Use a Different Account"
+                    color="info"
+                    outline
+                    disabled={isLoading}
+                />
+            </Buttons>
         </div>
       </CardBox>
     </SectionFullScreen>

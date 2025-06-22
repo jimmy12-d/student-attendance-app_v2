@@ -12,8 +12,11 @@ export const metadata: Metadata = {
 const LoginPage = () => {
   return (
     <SectionFullScreen bg="white">
-      <CardBox className="w-11/12 md:w-7/12 lg:w-6/12 xl:w-4/12 shadow-2xl">
-      <StudentGoogleSignIn />
+      <CardBox
+        className="w-11/12 md:w-7/12 lg:w-6/12 xl:w-4/12 shadow-2xl"
+        flex="flex-col"
+      >
+        <StudentGoogleSignIn />
       </CardBox>
     </SectionFullScreen>
   );
