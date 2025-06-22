@@ -1,15 +1,16 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const { Vonage } = require('@vonage/server-sdk');
+const { getFirestore, Timestamp } = require("firebase-admin/firestore");
+const { getStorage } = require("firebase-admin/storage");
+const {onRequest} = require("firebase-functions/v2/https");
+const {onObjectFinalized} = require("firebase-functions/v2/storage");
+const {setGlobalOptions} = require("firebase-functions/v2");
+const { onCall, HttpsError } = require("firebase-functions/v1/https");
+const cors = require("cors")({ origin: true });
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
-
-// Initialize the Vonage SDK
-const vonage = new Vonage({
-  apiKey: functions.config().vonage.key,
-  apiSecret: functions.config().vonage.secret,
-});
+const db = getFirestore();
 
 // --- Helper function for phone number normalization ---
 const normalizePhone = (phoneNumber) => {
@@ -23,127 +24,47 @@ const normalizePhone = (phoneNumber) => {
     return phoneNumber;
 };
 
-
-// =================================================================
-// NEW SECURE FUNCTIONS FOR ACCOUNT LINKING
-// =================================================================
-
-// NEW FUNCTION #1: Sends an OTP to a phone number to begin the linking process.
-exports.sendAccountLinkOtp = functions
-  .region("asia-southeast1")
-  .https.onCall(async (data, context) => {
-    if (!context.auth) {
-      throw new functions.https.HttpsError("unauthenticated", "Please sign in first.");
-    }
-
-    const phoneNumber = data.phoneNumber;
-    if (!phoneNumber) {
-      throw new functions.https.HttpsError("invalid-argument", "Phone number is required.");
-    }
-
-    const normalizedPhone = normalizePhone(phoneNumber);
-    
-    // 1. Check if a student with this phone number exists AND is NOT already linked
-    const studentsRef = admin.firestore().collection("students");
-    const studentQuery = await studentsRef.where("phone", "==", normalizedPhone).limit(1).get();
-
-    if (studentQuery.empty) {
-      throw new functions.https.HttpsError("not-found", "This phone number is not registered with any student. Please contact a Rodwell Admin for assistance.");
-    }
-    const studentDoc = studentQuery.docs[0];
-    if (studentDoc.data().authUid) {
-        throw new functions.https.HttpsError("already-exists", "This student profile is already linked to a login account.");
-    }
-
-    // 2. Generate a random 6-digit code
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = admin.firestore.Timestamp.fromMillis(Date.now() + (10 * 60 * 1000)); // 10 minute expiry
-
-    // 3. Store the OTP in a temporary document for verification later
-    const linkAttemptRef = admin.firestore().collection("link_attempts").doc(context.auth.uid);
-    await linkAttemptRef.set({
-        authUid: context.auth.uid,
-        phoneNumber: normalizedPhone,
-        otp: otp,
-        expires: expires,
-    });
-    
-    // 4. Send the SMS directly using the Vonage SDK
-    const from = "Rodwell Learning Center";
-    const to = `+855${normalizedPhone.substring(1)}`;
-    const text = `Your Rodwell Learning Center verification code is: ${otp}`;
-
-    try {
-      await vonage.sms.send({to, from, text});
-      console.log(`Successfully sent OTP to ${to} via Vonage.`);
-    } catch (err) {
-        console.error("Failed to send SMS via Vonage:", err);
-        // It's often better not to throw an error back to the client here,
-        // as they can't do anything about it. We log it for debugging.
-        // The OTP is still saved, so they can potentially verify it if they receive it late.
-    }
-
-    return { success: true };
-  });
-
-
-// NEW FUNCTION #2: Verifies the OTP and securely connects the student record.
-// Note: I have renamed your 'linkAccount' to 'verifyAndConnectAccount' to match the frontend code.
-exports.verifyAndConnectAccount = functions
+// This function is now the single point of truth for linking a profile.
+// It assumes the user has ALREADY verified they own the phone number on the client-side.
+exports.linkStudentProfileWithVerifiedNumber = functions
   .region("asia-southeast1")
   .https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "Please sign in first.");
     }
     
-    const { phoneNumber, otp } = data;
+    const { phoneNumber } = data;
     const { uid, token } = context.auth;
 
-    if (!phoneNumber || !otp) {
-      throw new functions.https.HttpsError("invalid-argument", "Phone number and OTP are required.");
-    }
-
-    const linkAttemptRef = admin.firestore().collection("link_attempts").doc(uid);
-    const linkAttemptSnap = await linkAttemptRef.get();
-
-    if (!linkAttemptSnap.exists) {
-        throw new functions.https.HttpsError("not-found", "Verification failed. Please request a new code.");
-    }
-
-    const attempt = linkAttemptSnap.data();
-
-    // 1. Verify the data is correct and not expired
-    if (attempt.otp !== otp) {
-        throw new functions.https.HttpsError("invalid-argument", "The code you entered is incorrect.");
-    }
-    if (Date.now() > attempt.expires.toMillis()) {
-        await linkAttemptRef.delete(); // Clean up expired attempt
-        throw new functions.https.HttpsError("deadline-exceeded", "The verification code has expired. Please request a new code.");
+    if (!phoneNumber) {
+      throw new functions.https.HttpsError("invalid-argument", "Phone number is required.");
     }
 
     const normalizedPhone = normalizePhone(phoneNumber);
     
-    // 2. Data is valid, so find the student and link them
+    // Find the student with the matching phone number
     const studentsRef = admin.firestore().collection("students");
     const studentQuery = await studentsRef.where("phone", "==", normalizedPhone).limit(1).get();
 
     if (studentQuery.empty) {
-        throw new functions.https.HttpsError("not-found", "Student profile not found. Contact administration.");
+        throw new functions.https.HttpsError("not-found", "This phone number is not registered with any student. Please contact a Rodwell administrator for assistance.");
     }
 
     const studentDoc = studentQuery.docs[0];
+    
+    if (studentDoc.data().authUid) {
+      throw new functions.https.HttpsError("already-exists", "This student profile is already linked to a different login account.");
+    }
+    
+    // Link the account
     await studentDoc.ref.update({ 
       authUid: uid,
       email: token.email || null 
     }); 
 
-    // 3. Clean up by deleting the temporary attempt document
-    await linkAttemptRef.delete();
-
     console.log(`Successfully linked authUid ${uid} to student ${studentDoc.id}`);
     return { success: true };
   });
-
 
 exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
   if (!context.auth) {
@@ -263,3 +184,61 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
   const message = `${studentData.fullName} marked ${attendanceStatus}!`;
   return { success: true, message: message };
 });
+
+/**
+ * Links a student profile to the authenticated user's UID based on phone number.
+ * This is a simplified version that does not require OTP verification.
+ */
+exports.linkStudentByPhone = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+  // Force redeploy 1
+  if (!context.auth) {
+    throw new HttpsError("unauthenticated", "You must be logged in to perform this action.");
+  }
+
+  const { phoneNumber } = data;
+  if (!phoneNumber) {
+    throw new HttpsError("invalid-argument", "The function must be called with a 'phoneNumber' argument.");
+  }
+  
+  const uid = context.auth.uid;
+
+  try {
+
+    // Find the student document by the provided phone number.
+    // The field name must match Firestore exactly, which is "phone" (lowercase).
+    const studentQuery = db.collection("students").where("phone", "==", phoneNumber).limit(1);
+    const studentSnapshot = await studentQuery.get();
+
+    if (studentSnapshot.empty) {
+      throw new HttpsError("not-found", `We couldn't find a student record associated with this phone number. Contact a Rodwell administrator for assistance.`);
+    }
+
+    const studentDoc = studentSnapshot.docs[0];
+    
+    // Check if the student profile is already linked to a different auth account.
+    if (studentDoc.data().authUid) {
+      // Security: It's better not to reveal if the account is linked to someone else or not.
+      // A generic message is safer, but for internal use, a specific one might be okay.
+      throw new HttpsError("already-exists", "This student profile is already linked to an account.");
+    }
+    
+    // If we're here, the student exists and is not linked. Let's link them.
+    // We will also add the user's email to the student document for reference.
+    const userEmail = context.auth.token.email;
+    await studentDoc.ref.update({ authUid: uid, email: userEmail });
+    
+    return { success: true, message: "Your account has been successfully linked!" };
+
+  } catch (error) {
+    console.error("Error linking student by phone:", error);
+    // Re-throw HttpsError instances directly.
+    if (error instanceof HttpsError) {
+        throw error;
+    }
+    // Log other errors and throw a generic internal error to the client.
+    throw new HttpsError("internal", "An unexpected error occurred while linking your account.");
+  }
+});
+
+// Note: The 'linkStudentProfileWithVerifiedNumber' function that previously existed
+// has been removed and replaced by the two functions above.

@@ -1,0 +1,95 @@
+[debug] [2025-06-22T18:42:03.383Z] ----------------------------------------------------------------------
+[debug] [2025-06-22T18:42:03.384Z] Command:       /usr/local/bin/node /usr/local/bin/firebase deploy --only functions
+[debug] [2025-06-22T18:42:03.384Z] CLI Version:   14.6.0
+[debug] [2025-06-22T18:42:03.385Z] Platform:      darwin
+[debug] [2025-06-22T18:42:03.385Z] Node Version:  v20.9.0
+[debug] [2025-06-22T18:42:03.385Z] Time:          Mon Jun 23 2025 01:42:03 GMT+0700 (Indochina Time)
+[debug] [2025-06-22T18:42:03.385Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-06-22T18:42:03.491Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-22T18:42:03.492Z] > authorizing via signed-in user (kemhoutlem@gmail.com)
+[debug] [2025-06-22T18:42:03.492Z] [iam] checking project rodwell-attendance for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2025-06-22T18:42:03.492Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:03.492Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:03.493Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions [none]
+[debug] [2025-06-22T18:42:03.493Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-06-22T18:42:03.493Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-06-22T18:42:04.499Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions 200
+[debug] [2025-06-22T18:42:04.500Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-06-22T18:42:04.500Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:04.500Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:04.500Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/rodwell-attendance/serviceAccounts/rodwell-attendance@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2025-06-22T18:42:04.500Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/rodwell-attendance/serviceAccounts/rodwell-attendance@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-06-22T18:42:05.687Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/rodwell-attendance/serviceAccounts/rodwell-attendance@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2025-06-22T18:42:05.687Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/rodwell-attendance/serviceAccounts/rodwell-attendance@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'rodwell-attendance'...
+[info] 
+[info] i  deploying functions 
+[debug] [2025-06-22T18:42:05.691Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:05.691Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:05.691Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudresourcemanager.googleapis.com [none]
+[debug] [2025-06-22T18:42:05.691Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudresourcemanager.googleapis.com x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-06-22T18:42:06.998Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudresourcemanager.googleapis.com 200
+[debug] [2025-06-22T18:42:06.998Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudresourcemanager.googleapis.com [omitted]
+[debug] [2025-06-22T18:42:06.998Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:06.998Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:06.998Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance [none]
+[debug] [2025-06-22T18:42:07.252Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance 200
+[debug] [2025-06-22T18:42:07.253Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance {"projectNumber":"50079853705","projectId":"rodwell-attendance","lifecycleState":"ACTIVE","name":"rodwell-attendance","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-05-28T05:19:56.868943Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[debug] [2025-06-22T18:42:07.254Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:07.254Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:07.255Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:07.255Z] Checked if tokens are valid: true, expires at: 1750621150937
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[debug] [2025-06-22T18:42:07.255Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:07.255Z] Checked if tokens are valid: true, expires at: 1750621150937
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2025-06-22T18:42:07.256Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:07.256Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:07.256Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudfunctions.googleapis.com [none]
+[debug] [2025-06-22T18:42:07.256Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-06-22T18:42:07.257Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/runtimeconfig.googleapis.com [none]
+[debug] [2025-06-22T18:42:07.257Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/runtimeconfig.googleapis.com x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-06-22T18:42:07.259Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudbuild.googleapis.com [none]
+[debug] [2025-06-22T18:42:07.260Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudbuild.googleapis.com x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-06-22T18:42:07.262Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/artifactregistry.googleapis.com [none]
+[debug] [2025-06-22T18:42:07.262Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/artifactregistry.googleapis.com x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-06-22T18:42:07.584Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudfunctions.googleapis.com 200
+[debug] [2025-06-22T18:42:07.585Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudfunctions.googleapis.com [omitted]
+[info] ✔  functions: required API cloudfunctions.googleapis.com is enabled 
+[debug] [2025-06-22T18:42:08.555Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudbuild.googleapis.com 200
+[debug] [2025-06-22T18:42:08.555Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/cloudbuild.googleapis.com [omitted]
+[info] ✔  functions: required API cloudbuild.googleapis.com is enabled 
+[debug] [2025-06-22T18:42:08.683Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/runtimeconfig.googleapis.com 200
+[debug] [2025-06-22T18:42:08.683Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/runtimeconfig.googleapis.com [omitted]
+[debug] [2025-06-22T18:42:08.827Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/artifactregistry.googleapis.com 200
+[debug] [2025-06-22T18:42:08.827Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/rodwell-attendance/services/artifactregistry.googleapis.com [omitted]
+[info] ✔  artifactregistry: required API artifactregistry.googleapis.com is enabled 
+[debug] [2025-06-22T18:42:08.827Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:08.828Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:08.828Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/adminSdkConfig [none]
+[debug] [2025-06-22T18:42:09.231Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/adminSdkConfig 200
+[debug] [2025-06-22T18:42:09.231Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/adminSdkConfig {"projectId":"rodwell-attendance","storageBucket":"rodwell-attendance.firebasestorage.app"}
+[debug] [2025-06-22T18:42:09.232Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.232Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.232Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs [none]
+[debug] [2025-06-22T18:42:09.583Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs 200
+[debug] [2025-06-22T18:42:09.583Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs {"configs":[{"name":"projects/rodwell-attendance/configs/jwt"},{"name":"projects/rodwell-attendance/configs/msg91"},{"name":"projects/rodwell-attendance/configs/readyme"},{"name":"projects/rodwell-attendance/configs/sheet"},{"name":"projects/rodwell-attendance/configs/vonage"}]}
+[debug] [2025-06-22T18:42:09.583Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.583Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.583Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.584Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.584Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.584Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.584Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.584Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.584Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.584Z] Checked if tokens are valid: true, expires at: 1750621150937
+[debug] [2025-06-22T18:42:09.584Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/jwt/variables [none]
+[debug] [2025-06-22T18:42:09.585Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables [none]
+[debug] [2025-06-22T18:42:09.587Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/readyme/variables [none]
+[debug] [2025-06-22T18:42:09.589Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/sheet/variables [none]
+[debug] [2025-06-22T18:42:09.591Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables [none]
