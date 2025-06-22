@@ -71,7 +71,7 @@ const LinkAccountPage = () => {
         <div className="flex justify-center mb-6">
           <Image src="/phone_verify.png" alt="Phone Verification" width={100} height={100} />
         </div>
-        <h1 className="text-3xl font-bold text-center mb-6">Link Your Student Account</h1>
+        <h1 className="text-3xl font-bold text-center mb-6">Link Your Account</h1>
         <p className="text-center mb-6">
           Enter the phone number you registered with to connect it to your Google account.
         </p>
@@ -102,20 +102,20 @@ const LinkAccountPage = () => {
                 )}
             </FormField>
 
-            <p className="text-xs text-center mt-4 text-gray-600 dark:text-gray-400">
+            <p className="text-xs mt-4 text-gray-600 dark:text-gray-400">
                 This will link the phone number to: <span className="font-semibold">{user.email}</span>
             </p>
             
-            <Buttons className="mt-8 mb-2" type="justify-center">
+            <Buttons className="mt-8 mb-2 gap-x-4" type="justify-center">
                 <Button
                     onClick={handleLinkAccount}
-                    label={isLoading ? "Linking Account..." : "Link Account"}
+                    label={isLoading ? "Linking..." : "Link Account"}
                     color="success"
                     disabled={isLoading}
                 />
                 <Button
-                    onClick={() => auth.signOut().then(() => router.push('/login'))}
-                    label="Use a Different Account"
+                    onClick={() => router.back()}
+                    label="Back"
                     color="info"
                     outline
                     disabled={isLoading}

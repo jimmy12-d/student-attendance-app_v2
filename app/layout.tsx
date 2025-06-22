@@ -19,7 +19,7 @@ const imageWidth = "1920";
 const imageHeight = "960";
 
 export const metadata: Metadata = {
-  title: 'Rodwell College Student Portal',
+  title: 'Rodwell Student Portal',
   description: 'Student portal for Rodwell',
   icons: "/favicon.png",
   twitter: {
