@@ -10,6 +10,8 @@ import Button from "../../_components/Button";
 import CardBoxModal from "../../_components/CardBox/Modal";
 import { collection, query, where, getDocs, DocumentData } from "firebase/firestore";
 import Image from "next/image";
+import DarkModeToggle from "./DarkModeToggle";
+import DarkModeInit from "../../_components/DarkModeInit";
 
 type Props = {
   children: (userName: string | null) => ReactNode;
@@ -101,6 +103,7 @@ export default function StudentLayout({ children }: Props) {
 
   return (
     <>
+      <DarkModeInit />
       <CardBoxModal
         title="Confirm Logout"
         buttonColor="danger"
@@ -130,7 +133,8 @@ export default function StudentLayout({ children }: Props) {
                   )}
                 </div>
               </div>
-              <div>
+              <div className="flex items-center space-x-2">
+                <DarkModeToggle />
                 <Button color="danger" label="Logout" onClick={() => setIsLogoutModalActive(true)} outline />
               </div>
             </div>
