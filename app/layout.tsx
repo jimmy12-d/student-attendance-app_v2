@@ -5,41 +5,35 @@ import StoreProvider from "./_stores/StoreProvider";
 import DarkModeInit from "./_components/DarkModeInit";
 import Script from "next/script";
 
-const title = `Rodwell Attendance`;
-
-const description =
-  "Rodwell Attendance System";
-
-const url = "https://justboil.github.io/admin-one-react-tailwind/";
-
-const image = `https://static.justboil.me/templates/one/repo-tailwind-react.png`;
-
-const imageWidth = "1920";
-
-const imageHeight = "960";
+const title = `Rodwell Portal`;
+const description = "Student and Admin Portal for Rodwell.";
+const url = "https://your-live-url.com"; // Replace with your actual domain when you deploy
+const imageUrl = `${url}/rodwell_logo.png`;
 
 export const metadata: Metadata = {
-  title: 'Rodwell Student Portal',
-  description: 'Student portal for Rodwell',
-  icons: "/favicon.png",
-  twitter: {
-    card: "summary_large_image",
-    title,
-    description,
-    images: {
-      url: image,
-      width: imageWidth,
-      height: imageHeight,
-    },
-  },
+  title: title,
+  description: description,
   openGraph: {
-    url,
-    title,
-    images: {
-      url: image,
-      width: imageWidth,
-      height: imageHeight,
-    },
+    title: title,
+    description: description,
+    url: url,
+    siteName: 'Rodwell Portal',
+    images: [
+      {
+        url: imageUrl,
+        width: 512,
+        height: 512,
+        alt: 'Rodwell Logo',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: title,
+    description: description,
+    images: [imageUrl],
   },
 };
 
