@@ -7,7 +7,7 @@ import Script from "next/script";
 
 const title = `Rodwell Portal`;
 const description = "Student and Admin Portal for Rodwell.";
-const url = "https://your-live-url.com"; // Replace with your actual domain when you deploy
+const url = "https://portal.rodwell.center"; // Replace with your actual domain when you deploy
 const imageUrl = `${url}/rodwell_logo.png`;
 
 export const metadata: Metadata = {

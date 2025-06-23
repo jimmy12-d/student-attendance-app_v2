@@ -16,6 +16,7 @@ interface Props {
   studentUid: string;
   qrSize?: number; 
 }
+//commit
 
 const StudentQRCode: React.FC<Props> = ({
   studentName,
