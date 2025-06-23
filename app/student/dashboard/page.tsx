@@ -439,11 +439,19 @@ const StudentDashboard = () => {
                     height={80}
                     className="absolute left-0 top-1/2 -translate-y-1/2 z-10 -ml-5"
                   />
-                  <div className="relative bg-slate-900 rounded-2xl h-full ml-6 px-4 py-2 flex flex-col justify-between items-end">
-                    <span className="font-semibold text-white">Room</span>
-                    <span className={`text-5xl font-bold text-white ${progressStatus === 'No Registered' ? 'animate-bounce-subtle' : ''}`}>
-                      {progressStatus === 'No Registered' ? '?' : room}
-                    </span>
+                  <div className={`relative bg-slate-900 rounded-2xl h-full ml-6 px-4 py-2 flex flex-col ${progressStatus === 'No Registered' ? 'justify-center items-center' : 'justify-between items-end'}`}>
+                    {progressStatus === 'No Registered' ? (
+                      <span className="text-center text-sm font-semibold text-yellow-300 animate-pulse pl-6">
+                        Register to View your Exam Room
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-white">Room</span>
+                        <span className="text-5xl font-bold text-white">
+                          {room}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
                 {/* Seat Widget */}
@@ -455,11 +463,19 @@ const StudentDashboard = () => {
                     height={80}
                     className="absolute left-0 top-1/2 -translate-y-1/2 z-10 saturate-125 contrast-125"
                   />
-                  <div className="relative bg-slate-900 rounded-2xl h-full ml-6 px-4 py-2 flex flex-col justify-between items-end">
-                  <span className="font-semibold text-white">Seat</span>
-                    <span className={`text-5xl font-bold text-white ${progressStatus !== 'Paid Star' ? 'animate-bounce-subtle' : ''}`}>
-                      {progressStatus !== 'Paid Star' ? '?' : seat}
-                    </span>
+                  <div className={`relative bg-slate-900 rounded-2xl h-full ml-6 px-4 py-2 flex flex-col ${progressStatus !== 'Paid Star' ? 'justify-center items-center' : 'justify-between items-end'}`}>
+                    {progressStatus !== 'Paid Star' ? (
+                      <span className="text-center text-sm font-semibold text-yellow-300 animate-pulse pl-8">
+                        Pay STAR to View your Exam Seat
+                      </span>
+                    ) : (
+                      <>
+                        <span className="font-semibold text-white">Seat</span>
+                        <span className="text-5xl font-bold text-white">
+                          {seat}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
