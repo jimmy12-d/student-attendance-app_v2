@@ -221,6 +221,7 @@ exports.linkStudentByPhone = functions.region("asia-southeast1").https.onCall(as
       // A generic message is safer, but for internal use, a specific one might be okay.
       throw new HttpsError("already-exists", "This student profile is already linked to an account.");
     }
+    // Force redeploy 2
     
     // If we're here, the student exists and is not linked. Let's link them.
     // We will also add the user's email to the student document for reference.
