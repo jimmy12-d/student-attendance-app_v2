@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { GoogleAuthProvider, signInWithRedirect, getRedirectResult, User } from "firebase/auth";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { useAppDispatch } from "../../_stores/hooks";
 import { setUser } from "../../_stores/mainSlice";
@@ -16,20 +16,34 @@ const StudentGoogleSignIn = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // This effect runs on page load to check for a redirect result.
+  useEffect(() => {
+    const processRedirectResult = async () => {
+        try {
+            // Check if we are returning from a redirect
+            const result = await getRedirectResult(auth);
+            if (result) {
+                // User has successfully signed in via redirect.
+                setIsLoading(true); // Show loading indicator while we check their profile
+                const firebaseUser = result.user;
+                await checkUserAndRedirect(firebaseUser);
+            }
+        } catch (error: any) {
+            setError(error.message || "Failed to process sign-in. Please try again.");
+            console.error("Google redirect result error:", error);
+            setIsLoading(false);
+        }
+    };
+    
+    processRedirectResult();
+  }, []);
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
-
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-      await checkUserAndRedirect(firebaseUser);
-    } catch (error: any) {
-      setError(error.message || "Failed to sign in with Google.");
-      console.error("Google sign-in error:", error);
-      setIsLoading(false);
-    }
+    // Start the redirect flow instead of popup
+    await signInWithRedirect(auth, provider);
   };
 
   const checkUserAndRedirect = async (firebaseUser: User) => {
