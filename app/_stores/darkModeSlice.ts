@@ -1,37 +1,59 @@
+// File: app/_stores/darkModeSlice.ts
+
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-interface DarkModeState {
+// The interface is correct
+export interface DarkModeState {
   isEnabled: boolean;
 }
 
-// Use the function here
+// =================================================================
+// THIS IS THE CORRECTED LOGIC
+// =================================================================
+
+// 1. We create a variable to hold our initial state. We default to 'true' (dark mode).
+let initialDarkModeState = true;
+
+// 2. We check if we are in the browser and if a setting is saved in localStorage.
+if (typeof window !== "undefined") {
+  const storedValue = localStorage.getItem("darkMode");
+  // If a value was found, use it. Otherwise, we stick with the default 'true'.
+  if (storedValue !== null) {
+    initialDarkModeState = JSON.parse(storedValue);
+  }
+}
+
+// 3. Set the initial state based on the logic above.
 const initialState: DarkModeState = {
-  isEnabled: true,
+  isEnabled: initialDarkModeState,
 };
+
+
+// =================================================================
+// THE REST OF THE FILE IS UPDATED TO USE THIS LOGIC
+// =================================================================
 
 export const styleSlice = createSlice({
   name: "darkMode",
   initialState,
   reducers: {
+    // This action handles toggling or setting the dark mode
     setDarkMode: (state, action: PayloadAction<boolean | null>) => {
-      state.isEnabled =
-        action.payload !== null ? action.payload : !state.isEnabled;
+      // If the action payload is null, toggle the current state. Otherwise, set it.
+      state.isEnabled = action.payload ?? !state.isEnabled;
 
-      if (typeof document !== "undefined") {
-        document.body.classList[state.isEnabled ? "add" : "remove"](
-          "dark-scrollbars",
-        );
+      // This is the important part for persisting the choice
+      if (typeof window !== "undefined") {
+        // Save the new setting to localStorage for the user's next visit
+        localStorage.setItem('darkMode', JSON.stringify(state.isEnabled));
 
-        document.documentElement.classList[state.isEnabled ? "add" : "remove"](
-          "dark",
-          "dark-scrollbars-compat",
-        );
+        // Apply the 'dark' class to the main <html> element
+        if (state.isEnabled) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
       }
-
-      // You can persist dark mode setting
-      // if (typeof localStorage !== 'undefined') {
-      //   localStorage.setItem('darkMode', state.isEnabled ? '1' : '0')
-      // }
     },
   },
 });
