@@ -395,9 +395,17 @@ const StudentDashboard = () => {
 
   // Parse room and seat from seatInfo
   const { room, seat } = useMemo(() => {
-    if (!seatInfo) return { room: null, seat: null };
-    const room = seatInfo.length >= 2 ? seatInfo.substring(0, 2) : '?';
-    const seat = seatInfo.length >= 4 ? seatInfo.substring(2, 4) : '?';
+    if (typeof seatInfo !== 'string' || seatInfo.length < 3) {
+      // Need at least 3 digits (e.g., 901) to be valid
+      return { room: '?', seat: '?' };
+    }
+    
+    const len = seatInfo.length;
+    // The seat is always the last two digits.
+    const seat = seatInfo.substring(len - 2);
+    // The room is everything before the last two digits.
+    const room = seatInfo.substring(0, len - 2);
+
     return { room, seat };
   }, [seatInfo]);
 
