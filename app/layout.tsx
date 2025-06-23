@@ -6,8 +6,8 @@ import DarkModeInit from "./_components/DarkModeInit";
 import Script from "next/script";
 
 const title = `Rodwell Portal`;
-const description = "Student and Admin Portal for Rodwell.";
-const url = "https://portal.rodwell.center"; // Replace with your actual domain when you deploy
+const description = "Portal for Rodwell Student.";
+const url = "https://portal.rodwell.center/"; // Replace with your actual domain when you deploy
 const imageUrl = `${url}/rodwell_logo.png`;
 
 export const metadata: Metadata = {
