@@ -108,7 +108,13 @@ const LinkAccountPage = () => {
       setError(null);
     } catch (err: any) {
         console.error("Full error object from Firebase:", err);
-        setError(err.message || "Failed to send OTP. Please check the phone number and try again.");
+        if (err.code === 'auth/too-many-requests') {
+          setError("Too many requests from this phone number. Please try again later.");
+        } else if (err.code === 'auth/internal-error') {
+          setError("An internal Firebase error occurred. Please try again later..");
+        } else {
+          setError(err.message || "Failed to send OTP. Please check the phone number and try again.");
+        }
     } finally {
         console.log("handleSendOtp function finished.");
         setIsLoading(false);
@@ -136,7 +142,11 @@ const LinkAccountPage = () => {
       }
 
     } catch (err: any) {
-        setError(err.message || "An unknown error occurred during linking.");
+        if (err.code === 'auth/invalid-verification-code') {
+          setError("Invalid OTP code. Please try again.");
+        } else {
+          setError(err.message || "An unknown error occurred during linking.");
+        }
     } finally {
         setIsLoading(false);
     }
