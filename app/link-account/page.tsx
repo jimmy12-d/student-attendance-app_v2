@@ -76,21 +76,18 @@ const LinkAccountPage = () => {
   }
   
   const handleSendOtp = async () => {
-    console.log("handleSendOtp function started.");
     setIsLoading(true);
     setError(null);
     setCanResend(false);
     setTimer(60);
 
     if (!phone) {
-        console.log("No phone number entered.");
         setError("Please enter a valid phone number.");
         setIsLoading(false);
         return;
     }
 
     try {
-      console.log("Attempting to send OTP...");
       const appVerifier = window.recaptchaVerifier!;
       let cleanPhone = phone.replace(/\D/g, ''); 
       if (cleanPhone.startsWith('0')) {
@@ -99,10 +96,8 @@ const LinkAccountPage = () => {
         cleanPhone = '855' + cleanPhone;
       }
       const phoneNumber = `+${cleanPhone}`;
-      console.log("Formatted phone number:", phoneNumber);
       
       const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-      console.log("OTP sent successfully, confirmation result received.");
       window.confirmationResult = confirmationResult;
       setOtpSent(true);
       setError(null);
@@ -116,7 +111,6 @@ const LinkAccountPage = () => {
           setError(err.message || "Failed to send OTP. Please check the phone number and try again.");
         }
     } finally {
-        console.log("handleSendOtp function finished.");
         setIsLoading(false);
     }
   };
