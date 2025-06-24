@@ -54,6 +54,8 @@ const OtpInput = ({ length, onChange }: Props) => {
         <input
           key={index}
           type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           maxLength={1}
           className="w-12 h-14 text-center text-2xl font-semibold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-slate-700 dark:border-slate-600"
           value={data}

@@ -183,7 +183,7 @@ const LinkAccountPage = () => {
                         type="tel"
                         name="phone"
                         id="phone"
-                        placeholder="e.g., 012 345 678"
+                        placeholder="e.g., 0967639355"
                         className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-slate-700 dark:text-slate-100"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
