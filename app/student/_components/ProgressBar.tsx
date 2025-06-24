@@ -8,12 +8,19 @@ const statusConfig = {
     bar: "bg-red-500",
   },
   "Registered": {
-    percent: 50,
+    percent: 33,
     message: "Registered for Mock Exam",
-    color: "text-blue-400",
-    bar: "bg-blue-600",
+    color: "text-orange-400",
+    bar: "bg-orange-400",
   },
-  "Paid Star": {
+  "Borrow": {
+    percent: 66,
+    message: "You owe Star payment. You need to finish your payment to view your Mock 3 results.",
+    color: "text-blue-500",
+    bar: "bg-blue-500",
+  },
+  "Paid Star" :
+   {
     percent: 100,
     message: "Star has been Paid! Good Luck on the Exam.",
     color: "text-green-500",

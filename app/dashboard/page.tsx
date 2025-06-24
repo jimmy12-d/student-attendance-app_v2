@@ -241,19 +241,18 @@ export default function DashboardPage() {
 
       {/* Pass data to the new section components */}
       {/* Note: ConsecutiveAbsencesSection might need its own way of determining 'recent' if not tied to selectedMonth */}
-      <ConsecutiveAbsencesSection 
+      {/* <ConsecutiveAbsencesSection 
         students={students} 
         attendanceRecords={attendance} 
         allClassConfigs={allClassConfigs} // Pass allClassConfigs
         approvedPermissions={permissions.filter(p => p.studentId && p.status === 'approved')} // Filter for approved permissions
-      />
+      /> */}
 
       {/* Wrapper for Monthly Reports to include the Month Selector */}
-      <SectionTitleLineWithButton icon={mdiCalendarMonth} title="Monthly Reports" main>
-        <div className="relative w-56" ref={monthDropdownRef}> {/* Adjusted width */}
+      {/* <SectionTitleLineWithButton icon={mdiCalendarMonth} title="Monthly Reports" main>
+        <div className="relative w-56" ref={monthDropdownRef}> 
           <button type="button" onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-              className="text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-4 py-2 inline-flex justify-between items-center w-full hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 dark:focus:ring-offset-slate-800"
-          >
+              className="text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm px-4 py-2 inline-flex justify-between items-center w-full hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 dark:focus:ring-offset-slate-800">
               <span>{monthOptions.find(m => m.value === selectedMonth)?.label || "Select Month"}</span>
               <Icon path={mdiChevronDown} w="h-4 w-4" className={`ml-2 text-gray-400 transform transition-transform duration-200 ${isMonthDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -274,11 +273,11 @@ export default function DashboardPage() {
           </div>
           )}
         </div>
-      </SectionTitleLineWithButton>
+      </SectionTitleLineWithButton> */}
 
       
         {/* Pass selectedMonth to components that need it */}
-        {!loading && (
+        {/* {!loading && (
             <>
             <MonthlyAbsencesSection 
                 students={students} 
@@ -299,9 +298,7 @@ export default function DashboardPage() {
                 // allClassConfigs is not directly needed by this version of MonthlyLatesSection's calculate function
             />
             </>
-        )}
-
-
+        )} */}
     </SectionMain>
   );
 }

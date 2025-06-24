@@ -111,6 +111,7 @@ const StudentDashboard = () => {
       try {
         const response = await fetch(apiUrl);
         if (!response.ok) throw new Error("Failed to fetch progress");
+       
         const data = await response.json();
         if (data.status) setProgressStatus(data.status);
         if (data.seat) setSeatInfo(String(data.seat)); // Store seat info as a string
@@ -463,74 +464,107 @@ const StudentDashboard = () => {
                     height={80}
                     className="absolute left-0 top-1/2 -translate-y-1/2 z-10 saturate-125 contrast-125"
                   />
-                  <div className={`relative bg-slate-900 rounded-2xl h-full ml-6 px-4 py-2 flex flex-col ${progressStatus !== 'Paid Star' ? 'justify-center items-center' : 'justify-between items-end'}`}>
-                    {progressStatus !== 'Paid Star' ? (
-                      <span className="text-center text-sm font-semibold text-yellow-300 animate-pulse pl-8">
-                        Pay STAR to View your Exam Seat
+                 <div className={`relative bg-slate-900 rounded-2xl h-full ml-6 px-4 py-2 flex flex-col ${
+                    progressStatus === 'Paid Star' || progressStatus === 'Borrow' 
+                      ? 'justify-between items-end' 
+                      : 'justify-center items-center'
+                  }`}>
+                  {progressStatus === 'Paid Star' || progressStatus === 'Borrow' ? (
+                    <>
+                      <span className="font-semibold text-white">Seat</span>
+                      <span className="text-5xl font-bold text-white">
+                        {seat}
                       </span>
-                    ) : (
-                      <>
-                        <span className="font-semibold text-white">Seat</span>
-                        <span className="text-5xl font-bold text-white">
-                          {seat}
-                        </span>
-                      </>
-                    )}
+                    </>
+                  ) : (
+                    <span className="text-center text-sm font-semibold text-yellow-300 animate-pulse pl-8">
+                      Pay STAR to View your Exam Seat
+                    </span>
+                  )}
                   </div>
                 </div>
               </div>
             )}
 
             <hr className="my-4 border-slate-800" />
-
             {/* Mock 1 & 2 Results Section */}
-            <h2 className="text-xl font-bold">Mock Exam Results</h2>
-            <ExamTabs tabs={availableTabs} selectedTab={selectedTab} setSelectedTab={handleTabChange} disabled={isExamLoading} />
-            {isExamLoading ? (
-              <div className="text-center text-gray-400 p-8">Loading scores...</div>
-            ) : (
-              <div className="space-y-6">
-                {Object.keys(examSettings).length > 0 ? (
-                  <>
-                    <div className="flex flex-col items-center p-6 bg-slate-900 rounded-2xl">
-                      <div className="relative">
-                        <CircularProgress percentage={examResults.totalPercentage} />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-4xl font-bold text-white">{animatedTotalScore}</span>
-                          <span className="text-lg text-gray-400">Total Score</span>
-                        </div>
-                      </div>
-                      <div className="mt-4 text-center">
-                        <span className="text-2xl font-bold text-purple-400">Grade: {examResults.totalGrade}</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {SUBJECT_ORDER.map(subjectKey => {
-                        // Only render if a score exists for this subject in the ordered list
-                        if (examScores.hasOwnProperty(subjectKey)) {
-                          const displayLabel = studentClassType === 'Grade 12 Social'
-                            ? SOCIAL_STUDIES_LABELS[subjectKey] || subjectKey
-                            : subjectKey;
+              <div>
+                <h2 className="text-xl font-bold">Mock Exam Results</h2>
+                <ExamTabs tabs={availableTabs} selectedTab={selectedTab} setSelectedTab={handleTabChange} disabled={isExamLoading} />
+              {isExamLoading ? (
+                <div className="text-center text-gray-400 p-8">Loading scores...</div>
+              ) : (
+                <>
+                  <div className="space-y-6">
+                    {(() => {
+                      // First, let's define what the "results view" looks like.
+                      // This avoids duplicating the code.
+                      const resultsView = (
+                        Object.keys(examSettings).length > 0 ? (
+                          <>
+                            <div className="flex flex-col items-center p-6 bg-slate-900 rounded-2xl">
+                              <div className="relative">
+                                <CircularProgress percentage={examResults.totalPercentage} />
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                  <span className="text-4xl font-bold text-white">{animatedTotalScore}</span>
+                                  <span className="text-lg text-gray-400">Total Score</span>
+                                </div>
+                              </div>
+                              <div className="mt-4 text-center">
+                                <span className="text-2xl font-bold text-purple-400">Grade: {examResults.totalGrade}</span>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {SUBJECT_ORDER.map(subjectKey => {
+                                if (examScores.hasOwnProperty(subjectKey)) {
+                                  const displayLabel = studentClassType === 'Grade 12 Social'
+                                    ? SOCIAL_STUDIES_LABELS[subjectKey] || subjectKey
+                                    : subjectKey;
 
+                                  return (
+                                    <ScoreCard
+                                      key={subjectKey}
+                                      subject={displayLabel}
+                                      score={examScores[subjectKey]}
+                                      maxScore={examSettings[subjectKey]?.maxScore || 0}
+                                      grade={calculateGrade(examScores[subjectKey], examSettings[subjectKey]?.maxScore || 0)}
+                                    />
+                                  );
+                                }
+                                return null;
+                              })}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center text-gray-400 p-8">No results found for this exam.</div>
+                        )
+                      );
+
+                      // Now, we apply the logic based on the selected tab.
+                      if (selectedTab === 'mock3') {
+                        // If the tab is 'mock3', we check the payment status.
+                        if (progressStatus === 'Paid Star') {
+                          return resultsView; // If paid, show the results.
+                        } else {
+                          // If not paid, show the payment message.
                           return (
-                            <ScoreCard
-                              key={subjectKey}
-                              subject={displayLabel}
-                              score={examScores[subjectKey]}
-                              maxScore={examSettings[subjectKey]?.maxScore || 0}
-                              grade={calculateGrade(examScores[subjectKey], examSettings[subjectKey]?.maxScore || 0)}
-                            />
+                            <div className="text-center text-yellow-400 bg-yellow-500/10 p-6 border border-yellow-500/30 rounded-2xl">
+                              <p className="font-bold text-lg animate-pulse">Payment Required</p>
+                              <p className="mt-2 text-sm animate-pulse">
+                                Please pay your Star Debt first to view your Mock 3 results.
+                              </p>
+                            </div>
                           );
                         }
-                        return null;
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center text-gray-400 p-8">No results found for this exam.</div>
-                )}
-              </div>
-            )}
+                      } else {
+                        // For any other tab ('mock1', 'mock2'), always show the results.
+                        return resultsView;
+                      }
+                    })()}
+                  </div>
+                </>
+               )}
+            </div> 
           </div>
         </>
       )}
