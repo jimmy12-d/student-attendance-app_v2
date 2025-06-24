@@ -13,6 +13,8 @@ import Button from "@/app/_components/Button";
 import Buttons from "@/app/_components/Buttons";
 import Image from 'next/image';
 import OtpInput from "../_components/OtpInput";
+import { mdiPhone } from "@mdi/js";
+import Icon from "../_components/Icon";
 
 declare global {
   interface Window {
@@ -59,7 +61,6 @@ const LinkAccountPage = () => {
       }, 1000);
     } else if (timer === 0) {
       setCanResend(true);
-      setTimer(60);
     }
     return () => clearInterval(interval);
   }, [otpSent, timer]);
@@ -75,17 +76,21 @@ const LinkAccountPage = () => {
   }
   
   const handleSendOtp = async () => {
+    console.log("handleSendOtp function started.");
     setIsLoading(true);
     setError(null);
     setCanResend(false);
+    setTimer(60);
 
     if (!phone) {
+        console.log("No phone number entered.");
         setError("Please enter a valid phone number.");
         setIsLoading(false);
         return;
     }
 
     try {
+      console.log("Attempting to send OTP...");
       const appVerifier = window.recaptchaVerifier!;
       let cleanPhone = phone.replace(/\D/g, ''); 
       if (cleanPhone.startsWith('0')) {
@@ -94,14 +99,18 @@ const LinkAccountPage = () => {
         cleanPhone = '855' + cleanPhone;
       }
       const phoneNumber = `+${cleanPhone}`;
+      console.log("Formatted phone number:", phoneNumber);
       
       const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      console.log("OTP sent successfully, confirmation result received.");
       window.confirmationResult = confirmationResult;
       setOtpSent(true);
       setError(null);
     } catch (err: any) {
+        console.error("Full error object from Firebase:", err);
         setError(err.message || "Failed to send OTP. Please check the phone number and try again.");
     } finally {
+        console.log("handleSendOtp function finished.");
         setIsLoading(false);
     }
   };
@@ -168,15 +177,18 @@ const LinkAccountPage = () => {
           {!otpSent ? (
             <FormField label="Registered Phone Number" labelFor="phone">
               {() => (
-                  <input
-                      type="tel"
-                      name="phone"
-                      id="phone"
-                      placeholder="e.g., 012 345 678"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-slate-700 dark:text-slate-100"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                  />
+                  <div className="relative">
+                    <Icon path={mdiPhone} className="w-6 h-6 absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="tel"
+                        name="phone"
+                        id="phone"
+                        placeholder="e.g., 012 345 678"
+                        className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-slate-700 dark:text-slate-100"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                    />
+                  </div>
               )}
             </FormField>
           ) : (
@@ -206,7 +218,7 @@ const LinkAccountPage = () => {
                 This action will link the phone number to: <span className="font-semibold">{user.email}</span>
             </p>
             
-            <Buttons className="mt-8 mb-2 gap-x-4" type="justify-center">
+            <Buttons className="mt-4 mb-2 gap-x-4" type="justify-center">
               {!otpSent ? (
                 <Button
                     onClick={handleSendOtp}
