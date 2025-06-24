@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { RecaptchaVerifier, signInWithPhoneNumber, linkWithCredential, PhoneAuthProvider } from "firebase/auth";
 import { useAuth } from "@/app/_hooks/use-auth";
 import { auth } from "@/firebase-config";
 import SectionFullScreen from "@/app/_components/Section/FullScreen";
@@ -11,6 +12,14 @@ import FormField from "@/app/_components/FormField";
 import Button from "@/app/_components/Button";
 import Buttons from "@/app/_components/Buttons";
 import Image from 'next/image';
+import OtpInput from "../_components/OtpInput";
+
+declare global {
+  interface Window {
+    recaptchaVerifier?: RecaptchaVerifier;
+    confirmationResult?: any;
+  }
+}
 
 /*
 // This is how the metadata would be defined in a server component.
@@ -26,8 +35,35 @@ const LinkAccountPage = () => {
   const { user, loading } = useAuth();
   
   const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [timer, setTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+
+  useEffect(() => {
+    if (user && !window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': () => console.log('reCAPTCHA solved!'),
+      });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (otpSent && timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (timer === 0) {
+      setCanResend(true);
+      setTimer(60);
+    }
+    return () => clearInterval(interval);
+  }, [otpSent, timer]);
+
 
   if (loading) {
     return <SectionFullScreen bg="white"><p className="text-black">Loading...</p></SectionFullScreen>;
@@ -38,42 +74,88 @@ const LinkAccountPage = () => {
     return null;
   }
   
-  const handleLinkAccount = async () => {
+  const handleSendOtp = async () => {
     setIsLoading(true);
     setError(null);
+    setCanResend(false);
+
     if (!phone) {
-        setError("Please enter the phone number you registered with.");
+        setError("Please enter a valid phone number.");
         setIsLoading(false);
         return;
     }
 
     try {
-      const functions = getFunctions(auth.app, "asia-southeast1");
-      const linkFunction = httpsCallable(functions, 'linkStudentByPhone');
-      
-      const result = await linkFunction({ phoneNumber: phone });
-
-      if ((result.data as any).success) {
-          router.push("/student/dashboard");
-      } else {
-          throw new Error((result.data as any).error || "Failed to link your student profile.");
+      const appVerifier = window.recaptchaVerifier!;
+      let cleanPhone = phone.replace(/\D/g, ''); 
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '855' + cleanPhone.substring(1);
+      } else if (!cleanPhone.startsWith('855')) {
+        cleanPhone = '855' + cleanPhone;
       }
+      const phoneNumber = `+${cleanPhone}`;
+      
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+      window.confirmationResult = confirmationResult;
+      setOtpSent(true);
+      setError(null);
     } catch (err: any) {
-        setError(err.message || "An unknown error occurred.");
+        setError(err.message || "Failed to send OTP. Please check the phone number and try again.");
     } finally {
         setIsLoading(false);
     }
   };
 
+  const handleVerifyAndLink = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (!window.confirmationResult) throw new Error("OTP confirmation result not found.");
+      
+      const credential = PhoneAuthProvider.credential(window.confirmationResult.verificationId, otp);
+      await linkWithCredential(auth.currentUser!, credential);
+
+      const functions = getFunctions(auth.app, "asia-southeast1");
+      const linkFunction = httpsCallable(functions, 'linkStudentByPhone');
+      const result = await linkFunction({ phoneNumber: phone });
+
+      if ((result.data as any).success) {
+          router.push("/student/dashboard");
+      } else {
+          throw new Error((result.data as any).error || "Failed to link your student profile in the database.");
+      }
+
+    } catch (err: any) {
+        setError(err.message || "An unknown error occurred during linking.");
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    if (otpSent) {
+      setOtpSent(false);
+      setError(null);
+      setOtp("");
+    } else {
+      router.back();
+    }
+  }
+
   return (
     <SectionFullScreen bg="white">
+      <div id="recaptcha-container"></div>
       <CardBox className="w-11/12 md:w-7/12 lg:w-5/12 xl:w-4/12 shadow-2xl">
         <div className="flex justify-center mb-6">
           <Image src="/phone_verify.png" alt="Phone Verification" width={100} height={100} />
         </div>
-        <h1 className="text-3xl font-bold text-center mb-6">Link Your Account</h1>
+        <h1 className="text-3xl font-bold text-center mb-6">{otpSent ? "Enter Verification Code" : "Link Your Account"}</h1>
         <p className="text-center mb-6">
-          Enter the phone number you registered with to connect it to your Google account.
+          {otpSent 
+            ? `We've sent a code to ${phone}. Please enter it below.`
+            : "Enter the phone number you registered with to verify your account."
+          }
         </p>
         
         {error && (
@@ -83,38 +165,65 @@ const LinkAccountPage = () => {
         )}
 
         <div className="px-4">
+          {!otpSent ? (
             <FormField label="Registered Phone Number" labelFor="phone">
-                {() => (
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
-                    </span>
-                    <input
-                        type="tel"
-                        name="phone"
-                        id="phone"
-                        placeholder="Enter registered phone number"
-                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-slate-700 dark:text-slate-100"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
-                )}
+              {() => (
+                  <input
+                      type="tel"
+                      name="phone"
+                      id="phone"
+                      placeholder="e.g., 012 345 678"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-slate-700 dark:text-slate-100"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                  />
+              )}
             </FormField>
+          ) : (
+            <>
+              <FormField label="Verification Code" labelFor="otp">
+                {() => (
+                  <OtpInput length={6} onChange={setOtp} />
+                )}
+              </FormField>
+              <div className="text-center text-sm mt-4">
+                {canResend ? (
+                   <button
+                     onClick={handleSendOtp}
+                     className="font-medium text-purple-600 hover:text-purple-500 disabled:text-gray-400"
+                     disabled={isLoading}
+                   >
+                     Resend OTP
+                   </button>
+                ) : (
+                  <p>Resend OTP in {timer}s</p>
+                )}
+              </div>
+            </>
+          )}
 
             <p className="text-xs mt-4 text-gray-600 dark:text-gray-400">
-                This will link the phone number to: <span className="font-semibold">{user.email}</span>
+                This action will link the phone number to: <span className="font-semibold">{user.email}</span>
             </p>
             
             <Buttons className="mt-8 mb-2 gap-x-4" type="justify-center">
+              {!otpSent ? (
                 <Button
-                    onClick={handleLinkAccount}
-                    label={isLoading ? "Linking..." : "Link Account"}
+                    onClick={handleSendOtp}
+                    label={isLoading ? "Sending..." : "Send OTP"}
                     color="success"
-                    disabled={isLoading}
+                    disabled={isLoading || !phone}
                 />
+              ) : (
                 <Button
-                    onClick={() => router.back()}
+                    onClick={handleVerifyAndLink}
+                    label={isLoading ? "Verifying..." : "Verify & Link Account"}
+                    color="success"
+                    disabled={isLoading || otp.length < 6}
+                />
+              )}
+                <Button
+                    onClick={handleBack}
                     label="Back"
                     color="info"
                     outline
