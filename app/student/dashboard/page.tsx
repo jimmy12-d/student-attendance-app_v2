@@ -583,7 +583,7 @@ const StudentDashboard = () => {
                         )
                       );
 
-                      // Now, we apply the logic based on the selected tab.
+                      // Now, we apply the logic based on the selected tab. commit
                       if (selectedTab === 'mock3') {
                         // If the tab is 'mock3', we check the payment status.
                         if (progressStatus === 'Paid Star') {
