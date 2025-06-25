@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult, 
+  User 
+} from "firebase/auth";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { useAppDispatch } from "../../_stores/hooks";
 import { setUser } from "../../_stores/mainSlice";
@@ -16,17 +22,57 @@ const StudentGoogleSignIn = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Function to detect if user is on mobile device
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  // Check for redirect result on component mount (for mobile users returning from Google)
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      if (isMobileDevice()) {
+        setIsLoading(true);
+        try {
+          const result = await getRedirectResult(auth);
+          if (result) {
+            const firebaseUser = result.user;
+            await checkUserAndRedirect(firebaseUser);
+          } else {
+            setIsLoading(false);
+          }
+        } catch (error: any) {
+          setError(error.message || "Failed to complete sign-in.");
+          console.error("Redirect sign-in error:", error);
+          setIsLoading(false);
+        }
+      }
+    };
+
+    checkRedirectResult();
+  }, []);
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
     const provider = new GoogleAuthProvider();
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-      await checkUserAndRedirect(firebaseUser);
+      if (isMobileDevice()) {
+        // Use redirect for mobile devices
+        console.log("Redirecting to Google sign-in page for mobile devices.");
+        await signInWithRedirect(auth, provider);
+      } else {
+        console.log("Signing in with popup for desktop devices.");
+        // Use popup for desktop devices
+        const result = await signInWithPopup(auth, provider);
+        const firebaseUser = result.user;
+        await checkUserAndRedirect(firebaseUser);
+      }
     } catch (error: any) {
-      setError(error.message || "Failed to sign in with Google.");
+      // Handle common errors like popup closed by user
+      if (error.code !== 'auth/popup-closed-by-user') {
+        setError(error.message || "Failed to sign in with Google.");
+      }
       console.error("Google sign-in error:", error);
       setIsLoading(false);
     }

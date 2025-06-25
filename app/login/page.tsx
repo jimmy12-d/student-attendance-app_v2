@@ -4,6 +4,13 @@ import SectionFullScreen from "../_components/Section/FullScreen";
 import { getPageTitle } from "../_lib/config";
 import { Metadata } from "next";
 import StudentGoogleSignIn from "./_components/StudentGoogleSignIn";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  FacebookAuthProvider,
+  onAuthStateChanged,
+} from 'firebase/auth';
 
 export const metadata: Metadata = {
   title: getPageTitle("Login"),
