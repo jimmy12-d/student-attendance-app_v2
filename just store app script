@@ -94,6 +94,7 @@ function getRegistrationStatus(spreadsheet, studentId) {
   const ID_COLUMN_NAME = "id";
   const STATUS_COLUMN_NAME = "status";
   const SEAT_COLUMN_NAME = "seat";
+  const PHONE_COLUMN_NAME = "phone";
 
   const data = sheet.getDataRange().getValues();
   const headers = data[0].map(h => String(h).toLowerCase().trim());
@@ -101,9 +102,10 @@ function getRegistrationStatus(spreadsheet, studentId) {
   const idCol = headers.indexOf(ID_COLUMN_NAME);
   const statusCol = headers.indexOf(STATUS_COLUMN_NAME);
   const seatCol = headers.indexOf(SEAT_COLUMN_NAME);
+  const phoneCol = headers.indexOf(PHONE_COLUMN_NAME);
 
-  if (idCol === -1 || statusCol === -1 || seatCol === -1) {
-    return { error: `One or more required columns ('id', 'status', 'seat') not found in '${REGISTRATION_SHEET_NAME}' sheet.` };
+  if (idCol === -1 || statusCol === -1 || seatCol === -1 || phoneCol === -1) {
+    return { error: `One or more required columns ('id', 'status', 'seat', 'phone') not found in '${REGISTRATION_SHEET_NAME}' sheet.` };
   }
   
   const studentRow = data.slice(1).find(row => row[idCol] == studentId);
@@ -111,9 +113,10 @@ function getRegistrationStatus(spreadsheet, studentId) {
   if (studentRow) {
     return {
       status: studentRow[statusCol],
-      seat: studentRow[seatCol]
+      seat: studentRow[seatCol],
+      phone: studentRow[phoneCol]
     };
   } else {
-    return { status: "Not Registered", seat: null };
+    return { status: "Not Registered", seat: null, phone: null };
   }
 }
