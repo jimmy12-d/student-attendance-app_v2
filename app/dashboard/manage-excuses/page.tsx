@@ -18,8 +18,8 @@ import { collection, getDocs, query, orderBy, doc, updateDoc } from "firebase/fi
 // Removed serverTimestamp as it's not used in this specific update logic for gracePeriodMinutes
 
 // Define standard and extended grace periods (these could also be app-wide configs)
-export const STANDARD_ON_TIME_GRACE_MINUTES = 15;
-export const EXTENDED_GRACE_MINUTES = 30;
+const STANDARD_ON_TIME_GRACE_MINUTES = 15;
+const EXTENDED_GRACE_MINUTES = 30;
 
 export default function ManageGracePeriodsPage() { // Renamed for clarity
   const [students, setStudents] = useState<StudentWithGracePeriod[]>([]);
