@@ -1,0 +1,568 @@
+[debug] [2025-06-26T08:47:13.819Z] ----------------------------------------------------------------------
+[debug] [2025-06-26T08:47:13.821Z] Command:       /usr/local/bin/node /usr/local/bin/firebase deploy --only hosting
+[debug] [2025-06-26T08:47:13.821Z] CLI Version:   14.8.0
+[debug] [2025-06-26T08:47:13.821Z] Platform:      darwin
+[debug] [2025-06-26T08:47:13.821Z] Node Version:  v20.9.0
+[debug] [2025-06-26T08:47:13.821Z] Time:          Thu Jun 26 2025 15:47:13 GMT+0700 (Indochina Time)
+[debug] [2025-06-26T08:47:13.821Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-06-26T08:47:13.930Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-26T08:47:13.930Z] > authorizing via signed-in user (kemhoutlem@gmail.com)
+[debug] [2025-06-26T08:47:13.930Z] [iam] checking project rodwell-attendance for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-06-26T08:47:13.931Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:13.931Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:13.931Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions [none]
+[debug] [2025-06-26T08:47:13.931Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-06-26T08:47:13.931Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-06-26T08:47:14.994Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions 200
+[debug] [2025-06-26T08:47:14.994Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-06-26T08:47:14.995Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:14.995Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:14.995Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance [none]
+[debug] [2025-06-26T08:47:15.390Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance 200
+[debug] [2025-06-26T08:47:15.391Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance {"projectId":"rodwell-attendance","projectNumber":"50079853705","displayName":"rodwell-attendance","name":"projects/rodwell-attendance","resources":{"hostingSite":"rodwell-attendance"},"state":"ACTIVE","etag":"1_db647dd3-c89d-4679-b123-ef48e46c12f9"}
+[debug] [2025-06-26T08:47:16.357Z] defaultcredentials: writing to file /Users/jimmy/.config/firebase/kemhoutlem_gmail_com_application_default_credentials.json
+[debug] [2025-06-26T08:47:16.358Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:16.358Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:16.359Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites pageToken=&pageSize=10
+[debug] [2025-06-26T08:47:16.954Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites 200
+[debug] [2025-06-26T08:47:16.955Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites {"sites":[{"name":"projects/rodwell-attendance/sites/rodwell-attendance","defaultUrl":"https://rodwell-attendance.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-06-26T08:47:16.955Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:16.955Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:16.956Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites 
+[debug] [2025-06-26T08:47:17.317Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites 200
+[debug] [2025-06-26T08:47:17.318Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites {"sites":[{"name":"projects/rodwell-attendance/sites/rodwell-attendance","defaultUrl":"https://rodwell-attendance.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-06-26T08:47:17.318Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:17.318Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:17.319Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/webApps/-/config [none]
+[debug] [2025-06-26T08:47:18.118Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/webApps/-/config 200
+[debug] [2025-06-26T08:47:18.119Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/webApps/-/config {"projectId":"rodwell-attendance","appId":"1:50079853705:web:5e9d3dcb42b4d0d874aa58","storageBucket":"rodwell-attendance.firebasestorage.app","apiKey":"AIzaSyBlUIZfsrgVvfw4fL2poyITh0bfM9Iumag","authDomain":"rodwell-attendance.firebaseapp.com","messagingSenderId":"50079853705"}
+[info] 
+   Thank you for trying our early preview of Next.js support on Firebase Hosting.
+   During the preview, support is best-effort and breaking changes can be expected. Proceed with caution.
+   The integration is known to work with Next.js version 12 - 15.0. You may encounter errors.
+
+   Documentation: https://firebase.google.com/docs/hosting/frameworks/nextjs
+   File a bug: https://github.com/firebase/firebase-tools/issues/new?template=bug_report.md
+   Submit a feature request: https://github.com/firebase/firebase-tools/issues/new?template=feature_request.md
+
+   We'd love to learn from you. Express your interest in helping us shape the future of Firebase Hosting: https://goo.gle/41enW5X
+
+[debug] [2025-06-26T08:47:19.912Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:19.912Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:19.912Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites/rodwell-attendance [none]
+[debug] [2025-06-26T08:47:20.319Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites/rodwell-attendance 200
+[debug] [2025-06-26T08:47:20.320Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites/rodwell-attendance {"name":"projects/rodwell-attendance/sites/rodwell-attendance","defaultUrl":"https://rodwell-attendance.web.app","type":"DEFAULT_SITE"}
+[info]    ▲ Next.js 15.1.7
+
+[info]    - Environments: .env.local
+
+
+[info]    Creating an optimized production build ...
+
+[info]  ✓ Compiled successfully
+
+[info]    Skipping validation of types
+   Skipping linting
+
+[info]    Collecting page data ...
+
+[info]    Generating static pages (0/19) ...
+
+[info]    Generating static pages (4/19) 
+
+[info] Phone Info null
+
+[info]    Generating static pages (9/19) 
+
+[info]    Generating static pages (14/19) 
+ ✓ Generating static pages (19/19)
+
+[info]    Finalizing page optimization ...
+
+[info]    Collecting build traces ...
+
+[info] 
+
+[info] Route (app)                              Size     First Load JS
+┌ ○ /                                    345 B           106 kB
+├ ○ /_not-found                          982 B           106 kB
+├ ○ /admin                               3.91 kB         279 kB
+├ ƒ /api/sheet-data                      134 B           106 kB
+├ ○ /dashboard                           8.29 kB         279 kB
+├ ○ /dashboard/check                     7.77 kB         278 kB
+├ ○ /dashboard/import-student            3.81 kB         273 kB
+├ ○ /dashboard/manage-excuses            5.98 kB         272 kB
+├ ○ /dashboard/mock-exams                4 kB            267 kB
+├ ○ /dashboard/permission                4.9 kB          271 kB
+├ ○ /dashboard/record                    5.61 kB         272 kB
+├ ○ /dashboard/scan-qr                   111 kB          377 kB
+├ ○ /dashboard/students                  7.62 kB         274 kB
+├ ○ /dashboard/ui                        5.55 kB         141 kB
+├ ○ /link-account                        5.69 kB         282 kB
+├ ○ /login                               4.35 kB         279 kB
+└ ○ /student/dashboard                   28.3 kB         321 kB
++ First Load JS shared by all            105 kB
+  ├ chunks/4bd1b696-f0807ee74317a522.js  53 kB
+  ├ chunks/517-50503bebbd660a0a.js       50.4 kB
+  └ other shared chunks (total)          2.06 kB
+
+
+
+[info] ○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+
+[info] Building a Cloud Function to run this application. This is needed due to:
+[info]  • non-static component /api/sheet-data/route
+[info] 
+[debug] [2025-06-26T08:47:41.940Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:41.940Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:41.940Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites/rodwell-attendance [none]
+[debug] [2025-06-26T08:47:42.396Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites/rodwell-attendance 200
+[debug] [2025-06-26T08:47:42.396Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites/rodwell-attendance {"name":"projects/rodwell-attendance/sites/rodwell-attendance","defaultUrl":"https://rodwell-attendance.web.app","type":"DEFAULT_SITE"}
+[debug] [2025-06-26T08:47:50.620Z] [web frameworks] effective firebase.json:  {
+  "hosting": [
+    {
+      "source": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "frameworksBackend": {
+        "region": "asia-southeast1"
+      },
+      "site": "rodwell-attendance",
+      "rewrites": [
+        {
+          "source": "/**",
+          "function": {
+            "functionId": "ssrrodwellattendance",
+            "region": "asia-southeast1",
+            "pinTag": true
+          }
+        }
+      ],
+      "redirects": [],
+      "headers": [
+        {
+          "source": "/_not-found",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/_not-found/layout,_N_T_/_not-found/page,_N_T_/_not-found"
+            }
+          ]
+        },
+        {
+          "source": "/admin",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/admin/layout,_N_T_/admin/page,_N_T_/admin"
+            }
+          ]
+        },
+        {
+          "source": "/student/dashboard",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/student/layout,_N_T_/student/dashboard/layout,_N_T_/student/dashboard/page,_N_T_/student/dashboard"
+            }
+          ]
+        },
+        {
+          "source": "/login",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/login/layout,_N_T_/login/page,_N_T_/login"
+            }
+          ]
+        },
+        {
+          "source": "/link-account",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/link-account/layout,_N_T_/link-account/page,_N_T_/link-account"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/check",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/check/layout,_N_T_/dashboard/check/page,_N_T_/dashboard/check"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/import-student",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/import-student/layout,_N_T_/dashboard/import-student/page,_N_T_/dashboard/import-student"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/mock-exams",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/mock-exams/layout,_N_T_/dashboard/mock-exams/page,_N_T_/dashboard/mock-exams"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/record",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/record/layout,_N_T_/dashboard/record/page,_N_T_/dashboard/record"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/page,_N_T_/dashboard"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/ui",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/ui/layout,_N_T_/dashboard/ui/page,_N_T_/dashboard/ui"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/permission",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/permission/layout,_N_T_/dashboard/permission/page,_N_T_/dashboard/permission"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/manage-excuses",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/manage-excuses/layout,_N_T_/dashboard/manage-excuses/page,_N_T_/dashboard/manage-excuses"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/students",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/students/layout,_N_T_/dashboard/students/page,_N_T_/dashboard/students"
+            }
+          ]
+        },
+        {
+          "source": "/dashboard/scan-qr",
+          "headers": [
+            {
+              "key": "x-nextjs-stale-time",
+              "value": "4294967294"
+            },
+            {
+              "key": "x-nextjs-prerender",
+              "value": "1"
+            },
+            {
+              "key": "x-next-cache-tags",
+              "value": "_N_T_/layout,_N_T_/dashboard/layout,_N_T_/dashboard/scan-qr/layout,_N_T_/dashboard/scan-qr/page,_N_T_/dashboard/scan-qr"
+            }
+          ]
+        },
+        {
+          "source": "/**/*.[jt]s",
+          "headers": [
+            {
+              "key": "Set-Cookie",
+              "value": "__FIREBASE_DEFAULTS__=eyJjb25maWciOnsicHJvamVjdElkIjoicm9kd2VsbC1hdHRlbmRhbmNlIiwiYXBwSWQiOiIxOjUwMDc5ODUzNzA1OndlYjo1ZTlkM2RjYjQyYjRkMGQ4NzRhYTU4Iiwic3RvcmFnZUJ1Y2tldCI6InJvZHdlbGwtYXR0ZW5kYW5jZS5maXJlYmFzZXN0b3JhZ2UuYXBwIiwiYXBpS2V5IjoiQUl6YVN5QmxVSVpmc3JnVnZmdzRmTDJwb3lJVGgwYmZNOUl1bWFnIiwiYXV0aERvbWFpbiI6InJvZHdlbGwtYXR0ZW5kYW5jZS5maXJlYmFzZWFwcC5jb20iLCJtZXNzYWdpbmdTZW5kZXJJZCI6IjUwMDc5ODUzNzA1In0sIl9hdXRoVG9rZW5TeW5jVVJMIjoiL19fc2Vzc2lvbiJ9; SameSite=Strict; Expires=2027-05-21T19:27:50.620Z; Path=/;"
+            }
+          ]
+        }
+      ],
+      "cleanUrls": true,
+      "trailingSlash": false,
+      "public": ".firebase/rodwell-attendance/hosting",
+      "webFramework": "next_ssr"
+    }
+  ],
+  "functions": [
+    {
+      "source": ".firebase/rodwell-attendance/functions",
+      "codebase": "firebase-frameworks-rodwell-attendance"
+    }
+  ]
+}
+[debug] [2025-06-26T08:47:50.621Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-26T08:47:50.621Z] > authorizing via signed-in user (kemhoutlem@gmail.com)
+[debug] [2025-06-26T08:47:50.621Z] [iam] checking project rodwell-attendance for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2025-06-26T08:47:50.622Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:50.622Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:50.622Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions [none]
+[debug] [2025-06-26T08:47:50.622Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-06-26T08:47:50.622Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-06-26T08:47:51.577Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions 200
+[debug] [2025-06-26T08:47:51.577Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-06-26T08:47:51.577Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:51.577Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:51.577Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/rodwell-attendance/locations/-/functions [none]
+[debug] [2025-06-26T08:47:52.705Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/rodwell-attendance/locations/-/functions 200
+[debug] [2025-06-26T08:47:52.705Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/rodwell-attendance/locations/-/functions {"functions":[{"name":"projects/rodwell-attendance/locations/asia-southeast1/functions/verifyAndLinkWithMsg91","httpsTrigger":{"url":"https://asia-southeast1-rodwell-attendance.cloudfunctions.net/verifyAndLinkWithMsg91","securityLevel":"SECURE_ALWAYS"},"status":"ACTIVE","entryPoint":"verifyAndLinkWithMsg91","timeout":"60s","availableMemoryMb":256,"serviceAccountEmail":"rodwell-attendance@appspot.gserviceaccount.com","updateTime":"2025-06-23T07:03:26.701Z","versionId":"2","labels":{"deployment-tool":"cli-firebase","deployment-callable":"true","firebase-functions-hash":"2393ed0005e878bc441558472954a519df5735ff"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-92701763916.asia-southeast1.cloudfunctions.appspot.com/456c5849-efdc-4ef3-bc8a-cdfa51c16d68.zip","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"rodwell-attendance\",\"storageBucket\":\"rodwell-attendance.firebasestorage.app\"}","GCLOUD_PROJECT":"rodwell-attendance","EVENTARC_CLOUD_EVENT_SOURCE":"projects/rodwell-attendance/locations/asia-southeast1/functions/verifyAndLinkWithMsg91"},"runtime":"nodejs20","ingressSettings":"ALLOW_ALL","buildId":"537b448d-7289-4d22-ac8f-669eac395691","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"buildName":"projects/50079853705/locations/asia-southeast1/builds/537b448d-7289-4d22-ac8f-669eac395691","dockerRegistry":"ARTIFACT_REGISTRY","automaticUpdatePolicy":{},"buildServiceAccount":"projects/rodwell-attendance/serviceAccounts/50079853705-compute@developer.gserviceaccount.com"},{"name":"projects/rodwell-attendance/locations/asia-southeast1/functions/redeemAttendancePasscode","httpsTrigger":{"url":"https://asia-southeast1-rodwell-attendance.cloudfunctions.net/redeemAttendancePasscode","securityLevel":"SECURE_ALWAYS"},"status":"ACTIVE","entryPoint":"redeemAttendancePasscode","timeout":"60s","availableMemoryMb":256,"serviceAccountEmail":"rodwell-attendance@appspot.gserviceaccount.com","updateTime":"2025-06-23T07:03:28.849Z","versionId":"17","labels":{"deployment-tool":"cli-firebase","deployment-callable":"true","firebase-functions-hash":"2393ed0005e878bc441558472954a519df5735ff"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-92701763916.asia-southeast1.cloudfunctions.appspot.com/456c5849-efdc-4ef3-bc8a-cdfa51c16d68.zip","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"rodwell-attendance\",\"storageBucket\":\"rodwell-attendance.firebasestorage.app\"}","GCLOUD_PROJECT":"rodwell-attendance","EVENTARC_CLOUD_EVENT_SOURCE":"projects/rodwell-attendance/locations/asia-southeast1/functions/redeemAttendancePasscode"},"runtime":"nodejs20","ingressSettings":"ALLOW_ALL","buildId":"537b448d-7289-4d22-ac8f-669eac395691","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"buildName":"projects/50079853705/locations/asia-southeast1/builds/537b448d-7289-4d22-ac8f-669eac395691","dockerRegistry":"ARTIFACT_REGISTRY","automaticUpdatePolicy":{},"buildServiceAccount":"projects/rodwell-attendance/serviceAccounts/50079853705-compute@developer.gserviceaccount.com"},{"name":"projects/rodwell-attendance/locations/asia-southeast1/functions/generateAttendancePasscode","httpsTrigger":{"url":"https://asia-southeast1-rodwell-attendance.cloudfunctions.net/generateAttendancePasscode","securityLevel":"SECURE_ALWAYS"},"status":"ACTIVE","entryPoint":"generateAttendancePasscode","timeout":"60s","availableMemoryMb":256,"serviceAccountEmail":"rodwell-attendance@appspot.gserviceaccount.com","updateTime":"2025-06-23T07:03:26.132Z","versionId":"17","labels":{"deployment-tool":"cli-firebase","deployment-callable":"true","firebase-functions-hash":"2393ed0005e878bc441558472954a519df5735ff"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-92701763916.asia-southeast1.cloudfunctions.appspot.com/456c5849-efdc-4ef3-bc8a-cdfa51c16d68.zip","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"rodwell-attendance\",\"storageBucket\":\"rodwell-attendance.firebasestorage.app\"}","GCLOUD_PROJECT":"rodwell-attendance","EVENTARC_CLOUD_EVENT_SOURCE":"projects/rodwell-attendance/locations/asia-southeast1/functions/generateAttendancePasscode"},"runtime":"nodejs20","ingressSettings":"ALLOW_ALL","buildId":"537b448d-7289-4d22-ac8f-669eac395691","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"buildName":"projects/50079853705/locations/asia-southeast1/builds/537b448d-7289-4d22-ac8f-669eac395691","dockerRegistry":"ARTIFACT_REGISTRY","automaticUpdatePolicy":{},"buildServiceAccount":"projects/rodwell-attendance/serviceAccounts/50079853705-compute@developer.gserviceaccount.com"},{"name":"projects/rodwell-attendance/locations/asia-southeast1/functions/sendMsg91Otp","httpsTrigger":{"url":"https://asia-southeast1-rodwell-attendance.cloudfunctions.net/sendMsg91Otp","securityLevel":"SECURE_ALWAYS"},"status":"ACTIVE","entryPoint":"sendMsg91Otp","timeout":"60s","availableMemoryMb":256,"serviceAccountEmail":"rodwell-attendance@appspot.gserviceaccount.com","updateTime":"2025-06-23T07:03:29.104Z","versionId":"2","labels":{"deployment-tool":"cli-firebase","deployment-callable":"true","firebase-functions-hash":"2393ed0005e878bc441558472954a519df5735ff"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-92701763916.asia-southeast1.cloudfunctions.appspot.com/456c5849-efdc-4ef3-bc8a-cdfa51c16d68.zip","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"rodwell-attendance\",\"storageBucket\":\"rodwell-attendance.firebasestorage.app\"}","GCLOUD_PROJECT":"rodwell-attendance","EVENTARC_CLOUD_EVENT_SOURCE":"projects/rodwell-attendance/locations/asia-southeast1/functions/sendMsg91Otp"},"runtime":"nodejs20","ingressSettings":"ALLOW_ALL","buildId":"537b448d-7289-4d22-ac8f-669eac395691","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"buildName":"projects/50079853705/locations/asia-southeast1/builds/537b448d-7289-4d22-ac8f-669eac395691","dockerRegistry":"ARTIFACT_REGISTRY","automaticUpdatePolicy":{},"buildServiceAccount":"projects/rodwell-attendance/serviceAccounts/50079853705-compute@developer.gserviceaccount.com"},{"name":"projects/rodwell-attendance/locations/asia-southeast1/functions/linkStudentByPhone","httpsTrigger":{"url":"https://asia-southeast1-rodwell-attendance.cloudfunctions.net/linkStudentByPhone","securityLevel":"SECURE_ALWAYS"},"status":"ACTIVE","entryPoint":"linkStudentByPhone","timeout":"60s","availableMemoryMb":256,"serviceAccountEmail":"rodwell-attendance@appspot.gserviceaccount.com","updateTime":"2025-06-23T07:03:09.489188517Z","versionId":"1","labels":{"deployment-callable":"true","firebase-functions-hash":"2393ed0005e878bc441558472954a519df5735ff","deployment-tool":"cli-firebase"},"sourceUploadUrl":"https://storage.googleapis.com/uploads-92701763916.asia-southeast1.cloudfunctions.appspot.com/456c5849-efdc-4ef3-bc8a-cdfa51c16d68.zip","environmentVariables":{"FIREBASE_CONFIG":"{\"projectId\":\"rodwell-attendance\",\"storageBucket\":\"rodwell-attendance.firebasestorage.app\"}","GCLOUD_PROJECT":"rodwell-attendance","EVENTARC_CLOUD_EVENT_SOURCE":"projects/rodwell-attendance/locations/asia-southeast1/functions/linkStudentByPhone"},"runtime":"nodejs20","ingressSettings":"ALLOW_ALL","buildId":"537b448d-7289-4d22-ac8f-669eac395691","buildEnvironmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"buildName":"projects/50079853705/locations/asia-southeast1/builds/537b448d-7289-4d22-ac8f-669eac395691","dockerRegistry":"ARTIFACT_REGISTRY","automaticUpdatePolicy":{},"buildServiceAccount":"projects/rodwell-attendance/serviceAccounts/50079853705-compute@developer.gserviceaccount.com"}]}
+[debug] [2025-06-26T08:47:52.706Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:52.706Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:52.706Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/rodwell-attendance/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2025-06-26T08:47:53.382Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/rodwell-attendance/locations/-/functions 200
+[debug] [2025-06-26T08:47:53.382Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v2/projects/rodwell-attendance/locations/-/functions {"functions":[{"name":"projects/rodwell-attendance/locations/asia-southeast1/functions/ssrrodwellattendance","buildConfig":{"build":"projects/50079853705/locations/asia-southeast1/builds/03d24a38-0b38-4f0a-b71e-ad1c48663d43","runtime":"nodejs20","entryPoint":"ssrrodwellattendance","source":{"storageSource":{"bucket":"gcf-v2-sources-50079853705-asia-southeast1","object":"ssrrodwellattendance/function-source.zip","generation":"1750925497034596"}},"environmentVariables":{"GOOGLE_NODE_RUN_SCRIPTS":""},"dockerRepository":"projects/rodwell-attendance/locations/asia-southeast1/repositories/gcf-artifacts","sourceProvenance":{"resolvedStorageSource":{"bucket":"gcf-v2-sources-50079853705-asia-southeast1","object":"ssrrodwellattendance/function-source.zip","generation":"1750925497034596"}},"dockerRegistry":"ARTIFACT_REGISTRY","serviceAccount":"projects/rodwell-attendance/serviceAccounts/50079853705-compute@developer.gserviceaccount.com","automaticUpdatePolicy":{}},"serviceConfig":{"service":"projects/rodwell-attendance/locations/asia-southeast1/services/ssrrodwellattendance","timeoutSeconds":60,"environmentVariables":{"VERCEL_URL":"rodwell-attendance.web.app","__FIREBASE_FRAMEWORKS_ENTRY__":"next.js","__FIREBASE_DEFAULTS__":"{\"config\":{\"projectId\":\"rodwell-attendance\",\"appId\":\"1:50079853705:web:5e9d3dcb42b4d0d874aa58\",\"storageBucket\":\"rodwell-attendance.firebasestorage.app\",\"apiKey\":\"AIzaSyBlUIZfsrgVvfw4fL2poyITh0bfM9Iumag\",\"authDomain\":\"rodwell-attendance.firebaseapp.com\",\"messagingSenderId\":\"50079853705\"},\"_authTokenSyncURL\":\"/__session\"}","FIREBASE_CONFIG":"{\"projectId\":\"rodwell-attendance\",\"storageBucket\":\"rodwell-attendance.firebasestorage.app\"}","GCLOUD_PROJECT":"rodwell-attendance","EVENTARC_CLOUD_EVENT_SOURCE":"projects/rodwell-attendance/locations/asia-southeast1/services/ssrrodwellattendance","FUNCTION_TARGET":"ssrrodwellattendance","LOG_EXECUTION_ID":"true"},"maxInstanceCount":20,"ingressSettings":"ALLOW_ALL","uri":"https://ssrrodwellattendance-uegi5asu6a-as.a.run.app","serviceAccountEmail":"50079853705-compute@developer.gserviceaccount.com","availableMemory":"256Mi","allTrafficOnLatestRevision":true,"revision":"ssrrodwellattendance-00012-lax","maxInstanceRequestConcurrency":80,"availableCpu":"1"},"state":"ACTIVE","updateTime":"2025-06-26T08:15:25.097510462Z","labels":{"deployment-tool":"cli-firebase","firebase-functions-codebase":"firebase-frameworks-rodwell-attendance","firebase-functions-hash":"0a948c6901d95786ee46f093cad9b0786bd8070f"},"environment":"GEN_2","url":"https://asia-southeast1-rodwell-attendance.cloudfunctions.net/ssrrodwellattendance","createTime":"2025-06-26T06:35:55.543817896Z"}]}
+[info] i  hosting: The following function(s) are pinned to site rodwell-attendance and will be deployed as well: ssrrodwellattendance 
+[info] 
+[info] === Deploying to 'rodwell-attendance'...
+[info] 
+[info] i  deploying functions, hosting 
+[debug] [2025-06-26T08:47:53.384Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:53.384Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:53.385Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance [none]
+[debug] [2025-06-26T08:47:53.634Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance 200
+[debug] [2025-06-26T08:47:53.634Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance {"projectNumber":"50079853705","projectId":"rodwell-attendance","lifecycleState":"ACTIVE","name":"rodwell-attendance","labels":{"firebase":"enabled","firebase-core":"disabled"},"createTime":"2025-05-28T05:19:56.868943Z"}
+[info] i  functions: preparing codebase firebase-frameworks-rodwell-attendance for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2025-06-26T08:47:53.635Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:53.635Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:53.635Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/adminSdkConfig [none]
+[debug] [2025-06-26T08:47:54.095Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/adminSdkConfig 200
+[debug] [2025-06-26T08:47:54.095Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/adminSdkConfig {"projectId":"rodwell-attendance","storageBucket":"rodwell-attendance.firebasestorage.app"}
+[debug] [2025-06-26T08:47:54.095Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.095Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.095Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs [none]
+[debug] [2025-06-26T08:47:54.510Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs 200
+[debug] [2025-06-26T08:47:54.511Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs {"configs":[{"name":"projects/rodwell-attendance/configs/msg91"},{"name":"projects/rodwell-attendance/configs/readyme"},{"name":"projects/rodwell-attendance/configs/sheet"},{"name":"projects/rodwell-attendance/configs/vonage"},{"name":"projects/rodwell-attendance/configs/jwt"}]}
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.511Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables [none]
+[debug] [2025-06-26T08:47:54.511Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/readyme/variables [none]
+[debug] [2025-06-26T08:47:54.512Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/sheet/variables [none]
+[debug] [2025-06-26T08:47:54.513Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables [none]
+[debug] [2025-06-26T08:47:54.513Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/jwt/variables [none]
+[debug] [2025-06-26T08:47:54.773Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables 200
+[debug] [2025-06-26T08:47:54.773Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables {"variables":[{"name":"projects/rodwell-attendance/configs/msg91/variables/authkey","updateTime":"2025-06-22T17:48:17.113085431Z"},{"name":"projects/rodwell-attendance/configs/msg91/variables/template_id","updateTime":"2025-06-22T17:55:45.005505386Z"}]}
+[debug] [2025-06-26T08:47:54.773Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.773Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.773Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.773Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.773Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables/authkey [none]
+[debug] [2025-06-26T08:47:54.774Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables/template_id [none]
+[debug] [2025-06-26T08:47:54.831Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables 200
+[debug] [2025-06-26T08:47:54.831Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables {"variables":[{"name":"projects/rodwell-attendance/configs/vonage/variables/key","updateTime":"2025-06-22T10:10:17.623040153Z"},{"name":"projects/rodwell-attendance/configs/vonage/variables/secret","updateTime":"2025-06-22T10:10:59.085430076Z"}]}
+[debug] [2025-06-26T08:47:54.831Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.831Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.831Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.831Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.831Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables/key [none]
+[debug] [2025-06-26T08:47:54.831Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables/secret [none]
+[debug] [2025-06-26T08:47:54.846Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/readyme/variables 200
+[debug] [2025-06-26T08:47:54.846Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/readyme/variables {"variables":[{"name":"projects/rodwell-attendance/configs/readyme/variables/apikey","updateTime":"2025-06-19T03:14:42.550535643Z"}]}
+[debug] [2025-06-26T08:47:54.846Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.846Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.846Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/readyme/variables/apikey [none]
+[debug] [2025-06-26T08:47:54.885Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/jwt/variables 200
+[debug] [2025-06-26T08:47:54.885Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/jwt/variables {"variables":[{"name":"projects/rodwell-attendance/configs/jwt/variables/secret","updateTime":"2025-06-12T08:07:10.143923725Z"}]}
+[debug] [2025-06-26T08:47:54.885Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.885Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.885Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/jwt/variables/secret [none]
+[debug] [2025-06-26T08:47:54.918Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/sheet/variables 200
+[debug] [2025-06-26T08:47:54.918Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/sheet/variables {"variables":[{"name":"projects/rodwell-attendance/configs/sheet/variables/secret","updateTime":"2025-06-19T08:04:00.027798487Z"}]}
+[debug] [2025-06-26T08:47:54.918Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.918Z] Checked if tokens are valid: true, expires at: 1750929027281
+[debug] [2025-06-26T08:47:54.918Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/sheet/variables/secret [none]
+[debug] [2025-06-26T08:47:55.021Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables/authkey 200
+[debug] [2025-06-26T08:47:55.021Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables/authkey {"name":"projects/rodwell-attendance/configs/msg91/variables/authkey","updateTime":"2025-06-22T17:48:17.113085431Z","text":"457211A4bJgb9QuLm68583f45P1"}
+[debug] [2025-06-26T08:47:55.064Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables/key 200
+[debug] [2025-06-26T08:47:55.064Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables/key {"name":"projects/rodwell-attendance/configs/vonage/variables/key","updateTime":"2025-06-22T10:10:17.623040153Z","text":"cd990918"}
+[debug] [2025-06-26T08:47:55.107Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables/template_id 200
+[debug] [2025-06-26T08:47:55.107Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/msg91/variables/template_id {"name":"projects/rodwell-attendance/configs/msg91/variables/template_id","updateTime":"2025-06-22T17:55:45.005505386Z","text":"68584389d6fc05104c47f844"}
+[debug] [2025-06-26T08:47:55.107Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/readyme/variables/apikey 200
+[debug] [2025-06-26T08:47:55.107Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/readyme/variables/apikey {"name":"projects/rodwell-attendance/configs/readyme/variables/apikey","updateTime":"2025-06-19T03:14:42.550535643Z","text":"sk_live_nkdzr89ykHjvQqPngJFonhWQ4tOHONFfvIXR"}
+[debug] [2025-06-26T08:47:55.156Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/jwt/variables/secret 200
+[debug] [2025-06-26T08:47:55.156Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/jwt/variables/secret {"name":"projects/rodwell-attendance/configs/jwt/variables/secret","updateTime":"2025-06-12T08:07:10.143923725Z","text":"jsNPWKOrDtmQdmrs9F8brzcEV9aSW34r7baiq1f74julcLcuZl2WXmzNEQ4C23Mo"}
+[debug] [2025-06-26T08:47:55.190Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables/secret 200
+[debug] [2025-06-26T08:47:55.190Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/vonage/variables/secret {"name":"projects/rodwell-attendance/configs/vonage/variables/secret","updateTime":"2025-06-22T10:10:59.085430076Z","text":"lc3ASskVxFwb8Pcw"}
+[debug] [2025-06-26T08:47:55.567Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/sheet/variables/secret 200
+[debug] [2025-06-26T08:47:55.567Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/rodwell-attendance/configs/sheet/variables/secret {"name":"projects/rodwell-attendance/configs/sheet/variables/secret","updateTime":"2025-06-19T08:04:00.027798487Z","text":"838afceeafd35426ab9a0885b25ef160d0d91bfe"}
+[debug] [2025-06-26T08:47:55.568Z] Validating nodejs source
+[debug] [2025-06-26T08:47:56.324Z] > [functions] package.json contents: {
+  "private": true,
+  "dependencies": {
+    "@mdi/js": "^7.0.96",
+    "@reduxjs/toolkit": "^2.5.1",
+    "chart.js": "^4.4.0",
+    "firebase": "^11.8.1",
+    "firebase-admin": "^13.4.0",
+    "formik": "^2.4.2",
+    "html-to-image": "^1.11.13",
+    "html5-qrcode": "^2.3.8",
+    "next": "15.1.7",
+    "numeral": "^2.0.6",
+    "qrcode.react": "^4.2.0",
+    "react": "19.0.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "19.0.0",
+    "react-native-svg": "^15.11.2",
+    "react-qr-code": "^2.0.15",
+    "react-redux": "^9.2.0",
+    "swr": "^2.2.0",
+    "yup": "^1.6.1",
+    "firebase-frameworks": "^0.11.0",
+    "firebase-functions": "^6.0.1"
+  },
+  "main": "server.js",
+  "engines": {
+    "node": "20"
+  }
+}
+[debug] [2025-06-26T08:47:56.324Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase firebase-frameworks-rodwell-attendance to determine what to deploy 
+[debug] [2025-06-26T08:47:56.324Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-06-26T08:47:56.327Z] Found firebase-functions binary at '/Users/jimmy/student-attendance-app-main_v2/.firebase/rodwell-attendance/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8247
+
+[debug] [2025-06-26T08:47:56.541Z] Got response from /__/functions.yaml {"endpoints":{"ssrrodwellattendance":{"availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"concurrency":null,"serviceAccountEmail":null,"vpc":null,"platform":"gcfv2","region":["asia-southeast1"],"labels":{},"httpsTrigger":{},"entryPoint":"ssrrodwellattendance"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}

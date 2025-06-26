@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleAuthProvider, signInWithPopup, User } from "firebase/auth";
+import { 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult, 
+  User 
+} from "firebase/auth";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { useAppDispatch } from "../../_stores/hooks";
 import { setUser } from "../../_stores/mainSlice";
@@ -13,36 +19,20 @@ import Image from "next/image";
 const StudentGoogleSignIn = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start as true to handle redirect
   const [error, setError] = useState<string | null>(null);
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setError(null);
-    const provider = new GoogleAuthProvider();
-
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
-      await checkUserAndRedirect(firebaseUser);
-    } catch (error: any) {
-      // Handle common errors like popup closed by user
-      if (error.code !== 'auth/popup-closed-by-user') {
-        setError(error.message || "Failed to sign in with Google.");
-      }
-      console.error("Google sign-in error:", error);
-      setIsLoading(false);
-    }
+  const isMobileDevice = () => {
+    if (typeof navigator === 'undefined') return false;
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   };
 
-  const checkUserAndRedirect = async (firebaseUser: User) => {
-    // Check if the student is already linked in Firestore
+  const checkUserAndRedirect = useCallback(async (firebaseUser: User) => {
     const studentsRef = collection(db, "students");
     const q = query(studentsRef, where("authUid", "==", firebaseUser.uid), limit(1));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
-      // User is linked, proceed to dashboard
       const studentDoc = querySnapshot.docs[0];
       dispatch(
         setUser({
@@ -56,8 +46,46 @@ const StudentGoogleSignIn = () => {
       );
       router.push("/student/dashboard");
     } else {
-      // User is not linked, redirect to the link-account page
       router.push("/link-account");
+    }
+  }, [dispatch, router]);
+
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result) {
+          const firebaseUser = result.user;
+          await checkUserAndRedirect(firebaseUser);
+        } else {
+          setIsLoading(false); // No redirect result, stop loading
+        }
+      })
+      .catch((error) => {
+        console.error("Redirect Result Error:", error);
+        setError(error.message || "Failed to process sign-in.");
+        setIsLoading(false);
+      });
+  }, [checkUserAndRedirect]);
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setError(null);
+    const provider = new GoogleAuthProvider();
+
+    if (isMobileDevice()) {
+      await signInWithRedirect(auth, provider);
+    } else {
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const firebaseUser = result.user;
+        await checkUserAndRedirect(firebaseUser);
+      } catch (error: any) {
+        if (error.code !== 'auth/popup-closed-by-user') {
+          setError(error.message || "Failed to sign in with Google.");
+        }
+        console.error("Google sign-in error:", error);
+        setIsLoading(false);
+      }
     }
   };
 
@@ -93,4 +121,4 @@ const StudentGoogleSignIn = () => {
   );
 };
 
-export default StudentGoogleSignIn; 
+export default StudentGoogleSignIn;
