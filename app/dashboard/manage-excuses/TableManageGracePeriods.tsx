@@ -16,8 +16,8 @@ type Props = {
   students: StudentWithGracePeriod[];
   onUpdateGracePeriod: (studentId: string, newGraceTotalMinutes: number | null) => Promise<void>;
   // Define what your "standard" and "extended" grace periods mean in minutes
-  standardGraceValue: number; // e.g., 15 (this is the default if student.gracePeriodMinutes is null/undefined)
-  extendedGraceValue: number; // e.g., 30
+  standardGraceValue: number; // e.g., 15 (this is the default if student.gracePeriodMinutes is null/unefined)
+  extendedGraceValue: number; // e.g., 30 
   perPage?: number;
 };
 
