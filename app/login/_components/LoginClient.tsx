@@ -11,13 +11,15 @@ import StudentGoogleSignIn from './StudentGoogleSignIn';
 const LoginClient = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     if (auth) {
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         if (user) {
           // If user is logged in, redirect them away from the login page.
-          router.replace('/student/dashboard');
+          setIsAuthenticated(true);
+          router.replace('/student/attendance');
         } else {
           // If no user, stop loading and show the login button.
           setLoading(false);

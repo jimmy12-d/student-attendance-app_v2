@@ -15,6 +15,9 @@ import Image from 'next/image';
 import OtpInput from "../_components/OtpInput";
 import { mdiPhone } from "@mdi/js";
 import Icon from "../_components/Icon";
+import { navItems } from '../student/_components/StudentBottomNav';
+import SectionTitleLineWithButton from '../_components/Section/TitleLineWithButton';
+import { getAuth } from 'firebase/auth';
 
 declare global {
   interface Window {
@@ -130,7 +133,7 @@ const LinkAccountPage = () => {
       const result = await linkFunction({ phoneNumber: phone });
 
       if ((result.data as any).success) {
-          router.push("/student/dashboard");
+          router.push(navItems[0].href);
       } else {
           throw new Error((result.data as any).error || "Failed to link your student profile in the database.");
       }

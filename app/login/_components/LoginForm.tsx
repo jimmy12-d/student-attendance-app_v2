@@ -223,17 +223,20 @@ const LoginForm = () => {
         const studentDocId = studentDoc.id; 
         console.log("Student found:", studentData.fullName);
 
-        dispatch(
-          setUser({
-            name: studentData.fullName,
-            email: null,
-            avatar: null,
-            uid: firebaseUser.uid,
-            studentDocId: studentDocId,
-            role: "student",
-          })
-        );
-        router.push("/student/dashboard");
+        const userPayload = {
+          name: studentData.fullName,
+          email: null,
+          avatar: null,
+          uid: firebaseUser.uid,
+          studentDocId: studentDocId,
+          role: "student" as "student",
+        };
+
+        // Finally, dispatch user info to Redux store
+        dispatch(setUser(userPayload));
+
+        // Redirect to a student-specific dashboard
+        router.push("/student/attendance");
       }
     } catch (error: any) {
       console.error("OTP Verification or Student Check Error:", error);

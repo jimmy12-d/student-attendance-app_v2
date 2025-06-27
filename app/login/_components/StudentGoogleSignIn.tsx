@@ -7,7 +7,8 @@ import {
   signInWithPopup, 
   signInWithRedirect, 
   getRedirectResult, 
-  User 
+  User,
+  getAuth
 } from "firebase/auth";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { useAppDispatch } from "../../_stores/hooks";
@@ -15,6 +16,7 @@ import { setUser } from "../../_stores/mainSlice";
 import { auth, db } from "../../../firebase-config";
 import Button from "../../_components/Button";
 import Image from "next/image";
+import { navItems } from "../../student/_components/StudentBottomNav";
 
 const StudentGoogleSignIn = () => {
   const router = useRouter();
@@ -44,7 +46,7 @@ const StudentGoogleSignIn = () => {
           role: "student",
         })
       );
-      router.push("/student/dashboard");
+      router.push(navItems[0].href);
     } else {
       router.push("/link-account");
     }
@@ -70,6 +72,7 @@ const StudentGoogleSignIn = () => {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
+    const auth = getAuth();
     const provider = new GoogleAuthProvider();
 
     if (isMobileDevice()) {

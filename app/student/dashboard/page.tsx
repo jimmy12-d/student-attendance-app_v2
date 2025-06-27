@@ -23,7 +23,7 @@ import { useAppSelector } from '../../_stores/hooks';
 import { mdiChevronRight } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import CardBoxModal from '../../_components/CardBox/Modal';
-import { PermissionRequestForm } from './_components/PermissionRequestForm';
+import { PermissionRequestForm } from './../_components/PermissionRequestForm';
 import StudentQRCode from '../_components/StudentQRCode';
 import useCountUp from '../../_hooks/useCountUp';
 
@@ -33,7 +33,7 @@ type ExamScores = { [subject: string]: number };
 
 // Dynamically import StudentLayout
 const StudentLayout = dynamic(
-  () => import('../_components/StudentLayout'),
+  () => import('../layout'),
   { 
     ssr: false,
     loading: () => <p className="text-lg text-center p-12">Loading Portal...</p>
@@ -425,7 +425,7 @@ const StudentDashboard = () => {
   
   return (
     <StudentLayout>
-      {(userName) => (
+      
         <>
           {/* --- Modals remain the same --- */}
           <CardBoxModal title="Your Personal QR Code" isActive={isQrModalActive} onConfirm={() => setIsQrModalActive(false)} onCancel={() => setIsQrModalActive(false)}>
@@ -531,86 +531,10 @@ const StudentDashboard = () => {
 
             <hr className="my-4 border-slate-800" />
             {/* Mock 1 & 2 Results Section */}
-              <div>
-                <h2 className="text-xl font-bold">Mock Exam Results</h2>
-                <ExamTabs tabs={availableTabs} selectedTab={selectedTab} setSelectedTab={handleTabChange} disabled={isExamLoading} />
-              {isExamLoading ? (
-                <div className="text-center text-gray-400 p-8">Loading scores...</div>
-              ) : (
-                <>
-                  <div className="space-y-6">
-                    {(() => {
-                      // First, let's define what the "results view" looks like.
-                      // This avoids duplicating the code.
-                      const resultsView = (
-                        Object.keys(examSettings).length > 0 ? (
-                          <>
-                            <div className="flex flex-col items-center p-6 bg-slate-900 rounded-2xl">
-                              <div className="relative">
-                                <CircularProgress percentage={examResults.totalPercentage} />
-                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                  <span className="text-4xl font-bold text-white">{animatedTotalScore}</span>
-                                  <span className="text-lg text-gray-400">Total Score</span>
-                                </div>
-                              </div>
-                              <div className="mt-4 text-center">
-                                <span className="text-2xl font-bold text-purple-400">Grade: {examResults.totalGrade}</span>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {SUBJECT_ORDER.map(subjectKey => {
-                                if (examScores.hasOwnProperty(subjectKey)) {
-                                  const displayLabel = studentClassType === 'Grade 12 Social'
-                                    ? SOCIAL_STUDIES_LABELS[subjectKey] || subjectKey
-                                    : subjectKey;
-
-                                  return (
-                                    <ScoreCard
-                                      key={subjectKey}
-                                      subject={displayLabel}
-                                      score={examScores[subjectKey]}
-                                      maxScore={examSettings[subjectKey]?.maxScore || 0}
-                                      grade={calculateGrade(examScores[subjectKey], examSettings[subjectKey]?.maxScore || 0)}
-                                    />
-                                  );
-                                }
-                                return null;
-                              })}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-center text-gray-400 p-8">No results found for this exam.</div>
-                        )
-                      );
-
-                      // Now, we apply the logic based on the selected tab. commit
-                      if (selectedTab === 'mock3') {
-                        // If the tab is 'mock3', we check the payment status.
-                        if (progressStatus === 'Paid Star') {
-                          return resultsView; // If paid, show the results.
-                        } else {
-                          // If not paid, show the payment message.
-                          return (
-                            <div className="text-center text-yellow-400 bg-yellow-500/10 p-6 border border-yellow-500/30 rounded-2xl">
-                              <p className="font-bold text-lg animate-pulse">Payment Required</p>
-                              <p className="mt-2 text-sm animate-pulse">
-                                Please pay your Star Debt first to view your Mock 3 results.
-                              </p>
-                            </div>
-                          );
-                        }
-                      } else {
-                        // For any other tab ('mock1', 'mock2'), always show the results.
-                        return resultsView;
-                      }
-                    })()}
-                  </div>
-                </>
-               )}
-            </div> 
+            {/* This section has been moved to /student/mock-exam */}
           </div>
         </>
-      )}
+      
     </StudentLayout>
   );
 };

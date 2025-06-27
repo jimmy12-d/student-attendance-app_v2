@@ -1,14 +1,13 @@
 "use client";
-
 import React, { useState } from 'react';
-import { useAppSelector } from '../../../_stores/hooks';
-import { db } from '../../../../firebase-config';
+import { useAppSelector } from '../../_stores/hooks';
+import { db } from '../../../firebase-config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import Button from '../../../_components/Button';
-import FormField from '../../../_components/FormField';
+import Button from '../../_components/Button';
+import FormField from '../../_components/FormField';
 import { Field, Form, Formik, ErrorMessage } from "formik";
 import * as Yup from 'yup';
-import CustomSingleSelectDropdown from '../../../_components/CustomSingleSelectDropdown';
+import CustomSingleSelectDropdown from '../../_components/CustomSingleSelectDropdown';
 
 type Props = {
   onSuccess?: () => void;
