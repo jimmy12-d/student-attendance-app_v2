@@ -10,6 +10,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import Image from "next/image";
 import DarkModeInit from "../_components/DarkModeInit";
 import StudentBottomNav from "./_components/StudentBottomNav";
+import { Toaster } from 'sonner'
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
@@ -76,6 +77,15 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <DarkModeInit />
+      <Toaster
+        position="top-center"
+        richColors
+        toastOptions={{
+          style: {
+            marginTop: '5rem', // equivalent to mt-20 (80px)
+          },
+        }}
+      />
       <div className="min-h-screen bg-white dark:bg-slate-800">
         <nav className="fixed top-0 left-0 right-0 z-30 bg-gray-50 dark:bg-slate-900 shadow-md">
           <div className="max-w-2xl mx-auto px-2 sm:px-2 lg:px-2">

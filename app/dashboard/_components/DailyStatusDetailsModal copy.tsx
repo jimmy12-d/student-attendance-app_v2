@@ -236,7 +236,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     setIsLoading(false);
   }, [isActive, student, attendanceRecords, allClassConfigs, modalSelectedMonth]); // Key change: use modalSelectedMonth
 
-      const getStatusColor = (status?: DailyStatusInfo['status']): string => {
+    const getStatusColor = (status?: DailyStatusInfo['status']): string => {
     switch (status?.toLowerCase()) { // Convert to lowercase for case-insensitive matching
         case "present":
         return "bg-green-200 text-green-800";

@@ -529,9 +529,6 @@ const StudentDashboard = () => {
               </div>
             )}
 
-            <hr className="my-4 border-slate-800" />
-            {/* Mock 1 & 2 Results Section */}
-            {/* This section has been moved to /student/mock-exam */}
           </div>
         </>
       

@@ -62,7 +62,7 @@ export default function ProgressBar({ status, loading }: { status: string, loadi
   const stepIndex = Object.keys(statusConfig).indexOf(status);
 
   return (
-    <div className="bg-slate-900 rounded-2xl px-6 pt-4 pb-6 max-w-2xl mx-auto my-6">
+    <div className="bg-slate-900 rounded-2xl px-6 pt-4 pb-6 max-w-2xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-white">Mock Exam 3</h2>
         <span className="text-sm text-gray-400 font-semibold">Your progress</span>

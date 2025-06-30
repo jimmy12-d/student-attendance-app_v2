@@ -3,7 +3,11 @@
 const plugin = require("tailwindcss/plugin");
 
 module.exports = {
-  content: ["./app/**/*.{js,ts,jsx,tsx}", "./css/**/*.css"],
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
   darkMode: "class", // or 'media' or 'class'
   theme: {
     asideScrollbars: {
@@ -38,6 +42,14 @@ module.exports = {
       animation: {
         "fade-out": "fade-out 250ms ease-in-out",
         "fade-in": "fade-in 250ms ease-in-out",
+      },
+      colors: {
+        'company-purple': 'rgb(132, 94, 238)',
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'gradient-conic':
+          'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
     },
   },

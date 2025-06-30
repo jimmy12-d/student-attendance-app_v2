@@ -8,13 +8,13 @@ import FormField from '../../_components/FormField';
 import { Field, Form, Formik, ErrorMessage } from "formik";
 import * as Yup from 'yup';
 import CustomSingleSelectDropdown from '../../_components/CustomSingleSelectDropdown';
+import { toast } from 'sonner';
 
 type Props = {
   onSuccess?: () => void;
 };
 
 export const PermissionRequestForm = ({ onSuccess }: Props) => {
-  const [formStatus, setFormStatus] = useState({ message: '', type: '' });
   const studentDocId = useAppSelector((state) => state.main.studentDocId);
   const studentAuthUid = useAppSelector((state) => state.main.userUid);
   const userName = useAppSelector((state) => state.main.userName);
@@ -39,9 +39,12 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
   });
 
   const handleSubmit = async (values: any, { setSubmitting, resetForm }: any) => {
-    setFormStatus({ message: '', type: '' });
+    if (onSuccess) {
+      onSuccess(); 
+    }
+
     if (!studentDocId || !studentAuthUid) {
-      setFormStatus({ message: 'Error: User not authenticated properly.', type: 'error' });
+      toast.error('Error: User not authenticated properly.');
       setSubmitting(false);
       return;
     }
@@ -65,32 +68,32 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
       requestDate: serverTimestamp(),
     };
 
-    console.log("Submitting to Firestore:", newPermissionRequest);
+    const submissionPromise = addDoc(collection(db, 'permissions'), newPermissionRequest);
 
-    try {
-      await addDoc(collection(db, 'permissions'), newPermissionRequest);
-      setFormStatus({ message: 'Your request has been submitted successfully!', type: 'success' });
-      resetForm({
-        values: {
-          permissionStartDate: '',
-          duration: 1,
-          reason: '',
-          details: '',
-        }
-      });
-      if (onSuccess) {
-        setTimeout(onSuccess, 1500); 
-      }
-    } catch (error: any) {
-      console.error('Error submitting permission request:', error);
-      setFormStatus({ message: 'An error occurred while submitting your request. Please try again.', type: 'error' });
-    }
-    setSubmitting(false);
+    toast.promise(submissionPromise, {
+      loading: 'Submitting request...',
+      success: () => {
+        resetForm({
+          values: {
+            permissionStartDate: '',
+            duration: 1,
+            reason: '',
+            details: '',
+          }
+        });
+        setSubmitting(false);
+        return 'Permission request submitted successfully!';
+      },
+      error: (err) => {
+        setSubmitting(false);
+        console.error('Error submitting permission request:', err);
+        return 'An error occurred. Please try again.';
+      },
+    });
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg mr-3 mb-4">
-
+    <div className="bg-white dark:bg-slate-800 rounded-lg mb-4">
       <Formik
         initialValues={{
           permissionStartDate: '',
@@ -102,8 +105,9 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
         onSubmit={handleSubmit}
       >
         {({ values, isSubmitting, setFieldValue }) => (
-          <Form className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <Form className="space-y-2">
+            <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
               <FormField label="Start Date" labelFor="permissionStartDate">
                 {(fieldData) => (
                   <Field id="permissionStartDate" name="permissionStartDate" type="date" {...fieldData} />
@@ -114,26 +118,27 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
                   <Field id="duration" name="duration" type="number" min="1" {...fieldData} />
                 )}
               </FormField>
-            
-
-            <FormField label="Reason" labelFor="reason">
-              {(fieldData) => (
-                <CustomSingleSelectDropdown
-                  options={reasonOptions}
-                  selectedValue={values.reason}
-                  onChange={(value) => setFieldValue('reason', value)}
-                  fieldData={fieldData}
-                  id="reason"
-                />
-              )}
-            </FormField>
-
-            <FormField label="Details (min. 10 words)" labelFor="details" hasTextareaHeight>
-              {(fieldData) => (
-                <Field id="details" name="details" as="textarea" {...fieldData} placeholder="Please provide specific details about your absence..." />
-              )}
-            </FormField>
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label="Reason" labelFor="reason">
+                {(fieldData) => (
+                  <CustomSingleSelectDropdown
+                    options={reasonOptions}
+                    selectedValue={values.reason}
+                    onChange={(value) => setFieldValue('reason', value)}
+                    fieldData={fieldData}
+                    id="reason"
+                  />
+                )}
+              </FormField>
+
+              <FormField label="Details (min. 10 words)" labelFor="details" hasTextareaHeight>
+                {(fieldData) => (
+                  <Field id="details" name="details" as="textarea" {...fieldData} placeholder="Please provide specific details about your absence..." />
+                )}
+              </FormField>
+            </div>
+            
             <ErrorMessage name="details" component="div" className="text-red-500 text-sm mt-1" />
 
             <div className="flex justify-end">
@@ -148,11 +153,6 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
         )}
       </Formik>
 
-      {formStatus.message && (
-        <div className={`mt-6 text-sm p-4 rounded-lg text-center ${formStatus.type === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'}`}>
-          {formStatus.message}
-        </div>
-      )}
     </div>
   );
 }; 

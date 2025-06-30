@@ -304,14 +304,7 @@ const MockExamPage = () => {
   }, [phoneInfo]);
 
   return (
-    <div className="p-6">
-        <CardBoxModal title="Your Personal QR Code" isActive={isQrModalActive} onConfirm={() => setIsQrModalActive(false)} onCancel={() => setIsQrModalActive(false)}>
-            <StudentQRCode studentName={studentName || ''} studentUid={studentUid || ''} qrSize={256} />
-        </CardBoxModal>
-        <CardBoxModal title="Request Permission for Absence" isActive={isPermissionModalActive} onCancel={() => setIsPermissionModalActive(false)}>
-          <PermissionRequestForm onSuccess={handlePermissionSuccess} />
-        </CardBoxModal>
-        
+    <div className="p-6">        
         <ProgressBar status={progressStatus} loading={isProgressLoading} />
             
         {!isProgressLoading && (

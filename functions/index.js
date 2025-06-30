@@ -147,22 +147,45 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
 
   if (shiftConfig && shiftConfig.startTime) {
     const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
-    const shiftStartTimeDate = new Date();
+    
+    // Use a timezone-aware date for accurate 'late' calculation
+    const now = new Date();
+    const serverTimestamp = admin.firestore.FieldValue.serverTimestamp();
+    
+    // Create a localized date object for Asia/Phnom_Penh (UTC+7)
+    const localizedDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }));
+    
+    const shiftStartTimeDate = new Date(localizedDate);
     shiftStartTimeDate.setHours(startHour, startMinute, 0, 0);
+
     // Use gracePeriodMinutes from studentData if set, else default to 15
     let graceMinutes = 15;
+    // Check for both 'gracePeriodMinutes' and a potential typo 'gradePeriodMinutes'.
+    const studentGracePeriod = studentData.gracePeriodMinutes ?? studentData.gradePeriodMinutes;
+
     if (
-      typeof studentData.gracePeriodMinutes === 'number' && !isNaN(studentData.gracePeriodMinutes)
+      typeof studentGracePeriod === 'number' && !isNaN(studentGracePeriod)
     ) {
-      graceMinutes = studentData.gracePeriodMinutes;
+      graceMinutes = studentGracePeriod;
     } else if (
-      typeof studentData.gracePeriodMinutes === 'string' && studentData.gracePeriodMinutes.trim() !== '' && !isNaN(Number(studentData.gracePeriodMinutes))
+      typeof studentGracePeriod === 'string' && studentGracePeriod.trim() !== '' && !isNaN(Number(studentGracePeriod))
     ) {
-      graceMinutes = Number(studentData.gracePeriodMinutes);
+      graceMinutes = Number(studentGracePeriod);
     }
     const onTimeDeadline = new Date(shiftStartTimeDate);
     onTimeDeadline.setMinutes(shiftStartTimeDate.getMinutes() + graceMinutes);
-    if (new Date() > onTimeDeadline) {
+
+    // Log the times for debugging
+    logger.log({
+        currentTimeUTC: now.toISOString(),
+        currentTimeLocalized: localizedDate.toISOString(),
+        shiftStartTimeLocalized: shiftStartTimeDate.toISOString(),
+        onTimeDeadlineLocalized: onTimeDeadline.toISOString(),
+        graceMinutes: graceMinutes,
+        studentName: studentData.fullName
+    });
+
+    if (localizedDate > onTimeDeadline) {
       attendanceStatus = "late";
     }
   }
@@ -174,9 +197,9 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
     studentName: studentData.fullName,
     class: studentData.class || null,
     shift: studentData.shift || null,
-    status: attendance.status,
+    status: attendanceStatus,
     date: dateStr,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    timestamp: serverTimestamp,
     scannedBy: adminEmail,
   });
 
