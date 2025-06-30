@@ -168,7 +168,7 @@ const AttendancePage = () => {
       </SlideInPanel>
 
       <SlideInPanel title="Last 10 Days Activity" isOpen={isDetailsPanelOpen} onClose={() => setIsDetailsPanelOpen(false)}>
-        <div className="bg-slate-900 rounded-2xl p-2">
+          <div className="bg-slate-900 rounded-2xl p-2">
             <div className="max-h-[calc(100vh-200px)] overflow-y-auto pr-1">
               {recentRecords.length > 0 ? recentRecords.map(record => {
                 const styles = getStatusStyles(record.status);
@@ -221,9 +221,9 @@ const AttendancePage = () => {
             </>
           ) : (
             <>
-              <AttendanceSummaryCard title="Present" count={presentCount} total={totalDays} icon={mdiAccountCheckOutline} barColorClass="bg-green-700" bgColorClass="bg-green-200" />
-              <AttendanceSummaryCard title="Late" count={lateCount} total={totalDays} icon={mdiClockAlertOutline} barColorClass="bg-yellow-700" bgColorClass="bg-yellow-200" />
-              <AttendanceSummaryCard title="Absent" count={absentCount} total={totalDays} icon={mdiAccountOffOutline} barColorClass="bg-red-700" bgColorClass="bg-red-200" />
+              <AttendanceSummaryCard onClick={() => {}} title="Present" count={presentCount} total={totalDays} icon={mdiAccountCheckOutline} barColorClass="bg-green-700" bgColorClass="bg-green-200" rippleColor="rgba(0, 255, 0, 1)" />
+              <AttendanceSummaryCard onClick={() => {}} title="Late" count={lateCount} total={totalDays} icon={mdiClockAlertOutline} barColorClass="bg-yellow-700" bgColorClass="bg-yellow-200" rippleColor = "rgba(255, 255, 0, 1)" />
+              <AttendanceSummaryCard onClick={() => {}} title="Absent" count={absentCount} total={totalDays} icon={mdiAccountOffOutline} barColorClass="bg-red-700" bgColorClass="bg-red-200" rippleColor="rgba(255, 0, 0, 1)" />
             </>
           )}
         </div>
@@ -243,13 +243,13 @@ const AttendancePage = () => {
       <h2 className="text-2xl font-bold mb-4">Action</h2>
       <div className="grid grid-cols-2 gap-6">
         <button onClick={() => setIsPermissionPanelOpen(true)} className="relative bg-slate-900 p-4 rounded-2xl text-left hover:bg-slate-700 transition-colors h-40 flex flex-col justify-between">
-          <span className="font-semibold text-lg">Permission Form</span>
+            <span className="font-semibold text-lg">Permission Form</span>
           <div className="flex justify-center items-center h-24 w-24 self-center rounded-2xl">
             <Image src="/add-document.png" alt="Request Absence" width={80} height={80} />
           </div>
         </button>
         <button onClick={handleGenerateQrClick} className="relative bg-slate-900 p-4 rounded-2xl text-left hover:bg-slate-700 transition-colors h-40 flex flex-col justify-between">
-          <span className="font-semibold text-lg">Generate QR</span>
+            <span className="font-semibold text-lg">Generate QR</span>
           <div className="flex justify-center items-center h-24 w-24 self-center rounded-2xl">
             <Image src="/qr-code.png" alt="Scan QR" width={80} height={80} />
           </div>
