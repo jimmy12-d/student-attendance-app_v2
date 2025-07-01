@@ -1,6 +1,6 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const { getFirestore, Timestamp } = require("firebase-admin/firestore");
+const { getFirestore, Timestamp, FieldValue } = require("firebase-admin/firestore");
 const { getStorage } = require("firebase-admin/storage");
 const {onRequest} = require("firebase-functions/v2/https");
 const {onObjectFinalized} = require("firebase-functions/v2/storage");
@@ -142,21 +142,33 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
   const classesSnap = await db.collection("classes").get();
   const classConfigs = classesSnap.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
   let attendanceStatus = "present";
-  const classConfig = studentData.class ? classConfigs[studentData.class] : null;
+  
+  // Handle class name mismatch: student.class = "Class 12B" but doc ID = "12B"
+  const studentClassKey = studentData.class ? studentData.class.replace(/^Class\s+/, '') : null;
+  const classConfig = studentClassKey ? classConfigs[studentClassKey] : null;
   const shiftConfig = (studentData.shift && classConfig?.shifts) ? classConfig.shifts[studentData.shift] : null;
+  
+  // Debug log for class lookup
+  logger.log({
+    originalClass: studentData.class,
+    mappedClassKey: studentClassKey,
+    foundClassConfig: !!classConfig,
+    foundShiftConfig: !!shiftConfig,
+    studentName: studentData.fullName
+  });
 
   if (shiftConfig && shiftConfig.startTime) {
     const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
     
     // Use a timezone-aware date for accurate 'late' calculation
     const now = new Date();
-    const serverTimestamp = admin.firestore.FieldValue.serverTimestamp();
     
-    // Create a localized date object for Asia/Phnom_Penh (UTC+7)
-    const localizedDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }));
+    // Convert to Phnom Penh timezone (UTC+7) by adding 7 hours to UTC time
+    // This is more reliable than string parsing methods
+    const phnomPenhTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
     
-    const shiftStartTimeDate = new Date(localizedDate);
-    shiftStartTimeDate.setHours(startHour, startMinute, 0, 0);
+    // Create the shift start time for today in Phnom Penh timezone  
+    const shiftStartTimeDate = new Date(phnomPenhTime.getFullYear(), phnomPenhTime.getMonth(), phnomPenhTime.getDate(), startHour, startMinute, 0, 0);
 
     // Use gracePeriodMinutes from studentData if set, else default to 15
     let graceMinutes = 15;
@@ -178,16 +190,19 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
     // Log the times for debugging
     logger.log({
         currentTimeUTC: now.toISOString(),
-        currentTimeLocalized: localizedDate.toISOString(),
-        shiftStartTimeLocalized: shiftStartTimeDate.toISOString(),
-        onTimeDeadlineLocalized: onTimeDeadline.toISOString(),
+        currentTimePhnomPenh: phnomPenhTime.toISOString(),
+        shiftStartTimePhnomPenh: shiftStartTimeDate.toISOString(),
+        onTimeDeadlinePhnomPenh: onTimeDeadline.toISOString(),
         graceMinutes: graceMinutes,
         studentName: studentData.fullName
     });
 
-    if (localizedDate > onTimeDeadline) {
+    if (phnomPenhTime > onTimeDeadline) {
       attendanceStatus = "late";
     }
+    
+    // Log the attendance decision with timing details
+    functions.logger.log(`Attendance recorded for ${studentData.fullName} (${attendanceStatus}) by ${adminEmail} Scan Time: ${phnomPenhTime} Deadline: ${onTimeDeadline}`);
   }
 
   // 7. Create the attendance record
@@ -199,11 +214,11 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
     shift: studentData.shift || null,
     status: attendanceStatus,
     date: dateStr,
-    timestamp: serverTimestamp,
+    timestamp: FieldValue.serverTimestamp(),
     scannedBy: adminEmail,
   });
 
-  functions.logger.log(`Attendance recorded for ${studentData.fullName} (${attendanceStatus}) by ${adminEmail}`);
+  //functions.logger.log(`Attendance recorded for ${studentData.fullName} (${attendanceStatus}) by ${adminEmail}`);
   const message = `${studentData.fullName} marked ${attendanceStatus}!`;
   return { success: true, message: message };
 });

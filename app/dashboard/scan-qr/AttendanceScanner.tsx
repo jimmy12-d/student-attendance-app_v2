@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Html5Qrcode, Html5QrcodeCameraScanConfig } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeCameraScanConfig, CameraDevice } from 'html5-qrcode';
 import CardBox from "../../_components/CardBox";
 
 // Import Firebase SDKs for calling the function
@@ -17,6 +17,8 @@ const AttendanceScanner: React.FC = () => {
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error' | 'info' | 'warning', text: string } | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string | undefined>();
 
   // Refs
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
@@ -32,6 +34,30 @@ const AttendanceScanner: React.FC = () => {
     "The early bird gets the worm, but the late one gets... this message!"
   ];
 
+  const showFeedback = useCallback((type: 'success' | 'error' | 'info' | 'warning', text: string) => {
+    setFeedbackMessage({ type, text });
+    setTimeout(() => setFeedbackMessage(null), FEEDBACK_DISPLAY_MS);
+  }, []);
+
+  // --- Camera Discovery ---
+  useEffect(() => {
+    Html5Qrcode.getCameras()
+      .then(devices => {
+        if (devices && devices.length) {
+          setCameras(devices);
+          // Prefer back camera by default
+          const backCamera = devices.find(device => 
+            device.label.toLowerCase().includes('back')
+          );
+          setSelectedCameraId(backCamera?.id || devices[0].id);
+        }
+      })
+      .catch(err => {
+        console.error("Failed to get cameras", err);
+        showFeedback('error', 'Could not find or access camera devices.');
+      });
+  }, [showFeedback]);
+
   // --- Audio Setup ---
   useEffect(() => {
     if (typeof Audio !== "undefined") {
@@ -42,11 +68,6 @@ const AttendanceScanner: React.FC = () => {
 
   const playSuccessSound = useCallback(() => {
     successSoundRef.current?.play().catch(e => console.warn("Audio play error:", e));
-  }, []);
-
-  const showFeedback = useCallback((type: 'success' | 'error' | 'info' | 'warning', text: string) => {
-    setFeedbackMessage({ type, text });
-    setTimeout(() => setFeedbackMessage(null), FEEDBACK_DISPLAY_MS);
   }, []);
 
   // --- Core Scan Logic ---
@@ -96,6 +117,10 @@ const AttendanceScanner: React.FC = () => {
   // --- CAMERA CONTROL ---
   const handleStartScan = useCallback(() => {
     if (isScanning) return;
+    if (!selectedCameraId) {
+        showFeedback('info', 'Please select a camera to start scanning.');
+        return;
+    }
 
     const newScanner = new Html5Qrcode(VIDEO_ELEMENT_ID);
     html5QrCodeRef.current = newScanner;
@@ -103,16 +128,20 @@ const AttendanceScanner: React.FC = () => {
     const config: Html5QrcodeCameraScanConfig = {
       fps: 10,
       qrbox: { width: 400, height: 400 },
-      // Removed experimentalFeatures as it is not supported by the type
     };
 
     setIsScanning(true);
-    newScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+    newScanner.start(
+        selectedCameraId, 
+        config, 
+        onScanSuccess, 
+        onScanFailure
+    )
       .catch(err => {
         showFeedback('error', 'Could not start camera. Please grant permission.');
         setIsScanning(false);
       });
-  }, [isScanning, onScanSuccess, onScanFailure, showFeedback]);
+  }, [isScanning, onScanSuccess, onScanFailure, showFeedback, selectedCameraId]);
 
   const handleStopScan = useCallback(() => {
     if (html5QrCodeRef.current?.isScanning) {
@@ -133,22 +162,45 @@ useEffect(() => {
 
   // --- RENDER ---
   return (
-    <CardBox className="mx-auto max-w-3xl p-6 bg-gray-800 shadow-lg rounded-lg">
+    <CardBox className="mx-auto max-w-3xl p-6 bg-gray-800 shadow-lg rounded-lg relative">
+      {/* Camera Selection Dropdown - Top Right */}
+      {cameras.length > 1 && (
+        <div className="absolute top-4 right-4">
+          <select
+            id="camera-select"
+            value={selectedCameraId || ''}
+            onChange={(e) => setSelectedCameraId(e.target.value)}
+            disabled={isScanning}
+            className="pl-2 pr-8 py-1.5 bg-gray-700 text-white text-sm border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {cameras.map((camera) => {
+              // Remove content inside parentheses and trim
+              const cleanLabel = (camera.label || `Camera ${camera.id}`).replace(/\s*\([^)]*\)/g, '').trim();
+              return (
+                <option key={camera.id} value={camera.id}>
+                  {cleanLabel}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+      )}
+      
       <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center text-white">
-        Scan Student QR
+        Scan Student QR 2
       </h2>
       <div className="w-full rounded-md overflow-hidden mb-4 border-2 border-gray-500 bg-gray-900" style={{ minHeight: '280px' }}>
-        <div id={VIDEO_ELEMENT_ID} />
+        <div id={VIDEO_ELEMENT_ID} className="transform -scale-x-100"/>
       </div>
 
       {!isScanning && (
-        <div className="flex items-center justify-center -mt-10 mb-6">
-          <p className="text-gray-400 text-center">Camera is off.</p>
+        <div className="flex items-center justify-center -mt-5 mb-6">
+          <p className="text-gray-400 text-center -mt-70">Camera is off.</p>
         </div>
         )}
 
       <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4 mb-6">
-        <button onClick={handleStartScan} disabled={isScanning || isLoading} className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75 disabled:opacity-60 transition duration-150 ease-in-out">
+        <button onClick={handleStartScan} disabled={isScanning || isLoading || !selectedCameraId} className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75 disabled:opacity-60 transition duration-150 ease-in-out">
           {isLoading ? "Processing..." : "Start Scan"}
         </button>
         <button onClick={handleStopScan} disabled={!isScanning} className="px-6 py-3 bg-red-600 text-white font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-75 disabled:opacity-60 transition duration-150 ease-in-out">

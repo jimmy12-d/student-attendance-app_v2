@@ -17,6 +17,7 @@ import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
 import QRCodeDisplay from '../_components/QRCodeDisplay';
 import { toast } from 'sonner';
+import OngoingPermissions from '../_components/OngoingPermissions';
 
 const AttendancePage = () => {
   const studentUid = useAppSelector((state) => state.main.userUid);
@@ -29,6 +30,8 @@ const AttendancePage = () => {
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
   const [isConfirmationPanelOpen, setIsConfirmationPanelOpen] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState('');
+  const [ongoingPermissions, setOngoingPermissions] = useState<PermissionRecord[]>([]);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
 
   const handleGenerateQrClick = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -43,18 +46,40 @@ const AttendancePage = () => {
   };
 
   useEffect(() => {
-    if (isQrDisplayOpen && prevRecentRecords && recentRecords.length > prevRecentRecords.length) {
+    if (isQrDisplayOpen && prevRecentRecords && recentRecords.length >= prevRecentRecords.length) {
       const today = new Date().toISOString().split('T')[0];
       const todaysRecord = recentRecords.find(r => r.date === today && (r.status === 'present' || r.status === 'late'));
-      const prevTodaysRecord = prevRecentRecords.find(r => r.date === today && (r.status === 'present' || r.status === 'late'));
+      const prevTodaysRecord = prevRecentRecords?.find(r => r.date === today && (r.status === 'present' || r.status === 'late'));
 
+      // Check if we have a new attendance record for today
       if (todaysRecord && !prevTodaysRecord) {
+        // Close QR display immediately
         setIsQrDisplayOpen(false);
-        const message = `Attendance marked: ${todaysRecord.status}`;
+
+        // Format timestamp if available
+        const timeString = todaysRecord.timestamp ? ` at ${formatTime(todaysRecord.timestamp)}` : '';
+        
+        // Show appropriate toast based on status
+        const message = `Attendance marked: ${todaysRecord.status.charAt(0).toUpperCase() + todaysRecord.status.slice(1)}${timeString}`;
+        
         if (todaysRecord.status === 'late') {
-          toast.warning(message);
-        } else {
-          toast.success(message);
+          toast.warning(message, {
+            duration: 6000, // Stay longer
+            style: {
+              background: '#fef3c7',
+              color: '#92400e',
+              border: '1px solid #fcd34d'
+            }
+          });
+        } else if (todaysRecord.status === 'present') {
+          toast.success(message, {
+            duration: 6000, // Stay longer
+            style: {
+              background: '#d1fae5', 
+              color: '#065f46',
+              border: '1px solid #6ee7b7'
+            }
+          });
         }
       }
     }
@@ -86,29 +111,50 @@ const AttendancePage = () => {
           currentDate.setDate(currentDate.getDate() - 1);
         }
         
-        const permsQuery = query(collection(db, "permissions"), where("authUid", "==", studentUid), where("status", "==", "approved"));
-        const permsSnap = await getDocs(permsQuery);
-        const approvedPermissions = permsSnap.docs.map(doc => doc.data() as PermissionRecord);
-        const isDateInPermissionRange = (dateStr: string, perms: PermissionRecord[]) => perms.some(p => dateStr >= p.permissionStartDate && dateStr <= p.permissionEndDate);
-
-        if (schoolDays.length > 0) {
-            const recordsQuery = query(collection(db, "attendance"), where("authUid", "==", studentUid), where("date", "in", schoolDays));
-            unsubscribe = onSnapshot(recordsQuery, (snapshot) => {
-              const fetchedRecords: { [date: string]: AttendanceRecord } = {};
-              snapshot.docs.forEach(doc => { fetchedRecords[doc.data().date] = { ...doc.data(), id: doc.id } as AttendanceRecord; });
-              const displayRecords = schoolDays.map(dateStr => {
-                if (fetchedRecords[dateStr]) return fetchedRecords[dateStr];
-                if (isDateInPermissionRange(dateStr, approvedPermissions)) return { id: dateStr, date: dateStr, status: 'permission' };
-                return { id: dateStr, date: dateStr, status: 'absent' };
-              }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-              setRecentRecords(displayRecords);
-              setLoading(false);
-            });
-        } else { setLoading(false); }
+        const permsQuery = query(collection(db, "attendance"), where("authUid", "==", studentUid), where("date", "in", schoolDays));
+        unsubscribe = onSnapshot(permsQuery, (snapshot) => {
+          const fetchedRecords: { [date: string]: AttendanceRecord } = {};
+          snapshot.docs.forEach(doc => { fetchedRecords[doc.data().date] = { ...doc.data(), id: doc.id } as AttendanceRecord; });
+          const displayRecords = schoolDays.map(dateStr => {
+            if (fetchedRecords[dateStr]) return fetchedRecords[dateStr];
+            return { id: dateStr, date: dateStr, status: 'absent' };
+          }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          setRecentRecords(displayRecords);
+          setLoading(false);
+        });
       } catch (error) { console.error("Error fetching attendance:", error); setLoading(false); }
     };
     fetchSchoolDayAttendance();
     return () => { if (unsubscribe) unsubscribe(); };
+  }, [studentUid]);
+
+  // Fetch permission history for the current student (last 30 days)
+  useEffect(() => {
+    if (!studentUid) {
+      setLoadingPermissions(false);
+      return;
+    }
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const permsQuery = query(
+      collection(db, "permissions"),
+      where("authUid", "==", studentUid),
+      where("requestDate", ">=", thirtyDaysAgo),
+      orderBy("requestDate", "desc")
+    );
+
+    const unsubscribe = onSnapshot(permsQuery, (snapshot) => {
+      const allStudentPermissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PermissionRecord));
+      setOngoingPermissions(allStudentPermissions);
+      setLoadingPermissions(false);
+    }, (error) => {
+      console.error("Error fetching permissions:", error);
+      setLoadingPermissions(false);
+    });
+
+    return () => unsubscribe();
   }, [studentUid]);
 
   const presentCount = recentRecords.filter(r => r.status === 'present' || r.status === 'permission').length;
@@ -208,7 +254,7 @@ const AttendancePage = () => {
           </div>
       </SlideInPanel>
 
-      <div className="mb-6">
+      <div className="mb-1">
         <h2 className="font-bold mb-4">
           <span className="text-2xl">Summary</span> <span className="text-xl">— Last 10 Days</span>
         </h2>
@@ -222,7 +268,7 @@ const AttendancePage = () => {
           ) : (
             <>
               <AttendanceSummaryCard onClick={() => {}} title="Present" count={presentCount} total={totalDays} icon={mdiAccountCheckOutline} barColorClass="bg-green-700" bgColorClass="bg-green-200" rippleColor="rgba(0, 255, 0, 1)" />
-              <AttendanceSummaryCard onClick={() => {}} title="Late" count={lateCount} total={totalDays} icon={mdiClockAlertOutline} barColorClass="bg-yellow-700" bgColorClass="bg-yellow-200" rippleColor = "rgba(255, 255, 0, 1)" />
+              <AttendanceSummaryCard onClick={() => {}} title="Late" count={lateCount} total={totalDays} icon={mdiClockAlertOutline} barColorClass="bg-yellow-600" bgColorClass="bg-yellow-200" rippleColor = "rgba(255, 255, 0, 1)" />
               <AttendanceSummaryCard onClick={() => {}} title="Absent" count={absentCount} total={totalDays} icon={mdiAccountOffOutline} barColorClass="bg-red-700" bgColorClass="bg-red-200" rippleColor="rgba(255, 0, 0, 1)" />
             </>
           )}
@@ -241,7 +287,7 @@ const AttendancePage = () => {
       </div>
 
       <h2 className="text-2xl font-bold mb-4">Action</h2>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 mb-6">
         <button onClick={() => setIsPermissionPanelOpen(true)} className="relative bg-slate-900 p-4 rounded-2xl text-left hover:bg-slate-700 transition-colors h-40 flex flex-col justify-between">
             <span className="font-semibold text-lg">Permission Form</span>
           <div className="flex justify-center items-center h-24 w-24 self-center rounded-2xl">
@@ -255,6 +301,9 @@ const AttendancePage = () => {
           </div>
         </button>
       </div>
+
+      <h2 className="text-2xl font-bold mb-4">Permissions History</h2>
+      <OngoingPermissions permissions={ongoingPermissions} isLoading={loadingPermissions} />
     </div>
   );
 };

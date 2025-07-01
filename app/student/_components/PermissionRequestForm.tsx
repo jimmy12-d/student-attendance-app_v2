@@ -76,7 +76,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
         resetForm({
           values: {
             permissionStartDate: '',
-            duration: 1,
+            duration: 4000,
             reason: '',
             details: '',
           }
