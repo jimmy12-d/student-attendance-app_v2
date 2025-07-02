@@ -49,7 +49,9 @@ export type ColorButtonKey =
   | "info"
   | "void"
   | "glowing-purple"
-  | "glowing-red";
+  | "glowing-red"
+  | "facebook"
+  | "company-purple";
 
 export type BgKey = "purplePink" | "pinkRed" | "white";
 

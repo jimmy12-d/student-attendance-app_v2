@@ -9,6 +9,7 @@ import { Field, Form, Formik, ErrorMessage } from "formik";
 import * as Yup from 'yup';
 import CustomSingleSelectDropdown from '../../_components/CustomSingleSelectDropdown';
 import { toast } from 'sonner';
+import DurationSelector from './DurationSelector';
 
 type Props = {
   onSuccess?: () => void;
@@ -114,8 +115,11 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
                 )}
               </FormField>
               <FormField label="Duration (days)" labelFor="duration">
-                {(fieldData) => (
-                  <Field id="duration" name="duration" type="number" min="1" {...fieldData} />
+                {() => (
+                  <DurationSelector
+                    value={values.duration}
+                    onChange={(value) => setFieldValue('duration', value)}
+                  />
                 )}
               </FormField>
             </div>
@@ -144,7 +148,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
             <div className="flex justify-end">
               <Button
                 type="submit"
-                color="info"
+                color="company-purple"
                 label={isSubmitting ? 'Submitting...' : 'Submit Request'}
                 disabled={isSubmitting}
               />

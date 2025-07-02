@@ -4,6 +4,7 @@ import React from 'react';
 import ExamTabs from '../_components/ExamTabs';
 import CircularProgress from '../_components/CircularProgress';
 import ScoreCard from '../_components/ScoreCard';
+import { motion } from 'framer-motion';
 
 // Define types for our data
 type ExamSettings = { [subject: string]: { maxScore: number } };
@@ -47,6 +48,62 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
   SUBJECT_ORDER,
   SOCIAL_STUDIES_LABELS,
 }) => {
+  const getGradeDependentStyles = (grade: string) => {
+    switch (grade) {
+        case 'A': return {
+            glow1: 'bg-green-500/30',
+            glow2: 'bg-emerald-500/20',
+            gradeBadge: 'bg-green-500/30 text-green-200 border-green-500/50',
+            shadow: 'shadow-green-800/40 hover:shadow-green-700/50',
+            progressColor: '#4ade80' // green-400
+        };
+        case 'B': return {
+            glow1: 'bg-emerald-500/30',
+            glow2: 'bg-teal-500/20',
+            gradeBadge: 'bg-emerald-500/30 text-emerald-200 border-emerald-500/50',
+            shadow: 'shadow-emerald-800/40 hover:shadow-emerald-700/50',
+            progressColor: '#34d399' // emerald-400
+        };
+        case 'C': return {
+            glow1: 'bg-sky-500/30',
+            glow2: 'bg-cyan-500/20',
+            gradeBadge: 'bg-sky-500/30 text-sky-200 border-sky-500/50',
+            shadow: 'shadow-sky-800/40 hover:shadow-sky-700/50',
+            progressColor: '#38bdf8' // sky-400
+        };
+        case 'D': return {
+            glow1: 'bg-yellow-500/30',
+            glow2: 'bg-amber-500/20',
+            gradeBadge: 'bg-yellow-500/30 text-yellow-200 border-yellow-500/50',
+            shadow: 'shadow-yellow-800/40 hover:shadow-yellow-700/50',
+            progressColor: '#facc15' // yellow-400
+        };
+        case 'E': return {
+            glow1: 'bg-orange-500/30',
+            glow2: 'bg-red-500/20',
+            gradeBadge: 'bg-orange-500/30 text-orange-200 border-orange-500/50',
+            shadow: 'shadow-orange-800/40 hover:shadow-orange-700/50',
+            progressColor: '#fb923c' // orange-400
+        };
+        case 'F': return {
+            glow1: 'bg-red-600/30',
+            glow2: 'bg-rose-600/20',
+            gradeBadge: 'bg-red-500/30 text-red-200 border-red-500/50',
+            shadow: 'shadow-red-800/40 hover:shadow-red-700/50',
+            progressColor: '#ef4444' // red-500
+        };
+        default: return {
+            glow1: 'bg-slate-600/30',
+            glow2: 'bg-slate-700/20',
+            gradeBadge: 'bg-slate-600/30 text-slate-200 border-slate-500/50',
+            shadow: 'shadow-slate-800/40 hover:shadow-slate-700/50',
+            progressColor: '#94a3b8' // slate-400
+        };
+    }
+  };
+
+  const gradeStyles = getGradeDependentStyles(examResults.totalGrade);
+
   return (
     <div>
       <h2 className="text-xl font-bold">Mock Exam Results</h2>
@@ -60,18 +117,41 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
               const resultsView = (
                 Object.keys(examSettings).length > 0 ? (
                   <>
-                    <div className="flex flex-col items-center p-6 bg-slate-900 rounded-2xl">
-                      <div className="relative">
-                        <CircularProgress percentage={examResults.totalPercentage} />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-4xl font-bold text-white">{animatedTotalScore}</span>
-                          <span className="text-lg text-gray-400">Total Score</span>
+                    <motion.div
+                      className={`
+                        relative 
+                        overflow-hidden 
+                        rounded-3xl 
+                        border border-slate-800 
+                        bg-gradient-to-br from-slate-900 via-slate-900/90 to-black/80 
+                        p-6
+                        shadow-2xl ${gradeStyles.shadow}
+                        transition-all duration-300
+                      `}
+                      whileTap={{ scale: 0.92 }}
+                    >
+                        <div className="absolute top-0 left-0 w-1/2 h-1/2 rounded-full filter blur-3xl opacity-30" style={{ background: gradeStyles.glow1 }}></div>
+                        <div className="absolute bottom-0 right-0 w-1/2 h-1/2 rounded-full filter blur-3xl opacity-30" style={{ background: gradeStyles.glow2 }}></div>
+
+                        <div className="relative z-10 flex flex-col items-center">
+                            <div className="relative w-40 h-40 sm:w-44 sm:h-44">
+                                <CircularProgress percentage={examResults.totalPercentage} progressColor={gradeStyles.progressColor} />
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    <div className="px-3 py-1 text-sm font-semibold text-slate-300 ">
+                                        Total Score
+                                    </div>
+                                    <span className="-mt-1 text-5xl font-bold text-white tracking-tighter">
+                                        {animatedTotalScore}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="mt-4 text-center">
+                                <div className={`inline-block px-4 py-1.5 text-base font-semibold ${gradeStyles.gradeBadge} rounded-full backdrop-blur-sm`}>
+                                    Grade: <span className="font-extrabold text-2xl align-middle">{examResults.totalGrade}</span>
+                                </div>
+                            </div>
                         </div>
-                      </div>
-                      <div className="mt-4 text-center">
-                        <span className="text-2xl font-bold text-purple-400">Grade: {examResults.totalGrade}</span>
-                      </div>
-                    </div>
+                    </motion.div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {SUBJECT_ORDER.map(subjectKey => {
                         if (examScores.hasOwnProperty(subjectKey)) {
@@ -103,7 +183,7 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                   return resultsView;
                 } else {
                   return (
-                    <div className="text-center text-yellow-400 bg-yellow-500/10 p-6 border border-yellow-500/30 rounded-2xl">
+                    <div className="text-center text-yellow-400 bg-yellow-500/10 py-4 px-6 border border-yellow-500/30 rounded-2xl">
                       <p className="font-bold text-lg animate-pulse">Payment Required</p>
                       <p className="mt-2 text-sm animate-pulse">
                         Please pay your Star Debt first to view your Mock 3 results.

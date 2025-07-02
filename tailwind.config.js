@@ -44,7 +44,8 @@ module.exports = {
         "fade-in": "fade-in 250ms ease-in-out",
       },
       colors: {
-        'company-purple': 'rgb(132, 94, 238)',
+        'company-purple': 'rgb(164, 94, 244)',
+        'company-purple-dark': 'rgb(121, 33, 221)',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

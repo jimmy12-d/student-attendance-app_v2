@@ -44,6 +44,28 @@ export default function Button({
   ...props
 }: Props) {
 
+  if (color === 'company-purple') {
+    const buttonClasses = `
+      inline-flex justify-center items-center whitespace-nowrap
+      focus:outline-hidden transition-colors focus:ring-3 duration-150
+      border cursor-pointer rounded-sm
+      bg-company-purple text-white border-company-purple
+      hover:bg-company-purple-dark hover:border-company-purple-dark
+      dark:bg-company-purple dark:border-company-purple
+      dark:hover:bg-company-purple-dark dark:hover:border-company-purple-dark
+      ${small ? 'text-sm px-3 py-1' : 'py-2 px-3'}
+      ${disabled ? 'cursor-not-allowed opacity-70' : ''}
+      ${className}
+    `;
+
+    return (
+      <button className={buttonClasses} onClick={onClick} disabled={disabled}>
+        {icon && <Icon path={icon} size={iconSize} />}
+        {label && <span className={icon ? "ml-2" : ""}>{label}</span>}
+      </button>
+    );
+  }
+
   if (color === 'glowing-purple') {
     const outerClasses = "relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-medium text-gray-900 rounded-lg group bg-gradient-to-br from-purple-600 to-blue-500 dark:text-white focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 shadow-lg shadow-purple-500/50 dark:shadow-lg dark:shadow-purple-800/80";
     const innerClasses = `relative inline-flex items-center bg-white dark:bg-slate-900 rounded-md ${small ? 'px-3 py-1 text-sm' : 'px-5 py-2.5'}`;

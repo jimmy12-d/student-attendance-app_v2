@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 
 type Props = {
   percentage: number;
+  progressColor?: string;
+  trailColor?: string;
 };
 
-const CircularProgress = ({ percentage }: Props) => {
+const CircularProgress = ({ percentage, progressColor = "#8B5CF6", trailColor = "#334155" }: Props) => {
   const [animatedPercentage, setAnimatedPercentage] = useState(0);
 
   useEffect(() => {
@@ -40,7 +42,7 @@ const CircularProgress = ({ percentage }: Props) => {
       >
         {/* Background Circle */}
         <circle
-          stroke="#334155" // slate-700
+          stroke={trailColor} // slate-700
           fill="transparent"
           strokeWidth={strokeWidth}
           r={radius}
@@ -49,7 +51,7 @@ const CircularProgress = ({ percentage }: Props) => {
         />
         {/* Progress Circle */}
         <circle
-          stroke="#8B5CF6" // purple-500
+          stroke={progressColor} // purple-500
           fill="transparent"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference + ' ' + circumference}

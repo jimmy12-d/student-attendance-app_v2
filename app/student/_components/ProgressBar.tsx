@@ -16,8 +16,8 @@ const statusConfig = {
   "Borrow": {
     percent: 66,
     message: "You owe Star payment. You need to finish your payment to view your Mock 3 results.",
-    color: "text-blue-500",
-    bar: "bg-blue-500",
+    color: "text-yellow-400",
+    bar: "bg-yellow-500",
   },
   "Paid Star" :
    {

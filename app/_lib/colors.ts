@@ -14,6 +14,7 @@ export const colorsBgLight = {
   danger: "bg-red-500 border-red-500 text-white",
   warning: "bg-yellow-500 border-yellow-500 text-white",
   info: "bg-blue-500 border-blue-500 text-white",
+  'company-purple': 'bg-company-purple border-company-purple text-white',
 };
 
 export const colorsText = {
@@ -24,25 +25,29 @@ export const colorsText = {
   danger: "text-red-500",
   warning: "text-yellow-500",
   info: "text-blue-500",
+  'company-purple': "text-company-purple dark:text-company-purple",
+  facebook: "text-blue-800 dark:text-blue-700",
 };
 
 export const colorsOutline = {
   white: [colorsText.white, "border-gray-100"].join(" "),
   light: [colorsText.light, "border-gray-100"].join(" "),
   contrast: [colorsText.contrast, "border-gray-900 dark:border-slate-100"].join(
-    " ",
+    " "
   ),
   success: [colorsText.success, "border-emerald-500"].join(" "),
   danger: [colorsText.danger, "border-red-500"].join(" "),
   warning: [colorsText.warning, "border-yellow-500"].join(" "),
   info: [colorsText.info, "border-blue-500"].join(" "),
+  'company-purple': [colorsText["company-purple"], "border-company-purple"].join(" "),
+  facebook: [colorsText.facebook, "border-blue-800"].join(" "),
 };
 
 export const getButtonColor = (
   color: ColorButtonKey,
   isOutlined: boolean,
   hasHover: boolean,
-  isActive = false,
+  isActive = false
 ) => {
   if (color === "void") {
     return "";
@@ -58,6 +63,7 @@ export const getButtonColor = (
       danger: "ring-red-300 dark:ring-red-700",
       warning: "ring-yellow-300 dark:ring-yellow-700",
       info: "ring-blue-300 dark:ring-blue-700",
+      'company-purple': "ring-purple-300 dark:ring-purple-700",
       facebook: "ring-blue-300 dark:ring-blue-700",
     },
     active: {
@@ -69,6 +75,7 @@ export const getButtonColor = (
       danger: "bg-red-700 dark:bg-red-600",
       warning: "bg-yellow-700 dark:bg-yellow-600",
       info: "bg-blue-700 dark:bg-blue-600",
+      'company-purple': "bg-company-purple-dark dark:bg-company-purple-dark",
       facebook: "bg-blue-900 dark:bg-blue-800",
     },
     bg: {
@@ -80,6 +87,7 @@ export const getButtonColor = (
       danger: "bg-red-600 dark:bg-red-500 text-white",
       warning: "bg-yellow-600 dark:bg-yellow-500 text-white",
       info: "bg-blue-600 dark:bg-blue-500 text-white",
+      'company-purple': "bg-company-purple dark:bg-company-purple text-white",
       facebook: "bg-blue-800 dark:bg-blue-700 text-white",
     },
     bgHover: {
@@ -94,6 +102,7 @@ export const getButtonColor = (
       warning:
         "hover:bg-yellow-700 hover:border-yellow-700 dark:hover:bg-yellow-600 dark:hover:border-yellow-600",
       info: "hover:bg-blue-700 hover:border-blue-700 dark:hover:bg-blue-600 dark:hover:border-blue-600",
+      'company-purple': "hover:bg-company-purple-dark hover:border-company-purple-dark dark:hover:bg-company-purple-dark dark:hover:border-company-purple-dark",
       facebook: "hover:bg-blue-900 hover:border-blue-900 dark:hover:bg-blue-800 dark:hover:border-blue-800",
     },
     borders: {
@@ -105,6 +114,7 @@ export const getButtonColor = (
       danger: "border-red-600 dark:border-red-500",
       warning: "border-yellow-600 dark:border-yellow-500",
       info: "border-blue-600 dark:border-blue-500",
+      'company-purple': "border-company-purple dark:border-company-purple",
       facebook: "border-blue-800 dark:border-blue-700",
     },
     text: {
@@ -113,6 +123,7 @@ export const getButtonColor = (
       danger: "text-red-600 dark:text-red-500",
       warning: "text-yellow-600 dark:text-yellow-500",
       info: "text-blue-600 dark:text-blue-500",
+      'company-purple': "text-company-purple dark:text-company-purple",
       facebook: "text-blue-800 dark:text-blue-700",
     },
     outlineHover: {
@@ -125,6 +136,7 @@ export const getButtonColor = (
       warning:
         "hover:bg-yellow-600 hover:text-white hover:text-white dark:hover:text-white dark:hover:border-yellow-600",
       info: "hover:bg-blue-600 hover:text-white dark:hover:text-white dark:hover:border-blue-600",
+      'company-purple': "hover:bg-company-purple hover:text-white dark:hover:text-white dark:hover:border-company-purple",
       facebook: "hover:bg-blue-800 hover:text-white dark:hover:text-white dark:hover:border-blue-800",
     },
   };

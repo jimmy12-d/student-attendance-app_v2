@@ -94,7 +94,7 @@ const OngoingPermissions: React.FC<OngoingPermissionsProps> = ({ permissions, is
         return (
           <motion.div 
             key={permission.id} 
-            className={`relative overflow-hidden bg-slate-900 p-4 rounded-2xl border-l-4 ${borderColor} cursor-pointer`}
+            className={`relative overflow-hidden bg-slate-900 p-4 rounded-2xl border-l-6 ${borderColor} cursor-pointer`}
             onClick={(e) => createRipple(e, permission.id)}
             whileTap={{ scale: 0.98 }}
           >

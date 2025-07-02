@@ -87,27 +87,38 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         }}
       />
       <div className="min-h-screen bg-white dark:bg-slate-800">
-        <nav className="fixed top-0 left-0 right-0 z-30 bg-gray-50 dark:bg-slate-900 shadow-md">
-          <div className="max-w-2xl mx-auto px-2 sm:px-2 lg:px-2">
-            <div className="flex items-center justify-between h-20">
-              <div className="flex items-center flex-1 min-w-0">
-                <Image src="/favicon.png" alt="Logo" width={50} height={50} className="mr-4" />
-                <div className="flex flex-col justify-center">
-                  <span className="text-xl font-bold dark:text-white truncate">Student Portal</span>
-                  {userName && (
-                    <div className="flex flex-col">
-                      <span className="text-base text-gray-700 dark:text-gray-300 truncate">{userName}</span>
-                      {userClass && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{userClass}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+      <nav className="fixed top-0 left-0 right-0 z-30 bg-gray-50 dark:bg-slate-900 shadow-md">
+        <div className="max-w-2xl mx-auto px-4 sm:px-4 lg:px-4">
+          <div className="flex items-center justify-between h-16">
+            
+            {/* 1. LEFT side is now simplified */}
+            <div className="flex items-center">
+              <Image src="/favicon.png" alt="Logo" width={40} height={40} className="mr-2"/>
+              <span className="text-lg font-bold dark:text-white">Student Portal</span>
             </div>
+
+            <div className="flex items-center space-x-2">
+              <div className="flex flex-col items-end">
+                {userName && (
+                  <span className="text-base text-slate-800 dark:text-gray-100 truncate">
+                    {userName}
+                  </span>
+                )}
+                {userClass && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {userClass}
+                  </span>
+                )}
+              </div>
+
+              {/* The notification icon */}
+              <svg className="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            </div>
+
           </div>
-        </nav>
-        <main className="pt-20 pb-20">
+        </div>
+      </nav>
+        <main className="pt-16 pb-20">
           <div className="max-w-2xl mx-auto sm:px-6 lg:px-8">
             {children}
           </div>
