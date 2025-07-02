@@ -32,6 +32,19 @@ export interface ProgressData {
   lastFetched: string;
 }
 
+type AllMockScores = { [mockName: string]: { [subject: string]: number } };
+
+// Define a type for a single cache entry for the radar chart
+type RadarChartCacheEntry = {
+  data: AllMockScores;
+  lastFetched: string;
+};
+
+// Define a type for the radar chart cache
+type RadarChartCache = {
+  [studentId: string]: RadarChartCacheEntry;
+};
+
 export interface MainState {
   userName: string | null;
   userEmail: string | null;
@@ -49,6 +62,8 @@ export interface MainState {
   progressCache: {
     [studentId: string]: ProgressData;
   };
+  isStudentDataLoaded: boolean;
+  radarChartCache: RadarChartCache;
   // You might add an isAuthenticated flag here, updated by onAuthStateChanged,
   // but usually checking userName or userUid is sufficient.
 }
@@ -64,6 +79,8 @@ const initialState: MainState = {
   mockExamCache: {},
   mockExamSettingsCache: {},
   progressCache: {},
+  isStudentDataLoaded: false,
+  radarChartCache: {},
 
   /* Field focus with ctrl+k (to register only once) */
   isFieldFocusRegistered: false,
@@ -100,6 +117,12 @@ export const mainSlice = createSlice({
     setProgressData: (state, action: PayloadAction<{ studentId: string; data: ProgressData }>) => {
       state.progressCache[action.payload.studentId] = action.payload.data;
     },
+    setRadarChartData: (state, action: PayloadAction<{ studentId: string; data: RadarChartCacheEntry }>) => {
+      state.radarChartCache[action.payload.studentId] = action.payload.data;
+    },
+    setStudentDataLoaded: (state, action: PayloadAction<boolean>) => {
+      state.isStudentDataLoaded = action.payload;
+    },
     /* Field focus with ctrl+k (to register only once) */
     setFieldFocusRegistered: (state) => {
       state.isFieldFocusRegistered = true;
@@ -107,6 +130,14 @@ export const mainSlice = createSlice({
   },
 });
 
-export const { setUser, setMockExamData, setMockExamSettings, setProgressData, setFieldFocusRegistered } = mainSlice.actions;
+export const {
+  setUser,
+  setMockExamData,
+  setMockExamSettings,
+  setProgressData,
+  setRadarChartData,
+  setStudentDataLoaded,
+  setFieldFocusRegistered,
+} = mainSlice.actions;
 
 export default mainSlice.reducer;

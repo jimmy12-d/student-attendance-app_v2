@@ -49,23 +49,22 @@ const ScoreCard = ({ subject, score, maxScore, grade }: Props) => {
 
   return (
     <motion.div
-      className={`relative overflow-hidden bg-slate-900 px-4 py-3 rounded-lg flex items-center justify-between border-l-4 ${borderColor} cursor-pointer`}
+      className={`relative overflow-hidden bg-slate-900 px-3 py-2 md:px-4 md:py-3 rounded-lg flex items-center justify-between border-l-4 ${borderColor} cursor-pointer`}
       onClick={createRipple}
       whileTap={{ scale: 0.95 }}
     >
       <div className="flex flex-col justify-center pointer-events-none">
-        <p className="text-lg font-bold text-white leading-tight">
+        <p className="text-base md:text-lg font-bold text-white leading-tight">
           {capitalize(subject)}
         </p>
-        <div className="flex items-baseline gap-x-2 mt-1">
-          <span className="text-sm text-gray-400">Score:</span>
-          <span className="text-xl font-bold text-white">{score}</span>
-          <span className="text-sm text-gray-500">/ {maxScore}</span>
+        <div className="flex items-baseline gap-x-1.5 mt-1">
+          <span className="text-lg md:text-xl font-bold text-white">{score}</span>
+          <span className="text-xs md:text-sm text-gray-500">/ {maxScore}</span>
         </div>
       </div>
 
-      <div className={`flex items-center justify-center w-16 h-16 rounded-full bg-slate-800 border-2 ${borderColor} pointer-events-none`}>
-        <span className={`text-4xl font-bold ${textColor}`}>
+      <div className={`flex items-center justify-center w-12 h-12 md:w-16 md:h-16 rounded-full bg-slate-800 border-2 ${borderColor} pointer-events-none`}>
+        <span className={`text-3xl md:text-4xl font-bold ${textColor}`}>
           {grade}
         </span>
       </div>

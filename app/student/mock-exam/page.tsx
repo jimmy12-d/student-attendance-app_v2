@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 
 // Firebase and Data Handling
 import { db } from '../../../firebase-config';
@@ -9,7 +10,7 @@ import { collection, query, where, getDocs, doc, getDoc, limit } from 'firebase/
 
 // Redux
 import { useAppSelector, useAppDispatch } from '../../_stores/hooks';
-import { setMockExamData, setMockExamSettings, setProgressData } from '../../_stores/mainSlice';
+import { setMockExamData, setMockExamSettings, setProgressData, setRadarChartData } from '../../_stores/mainSlice';
 
 // UI Components
 import useCountUp from '../../_hooks/useCountUp';
@@ -19,11 +20,17 @@ import CardBoxModal from '../../_components/CardBox/Modal';
 import StudentQRCode from '../_components/StudentQRCode';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
 import ExamInfoBoxes from './ExamInfoBoxes';
+import PerformanceRadarChartSkeleton from './PerformanceRadarChartSkeleton';
 
+const PerformanceRadarChart = dynamic(() => import('./PerformanceRadarChart'), {
+  ssr: false,
+  loading: () => <PerformanceRadarChartSkeleton />
+});
 
 // Define types for our data
 type ExamSettings = { [subject: string]: { maxScore: number } };
 type ExamScores = { [subject: string]: number };
+type AllMockScores = { [mockName: string]: ExamScores };
 
 const MockExamPage = () => {
   const dispatch = useAppDispatch();
@@ -33,6 +40,7 @@ const MockExamPage = () => {
   const mockExamCache = useAppSelector((state) => state.main.mockExamCache);
   const mockExamSettingsCache = useAppSelector((state) => state.main.mockExamSettingsCache);
   const progressCache = useAppSelector((state) => state.main.progressCache);
+  const radarChartCache = useAppSelector((state) => state.main.radarChartCache);
 
   // State for modals and progress
   const [isQrModalActive, setIsQrModalActive] = useState(false);
@@ -47,25 +55,28 @@ const MockExamPage = () => {
   const [selectedTab, setSelectedTab] = useState('mock1');
   const [examSettings, setExamSettings] = useState<ExamSettings>({});
   const [examScores, setExamScores] = useState<ExamScores>({});
+  const [allMockScores, setAllMockScores] = useState<AllMockScores>({});
   const [isExamLoading, setIsExamLoading] = useState(true);
+  const [isAllMocksLoading, setIsAllMocksLoading] = useState(true);
   const [studentClassType, setStudentClassType] = useState<string | null>(null);
 
   // Fetch controls for available tabs (e.g., Mock 3)
-  // useEffect(() => {
-  //   const fetchExamControls = async () => {
-  //     const controlDocRef = doc(db, 'examControls', 'mock3');
-  //     const docSnap = await getDoc(controlDocRef);
-  //     if (docSnap.exists() && docSnap.data().isPublished) {
-  //       setAvailableTabs(['mock1', 'mock2', 'mock3']);
-  //     }
-  //   };
-  //   fetchExamControls();
-  // }, []);
-
   useEffect(() => {
-    // Debug: Skip Firestore check, assume isPublished is true
-    setAvailableTabs(['mock1', 'mock2', 'mock3']);
+    const fetchExamControls = async () => {
+      const controlDocRef = doc(db, 'examControls', 'mock3');
+      const docSnap = await getDoc(controlDocRef);
+      if (docSnap.exists() && docSnap.data().isPublished) {
+        setAvailableTabs(['mock1', 'mock2', 'mock3']);
+      }
+    };
+    fetchExamControls();
   }, []);
+
+  // Debug: Skip Firestore check, assume isPublished is true
+  // useEffect(() => {
+  //   // Debug: Skip Firestore check, assume isPublished is true
+  //   setAvailableTabs(['mock1', 'mock2', 'mock3']);
+  // }, []);
 
   // Fetch progress status and seat info (not cached)
   useEffect(() => {
@@ -126,6 +137,103 @@ const MockExamPage = () => {
     };
     fetchProgress();
   }, [studentDocId, dispatch, progressCache]);
+
+  // Effect to fetch all mock exam data for the radar chart
+  useEffect(() => {
+    if (!studentDocId || !studentClassType) return;
+
+    // Check cache first
+    const cachedData = radarChartCache[studentDocId];
+    const isCacheFresh = cachedData && (Date.now() - new Date(cachedData.lastFetched).getTime()) < 5 * 60 * 1000;
+
+    if (isCacheFresh) {
+      setAllMockScores(cachedData.data);
+      setIsAllMocksLoading(false);
+      return;
+    }
+
+    const fetchAllMockData = async () => {
+      setIsAllMocksLoading(true);
+      const mocksToFetch = availableTabs;
+      const getSettingsKey = (classType: string, tab: string) => `${classType}-${tab}`;
+      const getScoresKey = (studentId: string, tab: string) => `${studentId}-${tab}`;
+
+      const promises = mocksToFetch.map(async (mockName) => {
+        // --- FETCH SETTINGS FOR THIS MOCK ---
+        const settingsKey = getSettingsKey(studentClassType, mockName);
+        const cachedSettings = mockExamSettingsCache[settingsKey];
+        const isSettingsFresh = cachedSettings && (Date.now() - new Date(cachedSettings.lastFetched).getTime()) < 5 * 60 * 1000;
+
+        let settings: ExamSettings | null = isSettingsFresh ? cachedSettings.settings : null;
+        if (!settings) {
+          try {
+            const settingsQuery = query(collection(db, "examSettings"), where("type", "==", studentClassType), where("mock", "==", mockName));
+            const settingsSnapshot = await getDocs(settingsQuery);
+            const fetchedSettings: ExamSettings = {};
+            settingsSnapshot.forEach(doc => {
+              const data = doc.data();
+              fetchedSettings[data.subject] = { maxScore: data.maxScore };
+            });
+            settings = fetchedSettings;
+            dispatch(setMockExamSettings({
+              settingsKey,
+              data: { settings, lastFetched: new Date().toISOString() },
+            }));
+          } catch (e) {
+            console.error(`Failed to fetch settings for ${mockName}`, e);
+            settings = {}; // Empty settings on error
+          }
+        }
+        
+        // --- FETCH SCORES FOR THIS MOCK ---
+        const scoresKey = getScoresKey(studentDocId, mockName);
+        const cachedScores = mockExamCache[scoresKey];
+        const isScoresFreshForScores = cachedScores && (Date.now() - new Date(cachedScores.lastFetched).getTime()) < 5 * 60 * 1000;
+
+        if (isScoresFreshForScores) {
+          return { [mockName]: cachedScores.scores };
+        } else {
+          try {
+            const secretKey = process.env.NEXT_PUBLIC_SHEET_SECRET;
+            const scoresUrl = `/api/sheet-data?student_id=${studentDocId}&secret=${secretKey}&exam_name=${mockName}`;
+            const scoresResponse = await fetch(scoresUrl);
+            if (!scoresResponse.ok) return { [mockName]: {} };
+            const scoresData = await scoresResponse.json();
+            
+            const fetchedScores: ExamScores = {};
+            // Use the settings we just fetched/retrieved from cache
+            if (scoresData.scores && settings) {
+              Object.keys(settings).forEach(subject => {
+                fetchedScores[subject] = Number(scoresData.scores[subject]) || 0;
+              });
+            }
+
+            dispatch(setMockExamData({
+              examName: scoresKey,
+              data: { scores: fetchedScores, lastFetched: new Date().toISOString() },
+            }));
+            return { [mockName]: fetchedScores };
+          } catch (e) {
+            return { [mockName]: {} };
+          }
+        }
+      });
+
+      const results = await Promise.all(promises);
+      const allData = results.reduce((acc, current) => ({ ...acc, ...current }), {});
+      setAllMockScores(allData);
+
+      // Save to cache
+      dispatch(setRadarChartData({
+        studentId: studentDocId,
+        data: { data: allData, lastFetched: new Date().toISOString() }
+      }));
+
+      setIsAllMocksLoading(false);
+    };
+
+    fetchAllMockData();
+  }, [studentDocId, studentClassType, dispatch, mockExamCache, mockExamSettingsCache, radarChartCache, availableTabs]);
 
   // Main data fetching logic with caching
   useEffect(() => {
@@ -294,16 +402,17 @@ const MockExamPage = () => {
     <div className="p-6">        
         <ProgressBar status={progressStatus} loading={isProgressLoading} />
             
-        {!isProgressLoading && (
+        {/* {!isProgressLoading && (
           <ExamInfoBoxes
             progressStatus={progressStatus}
             seatInfo={seatInfo}
             phoneInfo={phoneInfo}
           />
-        )}
-
-        <hr className="my-4 border-slate-800" />
+        )} */}
         
+        <hr className="my-2 border-slate-800" />
+        <h2 className="text-xl font-bold -mb-2">Mock Exam Results</h2>
+
         <MockExamResults
           availableTabs={availableTabs}
           selectedTab={selectedTab}
@@ -319,6 +428,15 @@ const MockExamPage = () => {
           SUBJECT_ORDER={SUBJECT_ORDER}
           SOCIAL_STUDIES_LABELS={SOCIAL_STUDIES_LABELS}
         />
+
+        <hr className="my-2 border-slate-800" />
+        <h2 className="text-xl font-bold mb-2">Your Exam Journey</h2>
+
+        {isAllMocksLoading ? (
+          <PerformanceRadarChartSkeleton />
+        ) : (
+          <PerformanceRadarChart allMockData={allMockScores} progressStatus={progressStatus} />
+        )}
     </div>
   );
 };

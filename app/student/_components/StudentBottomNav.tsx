@@ -7,7 +7,7 @@ import Icon from '@/app/_components/Icon';
 import { mdiCalendarCheck, mdiFileDocumentEdit, mdiAccountCircle,  } from '@mdi/js';
 
 export const navItems = [
-  { name: 'Attendance', href: '/student/attendance', icon: mdiCalendarCheck },
+  // { name: 'Attendance', href: '/student/attendance', icon: mdiCalendarCheck },
   { name: 'Mock Exam', href: '/student/mock-exam', icon: mdiFileDocumentEdit },
   { name: 'Account', href: '/student/account', icon: mdiAccountCircle },
 ];

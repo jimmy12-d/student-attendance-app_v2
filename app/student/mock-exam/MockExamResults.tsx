@@ -106,7 +106,6 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
 
   return (
     <div>
-      <h2 className="text-xl font-bold">Mock Exam Results</h2>
       <ExamTabs tabs={availableTabs} selectedTab={selectedTab} setSelectedTab={handleTabChange} disabled={isExamLoading} />
       {isExamLoading ? (
         <div className="text-center text-gray-400 p-8">Loading scores...</div>
@@ -152,7 +151,7 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                             </div>
                         </div>
                     </motion.div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       {SUBJECT_ORDER.map(subjectKey => {
                         if (examScores.hasOwnProperty(subjectKey)) {
                           const displayLabel = studentClassType === 'Grade 12 Social'
