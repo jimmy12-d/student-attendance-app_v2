@@ -399,7 +399,7 @@ const MockExamPage = () => {
   };
   
   return (
-    <div className="p-6">        
+    <>
         <ProgressBar status={progressStatus} loading={isProgressLoading} />
             
         {/* {!isProgressLoading && (
@@ -437,7 +437,7 @@ const MockExamPage = () => {
         ) : (
           <PerformanceRadarChart allMockData={allMockScores} progressStatus={progressStatus} />
         )}
-    </div>
+    </>
   );
 };
 

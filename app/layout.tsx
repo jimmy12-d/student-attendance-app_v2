@@ -13,6 +13,13 @@ const imageUrl = `${url}/rodwell_logo.png`;
 export const metadata: Metadata = {
   title: title,
   description: description,
+  manifest: '/manifest.json',
+  themeColor: '#0f172a',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: title,
+  },
   openGraph: {
     title: title,
     description: description,

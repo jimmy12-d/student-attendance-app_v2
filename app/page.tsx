@@ -1,13 +1,21 @@
-// Corrected app/page.tsx for redirecting
-"use client"; // Required for useEffect and client-side redirect
-
-import { useEffect } from 'react'; // useEffect is needed
-import { redirect } from 'next/navigation';
+"use client";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
+  const router = useRouter();
+
   useEffect(() => {
-    redirect('/login');
-  }, []);
+    // This is a placeholder for your actual auth check.
+    // You might use Firebase's onAuthStateChanged or a similar method here.
+    const isLoggedIn = localStorage.getItem('token'); 
+
+    if (isLoggedIn) {
+      router.push('/student/mock-exam');
+    } else {
+      router.push('/login');
+    }
+  }, [router]);
 
   return null;
 }
