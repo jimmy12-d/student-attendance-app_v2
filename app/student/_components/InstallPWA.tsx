@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Icons
 const DownloadCloud = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-download-cloud">
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="feather feather-download-cloud">
     <path d="M8 17l4 4 4-4"/><path d="M12 12v9"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/>
   </svg>
 );
@@ -19,8 +19,8 @@ const AddToHomeScreenIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
 );
 
-const XIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+const XIcon = ({ size = 24 }: { size?: number }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 );
 
 
@@ -33,10 +33,10 @@ const IOSInstallSheet = ({ onClose }: { onClose: () => void }) => {
             transition={{ type: 'spring', damping: 25, stiffness: 180 }}
             className="fixed bottom-0 left-0 right-0 p-4 pt-6 bg-slate-900 backdrop-blur-md rounded-t-3xl shadow-2xl z-50 text-white"
         >
-            <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
-                <XIcon />
+            <button onClick={onClose} className="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors">
+                <XIcon size={20} />
             </button>
-            <div className="text-center">
+            <div className="text-center max-w-2xl mx-auto">
                 <h3 className="font-bold text-xl mb-2 text-white">Install the App</h3>
                 <p className="text-slate-300 text-sm mb-6">To install the app on your iOS device, follow these simple steps:</p>
             </div>
@@ -102,39 +102,40 @@ export const InstallPWA = ({ as_banner = false, as_button = false }) => {
   if (as_banner && showBanner) {
     return (
         <AnimatePresence>
-            <motion.div
-                initial={{ y: 100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 100, opacity: 0 }}
-                className="fixed bottom-4 left-4 right-4 z-50 p-3 bg-slate-800/80 backdrop-blur-lg border border-slate-700 rounded-xl shadow-2xl relative"
-            >
-                <button
-                    onClick={() => setShowBanner(false)}
-                    className="absolute top-1.5 right-1.5 flex-shrink-0 text-slate-400 hover:text-white transition-colors p-1"
+            <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-center">
+                <motion.div
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 100, opacity: 0 }}
+                    className="w-full max-w-2xl px-3 py-2 bg-slate-800/80 backdrop-blur-lg border border-slate-700 rounded-xl shadow-2xl relative"
                 >
-                    <XIcon />
-                </button>
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3 pr-6">
+                    <button
+                        onClick={() => setShowBanner(false)}
+                        className="absolute top-1.5 left-1.5 flex-shrink-0 text-slate-400 hover:text-white transition-colors p-1"
+                    >
+                        <XIcon size={20} />
+                    </button>
+                    <div className="flex items-center justify-between pl-6 pr-2">
+                    <div className="flex items-center gap-3">
                         <div className="hidden sm:block bg-indigo-500 p-1.5 rounded-lg">
-                            <DownloadCloud />
+                        <DownloadCloud />
                         </div>
                         <div>
-                            <h4 className="font-semibold text-white leading-tight">Install the App</h4>
-                            <p className="text-xs text-slate-300 sm:hidden">Quick access & offline use.</p>
-                            <p className="hidden sm:block text-sm text-slate-300">For quick access and offline features.</p>
+                        <h4 className="font-semibold text-white leading-tight">Install the App</h4>
+                        <p className="pt-2 text-xs text-slate-300 sm:hidden">Instant access and offline,</p>
+                        <p className="text-xs text-slate-300 sm:hidden">view right from your homescreen.</p>
+                        <p className="hidden sm:block text-sm text-slate-300">For quick access and offline features.</p>
                         </div>
                     </div>
-                    <div className='flex justify-end'>
-                        <button
-                            onClick={handleInstallClick}
-                            className="flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1.5 px-3 rounded-md transition-colors text-sm"
-                        >
-                            Install
-                        </button>
+                    <button
+                        onClick={handleInstallClick}
+                        className="flex-shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md transition-colors text-sm"
+                    >
+                        Install
+                    </button>
                     </div>
-                </div>
-            </motion.div>
+                </motion.div>
+            </div>
             {iosSheetOpen && <IOSInstallSheet onClose={() => setIosSheetOpen(false)} />}
         </AnimatePresence>
     );

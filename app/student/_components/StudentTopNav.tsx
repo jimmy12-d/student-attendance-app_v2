@@ -35,10 +35,11 @@ const StudentTopNav = () => {
 
     return (
         <nav className="z-30 bg-slate-900/80 backdrop-blur-lg shadow-md">
-            <div className="max-w-4xl mx-auto px-4">
+            <div className="max-w-3xl mx-auto px-4">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center space-x-2">
-                        <Image src="/rodwell_logo.png" alt="Logo" width={40} height={40} />
+                        <Image src="/rodwell_logo.png" alt="Logo" width={46} height={46} />
+
                         <span className="text-lg font-bold text-white">Student Portal</span>
                     </div>
                     

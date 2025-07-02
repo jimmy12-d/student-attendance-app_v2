@@ -64,6 +64,9 @@ export interface MainState {
   };
   isStudentDataLoaded: boolean;
   radarChartCache: RadarChartCache;
+  studentClassType: string | null;
+  isFieldAdmin: boolean;
+  isAdmin: boolean;
   // You might add an isAuthenticated flag here, updated by onAuthStateChanged,
   // but usually checking userName or userUid is sufficient.
 }
@@ -81,6 +84,9 @@ const initialState: MainState = {
   progressCache: {},
   isStudentDataLoaded: false,
   radarChartCache: {},
+  studentClassType: null,
+  isFieldAdmin: false,
+  isAdmin: false,
 
   /* Field focus with ctrl+k (to register only once) */
   isFieldFocusRegistered: false,
@@ -127,6 +133,9 @@ export const mainSlice = createSlice({
     setFieldFocusRegistered: (state) => {
       state.isFieldFocusRegistered = true;
     },
+    setStudentClassType: (state, action: PayloadAction<string>) => {
+      state.studentClassType = action.payload;
+    },
   },
 });
 
@@ -138,6 +147,7 @@ export const {
   setRadarChartData,
   setStudentDataLoaded,
   setFieldFocusRegistered,
+  setStudentClassType,
 } = mainSlice.actions;
 
 export default mainSlice.reducer;
