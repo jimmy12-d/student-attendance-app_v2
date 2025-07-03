@@ -10,6 +10,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '@/firebase-config';
 import { useRouter } from 'next/navigation';
 import { InstallPWA } from '../_components/InstallPWA';
+import NotificationSettings from '../_components/NotificationSettings';
 
 const AccountPage = () => {
   const dispatch = useAppDispatch();
@@ -41,7 +42,7 @@ const AccountPage = () => {
         
         <div className="bg-white dark:bg-slate-900/70 p-6 rounded-lg shadow-lg space-y-6">
             <div>
-                <h2 className="text-lg font-semibold mb-4 text-slate-500">Appearance</h2>
+                <h2 className="text-lg font-semibold mb-4 text-slate-100">Appearance</h2>
                 <div className="flex items-center justify-between">
                     <p>Theme</p>
                     <DarkModeToggle />
@@ -51,14 +52,21 @@ const AccountPage = () => {
             <hr className="border-slate-700" />
 
             <div>
-                <h2 className="text-lg font-semibold mb-4 text-slate-500">App Installation</h2>
+                <h2 className="text-lg font-semibold mb-4 text-slate-100">Notifications</h2>
+                <NotificationSettings />
+            </div>
+
+            <hr className="border-slate-700" />
+
+            <div>
+                <h2 className="text-lg font-semibold mb-4 text-slate-100">App Installation</h2>
                 <InstallPWA as_button={true} />
             </div>
 
             <hr className="border-slate-700" />
             
             <div>
-                <h2 className="text-lg font-semibold mb-4 text-slate-500">Authentication</h2>
+                <h2 className="text-lg font-semibold mb-4 text-slate-100">Authentication</h2>
                 <div className="flex items-center justify-between">
                     <p>Sign out from your account.</p>
                     <Button color="danger" label="Logout" onClick={() => setIsLogoutModalActive(true)} outline />

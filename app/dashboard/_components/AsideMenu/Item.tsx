@@ -8,6 +8,7 @@ import { getButtonColor } from "../../../_lib/colors"; // Assuming this function
 import AsideMenuList from "./List";
 import { MenuAsideItem } from "../../../_interfaces";
 import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { signOut } from "firebase/auth";
 import { auth } from "../../../../firebase-config"; // Adjust path to your firebase-config.js
@@ -93,7 +94,7 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
         />
       )}
       <span
-        className={`grow text-ellipsis line-clamp-1 ${
+        className={`grow ${
           item.menu ? "" : "pr-12" // Original had pr-12
         } ${activeClassAddon}`}
       >
@@ -148,16 +149,23 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
       )}
 
       {/* Dropdown menu list */}
-      {item.menu && (
-        <AsideMenuList
-          menu={item.menu}
-          className={`aside-menu-dropdown ${
-            isDropdownActive ? "block dark:bg-slate-800/50" : "hidden"
-          }`}
-          onRouteChange={onRouteChange ?? (() => {})}
-          isDropdownList
-        />
-      )}
+      <AnimatePresence>
+        {item.menu && isDropdownActive && (
+          <motion.div
+            initial={{ height: 0, opacity: 0, overflow: 'hidden' }}
+            animate={{ height: 'auto', opacity: 1, overflow: 'visible' }}
+            exit={{ height: 0, opacity: 0, overflow: 'hidden' }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <AsideMenuList
+              menu={item.menu}
+              className="aside-menu-dropdown"
+              onRouteChange={onRouteChange ?? (() => {})}
+              isDropdownList
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </li>
   );
 };

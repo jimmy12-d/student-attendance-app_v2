@@ -4,7 +4,10 @@ import {
   mdiClipboardListOutline,
   mdiMagnify,
   mdiAccountClockOutline,
-  mdiFileDocumentCheckOutline
+  mdiFileDocumentCheckOutline,
+  mdiBellOutline,
+  mdiNotebookEditOutline,
+  mdiCalendarClock,
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -25,31 +28,41 @@ const menuAside: MenuAsideItem[] = [
     label: "Student",
   },
   {
-    href: "/dashboard/record", // Path to your new page
     label: "Attendance",
-    icon: mdiClipboardListOutline, // Choose an appropriate icon
+    icon: mdiCalendarClock,
+    menu: [
+      {
+        href: "/dashboard/record",
+        label: "Attendance Records",
+        icon: mdiClipboardListOutline,
+      },
+      {
+        href: "/dashboard/check",
+        label: "Check Manually",
+        icon: mdiMagnify,
+      },
+      {
+        href: "/dashboard/permission",
+        label: "Permission",
+        icon: mdiFileDocumentCheckOutline,
+      },
+      {
+        href: "/dashboard/manage-excuses",
+        label: "Late Permission",
+        icon: mdiAccountClockOutline,
+      },
+    ]
   },
   {
-    href: "/dashboard/check", // Path to your new page
-    label: "Check",
-    icon: mdiMagnify, // Choose an appropriate icon
-  },
-  {
-    href: "/dashboard/permission", // Path to your new page
-    label: "Permission",
-    icon: mdiFileDocumentCheckOutline, // Choose an appropriate icon
-  },
-  {
-    href: "/dashboard/manage-excuses", // Path to your new page
-    label: "Late Permission",
-    icon: mdiAccountClockOutline, // Choose an appropriate icon
-  },
-  {
-    href: "/dashboard/mock-exams", // Path to your new page
+    href: "/dashboard/mock-exams",
     label: "Mock Control",
-    icon: mdiAccountClockOutline, // Choose an appropriate icon
+    icon: mdiNotebookEditOutline,
   },
-
+  {
+    href: "/dashboard/notification",
+    label: "Notification",
+    icon: mdiBellOutline,
+  },
 ];
 
 export default menuAside;

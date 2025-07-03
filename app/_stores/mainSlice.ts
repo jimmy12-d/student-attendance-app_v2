@@ -1,5 +1,6 @@
 // app/_stores/mainSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { Timestamp } from 'firebase/firestore';
 
 // Define the User type to allow for null values, as Firebase User properties can be null
 export interface User {
@@ -9,6 +10,15 @@ export interface User {
   uid?: string; // Optional: Store Firebase UID if needed
   studentDocId?: string; // Firestore document ID from 'students' collection
   role?: 'admin' | 'student'; // Add role property
+}
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  body: string;
+  link?: string;
+  createdAt: Timestamp;
+  isRead: boolean;
 }
 
 // Define types for mock exam data
@@ -67,6 +77,8 @@ export interface MainState {
   studentClassType: string | null;
   isFieldAdmin: boolean;
   isAdmin: boolean;
+  notifications: AppNotification[];
+  unreadNotificationCount: number;
   // You might add an isAuthenticated flag here, updated by onAuthStateChanged,
   // but usually checking userName or userUid is sufficient.
 }
@@ -87,6 +99,8 @@ const initialState: MainState = {
   studentClassType: null,
   isFieldAdmin: false,
   isAdmin: false,
+  notifications: [],
+  unreadNotificationCount: 0,
 
   /* Field focus with ctrl+k (to register only once) */
   isFieldFocusRegistered: false,
@@ -136,6 +150,25 @@ export const mainSlice = createSlice({
     setStudentClassType: (state, action: PayloadAction<string>) => {
       state.studentClassType = action.payload;
     },
+    setNotifications: (state, action: PayloadAction<AppNotification[]>) => {
+      state.notifications = action.payload;
+      state.unreadNotificationCount = action.payload.filter(n => !n.isRead).length;
+    },
+    addNotification: (state, action: PayloadAction<AppNotification>) => {
+      state.notifications.unshift(action.payload);
+      state.unreadNotificationCount++;
+    },
+    markNotificationAsRead: (state, action: PayloadAction<string>) => {
+      const notification = state.notifications.find(n => n.id === action.payload);
+      if (notification && !notification.isRead) {
+        notification.isRead = true;
+        state.unreadNotificationCount--;
+      }
+    },
+    markAllNotificationsAsRead: (state) => {
+      state.notifications.forEach(n => n.isRead = true);
+      state.unreadNotificationCount = 0;
+    }
   },
 });
 
@@ -148,6 +181,10 @@ export const {
   setStudentDataLoaded,
   setFieldFocusRegistered,
   setStudentClassType,
+  setNotifications,
+  addNotification,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
 } = mainSlice.actions;
 
 export default mainSlice.reducer;

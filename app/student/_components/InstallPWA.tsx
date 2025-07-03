@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { usePWAInstall } from '../../_hooks/usePWAInstall';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePromptManager } from '@/app/_hooks/usePromptManager';
 
 // Icons
 const DownloadCloud = () => (
@@ -61,16 +62,22 @@ export const InstallPWA = ({ as_banner = false, as_button = false }) => {
   const { canInstallPWA, triggerInstall, isIOS } = usePWAInstall();
   const [showBanner, setShowBanner] = useState(false);
   const [iosSheetOpen, setIosSheetOpen] = useState(false);
+  const { activePrompt, setActivePrompt } = usePromptManager();
 
   React.useEffect(() => {
-    // A delay to allow the user to settle before showing the banner
     const timer = setTimeout(() => {
-      if (canInstallPWA && as_banner) {
+      if (canInstallPWA && as_banner && !activePrompt) {
         setShowBanner(true);
+        setActivePrompt('pwa');
       }
     }, 3000);
     return () => clearTimeout(timer);
-  }, [canInstallPWA, as_banner]);
+  }, [canInstallPWA, as_banner, activePrompt, setActivePrompt]);
+
+  const handleDismiss = () => {
+    setShowBanner(false);
+    setActivePrompt(null);
+  };
 
   const handleInstallClick = () => {
     if (isIOS) {
@@ -112,7 +119,7 @@ export const InstallPWA = ({ as_banner = false, as_button = false }) => {
                     className="w-full max-w-2xl px-3 py-2 bg-slate-800/80 backdrop-blur-lg border border-slate-700 rounded-xl shadow-2xl relative"
                 >
                     <button
-                        onClick={() => setShowBanner(false)}
+                        onClick={handleDismiss}
                         className="absolute top-1.5 left-1.5 flex-shrink-0 text-slate-400 hover:text-white transition-colors p-1"
                     >
                         <XIcon size={20} />

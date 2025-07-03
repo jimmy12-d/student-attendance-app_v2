@@ -11,6 +11,7 @@ import StudentBottomNav from "./_components/StudentBottomNav";
 import { Toaster } from 'sonner'
 import { InstallPWA } from './_components/InstallPWA';
 import StudentTopNav from './_components/StudentTopNav';
+import NotificationPermissionPrompt from "./_components/NotificationPermissionPrompt";
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -77,6 +78,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
           <InstallPWA as_banner={true} />
         </main>
         <StudentBottomNav />
+        <NotificationPermissionPrompt />
       </div>
     </>
   );
