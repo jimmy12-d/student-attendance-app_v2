@@ -17,6 +17,7 @@ import { auth, db } from "../../../firebase-config";
 import Button from "../../_components/Button";
 import Image from "next/image";
 import { navItems } from "../../student/_components/StudentBottomNav";
+import { InstallPWA } from "../../student/_components/InstallPWA";
 
 const StudentGoogleSignIn = () => {
   const router = useRouter();
@@ -120,6 +121,17 @@ const StudentGoogleSignIn = () => {
             {isLoading ? "Signing In..." : "Sign in with Google"}
         </div>
       </Button>
+
+      <div className="relative flex items-center justify-center w-full mt-8 border-t border-gray-200 dark:border-slate-700">
+        <div className="absolute px-4 text-sm -translate-y-1/2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+          Or
+        </div>
+      </div>
+      
+      <div className="mt-8">
+        <InstallPWA as_button={true} />
+      </div>
+
     </div>
   );
 };
