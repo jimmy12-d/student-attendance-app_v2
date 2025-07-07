@@ -252,7 +252,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
   return (
     <motion.div 
       className="bg-slate-900 border border-slate-800 rounded-2xl p-4 cursor-pointer"
-      whileTap={{ scale: 0.96 }}
+      whileTap={{ scale: 0.99 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
     >
       <div className="relative h-80">

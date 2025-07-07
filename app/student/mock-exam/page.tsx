@@ -340,14 +340,6 @@ const MockExamPage = () => {
         <hr className="my-2 border-slate-800" />
         <h2 className="text-xl font-bold mb-2">Your Exam Journey</h2>
 
-        <CardBoxModal
-          isActive={isPermissionModalActive}
-          onConfirm={handlePermissionSuccess}
-          title="Permission Request"
-        >
-           <PermissionRequestForm />
-        </CardBoxModal>
-
         {/* Performance Chart Section */}
         {isAllMocksLoading ? (
             <PerformanceRadarChartSkeleton />

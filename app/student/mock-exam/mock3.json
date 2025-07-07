@@ -1,0 +1,198 @@
+[
+    {
+      "Document ID": "mock3_Grade 7_chemistry",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "chemistry",
+      "type": "Grade 7"
+    },
+    {
+      "Document ID": "mock3_Grade 7_khmer",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "khmer",
+      "type": "Grade 7"
+    },
+    {
+      "Document ID": "mock3_Grade 7_math",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "math",
+      "type": "Grade 7"
+    },
+    {
+      "Document ID": "mock3_Grade 7_physics",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "physics",
+      "type": "Grade 7"
+    },
+    {
+      "Document ID": "mock3_Grade 8_chemistry",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "chemistry",
+      "type": "Grade 8"
+    },
+    {
+      "Document ID": "mock3_Grade 8_khmer",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "khmer",
+      "type": "Grade 8"
+    },
+    {
+      "Document ID": "mock3_Grade 8_math",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "math",
+      "type": "Grade 8"
+    },
+    {
+      "Document ID": "mock3_Grade 8_physics",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "physics",
+      "type": "Grade 8"
+    },
+    {
+      "Document ID": "mock3_Grade 9_chemistry",
+      "maxScore": 25,
+      "mock": "mock3",
+      "subject": "chemistry",
+      "type": "Grade 9"
+    },
+    {
+      "Document ID": "mock3_Grade 9_khmer",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "khmer",
+      "type": "Grade 9"
+    },
+    {
+      "Document ID": "mock3_Grade 9_math",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "math",
+      "type": "Grade 9"
+    },
+    {
+      "Document ID": "mock3_Grade 9_physics",
+      "maxScore": 35,
+      "mock": "mock3",
+      "subject": "physics",
+      "type": "Grade 9"
+    },
+    {
+      "Document ID": "mock3_Grade 10_chemistry",
+      "maxScore": 37,
+      "mock": "mock3",
+      "subject": "chemistry",
+      "type": "Grade 10"
+    },
+    {
+      "Document ID": "mock3_Grade 10_khmer",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "khmer",
+      "type": "Grade 10"
+    },
+    {
+      "Document ID": "mock3_Grade 10_math",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "math",
+      "type": "Grade 10"
+    },
+    {
+      "Document ID": "mock3_Grade 10_physics",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "physics",
+      "type": "Grade 10"
+    },
+    {
+      "Document ID": "mock3_Grade 11A_biology",
+      "maxScore": 75,
+      "mock": "mock3",
+      "subject": "biology",
+      "type": "Grade 11A"
+    },
+    {
+      "Document ID": "mock3_Grade 11A_chemistry",
+      "maxScore": 75,
+      "mock": "mock3",
+      "subject": "chemistry",
+      "type": "Grade 11A"
+    },
+    {
+      "Document ID": "mock3_Grade 11A_history",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "history",
+      "type": "Grade 11A"
+    },
+    {
+      "Document ID": "mock3_Grade 11A_khmer",
+      "maxScore": 75,
+      "mock": "mock3",
+      "subject": "khmer",
+      "type": "Grade 11A"
+    },
+    {
+      "Document ID": "mock3_Grade 11A_math",
+      "maxScore": 100,
+      "mock": "mock3",
+      "subject": "math",
+      "type": "Grade 11A"
+    },
+    {
+      "Document ID": "mock3_Grade 11A_physics",
+      "maxScore": 75,
+      "mock": "mock3",
+      "subject": "physics",
+      "type": "Grade 11A"
+    },
+    {
+      "Document ID": "mock3_Grade 11E_biology",
+      "maxScore": 75,
+      "mock": "mock3",
+      "subject": "biology",
+      "type": "Grade 11E"
+    },
+    {
+      "Document ID": "mock3_Grade 11E_chemistry",
+      "maxScore": 75,
+      "mock": "mock3",
+      "subject": "chemistry",
+      "type": "Grade 11E"
+    },
+    {
+      "Document ID": "mock3_Grade 11E_history",
+      "maxScore": 50,
+      "mock": "mock3",
+      "subject": "history",
+      "type": "Grade 11E"
+    },
+    {
+      "Document ID": "mock3_Grade 11E_khmer",
+      "maxScore": 75,
+      "mock": "mock3",
+      "subject": "khmer",
+      "type": "Grade 11E"
+    },
+    {
+      "Document ID": "mock3_Grade 11E_math",
+      "maxScore": 100,
+      "mock": "mock3",
+      "subject": "math",
+      "type": "Grade 11E"
+    },
+    {
+      "Document ID": "mock3_Grade 11E_physics",
+      "maxScore": 75,
+      "mock": "mock3",
+      "subject": "physics",
+      "type": "Grade 11E"
+    }
+  ]
