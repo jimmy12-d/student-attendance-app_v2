@@ -58,6 +58,7 @@ const MockExamPage = () => {
   
   // Data state
   const [examSettings, setExamSettings] = useState<ExamSettings>({});
+  const [allExamSettings, setAllExamSettings] = useState<{ [mockName: string]: ExamSettings }>({});
   const [examScores, setExamScores] = useState<ExamScores>({});
   const [allMockScores, setAllMockScores] = useState<AllMockScores>({});
   const [progressStatus, setProgressStatus] = useState("No Registered");
@@ -183,6 +184,7 @@ const MockExamPage = () => {
         }
 
         const allData: AllMockScores = {};
+        const allSettings: { [mockName: string]: ExamSettings } = {};
         const promises = availableTabs.map(async (mockName) => {
             const sKey = `${studentClassType}-${mockName}`;
             const scKey = `${studentDocId}-${mockName}`;
@@ -197,6 +199,9 @@ const MockExamPage = () => {
                 settingsSnapshot.forEach(doc => { fetchedSettings[doc.data().subject] = { maxScore: doc.data().maxScore }; });
                 settings = fetchedSettings;
                 dispatch(setMockExamSettings({ settingsKey: sKey, data: { settings, lastFetched: new Date().toISOString() }}));
+            }
+            if (settings) {
+                allSettings[mockName] = settings;
             }
             
             let scores = isCacheFresh(cScores?.lastFetched) ? cScores.scores : null;
@@ -218,6 +223,7 @@ const MockExamPage = () => {
         });
         
         await Promise.all(promises);
+        setAllExamSettings(allSettings);
         setAllMockScores(allData);
         dispatch(setRadarChartData({ studentId: studentDocId, data: { data: allData, lastFetched: new Date().toISOString() }}));
         if (isInitialLoad) {
@@ -346,7 +352,7 @@ const MockExamPage = () => {
         {isAllMocksLoading ? (
             <PerformanceRadarChartSkeleton />
         ) : (
-            <PerformanceRadarChart allMockData={allMockScores} progressStatus={progressStatus} studentClassType={studentClassType} examSettings={examSettings} />
+            <PerformanceRadarChart allMockData={allMockScores} progressStatus={progressStatus} studentClassType={studentClassType} allExamSettings={allExamSettings} />
         )}
 
         {/* Exam Results Section */}

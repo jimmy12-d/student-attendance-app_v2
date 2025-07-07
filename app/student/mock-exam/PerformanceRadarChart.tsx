@@ -35,7 +35,7 @@ interface PerformanceRadarChartProps {
   allMockData: AllMockData;
   progressStatus: string;
   studentClassType?: string | null;
-  examSettings?: ExamSettings | null;
+  allExamSettings?: { [mockName: string]: ExamSettings };
 }
 
 const SUBJECT_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history'];
@@ -126,7 +126,7 @@ const CustomLegend = ({ datasets, totals, toggleDataset, hiddenDatasets, showMoc
     );
 };
 
-const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, progressStatus, studentClassType, examSettings }) => {
+const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, progressStatus, studentClassType, allExamSettings }) => {
   const [hiddenDatasets, setHiddenDatasets] = useState<string[]>([]);
   const showMock3 = progressStatus === 'Paid Star';
 
@@ -139,22 +139,26 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
   };
     
   const totals = useMemo(() => {
-    const calculatedTotals: { [key: string]: number } = { mock1: 0, mock2: 0, mock3: 0 };
+    const calculatedTotals: { [key:string]: number } = {};
+    if (!allExamSettings) return calculatedTotals;
+
     Object.entries(allMockData).forEach(([mockName, scores]) => {
-        if (scores && (mockName === 'mock1' || mockName === 'mock2' || mockName === 'mock3')) {
-            let totalForMock = 0;
-            Object.entries(scores).forEach(([subject, score]) => {
-                if (subject.toLowerCase() === 'english') {
-                    if (score > 25) totalForMock += (score - 25);
-                } else {
-                    totalForMock += score || 0;
-                }
-            });
-            calculatedTotals[mockName] = totalForMock;
-        }
+      const settingsForMock = allExamSettings[mockName];
+      if (scores && settingsForMock) {
+        let totalForMock = 0;
+        Object.keys(settingsForMock).forEach((subject) => {
+          const score = scores[subject] || 0;
+          if (subject.toLowerCase() === 'english') {
+            if (score > 25) { totalForMock += (score - 25); }
+          } else {
+            totalForMock += score;
+          }
+        });
+        calculatedTotals[mockName] = totalForMock;
+      }
     });
     return calculatedTotals;
-  }, [allMockData]);
+  }, [allMockData, allExamSettings]);
 
   const chartData = useMemo(() => {
     const isSocial = studentClassType && studentClassType.includes('S');
@@ -170,10 +174,11 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
 
         const mockLabel = `Mock ${mockKey.replace('mock', '')}`;
         const color = MOCK_COLORS[mockKey as keyof typeof MOCK_COLORS] || 'rgba(255, 255, 255, 1)';
+        const settingsForMock = allExamSettings?.[mockKey];
         
         const data = SUBJECT_ORDER.map(subject => {
             const score = scores[subject] || 0;
-            const maxScore = examSettings?.[subject]?.maxScore || 100;
+            const maxScore = settingsForMock?.[subject]?.maxScore || 100;
             if (maxScore === 0) return 0;
             return (score / maxScore) * 100;
         });
@@ -187,12 +192,12 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
             hidden: hiddenDatasets.includes(mockLabel),
             // Custom properties for tooltip
             rawScores: SUBJECT_ORDER.map(subject => scores[subject] || 0),
-            maxScores: SUBJECT_ORDER.map(subject => examSettings?.[subject]?.maxScore || 100),
+            maxScores: SUBJECT_ORDER.map(subject => settingsForMock?.[subject]?.maxScore || 100),
         });
     });
 
     return { labels, datasets };
-  }, [allMockData, showMock3, hiddenDatasets, studentClassType, examSettings]);
+  }, [allMockData, showMock3, hiddenDatasets, studentClassType, allExamSettings]);
   
   const chartOptions: any = {
     maintainAspectRatio: false,
