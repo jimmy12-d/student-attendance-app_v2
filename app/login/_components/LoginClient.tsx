@@ -6,7 +6,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../../../firebase-config';
 import CardBox from '../../_components/CardBox';
 import SectionFullScreen from '../../_components/Section/FullScreen';
-import StudentGoogleSignIn from './StudentGoogleSignIn';
+import StudentSignIn from './StudentSignIn';
 
 const LoginClient = () => {
   const router = useRouter();
@@ -47,7 +47,7 @@ const LoginClient = () => {
         className="w-11/12 md:w-7/12 lg:w-6/12 xl:w-4/12 shadow-2xl"
         flex="flex-col"
       >
-        <StudentGoogleSignIn />
+        <StudentSignIn />
       </CardBox>
     </SectionFullScreen>
   );

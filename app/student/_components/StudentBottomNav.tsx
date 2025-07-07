@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '@/app/_components/Icon';
-import { mdiCalendarCheck, mdiFileDocumentEdit, mdiAccountCircle,  } from '@mdi/js';
+import { mdiHome, mdiCalendarCheck, mdiFileDocumentEdit, mdiAccountCircle } from '@mdi/js';
 
 export const navItems = [
+  { name: 'Home', href: '/student/home', icon: mdiHome },
   // { name: 'Attendance', href: '/student/attendance', icon: mdiCalendarCheck },
   { name: 'Mock Exam', href: '/student/mock-exam', icon: mdiFileDocumentEdit },
   { name: 'Account', href: '/student/account', icon: mdiAccountCircle },

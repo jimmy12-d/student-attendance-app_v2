@@ -5,7 +5,7 @@ import { useAppDispatch } from "../_stores/hooks";
 import { setUser } from '../_stores/mainSlice';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from '../../firebase-config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import React, { ReactNode, useEffect, useState } from "react";
 import StudentBottomNav from "./_components/StudentBottomNav";
 import { Toaster } from 'sonner'
@@ -22,36 +22,61 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is signed in, now find their document in the 'students' collection
+        // User is authenticated with Firebase. Now, we must verify they are a fully onboarded student.
         const studentsRef = collection(db, "students");
-        const q = query(studentsRef, where("authUid", "==", user.uid));
+        const q = query(studentsRef, where("authUid", "==", user.uid), limit(1));
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
             const studentDoc = querySnapshot.docs[0];
             const studentData = studentDoc.data();
             
-            dispatch(
-              setUser({
-                name: studentData.fullName, // Use name from Firestore
-                email: user.email,
-                avatar: user.photoURL,
-                uid: user.uid,
-                studentDocId: studentDoc.id, // This is crucial
-                role: "student",
-              })
-            );
+            // A user is only fully onboarded if their record has a valid class.
+            if (studentData && studentData.class && studentData.class !== 'Unassigned') {
+                // SUCCESS: User is fully linked. Load their profile and let them proceed.
+                dispatch(
+                  setUser({
+                    name: studentData.fullName,
+                    email: user.email,
+                    avatar: user.photoURL,
+                    uid: user.uid,
+                    studentDocId: studentDoc.id,
+                    role: "student",
+                  })
+                );
+                setLoading(false); // Allow rendering of the page
+            } else {
+                // FAILURE: User has a record, but it's incomplete. Force them to link.
+                dispatch(
+                  setUser({
+                    name: user.displayName, // Use Google name as fallback
+                    email: user.email,
+                    avatar: user.photoURL,
+                    uid: user.uid,
+                    studentDocId: studentDoc.id,
+                    role: "student",
+                  })
+                );
+                router.push('/link-account');
+            }
         } else {
-             // If user is authenticated but not in the database, something is wrong. Log them out.
-             setError("Student record not found."); // You can show an error message
-             await signOut(auth);
-             router.push('/login');
+             // FAILURE: Authenticated, but no student record at all. Force them to link.
+             dispatch(
+                setUser({
+                  name: user.displayName,
+                  email: user.email,
+                  avatar: user.photoURL,
+                  uid: user.uid,
+                  studentDocId: null,
+                  role: "student",
+                })
+              );
+             router.push('/link-account');
         }
       } else {
-        // User is signed out
-        router.push('/');
+        // User is not authenticated at all. Send them to the login page.
+        router.push('/login');
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

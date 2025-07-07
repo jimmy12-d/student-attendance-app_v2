@@ -21,6 +21,7 @@ import StudentQRCode from '../_components/StudentQRCode';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
 import ExamInfoBoxes from './ExamInfoBoxes';
 import PerformanceRadarChartSkeleton from './PerformanceRadarChartSkeleton';
+import CardBox from '@/app/_components/CardBox';
 
 const PerformanceRadarChart = dynamic(() => import('./PerformanceRadarChart'), {
   ssr: false,
@@ -177,7 +178,9 @@ const MockExamPage = () => {
 
     // If radar data is stale, fetch all mocks in the background
     if (!isCacheFresh(cachedRadar?.lastFetched)) {
-        setIsAllMocksLoading(true);
+        if (isInitialLoad) {
+          setIsAllMocksLoading(true);
+        }
 
         const allData: AllMockScores = {};
         const promises = availableTabs.map(async (mockName) => {
@@ -217,10 +220,12 @@ const MockExamPage = () => {
         await Promise.all(promises);
         setAllMockScores(allData);
         dispatch(setRadarChartData({ studentId: studentDocId, data: { data: allData, lastFetched: new Date().toISOString() }}));
-        setIsAllMocksLoading(false);
+        if (isInitialLoad) {
+          setIsAllMocksLoading(false);
+        }
     }
 
-  }, [studentDocId, studentClassType, selectedTab, dispatch, availableTabs, mockExamCache, mockExamSettingsCache, progressCache, radarChartCache]);
+  }, [studentDocId, studentClassType, selectedTab, dispatch, availableTabs, mockExamCache, mockExamSettingsCache, progressCache, radarChartCache, isInitialLoad]);
 
 
   useEffect(() => {
@@ -305,12 +310,6 @@ const MockExamPage = () => {
     <>
         <ProgressBar status={progressStatus} loading={isProgressLoading} />
             
-        {/* <ExamInfoBoxes
-          progressStatus={progressStatus}
-          seatInfo={seatInfo}
-          phoneInfo={phoneInfo}
-        /> */}
-        
         <hr className="my-2 border-slate-800" />
         <h2 className="text-xl font-bold -mb-2">Mock Exam Results</h2>
 
@@ -328,16 +327,30 @@ const MockExamPage = () => {
           calculateGrade={calculateGrade}
           SUBJECT_ORDER={SUBJECT_ORDER}
           SOCIAL_STUDIES_LABELS={SOCIAL_STUDIES_LABELS}
+          seatInfo={seatInfo}
+          phoneInfo={phoneInfo}
         />
 
         <hr className="my-2 border-slate-800" />
         <h2 className="text-xl font-bold mb-2">Your Exam Journey</h2>
 
+        <CardBoxModal
+          isActive={isPermissionModalActive}
+          onConfirm={handlePermissionSuccess}
+          title="Permission Request"
+        >
+           <PermissionRequestForm />
+        </CardBoxModal>
+
+        {/* Performance Chart Section */}
         {isAllMocksLoading ? (
-          <PerformanceRadarChartSkeleton />
+            <PerformanceRadarChartSkeleton />
         ) : (
-          <PerformanceRadarChart allMockData={allMockScores} progressStatus={progressStatus} />
+            <PerformanceRadarChart allMockData={allMockScores} progressStatus={progressStatus} studentClassType={studentClassType} examSettings={examSettings} />
         )}
+
+        {/* Exam Results Section */}
+
     </>
   );
 };

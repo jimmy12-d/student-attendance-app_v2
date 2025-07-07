@@ -2,6 +2,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/generate-sw.js",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",

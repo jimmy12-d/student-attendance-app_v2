@@ -58,7 +58,7 @@ const IOSInstallSheet = ({ onClose }: { onClose: () => void }) => {
 };
 
 
-export const InstallPWA = ({ as_banner = false, as_button = false }) => {
+export const InstallPWA = ({ as_banner = false, as_button = false, as_link = false }) => {
   const { canInstallPWA, triggerInstall, isIOS } = usePWAInstall();
   const [showBanner, setShowBanner] = useState(false);
   const [iosSheetOpen, setIosSheetOpen] = useState(false);
@@ -89,6 +89,24 @@ export const InstallPWA = ({ as_banner = false, as_button = false }) => {
   
   if (!canInstallPWA) {
     return null;
+  }
+
+  if (as_link) {
+    return (
+        <>
+            <div className="text-center mt-4">
+                <button
+                    onClick={handleInstallClick}
+                    className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:underline transition-colors"
+                >
+                    Install App on Your Device
+                </button>
+            </div>
+            <AnimatePresence>
+                {iosSheetOpen && <IOSInstallSheet onClose={() => setIosSheetOpen(false)} />}
+            </AnimatePresence>
+        </>
+    );
   }
 
   if (as_button) {

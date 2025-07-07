@@ -23,6 +23,7 @@ ChartJS.register(
 );
 
 // Define types for our data
+type ExamSettings = { [subject: string]: { maxScore: number } };
 type MockScores = { [subject: string]: number };
 type AllMockData = {
   mock1?: MockScores;
@@ -33,6 +34,8 @@ type AllMockData = {
 interface PerformanceRadarChartProps {
   allMockData: AllMockData;
   progressStatus: string;
+  studentClassType?: string | null;
+  examSettings?: ExamSettings | null;
 }
 
 const SUBJECT_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history'];
@@ -43,6 +46,11 @@ const SOCIAL_STUDIES_LABELS: { [key: string]: string } = {
   physics: 'Moral',
   biology: 'Geometry',
   history: 'Earth',
+};
+
+const capitalize = (s: string) => {
+    if (typeof s !== 'string' || s.length === 0) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
 const MOCK_COLORS = {
@@ -118,7 +126,7 @@ const CustomLegend = ({ datasets, totals, toggleDataset, hiddenDatasets, showMoc
     );
 };
 
-const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, progressStatus }) => {
+const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, progressStatus, studentClassType, examSettings }) => {
   const [hiddenDatasets, setHiddenDatasets] = useState<string[]>([]);
   const showMock3 = progressStatus === 'Paid Star';
 
@@ -149,48 +157,42 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
   }, [allMockData]);
 
   const chartData = useMemo(() => {
-    const labels = SUBJECT_ORDER.map(subject => SOCIAL_STUDIES_LABELS[subject] || subject);
-    const datasets: {
-        label: string;
-        data: number[];
-        backgroundColor: string;
-        borderColor: string;
-        borderWidth: number;
-        hidden?: boolean;
-    }[] = [];
+    const isSocial = studentClassType && studentClassType.includes('S');
+    const labels = SUBJECT_ORDER.map(subject => {
+        const label = isSocial ? (SOCIAL_STUDIES_LABELS[subject] || subject) : subject;
+        return capitalize(label);
+    });
 
-    if (allMockData.mock1) {
-        datasets.push({
-            label: 'Mock 1',
-            data: SUBJECT_ORDER.map(subject => allMockData.mock1?.[subject] || 0),
-            backgroundColor: 'rgba(136, 132, 216, 0.4)',
-            borderColor: MOCK_COLORS.mock1,
-            borderWidth: 1,
-            hidden: hiddenDatasets.includes('Mock 1'),
+    const datasets: any[] = [];
+
+    Object.entries(allMockData).forEach(([mockKey, scores]) => {
+        if (!scores || (mockKey === 'mock3' && !showMock3)) return;
+
+        const mockLabel = `Mock ${mockKey.replace('mock', '')}`;
+        const color = MOCK_COLORS[mockKey as keyof typeof MOCK_COLORS] || 'rgba(255, 255, 255, 1)';
+        
+        const data = SUBJECT_ORDER.map(subject => {
+            const score = scores[subject] || 0;
+            const maxScore = examSettings?.[subject]?.maxScore || 100;
+            if (maxScore === 0) return 0;
+            return (score / maxScore) * 100;
         });
-    }
-    if (allMockData.mock2) {
+
         datasets.push({
-            label: 'Mock 2',
-            data: SUBJECT_ORDER.map(subject => allMockData.mock2?.[subject] || 0),
-            backgroundColor: 'rgba(255, 198, 88, 0.4)',
-            borderColor: MOCK_COLORS.mock2,
+            label: mockLabel,
+            data: data,
+            backgroundColor: color.replace('1)', '0.4)'),
+            borderColor: color,
             borderWidth: 1,
-            hidden: hiddenDatasets.includes('Mock 2'),
+            hidden: hiddenDatasets.includes(mockLabel),
+            // Custom properties for tooltip
+            rawScores: SUBJECT_ORDER.map(subject => scores[subject] || 0),
+            maxScores: SUBJECT_ORDER.map(subject => examSettings?.[subject]?.maxScore || 100),
         });
-    }
-    if (showMock3 && allMockData.mock3) {
-        datasets.push({
-            label: 'Mock 3',
-            data: SUBJECT_ORDER.map(subject => allMockData.mock3?.[subject] || 0),
-            backgroundColor: 'rgba(130, 202, 157, 0.4)',
-            borderColor: MOCK_COLORS.mock3,
-            borderWidth: 1,
-            hidden: hiddenDatasets.includes('Mock 3'),
-        });
-    }
+    });
+
     return { labels, datasets };
-  }, [allMockData, showMock3, hiddenDatasets]);
+  }, [allMockData, showMock3, hiddenDatasets, studentClassType, examSettings]);
   
   const chartOptions: any = {
     maintainAspectRatio: false,
@@ -206,13 +208,21 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
     },
     plugins: {
       legend: {
-        display: false, // Disable default legend
+        display: false,
       },
       tooltip: {
         backgroundColor: '#2d3748',
         titleColor: '#fff',
         bodyColor: '#fff',
         callbacks: {
+          label: function(context: any) {
+            const dataset = context.dataset;
+            const dataIndex = context.dataIndex;
+            const rawScore = dataset.rawScores[dataIndex];
+            const maxScore = dataset.maxScores[dataIndex];
+            const percentage = Math.round(context.raw);
+            return `${dataset.label}: ${rawScore} / ${maxScore} (${percentage}%)`;
+          },
           labelColor: function(context: any) {
             return {
               borderColor: context.dataset.borderColor,
@@ -244,7 +254,11 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
         <Radar data={chartData} options={chartOptions} />
       </div>
       <CustomLegend 
-        datasets={chartData.datasets} 
+        datasets={chartData.datasets.slice().sort((a, b) => {
+            const aNum = parseInt(a.label.replace('Mock ', ''), 10);
+            const bNum = parseInt(b.label.replace('Mock ', ''), 10);
+            return aNum - bNum;
+        })} 
         totals={totals}
         toggleDataset={toggleDataset}
         hiddenDatasets={hiddenDatasets}

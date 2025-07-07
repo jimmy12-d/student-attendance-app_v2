@@ -55,8 +55,8 @@ const StudentTopNav = () => {
     }, []);
 
     return (
-        <nav className="z-40 bg-slate-900/80 backdrop-blur-lg shadow-md sticky top-0">
-            <div className="max-w-3xl mx-auto px-2">
+        <nav className="bg-slate-900/80 backdrop-blur-lg shadow-md relative z-30">
+            <div className="max-w-3xl mx-auto px-4">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center space-x-2">
                         <Image src="/rodwell_logo.png" alt="Logo" width={46} height={46} />

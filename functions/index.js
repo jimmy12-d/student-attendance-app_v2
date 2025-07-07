@@ -51,8 +51,9 @@ exports.linkStudentProfileWithVerifiedNumber = functions
     }
 
     const studentDoc = studentQuery.docs[0];
+    const studentData = studentDoc.data();
     
-    if (studentDoc.data().authUid) {
+    if (studentData.authUid) {
       throw new functions.https.HttpsError("already-exists", "This student profile is already linked to a different login account.");
     }
     
@@ -63,7 +64,17 @@ exports.linkStudentProfileWithVerifiedNumber = functions
     }); 
 
     console.log(`Successfully linked authUid ${uid} to student ${studentDoc.id}`);
-    return { success: true };
+    
+    // Return the full student data object on success
+    return { 
+      success: true,
+      studentData: {
+        ...studentData, // original data
+        id: studentDoc.id, // add document ID
+        authUid: uid, // add the new authUid
+        email: token.email || null // add the email
+      }
+    };
   });
 
 exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {

@@ -8,7 +8,7 @@ export interface User {
   email: string | null;
   avatar: string | null;
   uid?: string; // Optional: Store Firebase UID if needed
-  studentDocId?: string; // Firestore document ID from 'students' collection
+  studentDocId?: string | null; // Firestore document ID from 'students' collection
   role?: 'admin' | 'student'; // Add role property
 }
 

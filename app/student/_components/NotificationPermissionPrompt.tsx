@@ -21,7 +21,7 @@ const NotificationPermissionPrompt = () => {
                 const timer = setTimeout(() => {
                     setIsVisible(true);
                     setActivePrompt('notification');
-                }, 3000); 
+                }, 5000);
                 return () => clearTimeout(timer);
             }
         }
@@ -45,35 +45,43 @@ const NotificationPermissionPrompt = () => {
     }
 
     return (
-        <div className="fixed bottom-4 right-4 max-w-sm w-full bg-slate-800 border border-slate-700/80 shadow-2xl rounded-xl p-5 z-50 text-white animate-fade-in-up">
-            <div className="flex items-start">
-                <div className="flex-shrink-0 bg-company-purple/20 text-company-purple p-3 rounded-full mr-4">
-                    <Icon path={mdiBellRing} size={24} />
-                </div>
-                <div className="flex-grow">
-                    <h3 className="font-bold text-lg mb-1">Get Notified</h3>
-                    <p className="text-slate-300 text-sm">
-                        Enable push notifications to receive important updates, announcements, and reminders instantly.
-                    </p>
-                    <div className="mt-5 flex gap-3">
-                        <Button
-                            label="Enable Notifications"
-                            color="contrast"
-                            onClick={handleAllow}
-                            small
-                        />
-                        <Button
-                            label="Not Now"
-                            color="white"
-                            onClick={handleDismiss}
-                            outline
-                            small
-                        />
-                    </div>
-                </div>
-                <button onClick={handleDismiss} className="-mt-2 -mr-2 p-2 text-slate-400 hover:text-white">
+        <div className="fixed bottom-4 inset-x-0 z-50 px-4">
+            <div className="relative max-w-2xl w-full mx-auto bg-slate-800 border border-slate-700/80 shadow-2xl rounded-xl pt-3 pb-4 px-4 text-white animate-fade-in-up">
+                
+                <button 
+                    onClick={handleDismiss} 
+                    className="absolute -top-2 -right-1 p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-700/50 transition-colors"
+                    aria-label="Dismiss"
+                >
                     <Icon path={mdiClose} size={20} />
                 </button>
+
+                <div className="flex items-start pt-2">
+                    <div className="flex-shrink-0 bg-company-purple/20 text-company-purple p-3 rounded-full mr-4">
+                        <Icon path={mdiBellRing} size={24} />
+                    </div>
+                    <div className="flex-grow pr-8">
+                        <h3 className="font-bold text-lg">Get Notified</h3>
+                        <p className="text-slate-300 text-sm mt-1">
+                            Enable push notifications to receive important updates, announcements, and reminders instantly.
+                        </p>
+                        <div className="mt-4 flex gap-3">
+                            <Button
+                                label="Enable Notifications"
+                                color="company-purple"
+                                onClick={handleAllow}
+                                small
+                            />
+                            <Button
+                                label="Not Now"
+                                color="white"
+                                onClick={handleDismiss}
+                                outline
+                                small
+                            />
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
