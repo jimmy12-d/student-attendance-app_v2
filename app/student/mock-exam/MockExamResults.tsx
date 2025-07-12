@@ -31,6 +31,8 @@ interface MockExamResultsProps {
   calculateGrade: (score: number, maxScore: number) => string;
   SUBJECT_ORDER: string[];
   SOCIAL_STUDIES_LABELS: { [key: string]: string };
+  seatInfo: string | null;
+  phoneInfo: string | null;
 }
 
 const MockExamResults: React.FC<MockExamResultsProps> = ({
@@ -47,6 +49,8 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
   calculateGrade,
   SUBJECT_ORDER,
   SOCIAL_STUDIES_LABELS,
+  seatInfo,
+  phoneInfo,
 }) => {
   const getGradeDependentStyles = (grade: string) => {
     switch (grade) {
