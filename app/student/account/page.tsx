@@ -9,8 +9,9 @@ import { setUser } from '@/app/_stores/mainSlice';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/firebase-config';
 import { useRouter } from 'next/navigation';
-import { InstallPWA } from '../_components/InstallPWA';
 import NotificationSettings from '../_components/NotificationSettings';
+import FacialEnrollment from '../_components/FacialEnrollment';
+import { InstallPWA } from '../_components/InstallPWA';
 
 const AccountPage = () => {
   const dispatch = useAppDispatch();
@@ -61,6 +62,13 @@ const AccountPage = () => {
             <div>
                 <h2 className="text-lg font-semibold mb-4 text-slate-100">App Installation</h2>
                 <InstallPWA as_button={true} />
+            </div>
+
+            <hr className="border-slate-700" />
+
+            <div>
+                <h2 className="text-lg font-semibold mb-4 text-slate-100">Facial Recognition</h2>
+                <FacialEnrollment />
             </div>
 
             <hr className="border-slate-700" />

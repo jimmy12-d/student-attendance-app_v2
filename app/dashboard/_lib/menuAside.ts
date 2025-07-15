@@ -8,6 +8,8 @@ import {
   mdiBellOutline,
   mdiNotebookEditOutline,
   mdiCalendarClock,
+  mdiCamera,
+  mdiFaceRecognition,
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -40,6 +42,11 @@ const menuAside: MenuAsideItem[] = [
         href: "/dashboard/check",
         label: "Check Manually",
         icon: mdiMagnify,
+      },
+      {
+        href: "/dashboard/face-scan",
+        label: "Face Scan",
+        icon: mdiFaceRecognition,
       },
       {
         href: "/dashboard/permission",

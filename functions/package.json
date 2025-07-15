@@ -13,13 +13,14 @@
   },
   "main": "index.js",
   "dependencies": {
-    "@vonage/server-sdk": "^3.21.2",
+    "@google-cloud/vision": "^4.3.0",
+    "@tensorflow-models/face-landmarks-detection": "^1.0.6",
+    "@tensorflow/tfjs": "^4.22.0",
     "cors": "^2.8.5",
-    "firebase-admin": "^12.0.0",
-    "firebase-functions": "^5.0.0",
-    "jsonwebtoken": "^9.0.2",
-    "msg91": "^2.2.4",
-    "twilio": "^5.7.0"
+    "cosine-similarity": "^1.0.0",
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.1",
+    "jsonwebtoken": "^9.0.2"
   },
   "private": true
 }

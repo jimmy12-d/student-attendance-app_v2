@@ -7,10 +7,13 @@ const {onObjectFinalized} = require("firebase-functions/v2/storage");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const { onCall, HttpsError } = require("firebase-functions/v1/https");
 const cors = require("cors")({ origin: true });
+const vision = require("@google-cloud/vision");
+const cosineSimilarity = require("cosine-similarity");
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
 const db = getFirestore();
+const visionClient = new vision.ImageAnnotatorClient();
 
 // --- Helper function for phone number normalization ---
 const normalizePhone = (phoneNumber) => {
@@ -23,6 +26,92 @@ const normalizePhone = (phoneNumber) => {
     }
     return phoneNumber;
 };
+
+// This is the new v2 syntax for the Storage trigger.
+// By explicitly naming the bucket, we avoid region auto-detection errors during deployment.
+exports.processFaceEnrollmentImage = onObjectFinalized({ 
+    region: "us-central1", // IMPORTANT: Match this to your Storage bucket's location. Forcing redeploy.
+    bucket: "rodwell-attendance.firebasestorage.app" 
+}, async (event) => {
+    const fileBucket = event.data.bucket;
+    const filePath = event.data.name;
+    const contentType = event.data.contentType;
+
+    // Exit if this is triggered by a non-image file.
+    if (!contentType || !contentType.startsWith("image/")) {
+        return console.log("This is not an image.");
+    }
+
+    // Exit if the image is not in the correct folder.
+    if (!filePath.startsWith("face_enrollment/")) {
+        return console.log("Not a face enrollment image.");
+    }
+
+    const parts = filePath.split('/');
+    if (parts.length < 3) {
+        return console.error("Invalid file path structure:", filePath);
+    }
+    const studentAuthUid = parts[1];
+
+    if (!studentAuthUid) {
+        return console.error("Could not extract studentAuthUid from path:", filePath);
+    }
+
+    console.log(`Processing face enrollment for student UID: ${studentAuthUid}`);
+
+    try {
+        const imageUri = `gs://${fileBucket}/${filePath}`;
+        
+        const [result] = await visionClient.faceDetection(imageUri);
+        const faces = result.faceAnnotations;
+
+        if (!faces || faces.length === 0) {
+            console.log(`No faces detected in image: ${filePath}`);
+            // Optionally, delete the image from storage if it's not usable
+            // await admin.storage().bucket(fileBucket).file(filePath).delete();
+            return;
+        }
+        
+        if (faces.length > 1) {
+            console.log(`Multiple faces (${faces.length}) detected in ${filePath}. Using the most prominent one.`);
+        }
+
+        // Extract the facial embedding (feature vector) from the most prominent face
+        const embedding = faces[0].fdBoundingPoly.vertices.flatMap(v => [v.x, v.y]); // simplified embedding
+        
+        const studentQuery = db.collection("students").where("authUid", "==", studentAuthUid).limit(1);
+        const studentSnapshot = await studentQuery.get();
+
+        if (studentSnapshot.empty) {
+            console.error(`No student found with authUid: ${studentAuthUid}`);
+            return;
+        }
+
+        const studentDocRef = studentSnapshot.docs[0].ref;
+
+        // Store up to 4 embeddings. If more, replace the oldest.
+        await db.runTransaction(async (transaction) => {
+            const studentDoc = await transaction.get(studentDocRef);
+            const data = studentDoc.data();
+            const existingEmbeddings = data?.facialEmbeddings || [];
+            
+            // Wrap the embedding in an object to avoid nested arrays
+            existingEmbeddings.push({ embedding: embedding });
+
+            // Keep only the last 4 embeddings
+            if (existingEmbeddings.length > 4) {
+                existingEmbeddings.shift(); 
+            }
+
+            transaction.update(studentDocRef, { facialEmbeddings: existingEmbeddings });
+            console.log(`Successfully stored facial embedding for student ${studentAuthUid}. Total embeddings: ${existingEmbeddings.length}`);
+        });
+
+    } catch (error) {
+        console.error(`Failed to process face enrollment for UID ${studentAuthUid}.`, error);
+    }
+});
+
 
 // This function is now the single point of truth for linking a profile.
 // It assumes the user has ALREADY verified they own the phone number on the client-side.
@@ -75,6 +164,139 @@ exports.linkStudentProfileWithVerifiedNumber = functions
         email: token.email || null // add the email
       }
     };
+  });
+
+exports.verifyFaceForAttendance = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+    // 1. Verify admin and data
+    if (!context.auth || !context.auth.token.email) {
+      throw new functions.https.HttpsError("unauthenticated", "Authentication is required.");
+    }
+    if (!data.image) {
+        throw new functions.https.HttpsError("invalid-argument", "An 'image' (base64) must be provided.");
+    }
+    const adminEmail = context.auth.token.email;
+    
+    try {
+        // 2. Detect face in the provided image
+        const imageBuffer = Buffer.from(data.image, 'base64');
+        const [result] = await visionClient.faceDetection({ image: { content: imageBuffer } });
+        const faces = result.faceAnnotations;
+
+        if (!faces || faces.length === 0) {
+            throw new functions.https.HttpsError("not-found", "No face detected in the image.");
+        }
+        if (faces.length > 1) {
+           console.log(`Multiple faces (${faces.length}) detected in verification photo. Using the most prominent one.`);
+        }
+
+        const liveEmbedding = faces[0].fdBoundingPoly.vertices.flatMap(v => [v.x, v.y]); // simplified embedding
+        
+        // 3. Find the best match from stored student embeddings
+        const studentsSnapshot = await db.collection("students").where("facialEmbeddings", "!=", null).get();
+
+        if (studentsSnapshot.empty) {
+            throw new functions.https.HttpsError("not-found", "No students have enrolled for facial recognition.");
+        }
+        
+        let bestMatch = { studentId: null, studentData: null, similarity: 0 };
+
+        studentsSnapshot.forEach(doc => {
+            const studentData = doc.data();
+            const storedEmbeddings = studentData.facialEmbeddings;
+
+            if (storedEmbeddings && storedEmbeddings.length > 0) {
+                // Calculate similarity against each stored embedding
+                for (const storedEmbeddingData of storedEmbeddings) {
+                    // Unwrap the embedding from the object
+                    const storedEmbedding = storedEmbeddingData.embedding;
+                    if (!storedEmbedding) continue;
+
+                    const similarity = cosineSimilarity(liveEmbedding, storedEmbedding);
+                    console.log(`Comparing with student ${studentData.name}, similarity: ${similarity}`);
+                    
+                    if (similarity > bestMatch.similarity) {
+                        bestMatch = { studentId: doc.id, studentData, similarity };
+                    }
+                }
+            }
+        });
+        
+        // 4. Determine if the match is good enough
+        const SIMILARITY_THRESHOLD = 0.85; // Adjust this value based on testing
+        
+        console.log(`Best match: ${bestMatch.studentData?.fullName} with similarity ${bestMatch.similarity}`);
+
+        if (bestMatch.similarity < SIMILARITY_THRESHOLD) {
+            throw new functions.https.HttpsError("not-found", "Could not recognize the student. Please try again or use another method.");
+        }
+
+        // 5. Matched: Proceed to mark attendance (logic adapted from redeemAttendancePasscode)
+        const studentData = bestMatch.studentData;
+        const studentUid = studentData.authUid;
+        const dateStr = new Date().toISOString().split('T')[0];
+
+        const attendanceQuery = await db.collection("attendance")
+            .where("authUid", "==", studentUid)
+            .where("date", "==", dateStr)
+            .get();
+
+        if (!attendanceQuery.empty) {
+            const existingStatus = attendanceQuery.docs[0].data().status;
+            throw new functions.https.HttpsError("already-exists", `${studentData.fullName} was already marked '${existingStatus}' today.`);
+        }
+        
+        // --- The rest is attendance logic copied and adapted from redeemAttendancePasscode ---
+        const classesSnap = await db.collection("classes").get();
+        const classConfigs = classesSnap.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+        let attendanceStatus = "present";
+        
+        const studentClassKey = studentData.class ? studentData.class.replace(/^Class\s+/, '') : null;
+        const classConfig = studentClassKey ? classConfigs[studentClassKey] : null;
+        const shiftConfig = (studentData.shift && classConfig?.shifts) ? classConfig.shifts[studentData.shift] : null;
+
+        if (shiftConfig && shiftConfig.startTime) {
+            const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
+            const now = new Date();
+            const phnomPenhTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+            const shiftStartTimeDate = new Date(phnomPenhTime.getFullYear(), phnomPenhTime.getMonth(), phnomPenhTime.getDate(), startHour, startMinute, 0, 0);
+
+            let graceMinutes = 15;
+            const studentGracePeriod = studentData.gracePeriodMinutes ?? studentData.gradePeriodMinutes;
+            if (typeof studentGracePeriod === 'number' && !isNaN(studentGracePeriod)) {
+                graceMinutes = studentGracePeriod;
+            } else if (typeof studentGracePeriod === 'string' && studentGracePeriod.trim() !== '' && !isNaN(Number(studentGracePeriod))) {
+                graceMinutes = Number(studentGracePeriod);
+            }
+            const onTimeDeadline = new Date(shiftStartTimeDate);
+            onTimeDeadline.setMinutes(shiftStartTimeDate.getMinutes() + graceMinutes);
+
+            if (phnomPenhTime > onTimeDeadline) {
+                attendanceStatus = "late";
+            }
+        }
+        
+        await db.collection("attendance").add({
+            studentId: bestMatch.studentId,
+            authUid: studentUid,
+            studentName: studentData.fullName,
+            class: studentData.class || null,
+            shift: studentData.shift || null,
+            status: attendanceStatus,
+            date: dateStr,
+            timestamp: FieldValue.serverTimestamp(),
+            scannedBy: `facial_recognition_by_${adminEmail}`,
+        });
+
+        const message = `${studentData.fullName} marked ${attendanceStatus} by face scan!`;
+        return { success: true, message: message };
+
+    } catch (error) {
+        console.error("Error verifying face for attendance:", error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError("internal", "An unexpected error occurred during facial recognition.");
+    }
   });
 
 exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
