@@ -5,7 +5,8 @@ import Head from 'next/head';
 import Webcam from 'react-webcam';
 import { toast } from 'sonner';
 import { getAuth } from 'firebase/auth';
-import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
+import * as tf from '@tensorflow/tfjs-core';
 import * as blazeface from '@tensorflow-models/blazeface';
 
 import { mdiFaceRecognition } from '@mdi/js';
@@ -132,7 +133,7 @@ const RealtimeFaceScanner = () => {
       const idToken = await currentUser.getIdToken();
       const base64Image = imageSrc.split(',')[1];
 
-      const response = await fetch('https://asia-southeast1-rodwell-attendance.cloudfunctions.net/recognizeAndMarkAttendance', {
+      const response = await fetch('https://face-recognition-service-50079853705.asia-southeast1.run.app/recognize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({ image: base64Image })

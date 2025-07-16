@@ -9,60 +9,19 @@ const { onCall, HttpsError } = require("firebase-functions/v1/https");
 const cors = require("cors")({ origin: true });
 const vision = require("@google-cloud/vision");
 const cosineSimilarity = require("cosine-similarity");
+const axios = require("axios");
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
 const db = getFirestore();
-const visionClient = new vision.ImageAnnotatorClient();
+// Vision client is no longer needed for enrollment embeddings
+// const visionClient = new vision.ImageAnnotatorClient();
 
-// --- NEW: Helper function to create a standardized, normalized face embedding ---
-const essentialLandmarkTypes = [
-  'LEFT_EYE', 'RIGHT_EYE', 'MIDPOINT_BETWEEN_EYES', 'NOSE_TIP', 
-  'UPPER_LIP', 'LOWER_LIP', 'MOUTH_LEFT', 'MOUTH_RIGHT', 'MOUTH_CENTER',
-  'CHIN_GNATHION', 'CHIN_LEFT_GONION', 'CHIN_RIGHT_GONION',
-  // Pupils are removed as they are not reliably detected by the Vision API
-  'FOREHEAD_GLABELLA',
-  'LEFT_EYE_TOP_BOUNDARY', 'LEFT_EYE_RIGHT_CORNER', 'LEFT_EYE_BOTTOM_BOUNDARY', 'LEFT_EYE_LEFT_CORNER',
-  'RIGHT_EYE_TOP_BOUNDARY', 'RIGHT_EYE_RIGHT_CORNER', 'RIGHT_EYE_BOTTOM_BOUNDARY', 'RIGHT_EYE_LEFT_CORNER',
-];
+// --- NEW: Define the URL for your Python face recognition service ---
+const FACE_RECOGNITION_SERVICE_URL = "https://face-recognition-service-50079853705.asia-southeast1.run.app/generate-embedding";
 
-function createNormalizedEmbedding(face) {
-    if (!face || !face.landmarks || !face.fdBoundingPoly?.vertices) {
-        console.warn("Cannot create embedding: face annotation is missing landmarks or bounding polygon.");
-        return null;
-    }
-    
-    const vertices = face.fdBoundingPoly.vertices;
-    const xMin = vertices[0]?.x || 0;
-    const xMax = vertices[2]?.x || 0;
-    const yMin = vertices[0]?.y || 0;
-    const yMax = vertices[2]?.y || 0;
-    
-    const centerX = (xMin + xMax) / 2;
-    const centerY = (yMin + yMax) / 2;
-    const boxWidth = xMax - xMin;
-
-    if (boxWidth === 0) {
-        console.warn("Cannot create embedding: face has zero width.");
-        return null;
-    }
-
-    const landmarkMap = new Map(face.landmarks.map(l => [l.type, l.position]));
-
-    const embedding = essentialLandmarkTypes.flatMap(type => {
-        const pos = landmarkMap.get(type);
-        const x = pos?.x || 0;
-        const y = pos?.y || 0;
-        
-        if (x === 0 && y === 0) {
-            console.log(`Missing essential landmark '${type}' for embedding. Using (0,0).`);
-        }
-
-        return [(x - centerX) / boxWidth, (y - centerY) / boxWidth];
-    });
-
-    return embedding;
-}
+// --- The embedding logic is now handled by the Python service ---
+// function createNormalizedEmbedding(face) { ... } // This function is no longer needed.
 
 const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 let studentEmbeddingsCache = {
@@ -115,27 +74,23 @@ exports.processFaceEnrollmentImage = onObjectFinalized({
     console.log(`Processing face enrollment for student UID: ${studentAuthUid}`);
 
     try {
-        const imageUri = `gs://${fileBucket}/${filePath}`;
+        // 1. Download the image from GCS into a buffer
+        const bucket = admin.storage().bucket(fileBucket);
+        const file = bucket.file(filePath);
+        const [imageBuffer] = await file.download();
         
-        const [result] = await visionClient.faceDetection(imageUri);
-        const faces = result.faceAnnotations;
+        // 2. Send image to Python service to get the FaceNet embedding
+        console.log(`Sending image to ML service for embedding generation...`);
+        const response = await axios.post(FACE_RECOGNITION_SERVICE_URL, {
+            image: imageBuffer.toString('base64')
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        });
 
-        if (!faces || faces.length === 0) {
-            console.log(`No faces detected in image: ${filePath}`);
-            // Optionally, delete the image from storage if it's not usable
-            // await admin.storage().bucket(fileBucket).file(filePath).delete();
-            return;
-        }
-        
-        if (faces.length > 1) {
-            console.log(`Multiple faces (${faces.length}) detected in ${filePath}. Using the most prominent one.`);
-        }
+        const { embedding } = response.data;
 
-        // --- FIX: Use the new standardized embedding function ---
-        const embedding = createNormalizedEmbedding(faces[0]);
-        
-        if (!embedding) {
-            console.error(`Failed to generate a valid embedding for enrollment image ${filePath}.`);
+        if (!embedding || embedding.length === 0) {
+            console.error(`ML service failed to generate an embedding for ${filePath}.`);
             return;
         }
         
@@ -155,7 +110,6 @@ exports.processFaceEnrollmentImage = onObjectFinalized({
             const data = studentDoc.data();
             const existingEmbeddings = data?.facialEmbeddings || [];
             
-            // --- FIX: Store the embedding vector directly, not wrapped in an object ---
             existingEmbeddings.push(embedding);
 
             // Keep only the last 4 embeddings
@@ -164,11 +118,11 @@ exports.processFaceEnrollmentImage = onObjectFinalized({
             }
 
             transaction.update(studentDocRef, { facialEmbeddings: existingEmbeddings });
-            console.log(`Successfully stored facial embedding for student ${studentAuthUid}. Total embeddings: ${existingEmbeddings.length}`);
+            console.log(`Successfully stored new FaceNet embedding for student ${studentAuthUid}. Total embeddings: ${existingEmbeddings.length}`);
         });
 
     } catch (error) {
-        console.error(`Failed to process face enrollment for UID ${studentAuthUid}.`, error);
+        console.error(`Failed to process face enrollment for UID ${studentAuthUid}.`, error.response ? error.response.data : error);
     }
 });
 
