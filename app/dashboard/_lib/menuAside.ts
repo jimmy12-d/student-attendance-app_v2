@@ -10,6 +10,7 @@ import {
   mdiCalendarClock,
   mdiCamera,
   mdiFaceRecognition,
+  mdiPhone,
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -18,6 +19,11 @@ const menuAside: MenuAsideItem[] = [
     href: "/dashboard",
     icon: mdiMonitor,
     label: "Dashboard",
+  },
+  {
+    href: "/dashboard/pos-student",
+    icon: mdiPhone,
+    label: "POS Student",
   },
   {
     href: "/dashboard/scan-qr",

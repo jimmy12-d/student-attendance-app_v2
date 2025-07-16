@@ -4,6 +4,7 @@ import "../css/main.css";
 import StoreProvider from "./_stores/StoreProvider";
 import DarkModeInit from "./_components/DarkModeInit";
 import Script from "next/script";
+import { Toaster } from 'sonner'
 
 const title = `Rodwell Portal`;
 const description = "Portal for Rodwell Student.";
@@ -59,6 +60,7 @@ export default function RootLayout({
           className={`bg-gray-50 dark:bg-slate-800 dark:text-slate-100 antialiased`}
         >
           <DarkModeInit />
+          <Toaster position="top-center" richColors />
           {children}
 
           <Script

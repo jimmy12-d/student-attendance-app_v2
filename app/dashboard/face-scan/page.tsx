@@ -27,7 +27,9 @@ interface TrackedFace {
     height: number;
   };
   name?: string;
-  status: 'tracking' | 'verifying' | 'recognized' | 'unknown';
+  status: 'tracking' | 'verifying' | 'recognized'; // 'unknown' is now handled by the message
+  attendanceStatus?: 'present' | 'late'; // To store the status from the backend
+  firstSeen: number; // Timestamp of when the face first appeared
   lastVerification: number; // Timestamp of the last time we sent to the cloud
   lastSeen: number; // Timestamp of the last time the face was seen in a frame
   message?: string; // e.g., "Marked On-time"
@@ -45,8 +47,23 @@ const RealtimeFaceScanner = () => {
   
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isDetectingRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const VERIFICATION_COOLDOWN = 20000; // 20 seconds
+  const VERIFICATION_COOLDOWN = 20000; // 20 seconds for a new face
+  const RETRY_COOLDOWN = 3000; // 3 seconds for a retry
+  const DWELL_TIME_BEFORE_VERIFY = 1500; // 1.5 seconds
+  const MIN_FACE_WIDTH_PIXELS = 100; // Require face to be at least 100px wide
+
+  // --- Sound ---
+  const playSuccessSound = () => {
+    if (audioRef.current) {
+      audioRef.current.play().catch(e => console.error("Error playing sound:", e));
+    }
+  };
+  
+  useEffect(() => {
+    audioRef.current = new Audio('/success_sound_2.mp3');
+  }, []);
 
   // --- Utility Functions ---
   const generateFaceId = () => `face_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -133,7 +150,7 @@ const RealtimeFaceScanner = () => {
       const idToken = await currentUser.getIdToken();
       const base64Image = imageSrc.split(',')[1];
 
-      const response = await fetch('https://face-recognition-service-50079853705.asia-southeast1.run.app/recognize', {
+      const response = await fetch('https://face-recognition-service-us-central1-50079853705.us-central1.run.app/recognize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({ image: base64Image })
@@ -145,21 +162,40 @@ const RealtimeFaceScanner = () => {
         throw new Error(result.error || `HTTP ${response.status}`);
       }
       
-      toast.success(result.message);
+      setTrackedFaces(prev => prev.map(f => {
+        if (f.id !== face.id) return f;
 
-      // Update face with final status
-      setTrackedFaces(prev => prev.map(f => f.id === face.id ? {
-        ...f,
-        status: result.status === 'success' || result.status === 'already_marked' ? 'recognized' : 'unknown',
-        name: result.studentName,
-        message: result.attendanceStatus ? `${result.studentName} - ${result.attendanceStatus}`: 'Unknown',
-      } : f));
+        const isRecognized = result.status === 'recognized';
+        
+        if (isRecognized) {
+            const { studentName, attendanceStatus } = result;
+            const toastMessage = `${studentName} marked ${attendanceStatus}`;
+            if (attendanceStatus === 'late') {
+                toast.warning(toastMessage);
+            } else {
+                toast.success(toastMessage);
+            }
+            playSuccessSound();
+
+            return {
+                ...f,
+                status: 'recognized' as const,
+                name: studentName || 'Unknown',
+                attendanceStatus: attendanceStatus,
+                message: `${studentName} - ${attendanceStatus}`
+            };
+        }
+        
+        // Not recognized - always allow retry after short cooldown
+        return { ...f, status: 'tracking', message: 'Unknown' };
+      }));
 
     } catch (error: any) {
       console.error('Verification error:', error);
       toast.error(error.message || 'An error occurred during verification.');
-      // Reset face status on error to allow retry after cooldown
-      setTrackedFaces(prev => prev.map(f => f.id === face.id ? { ...f, status: 'unknown', message: 'Verification Failed' } : f));
+      
+      // On error, always allow a retry after the short cooldown
+      setTrackedFaces(prev => prev.map(f => f.id === face.id ? { ...f, status: 'tracking', message: `Error, retrying...` } : f));
     }
   }, []);
 
@@ -213,14 +249,19 @@ const RealtimeFaceScanner = () => {
             unmatchedNewFaces.splice(bestMatch.index, 1); // Remove from pool
           } else {
             // No match found, check if we should keep it for the grace period
-            if (now - prevFace.lastSeen < 3000) { // 3-second grace period
+            const gracePeriod = prevFace.status === 'recognized' ? 3000 : 500; // 3s for recognized, 0.5s for others
+            if (now - prevFace.lastSeen < gracePeriod) { 
               nextFaces.push(prevFace);
             }
           }
         }
 
-        // 2. Add any remaining new faces
+        // 2. Add any remaining new faces, but only up to the limit of 2 total faces
         for (const newFace of unmatchedNewFaces) {
+          if (nextFaces.length >= 2) {
+            break; // Stop adding new faces if we've reached the limit
+          }
+
           const newFaceBox = {
             xMin: newFace.topLeft[0], yMin: newFace.topLeft[1],
             xMax: newFace.bottomRight[0], yMax: newFace.bottomRight[1],
@@ -231,15 +272,23 @@ const RealtimeFaceScanner = () => {
             id: generateFaceId(),
             box: newFaceBox,
             status: 'tracking',
+            firstSeen: now,
             lastVerification: 0,
             lastSeen: now,
           });
         }
         
-        // 3. Atomically trigger verification for eligible faces
+        // 3. Atomically trigger verification for eligible faces that have "dwelled"
         const facesToVerify: { face: TrackedFace, image: string }[] = [];
         const finalFaces = nextFaces.map(face => {
-            if (face.status === 'tracking' && now - face.lastVerification > VERIFICATION_COOLDOWN) {
+            const cooldown = face.message === 'Unknown' || face.message?.includes('retrying') ? RETRY_COOLDOWN : VERIFICATION_COOLDOWN;
+            const isReadyForVerification = 
+                face.status === 'tracking' && 
+                now - face.lastVerification > cooldown &&
+                now - face.firstSeen > DWELL_TIME_BEFORE_VERIFY &&
+                face.box.width > MIN_FACE_WIDTH_PIXELS;
+
+            if (isReadyForVerification) {
                 if(webcamRef.current?.video){
                     const croppedImage = getCroppedFace(webcamRef.current.video, face.box);
                     if (croppedImage) {
@@ -312,29 +361,50 @@ const RealtimeFaceScanner = () => {
         
         let borderColor = '#6b7280'; // Gray for tracking
         let label = 'Tracking...';
+        if (face.status === 'tracking' && face.message) {
+            label = face.message;
+            // If the message is 'Unknown', make the box red
+            if (label === 'Unknown') {
+                borderColor = '#ef4444';
+            }
+        }
+        let subLabel = '';
 
         if (face.status === 'verifying') {
           borderColor = '#3b82f6'; // Blue
           label = 'Verifying...';
         } else if (face.status === 'recognized') {
-          borderColor = '#10b981'; // Green
-          label = face.message || 'Recognized';
-        } else if (face.status === 'unknown') {
-          borderColor = '#ef4444'; // Red
-          label = face.message || 'Unknown';
+          label = face.name || 'Recognized';
+          if(face.attendanceStatus === 'late'){
+            borderColor = '#f59e0b'; // Yellow for late
+            subLabel = 'Late';
+          } else {
+            borderColor = '#10b981'; // Green for present
+            subLabel = 'Present';
+          }
         }
 
         ctx.strokeStyle = borderColor;
         ctx.lineWidth = 4;
         ctx.strokeRect(drawX, drawY, drawWidth, drawHeight);
         
+        // Main label (Name)
         ctx.fillStyle = borderColor;
         const textWidth = ctx.measureText(label).width;
-        ctx.fillRect(drawX, drawY - 25, textWidth + 10, 25);
+        const subLabelWidth = subLabel ? ctx.measureText(subLabel).width : 0;
+        const boxWidth = Math.max(textWidth, subLabelWidth) + 20;
+
+        ctx.fillRect(drawX, drawY - 45, boxWidth, 45);
         
         ctx.fillStyle = 'white';
         ctx.font = '16px Arial';
-        ctx.fillText(label, drawX + 5, drawY - 8);
+        ctx.fillText(label, drawX + 10, drawY - 25);
+        
+        // Sub-label (Status)
+        if (subLabel) {
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(subLabel, drawX + 10, drawY - 8);
+        }
     });
   }, [trackedFaces, isCameraActive]);
 

@@ -4,8 +4,10 @@ const { getFirestore, Timestamp, FieldValue } = require("firebase-admin/firestor
 const { getStorage } = require("firebase-admin/storage");
 const {onRequest} = require("firebase-functions/v2/https");
 const {onObjectFinalized} = require("firebase-functions/v2/storage");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const {setGlobalOptions} = require("firebase-functions/v2");
-const { onCall, HttpsError } = require("firebase-functions/v1/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const logger = require("firebase-functions/logger");
 const cors = require("cors")({ origin: true });
 const vision = require("@google-cloud/vision");
 const cosineSimilarity = require("cosine-similarity");
@@ -18,7 +20,8 @@ const db = getFirestore();
 // const visionClient = new vision.ImageAnnotatorClient();
 
 // --- NEW: Define the URL for your Python face recognition service ---
-const FACE_RECOGNITION_SERVICE_URL = "https://face-recognition-service-50079853705.asia-southeast1.run.app/generate-embedding";
+// This should be an authenticated endpoint in a real-world scenario.
+const FACE_RECOGNITION_SERVICE_URL = "https://face-recognition-service-us-central1-50079853705.us-central1.run.app/generate-embedding";
 
 // --- The embedding logic is now handled by the Python service ---
 // function createNormalizedEmbedding(face) { ... } // This function is no longer needed.
@@ -41,91 +44,113 @@ const normalizePhone = (phoneNumber) => {
     return phoneNumber;
 };
 
-// This is the new v2 syntax for the Storage trigger.
-// By explicitly naming the bucket, we avoid region auto-detection errors during deployment.
-exports.processFaceEnrollmentImage = onObjectFinalized({ 
-    region: "us-central1", // IMPORTANT: Match this to your Storage bucket's location. Forcing redeploy.
-    bucket: "rodwell-attendance.firebasestorage.app" 
-}, async (event) => {
-    const fileBucket = event.data.bucket;
-    const filePath = event.data.name;
-    const contentType = event.data.contentType;
-
-    // Exit if this is triggered by a non-image file.
-    if (!contentType || !contentType.startsWith("image/")) {
-        return console.log("This is not an image.");
+/**
+ * [Callable Function]
+ * Called by the frontend when a user submits their 4 enrollment photos.
+ * Its only job is to create a task in the `faceEnrollmentQueue` collection.
+ * It returns immediately, allowing for a fast UI response.
+ */
+exports.processFaceEnrollmentImages = onCall({
+    region: "us-central1"
+}, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "You must be logged in to enroll.");
+    }
+    if (!request.data.images || !Array.isArray(request.data.images) || request.data.images.length !== 4) {
+        throw new HttpsError("invalid-argument", "Exactly 4 Base64 encoded images must be provided.");
     }
 
-    // Exit if the image is not in the correct folder.
-    if (!filePath.startsWith("face_enrollment/")) {
-        return console.log("Not a face enrollment image.");
-    }
-
-    const parts = filePath.split('/');
-    if (parts.length < 3) {
-        return console.error("Invalid file path structure:", filePath);
-    }
-    const studentAuthUid = parts[1];
-
-    if (!studentAuthUid) {
-        return console.error("Could not extract studentAuthUid from path:", filePath);
-    }
-
-    console.log(`Processing face enrollment for student UID: ${studentAuthUid}`);
+    const studentAuthUid = request.auth.uid;
+    const { images } = request.data;
+    console.log(`Queueing face enrollment task for student UID: ${studentAuthUid}`);
 
     try {
-        // 1. Download the image from GCS into a buffer
-        const bucket = admin.storage().bucket(fileBucket);
-        const file = bucket.file(filePath);
-        const [imageBuffer] = await file.download();
-        
-        // 2. Send image to Python service to get the FaceNet embedding
-        console.log(`Sending image to ML service for embedding generation...`);
-        const response = await axios.post(FACE_RECOGNITION_SERVICE_URL, {
-            image: imageBuffer.toString('base64')
-        }, {
-            headers: { 'Content-Type': 'application/json' }
+        await db.collection("faceEnrollmentQueue").add({
+            studentAuthUid: studentAuthUid,
+            images: images,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: "pending",
         });
 
-        const { embedding } = response.data;
+        console.log(`Task for ${studentAuthUid} successfully queued.`);
+        return { success: true, message: "Your enrollment has been submitted and will be processed in the background." };
 
-        if (!embedding || embedding.length === 0) {
-            console.error(`ML service failed to generate an embedding for ${filePath}.`);
-            return;
-        }
+    } catch (error) {
+        console.error(`Failed to queue face enrollment task for UID ${studentAuthUid}.`, error);
+        throw new HttpsError("internal", "An unexpected error occurred while queueing your request.");
+    }
+});
+
+
+/**
+ * [Firestore-triggered Function]
+ * Listens for new documents in the `faceEnrollmentQueue` collection.
+ * Handles the slow process of generating embeddings and saving them to the student profile.
+ */
+exports.handleEnrollmentQueue = onDocumentCreated({
+    document: "faceEnrollmentQueue/{docId}",
+    region: "us-central1",
+    timeoutSeconds: 540,
+    memory: "512MiB"
+}, async (event) => {
+    const snapshot = event.data;
+    if (!snapshot) {
+        console.log("No data associated with the event");
+        return;
+    }
+    const data = snapshot.data();
+    const { studentAuthUid, images } = data;
+    const docId = event.params.docId;
+
+    try {
+        await db.collection("faceEnrollmentQueue").doc(docId).update({ status: "processing" });
+
+        console.log(`Processing task ${docId} for student UID: ${studentAuthUid}`);
         
+        const embeddingPromises = images.map(async (imageBase64) => {
+            const response = await axios.post(FACE_RECOGNITION_SERVICE_URL, { image: imageBase64 }, {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const { embedding } = response.data;
+            if (!embedding || embedding.length === 0) {
+                throw new Error("The face recognition service failed to process an image.");
+            }
+            // Wrap the embedding vector in an object to prevent nested array errors in Firestore.
+            return { embedding };
+        });
+
+        const newEmbeddings = await Promise.all(embeddingPromises);
+
         const studentQuery = db.collection("students").where("authUid", "==", studentAuthUid).limit(1);
         const studentSnapshot = await studentQuery.get();
 
         if (studentSnapshot.empty) {
-            console.error(`No student found with authUid: ${studentAuthUid}`);
-            return;
+            throw new Error(`No student found with authUid: ${studentAuthUid}`);
         }
 
         const studentDocRef = studentSnapshot.docs[0].ref;
 
-        // Store up to 4 embeddings. If more, replace the oldest.
         await db.runTransaction(async (transaction) => {
             const studentDoc = await transaction.get(studentDocRef);
-            const data = studentDoc.data();
-            const existingEmbeddings = data?.facialEmbeddings || [];
+            const studentData = studentDoc.data();
+            const existingEmbeddings = studentData?.facialEmbeddings || [];
+            const combinedEmbeddings = [...existingEmbeddings, ...newEmbeddings];
             
-            existingEmbeddings.push(embedding);
-
-            // Keep only the last 4 embeddings
-            if (existingEmbeddings.length > 4) {
-                existingEmbeddings.shift(); 
+            while (combinedEmbeddings.length > 4) {
+                combinedEmbeddings.shift();
             }
 
-            transaction.update(studentDocRef, { facialEmbeddings: existingEmbeddings });
-            console.log(`Successfully stored new FaceNet embedding for student ${studentAuthUid}. Total embeddings: ${existingEmbeddings.length}`);
+            transaction.update(studentDocRef, { facialEmbeddings: combinedEmbeddings });
         });
 
+        console.log(`Successfully processed task ${docId} and stored ${newEmbeddings.length} embeddings for student ${studentAuthUid}.`);
+        await db.collection("faceEnrollmentQueue").doc(docId).update({ status: "success" });
+
     } catch (error) {
-        console.error(`Failed to process face enrollment for UID ${studentAuthUid}.`, error.response ? error.response.data : error);
+        console.error(`Error processing task ${docId} for UID ${studentAuthUid}:`, error);
+        await db.collection("faceEnrollmentQueue").doc(docId).update({ status: "error", errorMessage: error.message });
     }
 });
-
 
 // This function is now the single point of truth for linking a profile.
 // It assumes the user has ALREADY verified they own the phone number on the client-side.
@@ -180,6 +205,10 @@ exports.linkStudentProfileWithVerifiedNumber = functions
     };
   });
 
+// The 'recognizeAndMarkAttendance' function is now obsolete. Its logic has been
+// moved to the dedicated Python Cloud Run service for better performance and scalability.
+// We are removing it to avoid conflicts and outdated code.
+/*
 exports.recognizeAndMarkAttendance = functions
   .region('asia-southeast1')
   .https.onRequest((req, res) => {
@@ -388,6 +417,7 @@ exports.recognizeAndMarkAttendance = functions
       }
     });
   });
+*/
 
 exports.verifyFaceForAttendance = functions.region("asia-southeast1").https.onCall(async (data, context) => {
     // 1. Verify admin and data

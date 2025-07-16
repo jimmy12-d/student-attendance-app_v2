@@ -1,5 +1,5 @@
-# Use an official Python runtime as a parent image
-FROM python:3.9-slim
+# Use the full official Python runtime as a parent image for better compatibility
+FROM python:3.9
 
 # Set environment variables
 ENV PYTHONUNBUFFERED True
