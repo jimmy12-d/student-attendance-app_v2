@@ -47,5 +47,50 @@ service cloud.firestore {
       // Only admins can create or update attendance records.
       allow create, update: if isAuthorizedUser();
     }
+
+    match /documents/{documentId} {
+      // READ: Authenticated users can read document metadata.
+      allow read: if request.auth != null;
+      
+      // CREATE: Authenticated users can upload new documents.
+      // In production, you might want to restrict this to admins only.
+      allow create: if request.auth != null;
+      
+      // UPDATE/DELETE: Only admins can modify or delete documents.
+      allow update, delete: if isAuthorizedUser();
+    }
+
+    match /printRequests/{requestId} {
+      // READ: Authenticated users can read their own requests, admins can read all.
+      allow read: if request.auth != null && 
+                     (isAuthorizedUser() || request.auth.uid == resource.data.requestedBy);
+      
+      // CREATE: Authenticated users can create print requests.
+      allow create: if request.auth != null;
+      
+      // UPDATE: Only admins can update print requests (for approval/rejection).
+      allow update: if isAuthorizedUser();
+      
+      // DELETE: Only admins can delete print requests.
+      allow delete: if isAuthorizedUser();
+    }
+
+    match /teachers/{teacherId} {
+      // READ: Authenticated users can read teacher information for form population.
+      allow read: if request.auth != null;
+      
+      // CREATE/UPDATE/DELETE: Only admins can manage teacher records.
+      allow create, update, delete: if isAuthorizedUser();
+    }
+
+    match /cleanupLogs/{logId} {
+      // READ: Only admins can read cleanup logs.
+      allow read: if isAuthorizedUser();
+      
+      // CREATE: Allow system (Cloud Functions) to create logs.
+      // UPDATE/DELETE: Only admins can modify logs.
+      allow create: if true; // Cloud Functions don't have auth context
+      allow update, delete: if isAuthorizedUser();
+    }
   }
 } 

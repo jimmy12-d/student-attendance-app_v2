@@ -7,7 +7,7 @@ const DarkModeInit = () => {
       try {
         const stored = localStorage.getItem('darkMode');
         // Default to dark mode if nothing is stored
-        const isDark = stored === null ? true : stored === '1';
+        const isDark = stored === null ? true : stored === 'true' || stored === '1';
         if (isDark) {
           document.documentElement.classList.add('dark', 'dark-scrollbars-compat');
         } else {

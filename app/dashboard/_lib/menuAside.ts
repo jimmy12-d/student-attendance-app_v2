@@ -11,6 +11,8 @@ import {
   mdiCamera,
   mdiFaceRecognition,
   mdiPhone,
+  mdiQrcodeScan,
+  mdiCardAccountDetails,
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -70,6 +72,11 @@ const menuAside: MenuAsideItem[] = [
     href: "/dashboard/mock-exams",
     label: "Mock Control",
     icon: mdiNotebookEditOutline,
+  },
+  {
+    href: "/dashboard/approvals",
+    label: "Print Approvals",
+    icon: mdiFileDocumentCheckOutline,
   },
   {
     href: "/dashboard/notification",

@@ -104,6 +104,14 @@ export interface PermissionRecord {
 }
 
 // Print Request System Interfaces
+export interface Teacher {
+  id: string; // Firestore document ID
+  fullName: string;
+  subject: string;
+  email?: string;
+  createdAt?: Timestamp;
+}
+
 export interface Document {
   id: string; // Firestore document ID
   fileName: string;
@@ -113,6 +121,8 @@ export interface Document {
   chapter: string;
   lessonNumber: string;
   description?: string;
+  teacherName: string; // Teacher's full name
+  teacherId: string; // Reference to teacher document ID
 }
 
 export interface PrintRequest {

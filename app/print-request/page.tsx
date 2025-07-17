@@ -5,7 +5,10 @@ import Head from 'next/head';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'sonner';
+import * as pdfjsLib from 'pdfjs-dist';
 import { mdiPrinter, mdiUploadOutline, mdiFileDocumentOutline, mdiCheck } from '@mdi/js';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 // Firebase imports
 import { db, storage } from '../../firebase-config';
@@ -28,12 +31,16 @@ import FormField from '../_components/FormField';
 import Button from '../_components/Button';
 import Icon from '../_components/Icon';
 import LoadingSpinner from '../_components/LoadingSpinner';
+import CustomSingleSelectDropdown from '../_components/CustomSingleSelectDropdown';
 
 // Interfaces
-import { Document, PrintRequest } from '../_interfaces';
+import { Document, PrintRequest, Teacher } from '../_interfaces';
 
 // Validation schema
 const validationSchema = Yup.object().shape({
+  // Teacher selection
+  selectedTeacherId: Yup.string().required('Please select a teacher'),
+  
   // New document fields
   subject: Yup.string().when('uploadMode', {
     is: 'new',
@@ -75,6 +82,7 @@ const validationSchema = Yup.object().shape({
 
 interface FormValues {
   uploadMode: 'new' | 'existing';
+  selectedTeacherId: string;
   subject: string;
   chapter: string;
   lessonNumber: string;
@@ -87,11 +95,46 @@ interface FormValues {
 }
 
 export default function PrintRequestPage() {
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(true);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [existingDocuments, setExistingDocuments] = useState<Document[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
   const [subjectFilter, setSubjectFilter] = useState('');
   const [chapterFilter, setChapterFilter] = useState('');
+  const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [successInfo, setSuccessInfo] = useState<{
+    fileName: string;
+    teacherName: string;
+    subject: string;
+    chapter: string;
+    lessonNumber: string;
+    amountToPrint: number;
+  } | null>(null);
+
+  // Load teachers
+  useEffect(() => {
+    const loadTeachers = async () => {
+      try {
+        const teachersSnapshot = await getDocs(
+          query(collection(db, 'teachers'), orderBy('fullName'))
+        );
+        const teachersList = teachersSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Teacher[];
+        setTeachers(teachersList);
+      } catch (error) {
+        console.error('Error loading teachers:', error);
+        toast.error('Failed to load teachers');
+      } finally {
+        setLoadingTeachers(false);
+      }
+    };
+
+    loadTeachers();
+  }, []);
 
   // Load existing documents
   useEffect(() => {
@@ -117,9 +160,14 @@ export default function PrintRequestPage() {
     loadDocuments();
   }, []);
 
-  // Filter documents based on subject and chapter
+  // Filter documents based on teacher, subject and chapter
   useEffect(() => {
     let filtered = existingDocuments;
+    
+    // Filter by selected teacher
+    if (selectedTeacher) {
+      filtered = filtered.filter(doc => doc.teacherId === selectedTeacher.id);
+    }
     
     if (subjectFilter) {
       filtered = filtered.filter(doc => 
@@ -134,10 +182,17 @@ export default function PrintRequestPage() {
     }
     
     setFilteredDocuments(filtered);
-  }, [subjectFilter, chapterFilter, existingDocuments]);
+  }, [subjectFilter, chapterFilter, existingDocuments, selectedTeacher]);
 
   const handleSubmit = async (values: FormValues, { setSubmitting, resetForm }: any) => {
     try {
+      // Find selected teacher
+      const teacher = teachers.find(t => t.id === values.selectedTeacherId);
+      if (!teacher) {
+        toast.error('Please select a teacher');
+        return;
+      }
+
       let documentId = '';
       let pdfUrl = '';
 
@@ -177,7 +232,9 @@ export default function PrintRequestPage() {
           subject: values.subject,
           chapter: values.chapter,
           lessonNumber: values.lessonNumber,
-          description: values.description || ''
+          description: values.description || '',
+          teacherName: teacher.fullName,
+          teacherId: teacher.id
         };
 
         const docRef = await addDoc(collection(db, 'documents'), documentData);
@@ -209,8 +266,25 @@ export default function PrintRequestPage() {
 
       await addDoc(collection(db, 'printRequests'), printRequestData);
       
+      // Get document info for success display
+      const selectedDoc = values.uploadMode === 'existing' 
+        ? existingDocuments.find(doc => doc.id === values.selectedDocumentId)
+        : null;
+      
+      // Set success state with document info
+      setSuccessInfo({
+        fileName: values.uploadMode === 'new' 
+          ? `${values.subject}_${values.chapter}_${values.lessonNumber}.pdf`
+          : selectedDoc?.fileName || 'Document',
+        teacherName: teacher.fullName,
+        subject: values.uploadMode === 'new' ? values.subject : selectedDoc?.subject || '',
+        chapter: values.uploadMode === 'new' ? values.chapter : selectedDoc?.chapter || '',
+        lessonNumber: values.uploadMode === 'new' ? values.lessonNumber : selectedDoc?.lessonNumber || '',
+        amountToPrint: values.amountToPrint
+      });
+      setSubmissionSuccess(true);
+      
       toast.success('Print request submitted successfully!');
-      resetForm();
       
     } catch (error) {
       console.error('Error submitting print request:', error);
@@ -218,6 +292,11 @@ export default function PrintRequestPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handlePrintAnother = () => {
+    setSubmissionSuccess(false);
+    setSuccessInfo(null);
   };
 
   return (
@@ -232,10 +311,50 @@ export default function PrintRequestPage() {
           main 
         />
 
-        <CardBox>
+        <CardBox className='p-6'>
+          {submissionSuccess && successInfo ? (
+            /* Success State */
+            <div className="text-center py-8">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/20 mb-4">
+                <Icon path={mdiCheck} className="text-green-600 dark:text-green-400" size={24} />
+              </div>
+              
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                Print Request Submitted Successfully!
+              </h3>
+              
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6 text-left max-w-md mx-auto">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Request Details:</h4>
+                <div className="space-y-2 text-sm">
+                  <p><strong>File Name:</strong> {successInfo.fileName}</p>
+                  <p><strong>Teacher:</strong> {successInfo.teacherName}</p>
+                  <p><strong>Subject:</strong> {successInfo.subject}</p>
+                  <p><strong>Chapter:</strong> {successInfo.chapter}</p>
+                  <p><strong>Lesson:</strong> {successInfo.lessonNumber}</p>
+                  <p><strong>Copies to Print:</strong> {successInfo.amountToPrint}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <p className="text-gray-600 dark:text-gray-400">
+                  Your print request has been submitted and is pending admin approval.
+                  You will be notified when it's ready for printing.
+                </p>
+                
+                <Button
+                  onClick={handlePrintAnother}
+                  icon={mdiPrinter}
+                  color="success"
+                  label="Submit Another Print Request"
+                />
+              </div>
+            </div>
+          ) : (
+            /* Form State */
           <Formik
             initialValues={{
               uploadMode: 'new',
+              selectedTeacherId: '',
               subject: '',
               chapter: '',
               lessonNumber: '',
@@ -251,6 +370,43 @@ export default function PrintRequestPage() {
           >
             {({ values, setFieldValue, isSubmitting }) => (
               <Form className="space-y-6">
+                {/* Teacher Selection */}
+                <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                  <h3 className="text-lg font-medium mb-4">Teacher Selection</h3>
+                  <FormField label="Select Teacher" labelFor="selectedTeacherId">
+                    {(fieldData) => (
+                      <>
+                        {loadingTeachers ? (
+                          <div className="flex items-center justify-center py-2">
+                            <LoadingSpinner />
+                            <span className="ml-2">Loading teachers...</span>
+                          </div>
+                        ) : (
+                          <CustomSingleSelectDropdown
+                            options={teachers.map(teacher => ({
+                              value: teacher.id,
+                              label: `${teacher.fullName} - ${teacher.subject}`
+                            }))}
+                            selectedValue={values.selectedTeacherId}
+                            onChange={(value) => {
+                              setFieldValue('selectedTeacherId', value);
+                              const teacher = teachers.find(t => t.id === value);
+                              setSelectedTeacher(teacher || null);
+                              if (teacher) {
+                                setFieldValue('subject', teacher.subject);
+                              }
+                            }}
+                            placeholder="Select a teacher..."
+                            fieldData={fieldData}
+                            id="selectedTeacherId"
+                          />
+                        )}
+                        <ErrorMessage name="selectedTeacherId" component="div" className="text-red-500 text-sm mt-1" />
+                      </>
+                    )}
+                  </FormField>
+                </div>
+
                 {/* Upload Mode Selection */}
                 <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
                   <h3 className="text-lg font-medium mb-4">Document Selection</h3>
@@ -492,6 +648,7 @@ export default function PrintRequestPage() {
               </Form>
             )}
           </Formik>
+          )}
         </CardBox>
       </SectionMain>
     </>

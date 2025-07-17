@@ -782,3 +782,101 @@ exports.linkStudentByPhone = functions.region("asia-southeast1").https.onCall(as
 
 // Note: The 'linkStudentProfileWithVerifiedNumber' function that previously existed
 // has been removed and replaced by the two functions above.
+
+/**
+ * [Scheduled Function]
+ * Automatically deletes documents and their associated files that are older than 30 days.
+ * Runs daily at midnight UTC.
+ */
+exports.cleanupOldDocuments = functions.pubsub.schedule('0 0 * * *')
+  .timeZone('UTC')
+  .onRun(async (context) => {
+    console.log('Starting cleanup of old documents...');
+    
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // Query documents older than 30 days
+      const oldDocumentsQuery = await db.collection('documents')
+        .where('uploadedAt', '<=', admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+        .get();
+      
+      if (oldDocumentsQuery.empty) {
+        console.log('No old documents found to delete.');
+        return null;
+      }
+      
+      const storage = getStorage();
+      const bucket = storage.bucket();
+      let deletedCount = 0;
+      let errorCount = 0;
+      
+      // Process each old document
+      for (const docSnapshot of oldDocumentsQuery.docs) {
+        const docData = docSnapshot.data();
+        const docId = docSnapshot.id;
+        
+        try {
+          // Delete the file from Firebase Storage
+          if (docData.pdfUrl) {
+            // Extract file path from URL
+            const urlParts = docData.pdfUrl.split('/');
+            const filePathEncoded = urlParts[urlParts.length - 1].split('?')[0];
+            const filePath = decodeURIComponent(filePathEncoded);
+            
+            try {
+              await bucket.file(filePath).delete();
+              console.log(`Deleted file: ${filePath}`);
+            } catch (storageError) {
+              console.warn(`Failed to delete file ${filePath}:`, storageError.message);
+              // Continue with document deletion even if file deletion fails
+            }
+          }
+          
+          // Check for related print requests and delete them too
+          const relatedPrintRequests = await db.collection('printRequests')
+            .where('documentId', '==', docId)
+            .get();
+          
+          for (const printRequestDoc of relatedPrintRequests.docs) {
+            await printRequestDoc.ref.delete();
+            console.log(`Deleted related print request: ${printRequestDoc.id}`);
+          }
+          
+          // Delete the document from Firestore
+          await docSnapshot.ref.delete();
+          console.log(`Deleted document: ${docId} (${docData.fileName})`);
+          deletedCount++;
+          
+        } catch (error) {
+          console.error(`Error deleting document ${docId}:`, error);
+          errorCount++;
+        }
+      }
+      
+      console.log(`Cleanup completed. Deleted: ${deletedCount} documents, Errors: ${errorCount}`);
+      
+      // Log summary to a cleanup log collection for admin monitoring
+      await db.collection('cleanupLogs').add({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        deletedDocuments: deletedCount,
+        errors: errorCount,
+        cutoffDate: admin.firestore.Timestamp.fromDate(thirtyDaysAgo)
+      });
+      
+      return null;
+      
+    } catch (error) {
+      console.error('Error during cleanup process:', error);
+      
+      // Log error for admin monitoring
+      await db.collection('cleanupLogs').add({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        error: error.message,
+        success: false
+      });
+      
+      throw new Error('Cleanup process failed');
+    }
+  });
