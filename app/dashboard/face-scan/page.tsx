@@ -33,6 +33,7 @@ interface TrackedFace {
   lastVerification: number; // Timestamp of the last time we sent to the cloud
   lastSeen: number; // Timestamp of the last time the face was seen in a frame
   message?: string; // e.g., "Marked On-time"
+  isVerificationInProgress?: boolean; // Track if verification is already in progress
 }
 
 const RealtimeFaceScanner = () => {
@@ -140,7 +141,12 @@ const RealtimeFaceScanner = () => {
 
   const verifyAndMarkFace = useCallback(async (face: TrackedFace, imageSrc: string) => {
     console.log(`Verifying face ID: ${face.id}. Cropped image size: ${Math.round(imageSrc.length * 3/4 / 1024)} KB`);
-    // No longer need to set status here, it's done atomically before the call
+    
+    // Check if verification is already in progress for this face
+    if (face.isVerificationInProgress) {
+      console.log(`Verification already in progress for face ${face.id}, skipping...`);
+      return;
+    }
     
     try {
       const auth = getAuth();
@@ -157,6 +163,7 @@ const RealtimeFaceScanner = () => {
       });
 
       const result = await response.json();
+      console.log(`API Response for face ${face.id}:`, result);
 
       if (!response.ok) {
         throw new Error(result.error || `HTTP ${response.status}`);
@@ -169,7 +176,17 @@ const RealtimeFaceScanner = () => {
         
         if (isRecognized) {
             const { studentName, attendanceStatus } = result;
-            const toastMessage = `${studentName} marked ${attendanceStatus}`;
+            console.log(`Face ${face.id} recognized as ${studentName} with attendance status: "${attendanceStatus}"`);
+            
+            // Create timestamp for display
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { 
+              hour: '2-digit', 
+              minute: '2-digit', 
+              hour12: true 
+            });
+            
+            const toastMessage = `${studentName} is marked ${attendanceStatus} at ${timeString}`;
             if (attendanceStatus === 'late') {
                 toast.warning(toastMessage);
             } else {
@@ -182,20 +199,33 @@ const RealtimeFaceScanner = () => {
                 status: 'recognized' as const,
                 name: studentName || 'Unknown',
                 attendanceStatus: attendanceStatus,
-                message: `${studentName} - ${attendanceStatus}`
+                message: `${studentName} - ${attendanceStatus}`,
+                isVerificationInProgress: false
             };
         }
         
-        // Not recognized - always allow retry after short cooldown
-        return { ...f, status: 'tracking', message: 'Unknown' };
+        // Not recognized - reset verification status and allow retry after short cooldown
+        return { 
+          ...f, 
+          status: 'tracking', 
+          message: 'Unknown', 
+          isVerificationInProgress: false 
+        };
       }));
 
     } catch (error: any) {
-      console.error('Verification error:', error);
+      console.error('Verification error for face', face.id, ':', error);
       toast.error(error.message || 'An error occurred during verification.');
       
-      // On error, always allow a retry after the short cooldown
-      setTrackedFaces(prev => prev.map(f => f.id === face.id ? { ...f, status: 'tracking', message: `Error, retrying...` } : f));
+      // On error, reset verification status and allow a retry after the short cooldown
+      setTrackedFaces(prev => prev.map(f => 
+        f.id === face.id ? { 
+          ...f, 
+          status: 'tracking', 
+          message: `Error, retrying...`, 
+          isVerificationInProgress: false 
+        } : f
+      ));
     }
   }, []);
 
@@ -275,6 +305,7 @@ const RealtimeFaceScanner = () => {
             firstSeen: now,
             lastVerification: 0,
             lastSeen: now,
+            isVerificationInProgress: false,
           });
         }
         
@@ -284,6 +315,7 @@ const RealtimeFaceScanner = () => {
             const cooldown = face.message === 'Unknown' || face.message?.includes('retrying') ? RETRY_COOLDOWN : VERIFICATION_COOLDOWN;
             const isReadyForVerification = 
                 face.status === 'tracking' && 
+                !face.isVerificationInProgress && // Prevent multiple calls
                 now - face.lastVerification > cooldown &&
                 now - face.firstSeen > DWELL_TIME_BEFORE_VERIFY &&
                 face.box.width > MIN_FACE_WIDTH_PIXELS;
@@ -293,7 +325,12 @@ const RealtimeFaceScanner = () => {
                     const croppedImage = getCroppedFace(webcamRef.current.video, face.box);
                     if (croppedImage) {
                         facesToVerify.push({ face, image: croppedImage });
-                        return { ...face, status: 'verifying' as const, lastVerification: now };
+                        return { 
+                            ...face, 
+                            status: 'verifying' as const, 
+                            lastVerification: now,
+                            isVerificationInProgress: true  // Set flag immediately
+                        };
                     }
                 }
             }
@@ -375,12 +412,21 @@ const RealtimeFaceScanner = () => {
           label = 'Verifying...';
         } else if (face.status === 'recognized') {
           label = face.name || 'Recognized';
+          console.log(`Drawing face ${face.id}: attendanceStatus="${face.attendanceStatus}", name="${face.name}"`);
+          
           if(face.attendanceStatus === 'late'){
             borderColor = '#f59e0b'; // Yellow for late
             subLabel = 'Late';
-          } else {
+            console.log(`Face ${face.id} is late - setting yellow border`);
+          } else if(face.attendanceStatus === 'present') {
             borderColor = '#10b981'; // Green for present
             subLabel = 'Present';
+            console.log(`Face ${face.id} is present - setting green border`);
+          } else {
+            // Default for any other status or undefined
+            borderColor = '#10b981'; // Green as default
+            subLabel = face.attendanceStatus || 'Present';
+            console.log(`Face ${face.id} has unknown/undefined status "${face.attendanceStatus}" - defaulting to green`);
           }
         }
 

@@ -112,14 +112,32 @@ exports.handleEnrollmentQueue = onDocumentCreated({
                 headers: { 'Content-Type': 'application/json' }
             });
             const { embedding } = response.data;
-            if (!embedding || embedding.length === 0) {
-                throw new Error("The face recognition service failed to process an image.");
+            if (!embedding || !Array.isArray(embedding) || embedding.length === 0) {
+                throw new Error("The face recognition service returned an invalid embedding.");
             }
-            // Wrap the embedding vector in an object to prevent nested array errors in Firestore.
-            return { embedding };
+            return embedding; // Return the raw embedding array
         });
 
-        const newEmbeddings = await Promise.all(embeddingPromises);
+        const allEmbeddings = await Promise.all(embeddingPromises);
+        
+        if (allEmbeddings.length === 0) {
+            throw new Error("No embeddings were generated from the provided images.");
+        }
+
+        // --- Average the 4 embeddings to create a single master embedding ---
+        const embeddingLength = allEmbeddings[0].length;
+        const masterEmbedding = new Array(embeddingLength).fill(0);
+
+        for (const embedding of allEmbeddings) {
+            for (let i = 0; i < embeddingLength; i++) {
+                masterEmbedding[i] += embedding[i];
+            }
+        }
+
+        for (let i = 0; i < embeddingLength; i++) {
+            masterEmbedding[i] /= allEmbeddings.length;
+        }
+        // --- End of Averaging Logic ---
 
         const studentQuery = db.collection("students").where("authUid", "==", studentAuthUid).limit(1);
         const studentSnapshot = await studentQuery.get();
@@ -130,20 +148,12 @@ exports.handleEnrollmentQueue = onDocumentCreated({
 
         const studentDocRef = studentSnapshot.docs[0].ref;
 
-        await db.runTransaction(async (transaction) => {
-            const studentDoc = await transaction.get(studentDocRef);
-            const studentData = studentDoc.data();
-            const existingEmbeddings = studentData?.facialEmbeddings || [];
-            const combinedEmbeddings = [...existingEmbeddings, ...newEmbeddings];
-            
-            while (combinedEmbeddings.length > 4) {
-                combinedEmbeddings.shift();
-            }
-
-            transaction.update(studentDocRef, { facialEmbeddings: combinedEmbeddings });
+        // Store the single, averaged embedding (wrapped in an object for consistency)
+        await studentDocRef.update({ 
+            facialEmbeddings: [{ embedding: masterEmbedding }] 
         });
 
-        console.log(`Successfully processed task ${docId} and stored ${newEmbeddings.length} embeddings for student ${studentAuthUid}.`);
+        console.log(`Successfully processed task ${docId} and stored a single averaged embedding from ${allEmbeddings.length} photos for student ${studentAuthUid}.`);
         await db.collection("faceEnrollmentQueue").doc(docId).update({ status: "success" });
 
     } catch (error) {

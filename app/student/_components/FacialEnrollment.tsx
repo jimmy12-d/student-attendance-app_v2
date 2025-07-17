@@ -18,7 +18,6 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 
 
 type EnrollmentStatus = 'LOADING_MODEL' | 'INITIALIZING_CAMERA' | 'DETECTING' | 'ERROR' | 'UPLOADING' | 'COMPLETE';
-const DWELL_TIME_FOR_CAPTURE = 1500; // 1.5 seconds
 
 const captureInstructions = [
     { text: "Center your face in the oval and look directly at the camera.", pose: 'straight' },
@@ -70,7 +69,6 @@ const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, on
     const [isReadyForCapture, setIsReadyForCapture] = useState(false);
     const [guideColor, setGuideColor] = useState('stroke-slate-500');
     const [capturedImages, setCapturedImages] = useState<string[]>([]);
-    const [dwellStart, setDwellStart] = useState<number | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     // --- Sound ---
@@ -144,22 +142,16 @@ const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, on
                     const validation = validateFaceQuality(face);
                     
                     if (validation.isValid) {
-                        if (dwellStart === null) {
-                            setDwellStart(Date.now());
-                            setFeedback({ text: "Perfect! Hold steady...", type: "success" });
-                            setGuideColor('stroke-green-500');
-                        } else if (Date.now() - dwellStart >= DWELL_TIME_FOR_CAPTURE) {
-                            // Dwell time met, trigger capture
-                            handleCapture();
-                            setDwellStart(null); // Reset for next capture
-                        }
+                        setFeedback({ text: "Perfect! Hold steady...", type: "success" });
+                        setIsReadyForCapture(true);
+                        setGuideColor('stroke-green-500');
                     } else {
-                        setDwellStart(null); // Reset dwell time if face is invalid
                         setFeedback({ text: validation.message, type: "error" });
+                        setIsReadyForCapture(false);
                         setGuideColor('stroke-red-500');
                     }
                 } else {
-                    setDwellStart(null);
+                    setIsReadyForCapture(false);
                     setGuideColor('stroke-red-500');
                     setFeedback({ text: "No face detected", type: "error" });
                 }
@@ -216,22 +208,25 @@ const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, on
     };
 
     const handleCapture = useCallback(() => {
-        if (!webcamRef.current?.video || captureStep >= 4) return;
+        if (!webcamRef.current?.video) return;
 
         const imageSrc = webcamRef.current.getScreenshot();
         if (imageSrc) {
+            // We only need the base64 part
             const base64Image = imageSrc.split(',')[1];
             const newImages = [...capturedImages, base64Image];
             setCapturedImages(newImages);
 
             const nextStep = captureStep + 1;
-            setCaptureStep(nextStep);
-            
+
             if (nextStep < 4) {
-                 setFeedback({ text: "Great shot! Get ready for the next one...", type: "success" });
+                setCaptureStep(nextStep);
+                setIsReadyForCapture(false);
             } else {
-                setFeedback({ text: "All photos captured! Uploading...", type: "info" });
-                uploadAllImages(newImages);
+                // All 4 images are captured, trigger the upload.
+                setCaptureStep(nextStep);
+                setFeedback({ text: "All photos captured! Preparing to upload...", type: "success" });
+                uploadAllImages(newImages); // Pass the final list of images
             }
         }
     }, [webcamRef, captureStep, capturedImages]);
@@ -287,9 +282,7 @@ const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, on
                 
                 <ProgressIndicator currentStep={captureStep} />
 
-                <p className="text-center text-lg h-12 my-2 transition-colors duration-300"
-                   style={{ color: feedback.type === 'error' ? '#ef4444' : '#10b981' }}
-                >
+                <p className="text-center text-lg h-12 my-2 transition-colors duration-300">
                     {captureStep < 4 ? captureInstructions[captureStep].text : feedback.text}
                 </p>
 
@@ -313,15 +306,26 @@ const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, on
                     ) : null}
                 </div>
 
-                <div className="flex justify-center mt-4">
-                     {/* The capture button is now removed in favor of automatic capture */}
+                <div className="flex justify-center items-center mt-4 h-12">
+                     {status === 'DETECTING' && (
+                        <Button 
+                            color="info" 
+                            label={`Capture Photo ${captureStep + 1} of 4`}
+                            onClick={handleCapture}
+                            disabled={!isReadyForCapture} 
+                        />
+                     )}
+                     {status === 'UPLOADING' || status === 'COMPLETE' && <p>{feedback.text}</p>}
+                </div>
+
+                 <div className="text-center mt-4">
                      <Button 
                         color="danger" 
                         label="Cancel" 
                         onClick={onCancel} 
                         outline 
                      />
-                </div>
+                 </div>
             </div>
         </div>
     );

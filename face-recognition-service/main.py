@@ -8,7 +8,7 @@ from PIL import Image
 import numpy as np
 import base64
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
 from deepface import DeepFace
 from google.cloud import storage
@@ -211,57 +211,106 @@ def recognize_face():
         student_name = student_data.get('fullName', 'Unknown Student') # Use 'fullName'
         student_doc_id = student_doc.id # Get the actual document ID for the response
 
-        # --- New Attendance Logic ---
+        # --- New Attendance Logic with Firestore Read/Write ---
         attendance_status = "present" # Default
         try:
-            # 1. Fetch all class configurations once
-            classes_snap = db.collection("classes").get()
-            class_configs = {doc.id: doc.data() for doc in classes_snap}
+            today_str = date.today().isoformat()
+            
+            # 1. Check if attendance for today already exists
+            attendance_ref = db.collection("attendance")
+            query = attendance_ref.where("authUid", "==", best_match_uid).where("date", "==", today_str).limit(1)
+            existing_attendance_docs = list(query.stream())
 
-            # 2. Determine student's class and shift
-            student_class_str = student_data.get("class")
-            student_shift_str = student_data.get("shift")
-
-            if student_class_str and student_shift_str:
-                student_class_key = student_class_str.replace("Class ", "")
-                class_config = class_configs.get(student_class_key)
-                shift_config = class_config.get("shifts", {}).get(student_shift_str) if class_config else None
-
-                # 3. Calculate late status
-                if shift_config and "startTime" in shift_config:
-                    start_hour, start_minute = map(int, shift_config["startTime"].split(':'))
-                    
-                    phnom_penh_tz = timezone(timedelta(hours=7))
-                    now_phnom_penh = datetime.now(phnom_penh_tz)
-                    
-                    shift_start_time = now_phnom_penh.replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
-
-                    # 4. Handle grace period (more robustly)
-                    grace_minutes = 15 # Default
-                    # Check for both 'gracePeriodMinutes' and a common typo 'gradePeriodMinutes'
-                    student_grace_period = student_data.get("gracePeriodMinutes") or student_data.get("gradePeriodMinutes")
-
-                    if student_grace_period is not None:
-                        try:
-                            # This handles both numbers (int, float) and strings like "30"
-                            grace_minutes = int(float(student_grace_period))
-                        except (ValueError, TypeError):
-                            print(f"WARN: Could not parse grace period '{student_grace_period}' for {student_name}. Using default.")
-
-
-                    on_time_deadline = shift_start_time + timedelta(minutes=grace_minutes)
-
-                    if now_phnom_penh > on_time_deadline:
-                        attendance_status = "late"
-                    
-                    print(f"DEBUG: Attendance check for {student_name}. Now: {now_phnom_penh}. Deadline: {on_time_deadline}. Status: {attendance_status}")
-                else:
-                    print(f"DEBUG: No valid shift config found for {student_name} (Class: {student_class_key}, Shift: {student_shift_str})")
+            if existing_attendance_docs:
+                # Record exists, use its status and don't write a new one
+                existing_data = existing_attendance_docs[0].to_dict()
+                attendance_status = existing_data.get("status", "present")
+                print(f"DEBUG: Found existing attendance for {student_name}. Status: {attendance_status}")
             else:
-                print(f"DEBUG: Student {student_name} is missing class or shift information.")
+                # No record exists, so calculate status and then create a new record
+                print(f"DEBUG: No existing attendance for {student_name}. Calculating and writing new record...")
+                
+                # 2. Load class configurations from Firestore
+                print(f"DEBUG: Loading class configurations from Firestore...")
+                classes_ref = db.collection("classes")
+                classes_snapshot = classes_ref.stream()
+                class_configs = {}
+                for class_doc in classes_snapshot:
+                    class_configs[class_doc.id] = class_doc.to_dict()
+                print(f"DEBUG: Loaded {len(class_configs)} class configurations")
+                
+                # 3. Determine student's class and shift
+                student_class_str = student_data.get("class")
+                student_shift_str = student_data.get("shift")
+                print(f"DEBUG: Student {student_name} - Class: {student_class_str}, Shift: {student_shift_str}")
+
+                if student_class_str and student_shift_str:
+                    student_class_key = student_class_str.replace("Class ", "")
+                    class_config = class_configs.get(student_class_key)
+                    print(f"DEBUG: Looking for class config with key: {student_class_key}")
+                    print(f"DEBUG: Available class keys: {list(class_configs.keys())}")
+                    print(f"DEBUG: Found class config: {class_config is not None}")
+                    
+                    shift_config = class_config.get("shifts", {}).get(student_shift_str) if class_config else None
+                    print(f"DEBUG: Found shift config: {shift_config is not None}")
+                    if shift_config:
+                        print(f"DEBUG: Shift config: {shift_config}")
+
+                    # 4. Calculate late status
+                    if shift_config and "startTime" in shift_config:
+                        start_hour, start_minute = map(int, shift_config["startTime"].split(':'))
+                        
+                        phnom_penh_tz = timezone(timedelta(hours=7))
+                        now_phnom_penh = datetime.now(phnom_penh_tz)
+                        
+                        shift_start_time = now_phnom_penh.replace(hour=start_hour, minute=start_minute, second=0, microsecond=0)
+
+                        # 5. Handle grace period (more robustly)
+                        grace_minutes = 15 # Default
+                        # Check for both 'gracePeriodMinutes' and a common typo 'gradePeriodMinutes'
+                        student_grace_period = student_data.get("gracePeriodMinutes") or student_data.get("gradePeriodMinutes")
+
+                        if student_grace_period is not None:
+                            try:
+                                # This handles both numbers (int, float) and strings like "30"
+                                grace_minutes = int(float(student_grace_period))
+                            except (ValueError, TypeError):
+                                print(f"WARN: Could not parse grace period '{student_grace_period}' for {student_name}. Using default.")
+
+                        on_time_deadline = shift_start_time + timedelta(minutes=grace_minutes)
+
+                        if now_phnom_penh > on_time_deadline:
+                            attendance_status = "late"
+                            
+                        print(f"DEBUG: Attendance calculation for {student_name}:")
+                        print(f"DEBUG: - Current time (Phnom Penh): {now_phnom_penh}")
+                        print(f"DEBUG: - Shift start time: {shift_start_time}")
+                        print(f"DEBUG: - Grace period: {grace_minutes} minutes")
+                        print(f"DEBUG: - On-time deadline: {on_time_deadline}")
+                        print(f"DEBUG: - Final status: {attendance_status}")
+                    else:
+                        print(f"DEBUG: Cannot calculate late status - missing shift start time")
+                        if not shift_config:
+                            print(f"DEBUG: No shift config found for shift '{student_shift_str}'")
+                        else:
+                            print(f"DEBUG: Shift config exists but missing startTime: {shift_config}")
+                else:
+                    print(f"DEBUG: Student {student_name} is missing class or shift information.")
+
+                # Write the new attendance record to Firestore
+                admin_email = decoded_token.get("email", "unknown_admin")
+                new_record = {
+                    "studentId": student_doc_id, "authUid": best_match_uid,
+                    "studentName": student_name, "class": student_data.get("class"),
+                    "shift": student_data.get("shift"), "status": attendance_status,
+                    "date": today_str, "timestamp": firestore.SERVER_TIMESTAMP,
+                    "scannedBy": f"Face Recognition by {admin_email}"
+                }
+                db.collection("attendance").add(new_record)
+                print(f"DEBUG: Successfully wrote new attendance record for {student_name} with status: {attendance_status}")
 
         except Exception as e:
-            print(f"ERROR: Could not calculate attendance status: {e}")
+            print(f"ERROR: Could not calculate or write attendance status: {e}")
             traceback.print_exc()
         # --- End of New Attendance Logic ---
 

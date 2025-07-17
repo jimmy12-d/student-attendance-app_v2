@@ -103,6 +103,34 @@ export interface PermissionRecord {
   reviewedAt?: Timestamp;
 }
 
+// Print Request System Interfaces
+export interface Document {
+  id: string; // Firestore document ID
+  fileName: string;
+  pdfUrl: string; // URL from Firebase Storage
+  uploadedAt: Timestamp;
+  subject: string;
+  chapter: string;
+  lessonNumber: string;
+  description?: string;
+}
+
+export interface PrintRequest {
+  id: string; // Firestore document ID
+  documentId: string; // Reference to documents collection
+  pdfUrl: string; // Direct URL for easy access
+  amountToPrint: number;
+  isMultiplePages: boolean;
+  isBothSides: boolean;
+  status: 'pending' | 'approved' | 'rejected' | 'printing' | 'completed';
+  requestedAt: Timestamp;
+  requestedBy?: string; // User ID or name
+  approvedBy?: string;
+  approvedAt?: Timestamp;
+  errorMessage?: string;
+  rejectionReason?: string;
+}
+
 // Keep these interfaces here as they are specific to this component's view model
 export interface DailyStatusInfo {
   date: string;
