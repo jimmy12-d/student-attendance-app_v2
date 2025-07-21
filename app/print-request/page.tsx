@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import * as pdfjsLib from 'pdfjs-dist';
 import { mdiPrinter, mdiUploadOutline, mdiFileDocumentOutline, mdiCheck } from '@mdi/js';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdfjs/pdf.worker.min.mjs`;
 
 // Firebase imports
 import { db, storage } from '../../firebase-config';
@@ -70,6 +71,20 @@ const validationSchema = Yup.object().shape({
     then: (schema) => schema.required('Please select a document'),
     otherwise: (schema) => schema.notRequired()
   }),
+
+  // New field for custom page range
+  customPageRange: Yup.string().when(['isMultiplePages', 'pdfFile'], {
+    is: (isMultiplePages: boolean, pdfFile: File | null) =>
+      isMultiplePages && pdfFile !== null, // Only validate if multiple pages is selected and a PDF is uploaded
+    then: (schema) =>
+      schema
+        .required('Please specify page(s) to print')
+        .matches(
+          /^(\d+(-\d+)?)(,\s*\d+(-\d+)?)*$/,
+          'Invalid page range. Use format: 1-3, 5, 8'
+        ),
+    otherwise: (schema) => schema.notRequired(),
+  }),
   
   // Print settings
   amountToPrint: Yup.number()
@@ -92,6 +107,7 @@ interface FormValues {
   amountToPrint: number;
   isMultiplePages: boolean;
   isBothSides: boolean;
+  customPageRange: string;
 }
 
 export default function PrintRequestPage() {
@@ -104,6 +120,23 @@ export default function PrintRequestPage() {
   const [subjectFilter, setSubjectFilter] = useState('');
   const [chapterFilter, setChapterFilter] = useState('');
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+
+  // Function to get PDF page count
+  const getPdfPageCount = async (file: File): Promise<number> => {
+    try {
+      setIsProcessingPdf(true);
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      return pdf.numPages;
+    } catch (error) {
+      console.error('Error reading PDF:', error);
+      throw new Error('Failed to read PDF file');
+    } finally {
+      setIsProcessingPdf(false);
+    }
+  };
   const [successInfo, setSuccessInfo] = useState<{
     fileName: string;
     teacherName: string;
@@ -111,6 +144,9 @@ export default function PrintRequestPage() {
     chapter: string;
     lessonNumber: string;
     amountToPrint: number;
+    isMultiplePages: boolean;
+    isBothSides: boolean;
+    customPageRange?: string;
   } | null>(null);
 
   // Load teachers
@@ -184,6 +220,7 @@ export default function PrintRequestPage() {
     setFilteredDocuments(filtered);
   }, [subjectFilter, chapterFilter, existingDocuments, selectedTeacher]);
 
+
   const handleSubmit = async (values: FormValues, { setSubmitting, resetForm }: any) => {
     try {
       // Find selected teacher
@@ -195,6 +232,7 @@ export default function PrintRequestPage() {
 
       let documentId = '';
       let pdfUrl = '';
+      let docTotalPageCount: number | null = null; 
 
       if (values.uploadMode === 'new') {
         // Upload new document
@@ -223,7 +261,7 @@ export default function PrintRequestPage() {
         // Upload file
         const uploadResult = await uploadBytes(storageRef, values.pdfFile);
         pdfUrl = await getDownloadURL(uploadResult.ref);
-
+        docTotalPageCount = pdfPageCount;
         // Create document record
         const documentData = {
           fileName: filename,
@@ -234,7 +272,8 @@ export default function PrintRequestPage() {
           lessonNumber: values.lessonNumber,
           description: values.description || '',
           teacherName: teacher.fullName,
-          teacherId: teacher.id
+          teacherId: teacher.id,
+          pageCount: docTotalPageCount,
         };
 
         const docRef = await addDoc(collection(db, 'documents'), documentData);
@@ -250,7 +289,62 @@ export default function PrintRequestPage() {
         }
         documentId = selectedDoc.id;
         pdfUrl = selectedDoc.pdfUrl;
+        docTotalPageCount = selectedDoc.pageCount || null; // Get total page count from existing document
+
       }
+            // --- Calculate effectivePageCount for the print request ---
+            let effectivePageCountForRequest: number;
+            const currentDocPageCount = docTotalPageCount || 1; // Fallback to 1 if document page count isn't available
+      
+            if (values.isMultiplePages && values.customPageRange) {
+                // Parse the customPageRange to get the actual number of pages requested
+                const parsedPages = new Set<number>();
+                const ranges = values.customPageRange.split(',').map(s => s.trim());
+      
+                for (const range of ranges) {
+                    if (range.includes('-')) {
+                        const [startStr, endStr] = range.split('-').map(s => s.trim());
+                        const start = parseInt(startStr, 10);
+                        const end = parseInt(endStr, 10);
+      
+                        if (!isNaN(start) && !isNaN(end) && start <= end) {
+                            for (let i = start; i <= end; i++) {
+                                // Ensure page is within the document's total bounds
+                                if (i >= 1 && i <= currentDocPageCount) {
+                                    parsedPages.add(i);
+                                }
+                            }
+                        }
+                    } else {
+                        const pageNum = parseInt(range, 10);
+                        if (!isNaN(pageNum)) {
+                            // Ensure page is within the document's total bounds
+                            if (pageNum >= 1 && pageNum <= currentDocPageCount) {
+                                parsedPages.add(pageNum);
+                            }
+                        }
+                    }
+                }
+                effectivePageCountForRequest = parsedPages.size;
+                // As a fallback, if parsing results in 0 pages for a seemingly valid range,
+                // it might mean all specified pages were out of bounds or invalid.
+                // In such a case, default to 1 to avoid 0 page prints, though validation should ideally prevent this.
+                if (effectivePageCountForRequest === 0 && values.customPageRange.trim() !== '') {
+                    effectivePageCountForRequest = 1; // Fallback if custom range yields 0 valid pages
+                }
+            } else if (values.isMultiplePages) {
+                // If multiple pages is true but no custom range, it means all pages of the document
+                effectivePageCountForRequest = currentDocPageCount;
+            } else {
+                // If not multiple pages, it's a single page print
+                effectivePageCountForRequest = 1;
+            }
+            // Ensure effectivePageCountForRequest is at least 1
+            effectivePageCountForRequest = Math.max(1, effectivePageCountForRequest);
+            // --- End of effectivePageCount calculation ---
+      
+      
+            // Create print request
 
       // Create print request
       const printRequestData = {
@@ -259,6 +353,8 @@ export default function PrintRequestPage() {
         amountToPrint: values.amountToPrint,
         isMultiplePages: values.isMultiplePages,
         isBothSides: values.isBothSides,
+        customPageRange: values.isMultiplePages && values.customPageRange ? values.customPageRange : undefined,
+        effectivePageCount: effectivePageCountForRequest,
         status: 'pending',
         requestedAt: serverTimestamp(),
         requestedBy: 'Anonymous' // TODO: Add user authentication
@@ -280,7 +376,10 @@ export default function PrintRequestPage() {
         subject: values.uploadMode === 'new' ? values.subject : selectedDoc?.subject || '',
         chapter: values.uploadMode === 'new' ? values.chapter : selectedDoc?.chapter || '',
         lessonNumber: values.uploadMode === 'new' ? values.lessonNumber : selectedDoc?.lessonNumber || '',
-        amountToPrint: values.amountToPrint
+        amountToPrint: values.amountToPrint,
+        isMultiplePages: values.isMultiplePages,
+        isBothSides: values.isBothSides,
+        customPageRange: values.customPageRange || undefined
       });
       setSubmissionSuccess(true);
       
@@ -332,6 +431,11 @@ export default function PrintRequestPage() {
                   <p><strong>Chapter:</strong> {successInfo.chapter}</p>
                   <p><strong>Lesson:</strong> {successInfo.lessonNumber}</p>
                   <p><strong>Copies to Print:</strong> {successInfo.amountToPrint}</p>
+                  <p><strong>Multiple Pages:</strong> {successInfo.isMultiplePages ? 'Yes' : 'No'}</p>
+                  <p><strong>Both Sides:</strong> {successInfo.isBothSides ? 'Yes' : 'No'}</p>
+                  {successInfo.isMultiplePages && successInfo.customPageRange && (
+                    <p><strong>Page Range:</strong> {successInfo.customPageRange}</p>
+                  )}
                 </div>
               </div>
               
@@ -364,6 +468,7 @@ export default function PrintRequestPage() {
               amountToPrint: 1,
               isMultiplePages: false,
               isBothSides: false,
+              customPageRange: '',
             }}
             validationSchema={validationSchema}
             onSubmit={handleSubmit}
@@ -468,33 +573,58 @@ export default function PrintRequestPage() {
                       </FormField>
                     </div>
 
-                    <FormField label="Description (Optional)" labelFor="description" hasTextareaHeight>
-                      {(fieldData) => (
-                        <Field 
-                          name="description" 
-                          as="textarea" 
-                          {...fieldData} 
-                          placeholder="Brief description of the document content..." 
-                        />
-                      )}
-                    </FormField>
-
                     <FormField label="PDF File" labelFor="pdfFile">
                       {(fieldData) => (
                         <>
-                          <input
-                            type="file"
-                            accept=".pdf"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0] || null;
-                              setFieldValue('pdfFile', file);
-                            }}
-                            className={fieldData.className}
-                          />
+                        <input
+                        type="file"
+                        accept=".pdf"
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0] || null;
+                            setFieldValue('pdfFile', file); // This line is correct
+
+                            // --- Add the PDF processing logic here ---
+                            if (file) {
+                            setIsProcessingPdf(true); // You'll need this state defined in PrintRequestPage
+                            try {
+                                // Ensure pdfjs-dist is imported and configured at the top of the file
+                                const arrayBuffer = await file.arrayBuffer();
+                                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                                const pdf = await loadingTask.promise;
+                                setPdfPageCount(pdf.numPages); // You'll need this state defined in PrintRequestPage
+                                console.log('PDF page count:', pdf.numPages);
+                                // Conditionally update Formik values based on page count
+                                if (pdf.numPages === 1) {
+                                setFieldValue('isMultiplePages', false);
+                                setFieldValue('isBothSides', false);
+                                }
+                            } catch (error) {
+                                console.error('Error reading PDF for page count:', error);
+                                toast.error('Failed to read PDF file for page count.');
+                                setPdfPageCount(null);
+                            } finally {
+                                setIsProcessingPdf(false);
+                            }
+                            } else {
+                            setPdfPageCount(null); // Reset page count if no file selected
+                            setFieldValue('isMultiplePages', false); // Reset if no file
+                            setFieldValue('isBothSides', false);   // Reset if no file
+                            }
+                            // --- End of PDF processing logic ---
+
+                        }}
+                        className={fieldData.className}
+                        />
                           <ErrorMessage name="pdfFile" component="div" className="text-red-500 text-sm mt-1" />
                           {values.pdfFile && (
                             <div className="text-sm text-gray-600 mt-1">
                               Selected: {values.pdfFile.name} ({(values.pdfFile.size / 1024 / 1024).toFixed(2)} MB)
+                              {isProcessingPdf && <span className="ml-2 text-blue-600">Processing...</span>}
+                              {pdfPageCount !== null && !isProcessingPdf && (
+                                <span className="ml-2 text-green-600">
+                                  • {pdfPageCount} page{pdfPageCount !== 1 ? 's' : ''}
+                                </span>
+                              )}
                             </div>
                           )}
                         </>
@@ -610,29 +740,52 @@ export default function PrintRequestPage() {
                         </>
                       )}
                     </FormField>
-
+                
                     <div className="flex items-center space-x-4">
-                      <label className="flex items-center">
-                        <Field
-                          type="checkbox"
-                          name="isMultiplePages"
-                          className="mr-2"
-                        />
-                        Multiple Pages
-                      </label>
+                        <label className="flex items-center">
+                            <Field
+                            type="checkbox"
+                            name="isMultiplePages"
+                            className="mr-2"
+                            disabled={pdfPageCount !== null && pdfPageCount <= 1} // Disable if 1 page or less
+                            />
+                            Multiple Pages
+                        </label>
                     </div>
 
                     <div className="flex items-center space-x-4">
-                      <label className="flex items-center">
-                        <Field
-                          type="checkbox"
-                          name="isBothSides"
-                          className="mr-2"
-                        />
-                        Print Both Sides
-                      </label>
+                        <label className="flex items-center">
+                            <Field
+                            type="checkbox"
+                            name="isBothSides"
+                            className="mr-2"
+                            disabled={pdfPageCount !== null && pdfPageCount <= 1} // Disable if 1 page or less
+                            />
+                            Print Both Sides
+                        </label>
                     </div>
                   </div>
+                  
+                  {/* Page Range Selection - Show only when Multiple Pages is checked */}
+                  {values.isMultiplePages && pdfPageCount && pdfPageCount > 1 && (
+                    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <FormField label="Page Range" labelFor="customPageRange">
+                        {(fieldData) => (
+                          <>
+                            <Field 
+                              name="customPageRange" 
+                              placeholder={`e.g., 1-3, 5, 8 (Total pages: ${pdfPageCount})`}
+                              {...fieldData} 
+                            />
+                            <ErrorMessage name="customPageRange" component="div" className="text-red-500 text-sm mt-1" />
+                            <div className="text-xs text-gray-500 mt-1">
+                              Leave empty to print all pages. Format: 1-3, 5, 8 (individual pages or ranges)
+                            </div>
+                          </>
+                        )}
+                      </FormField>
+                    </div>
+                  )}
                 </div>
 
                 {/* Submit Button */}

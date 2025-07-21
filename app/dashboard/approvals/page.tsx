@@ -63,6 +63,7 @@ interface EnrichedPrintRequest extends PrintRequest {
   lastPrinterUsed?: string;
   approvedAt?: any;
   approvedBy?: string;
+  pageCount?: number;
 }
 
 interface Printer {
@@ -152,7 +153,8 @@ export default function PrintApprovalsPage() {
                 lessonNumber: docData.lessonNumber,
                 description: docData.description,
                 teacherName: docData.teacherName,
-                teacherId: docData.teacherId
+                teacherId: docData.teacherId,
+                pageCount: docData.pageCount,
               };
             }
             return {
@@ -197,14 +199,14 @@ export default function PrintApprovalsPage() {
       case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200';
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-200';
       case 'printing': return 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200';
-      case 'completed': return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+      case 'printed': return 'bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-200';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
   };
 
   const getCardHeaderColor = (subject: string, status: string) => {
     if (status === 'rejected') return 'bg-gradient-to-r from-red-500 to-red-600';
-    if (status === 'approved') return 'bg-gradient-to-r from-green-500 to-green-600';
+    if (status === 'printed') return 'bg-gradient-to-r from-green-500 to-green-600';
     
     // Subject-based colors for pending/other statuses
     const colors = {
@@ -337,6 +339,7 @@ export default function PrintApprovalsPage() {
           copies: request.amountToPrint,
           duplex: request.isBothSides,
           paperSize: 'A4',
+          customPageRange: request.customPageRange,
           requestId: request.id
         })
       });
@@ -395,7 +398,7 @@ export default function PrintApprovalsPage() {
       
       // First update the status to approved
       await updateDoc(doc(db, 'printRequests', requestId), {
-        status: 'approved',
+        status: 'printed',
         approvedBy: 'Admin', // TODO: Add actual admin user info
         approvedAt: serverTimestamp()
       });
@@ -410,9 +413,9 @@ export default function PrintApprovalsPage() {
             loading: `Sending to ${selectedPrinter.displayName}...`,
             success: (success) => {
               if (success) {
-                // Update status to printing/completed
+                // Update status to printed
                 updateDoc(doc(db, 'printRequests', requestId), {
-                  status: 'printing',
+                  status: 'printed',
                   printedAt: serverTimestamp(),
                   printerUsed: selectedPrinter.name
                 });
@@ -678,7 +681,7 @@ export default function PrintApprovalsPage() {
             <nav className="-mb-px flex space-x-8">
               {[
                 { key: 'pending', label: 'Pending', count: printRequests.filter(r => r.status === 'pending').length },
-                { key: 'approved', label: 'Approved', count: printRequests.filter(r => r.status === 'approved').length },
+                { key: 'printed', label: 'Printed', count: printRequests.filter(r => r.status === 'printed').length },
                 { key: 'rejected', label: 'Rejected', count: printRequests.filter(r => r.status === 'rejected').length },
                 { key: 'all', label: 'All', count: printRequests.length }
               ].map(tab => (
@@ -784,19 +787,44 @@ export default function PrintApprovalsPage() {
                       <Icon path={mdiPrinter} size={16} className="text-gray-400 mr-2" />
                       <span className="text-gray-600 dark:text-gray-300">
                         {request.amountToPrint} {request.amountToPrint === 1 ? 'copy' : 'copies'}
-                        {request.isMultiplePages && ' • Multiple pages'}
+                        {/* Conditional rendering for page range */}
+                        {request.isMultiplePages && request.customPageRange
+                          ? ` • Pages ${request.customPageRange}` // Show custom range if available
+                          : request.isMultiplePages
+                            ? ' • Multiple pages' // Fallback to generic if customPageRange is not provided/empty
+                            : '' // No multiple pages info needed
+                        }
                         {request.isBothSides && ' • Both sides'}
                       </span>
                     </div>
 
-                    <div className="flex items-center text-sm">
-                      <Icon path={mdiFileDocumentCheckOutline} size={16} className="text-gray-400 mr-2" /> {/* Or another appropriate icon */}
+                    <div className="w-full lg:w-1/2 flex items-center text-sm">
+                      <Icon path={mdiFileDocumentCheckOutline} size={16} className="text-gray-400 mr-2" />
                       <span className="text-gray-600 dark:text-gray-300">
-                        Paper Sheets: {request.isBothSides 
-                          ? Math.ceil(request.amountToPrint / 2) 
-                          : request.amountToPrint}
+                        Paper Sheets: {(() => {
+                          const numCopies = request.amountToPrint || 1;
+                          const isBothSidesPrint = request.isBothSides;
+                          const totalDocumentPages = request.effectivePageCount || 1; // Use the fetched pageCount
+
+                          let pagesPerSingleCopy = 1;
+                          
+                          if (request.isMultiplePages) {
+                              // If customPageRange is specified, we don't try to parse it for exact page count on frontend
+                              // For calculation, we use the totalDocumentPages as a reasonable estimate.
+                              // The precise sheet count based on a parsed custom range should ideally be handled on the backend.
+                              pagesPerSingleCopy = totalDocumentPages; 
+                          } else {
+                              // Not multiple pages, so it's a single page print
+                              pagesPerSingleCopy = 1;
+                          }
+
+                          const rawTotalPagesToPrint = pagesPerSingleCopy * numCopies;
+                          const finalTotalSheets = Math.ceil(rawTotalPagesToPrint / (isBothSidesPrint ? 2 : 1));
+                          
+                          return finalTotalSheets;
+                        })()}
                       </span>
-                      </div>
+                    </div>
                     {/* Date */}
                     <div className="flex items-center text-sm">
                       <Icon path={mdiCalendarClock} size={16} className="text-gray-400 mr-2" />
@@ -850,7 +878,7 @@ export default function PrintApprovalsPage() {
                           label={processingRequest === request.id 
                             ? "Processing..." 
                             : selectedPrinter 
-                              ? `Approve and Print via ${selectedPrinter.displayName}`
+                              ? `Print`
                               : "Approve"
                           }
                           icon={processingRequest === request.id ? mdiReload : selectedPrinter ? mdiPrinter : mdiCheck}
@@ -867,7 +895,7 @@ export default function PrintApprovalsPage() {
                       </div>
                     )}
 
-                    {(request.status === 'approved' || request.status === 'printing' || request.status === 'completed') && (
+                    {(request.status === 'approved' || request.status === 'printing' || request.status === 'printed') && (
                       <div className="flex space-x-2">
                         <Button
                           color={selectedPrinter ? "info" : "warning"}
@@ -1038,6 +1066,9 @@ export default function PrintApprovalsPage() {
                   <p><strong>Amount:</strong> {selectedRequest.amountToPrint} copies</p>
                   <p><strong>Multiple Pages:</strong> {selectedRequest.isMultiplePages ? 'Yes' : 'No'}</p>
                   <p><strong>Both Sides:</strong> {selectedRequest.isBothSides ? 'Yes' : 'No'}</p>
+                  {selectedRequest.isMultiplePages && selectedRequest.customPageRange && (
+                    <p><strong>Page Range:</strong> {selectedRequest.customPageRange}</p>
+                  )}
                 </div>
               </div>
               

@@ -196,6 +196,7 @@ export async function POST(request: NextRequest) {
       copies = 1, 
       duplex = false,
       paperSize = 'A4',
+      customPageRange,
       requestId 
     } = body;
 
@@ -252,6 +253,7 @@ export async function POST(request: NextRequest) {
         paper: paperSize.toLowerCase(),
         'fit-to-page': true,
         'color': false, // Force black and white printing with a boolean
+        ...(customPageRange && { pages: customPageRange }), // Add page range if specified
         ...(printer.capabilities && {
           // Use printer's specific capabilities if available
           resolution: printer.capabilities.resolutions?.[0]

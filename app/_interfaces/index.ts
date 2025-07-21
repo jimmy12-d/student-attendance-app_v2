@@ -117,6 +117,7 @@ export interface Document {
   fileName: string;
   pdfUrl: string; // URL from Firebase Storage
   uploadedAt: Timestamp;
+  pageCount?: number;
   subject: string;
   chapter: string;
   lessonNumber: string;
@@ -132,7 +133,9 @@ export interface PrintRequest {
   amountToPrint: number;
   isMultiplePages: boolean;
   isBothSides: boolean;
-  status: 'pending' | 'approved' | 'rejected' | 'printing' | 'completed';
+  customPageRange?: string; // For selecting specific pages when isMultiplePages is true
+  effectivePageCount?: number;
+  status: 'pending' | 'approved' | 'rejected' | 'printing' | 'printed';
   requestedAt: Timestamp;
   requestedBy?: string; // User ID or name
   approvedBy?: string;
