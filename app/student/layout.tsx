@@ -93,18 +93,19 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
       <Toaster richColors position="top-center" />
-      <div className="md:ml-64 lg:ml-0 xl:ml-0">
+      <div className="relative min-h-screen md:ml-64 lg:ml-0 xl:ml-0">
         <StudentTopNav />
-        <main className="relative pb-20">
+        <main className="relative pb-24">
             <div className="p-6 max-w-2xl mx-auto">
                 {children}
             </div>
           <InstallPWA as_banner={true} />
         </main>
-        <StudentBottomNav />
-        <NotificationPermissionPrompt />
       </div>
+      <StudentBottomNav />
+      <NotificationPermissionPrompt />
     </>
   );
 } 

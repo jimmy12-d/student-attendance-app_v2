@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
+import fs from 'fs/promises';
+import path from 'path';
 
 // PrintNode API configuration
 const PRINTNODE_API_KEY = process.env.PRINTNODE_API_KEY;
@@ -90,6 +93,106 @@ async function downloadPdfAsBase64(pdfUrl: string): Promise<string> {
   }
 }
 
+async function generateReceiptPdf(transaction: any, pageHeight: number): Promise<string> {
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([226.77, pageHeight]); // Use dynamic height
+    const { width, height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const margin = 15; // Increased side margins
+
+    // --- Logo ---
+    const logoPath = path.resolve('./public', 'rodwell_logo.png');
+    const logoImageBytes = await fs.readFile(logoPath);
+    const logoImage = await pdfDoc.embedPng(logoImageBytes);
+    const logoDims = logoImage.scale(0.025);
+    page.drawImage(logoImage, {
+      x: (width - logoDims.width) / 2, // Center the logo
+      y: height - logoDims.height, // Reduced top margin
+      width: logoDims.width,
+      height: logoDims.height,
+    });
+
+    let y = height - logoDims.height - 10; // Adjusted starting Y
+
+    const centerTextX = (text: string, textFont: any, size: number) => (width - textFont.widthOfTextAtSize(text, size)) / 2;
+
+    // --- Headers ---
+    page.drawText('RODWELL LEARNING CENTER', { x: centerTextX('RODWELL LEARNING CENTER', boldFont, 9), y, font: boldFont, size: 9 });
+    y -= 13;
+    page.drawText('RECEIPT OF PAYMENT', { x: centerTextX('RECEIPT OF PAYMENT', font, 8), y, font, size: 8 });
+    y -= 13;
+
+    page.drawLine({ start: { x: margin, y: y }, end: { x: width - margin, y: y }, thickness: 0.5 });
+    y -= 13;
+
+    // --- Details ---
+    const detailFontSize = 10; // Increased text size
+    const labelX = margin;
+    const valueX = 85; // Increased to prevent overlap
+
+    page.drawText('Date:', { x: labelX, y, font: boldFont, size: detailFontSize });
+    page.drawText(new Date(transaction.date).toLocaleString(), { x: valueX, y, font, size: detailFontSize, maxWidth: width - margin - valueX });
+    y -= 13;
+    page.drawText('Method:', { x: labelX, y, font: boldFont, size: detailFontSize });
+    page.drawText(transaction.paymentMethod, { x: valueX, y, font, size: detailFontSize });
+    y -= 13;
+    page.drawText('Payment For:', { x: labelX, y, font: boldFont, size: detailFontSize });
+    page.drawText(transaction.paymentMonth, { x: valueX, y, font, size: detailFontSize, maxWidth: width - margin - valueX });
+    y -= 13;
+    page.drawText('Receipt #:', { x: labelX, y, font: boldFont, size: detailFontSize });
+    page.drawText(transaction.receiptNumber, { x: valueX, y, font, size: detailFontSize });
+    y -= 13;
+    page.drawText('Student:', { x: labelX, y, font: boldFont, size: detailFontSize });
+    page.drawText(transaction.studentName, { x: valueX, y, font, size: detailFontSize, maxWidth: width - margin - valueX });
+    y -= 13;
+    page.drawText('Class:', { x: labelX, y, font: boldFont, size: detailFontSize });
+    page.drawText(`${transaction.className} (${transaction.classType})`, { x: valueX, y, font, size: detailFontSize, maxWidth: width - margin - valueX });
+    y -= 13;
+
+    page.drawLine({ start: { x: margin, y: y }, end: { x: width - margin, y: y }, thickness: 0.5 });
+    y -= 13;
+
+    page.drawText('DESCRIPTION', { x: margin, y, font: boldFont, size: detailFontSize });
+    y -= 13;
+    page.drawText(`Monthly Fee - ${transaction.classType}`, { x: margin + 4, y, font, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
+    y -= 13;
+    page.drawText('Subjects Included:', { x: margin + 4, y, font: boldFont, size: detailFontSize });
+    y -= 11;
+    
+    const subjectsText = transaction.subjects.join(', ');
+    const textWidth = width - (margin + 8) * 2; 
+    const words = subjectsText.split(' ');
+    let line = '';
+    
+    for (const word of words) {
+        const testLine = line.length > 0 ? `${line} ${word}` : word;
+        const currentWidth = font.widthOfTextAtSize(testLine, detailFontSize);
+        if (currentWidth > textWidth) {
+            page.drawText(line, { x: margin + 8, y, font, size: detailFontSize });
+            y -= 11;
+            line = word;
+        } else {
+            line = testLine;
+        }
+    }
+    page.drawText(line, { x: margin + 8, y, font, size: detailFontSize });
+    y -= 13;
+
+
+    page.drawLine({ start: { x: margin, y: y }, end: { x: width - margin, y: y }, thickness: 0.5 });
+    y -= 16;
+
+    page.drawText('Amount Paid:', { x: margin, y, font: boldFont, size: 11 });
+    const amountText = `$${transaction.amount.toFixed(2)}`;
+    page.drawText(amountText, { x: width - margin - boldFont.widthOfTextAtSize(amountText, 11), y, font: boldFont, size: 11 });
+    y -= 22;
+
+    page.drawText('Thank you!', { x: centerTextX('Thank you!', boldFont, 9), y, font: boldFont, size: 9 });
+
+    return pdfDoc.saveAsBase64();
+}
+
 // API route handlers
 export async function GET(request: NextRequest) {
   console.log('\n✅ [PrintNode API] Received GET request at:', new Date().toISOString());
@@ -107,6 +210,34 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action');
     console.log(`🔍 [PrintNode API] Action: ${action}`);
 
+    // Debug PDF generation
+    if (action === 'debug-pdf') {
+      const mockTransaction = {
+        studentName: "John Doe",
+        className: "Class 12A",
+        classType: "Grade 12",
+        subjects: ["Math", "Chemistry", "Physics", "Khmer", "Biology", "History"],
+        amount: 150,
+        receiptNumber: "RCPT-1234567890",
+        paymentMonth: "July 2024",
+        paymentMethod: "Cash",
+        date: new Date().toISOString(),
+        transactionId: "test-123",
+        cashier: "Admin"
+      };
+
+      const pdfBase64 = await generateReceiptPdf(mockTransaction, 600);
+      const pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      
+      return new NextResponse(pdfBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'inline; filename="debug-receipt.pdf"'
+        }
+      });
+    }
+
     const client = new PrintNodeClient(PRINTNODE_API_KEY);
 
     switch (action) {
@@ -114,18 +245,11 @@ export async function GET(request: NextRequest) {
         const printers = await client.getPrinters();
         console.log(`🖨️ [PrintNode API] Found ${printers.length} total printers.`);
         
-        // Filter for Ricoh printers and add helpful metadata
-        const ricohPrinters = printers.filter((printer: any) => 
-          printer.name.toLowerCase().includes('ricoh') || 
-          printer.name.toLowerCase().includes('mp') ||
-          printer.description?.toLowerCase().includes('ricoh')
-        );
-        
+        // Return all printers, filtering will be done on the client side if needed
         return NextResponse.json({
           success: true,
-          printers: ricohPrinters,
-          allPrinters: printers,
-          message: `Found ${ricohPrinters.length} Ricoh printers out of ${printers.length} total`
+          printers: printers,
+          message: `Found ${printers.length} total printers`
         });
 
       case 'computers':
@@ -192,6 +316,11 @@ export async function POST(request: NextRequest) {
     const { 
       printerId, 
       pdfUrl, 
+      rawContent,
+      transactionData,
+      pageHeight, // New parameter for height
+      action = 'print', // 'print' or 'generate'
+      contentType = 'pdf_base64',
       title, 
       copies = 1, 
       duplex = false,
@@ -200,13 +329,33 @@ export async function POST(request: NextRequest) {
       requestId 
     } = body;
 
-    if (!printerId || !pdfUrl) {
-      console.error('[PrintNode API] Missing printerId or pdfUrl in request body.');
-      return NextResponse.json(
-        { error: 'Printer ID and PDF URL are required' },
-        { status: 400 }
-      );
+    if (!printerId && action === 'print') {
+        return NextResponse.json({ error: 'Printer ID is required for printing.' }, { status: 400 });
     }
+
+    let contentBase64;
+
+    if (transactionData) {
+        console.log(`📄 [PrintNode API] Generating PDF receipt with height: ${pageHeight}`);
+        contentBase64 = await generateReceiptPdf(transactionData, pageHeight);
+    } else if (pdfUrl) {
+      console.log('📄 [PrintNode API] Downloading PDF from:', pdfUrl);
+      contentBase64 = await downloadPdfAsBase64(pdfUrl);
+      console.log(`[PrintNode API] PDF downloaded, size: ${Math.round(contentBase64.length / 1024)} KB`);
+    } else if (rawContent) {
+      console.log('📄 [PrintNode API] Using raw content for printing.');
+      contentBase64 = Buffer.from(rawContent).toString('base64');
+      console.log(`[PrintNode API] Raw content encoded, size: ${Math.round(contentBase64.length / 1024)} KB`);
+    } else {
+        return NextResponse.json({ error: 'No content provided.' }, { status: 400 });
+    }
+
+    // If the action is just to generate the PDF, return it now.
+    if (action === 'generate') {
+        return NextResponse.json({ success: true, pdfBase64: contentBase64 });
+    }
+
+    // --- The rest of this logic is for the 'print' action ---
 
     const client = new PrintNodeClient(PRINTNODE_API_KEY);
 
@@ -235,29 +384,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Download PDF and convert to base64
-    console.log('📄 [PrintNode API] Downloading PDF from:', pdfUrl);
-    const pdfBase64 = await downloadPdfAsBase64(pdfUrl);
-    console.log(`[PrintNode API] PDF downloaded, size: ${Math.round(pdfBase64.length / 1024)} KB`);
-
-    // Prepare print job
     const printJob = {
       printerId: printerId,
       title: title || `Print Job - ${requestId || 'Unknown'}`,
-      contentType: 'pdf_base64',
-      content: pdfBase64,
+      contentType: 'pdf_base64', // Forcing raw PDF printing
+      content: contentBase64,
       source: 'Student Attendance App',
       options: {
         copies: copies,
-        duplex: duplex ? 'long-edge' : 'simplex',
-        paper: paperSize.toLowerCase(),
-        'fit-to-page': true,
-        'color': false, // Force black and white printing with a boolean
-        ...(customPageRange && { pages: customPageRange }), // Add page range if specified
-        ...(printer.capabilities && {
-          // Use printer's specific capabilities if available
-          resolution: printer.capabilities.resolutions?.[0]
-        })
       }
     };
 

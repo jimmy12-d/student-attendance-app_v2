@@ -158,7 +158,7 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                       {SUBJECT_ORDER.map(subjectKey => {
                         if (examScores.hasOwnProperty(subjectKey)) {
-                          const displayLabel = studentClassType === 'Grade 12 Social'
+                          const displayLabel = studentClassType === 'Grade 12S'
                             ? SOCIAL_STUDIES_LABELS[subjectKey] || subjectKey
                             : subjectKey;
 

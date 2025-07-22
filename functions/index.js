@@ -5,6 +5,7 @@ const { getStorage } = require("firebase-admin/storage");
 const {onRequest} = require("firebase-functions/v2/https");
 const {onObjectFinalized} = require("firebase-functions/v2/storage");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
@@ -12,6 +13,11 @@ const cors = require("cors")({ origin: true });
 const vision = require("@google-cloud/vision");
 const cosineSimilarity = require("cosine-similarity");
 const axios = require("axios");
+
+// --- START: Configuration for Telegram Gateway ---
+const TELEGRAM_GATEWAY_API_URL = "https://gatewayapi.telegram.org";
+// --- END: Configuration for Telegram Gateway ---
+
 
 // Initialize the Firebase Admin SDK
 admin.initializeApp();
@@ -164,18 +170,18 @@ exports.handleEnrollmentQueue = onDocumentCreated({
 
 // This function is now the single point of truth for linking a profile.
 // It assumes the user has ALREADY verified they own the phone number on the client-side.
-exports.linkStudentProfileWithVerifiedNumber = functions
-  .region("asia-southeast1")
-  .https.onCall(async (data, context) => {
-    if (!context.auth) {
-        throw new functions.https.HttpsError("unauthenticated", "Please sign in first.");
+exports.linkStudentProfileWithVerifiedNumber = onCall({
+  region: "asia-southeast1"
+}, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Please sign in first.");
     }
     
-    const { phoneNumber } = data;
-    const { uid, token } = context.auth;
+    const { phoneNumber } = request.data;
+    const { uid, token } = request.auth;
 
     if (!phoneNumber) {
-      throw new functions.https.HttpsError("invalid-argument", "Phone number is required.");
+      throw new HttpsError("invalid-argument", "Phone number is required.");
     }
 
     const normalizedPhone = normalizePhone(phoneNumber);
@@ -185,14 +191,14 @@ exports.linkStudentProfileWithVerifiedNumber = functions
     const studentQuery = await studentsRef.where("phone", "==", normalizedPhone).limit(1).get();
 
     if (studentQuery.empty) {
-        throw new functions.https.HttpsError("not-found", "This phone number is not registered with any student. Please contact a Rodwell administrator for assistance.");
+        throw new HttpsError("not-found", "This phone number is not registered with any student. Please contact a Rodwell administrator for assistance.");
     }
 
     const studentDoc = studentQuery.docs[0];
     const studentData = studentDoc.data();
     
     if (studentData.authUid) {
-      throw new functions.https.HttpsError("already-exists", "This student profile is already linked to a different login account.");
+      throw new HttpsError("already-exists", "This student profile is already linked to a different login account.");
     }
     
     // Link the account
@@ -429,24 +435,26 @@ exports.recognizeAndMarkAttendance = functions
   });
 */
 
-exports.verifyFaceForAttendance = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+exports.verifyFaceForAttendance = onCall({
+  region: "asia-southeast1"
+}, async (request) => {
     // 1. Verify admin and data
-    if (!context.auth || !context.auth.token.isAdmin) {
-      throw new functions.https.HttpsError("unauthenticated", "Authentication is required.");
+    if (!request.auth || !request.auth.token.isAdmin) {
+      throw new HttpsError("unauthenticated", "Authentication is required.");
     }
-    if (!data.image) {
-        throw new functions.https.HttpsError("invalid-argument", "An 'image' (base64) must be provided.");
+    if (!request.data.image) {
+        throw new HttpsError("invalid-argument", "An 'image' (base64) must be provided.");
     }
-    const adminEmail = context.auth.token.email;
+    const adminEmail = request.auth.token.email;
     
     try {
         // 2. Detect face in the provided image
-        const imageBuffer = Buffer.from(data.image, 'base64');
+        const imageBuffer = Buffer.from(request.data.image, 'base64');
         const [result] = await visionClient.faceDetection({ image: { content: imageBuffer } });
         const faces = result.faceAnnotations;
 
         if (!faces || faces.length === 0) {
-            throw new functions.https.HttpsError("not-found", "No face detected in the image.");
+            throw new HttpsError("not-found", "No face detected in the image.");
         }
         if (faces.length > 1) {
            console.log(`Multiple faces (${faces.length}) detected in verification photo. Using the most prominent one.`);
@@ -455,14 +463,14 @@ exports.verifyFaceForAttendance = functions.region("asia-southeast1").https.onCa
         // --- FIX: Use the new standardized embedding function ---
         const liveEmbedding = createNormalizedEmbedding(faces[0]);
         if (!liveEmbedding) {
-            throw new functions.https.HttpsError("internal", "Could not extract geometric features from the detected face.");
+            throw new HttpsError("internal", "Could not extract geometric features from the detected face.");
         }
         
         // 3. Find the best match from stored student embeddings
         const studentsSnapshot = await db.collection("students").where("facialEmbeddings", "!=", []).get();
 
         if (studentsSnapshot.empty) {
-            throw new functions.https.HttpsError("not-found", "No students have enrolled for facial recognition.");
+            throw new HttpsError("not-found", "No students have enrolled for facial recognition.");
         }
         
         let bestMatch = { studentId: null, studentData: null, similarity: 0 };
@@ -494,7 +502,7 @@ exports.verifyFaceForAttendance = functions.region("asia-southeast1").https.onCa
         console.log(`Best match: ${bestMatch.studentData?.fullName} with similarity ${bestMatch.similarity}`);
 
         if (bestMatch.similarity < SIMILARITY_THRESHOLD) {
-            throw new functions.https.HttpsError("not-found", "Could not recognize the student. Please try again or use another method.");
+            throw new HttpsError("not-found", "Could not recognize the student. Please try again or use another method.");
         }
 
         // 5. Matched: Proceed to mark attendance (logic aligned with redeemAttendancePasscode)
@@ -509,7 +517,7 @@ exports.verifyFaceForAttendance = functions.region("asia-southeast1").https.onCa
 
         if (!attendanceQuery.empty) {
             const existingStatus = attendanceQuery.docs[0].data().status;
-            throw new functions.https.HttpsError("already-exists", `${studentData.fullName} was already marked '${existingStatus}' today.`);
+            throw new HttpsError("already-exists", `${studentData.fullName} was already marked '${existingStatus}' today.`);
         }
         
         // --- The rest is attendance logic copied and adapted from redeemAttendancePasscode ---
@@ -567,11 +575,13 @@ exports.verifyFaceForAttendance = functions.region("asia-southeast1").https.onCa
     }
   });
 
-exports.generateAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
+exports.generateAttendancePasscode = onCall({
+  region: "asia-southeast1"
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "The function must be called while authenticated.");
   }
-  const uid = context.auth.uid;
+  const uid = request.auth.uid;
   const db = admin.firestore();
   const passcode = Math.random().toString(36).substring(2, 8).toUpperCase();
   const expires = admin.firestore.Timestamp.fromMillis(Date.now() + 60000); // Valid for 60 seconds
@@ -587,18 +597,20 @@ exports.generateAttendancePasscode = functions.region("asia-southeast1").https.o
   return { passcode: passcode };
 });
 
-exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+exports.redeemAttendancePasscode = onCall({
+  region: "asia-southeast1"
+}, async (request) => {
   const logger = functions.logger;
   const db = admin.firestore();
 
   // 1. Verify admin is making the call
-  if (!context.auth || !context.auth.token.email) {
-    throw new functions.https.HttpsError("unauthenticated", "Authentication is required.");
+  if (!request.auth || !request.auth.token.email) {
+    throw new HttpsError("unauthenticated", "Authentication is required.");
   }
-  const adminEmail = context.auth.token.email;
-  const passcode = data.passcode;
+  const adminEmail = request.auth.token.email;
+  const passcode = request.data.passcode;
   if (!passcode) {
-    throw new functions.https.HttpsError("invalid-argument", "A 'passcode' must be provided.");
+    throw new HttpsError("invalid-argument", "A 'passcode' must be provided.");
   }
 
   const passcodeRef = db.collection("attendancePasscodes").doc(passcode);
@@ -606,14 +618,14 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
 
   // 2. Validate the passcode
   if (!passcodeDoc.exists) {
-    throw new functions.https.HttpsError("not-found", "Invalid QR Code.");
+    throw new HttpsError("not-found", "Invalid QR Code.");
   }
   const passcodeData = passcodeDoc.data();
   if (passcodeData.used) {
-    throw new functions.https.HttpsError("already-exists", "This QR Code has already been used.");
+    throw new HttpsError("already-exists", "This QR Code has already been used.");
   }
   if (new Date() > passcodeData.expires.toDate()) {
-    throw new functions.https.HttpsError("deadline-exceeded", "This QR Code has expired.");
+    throw new HttpsError("deadline-exceeded", "This QR Code has expired.");
   }
 
   // 3. Mark passcode as used immediately to prevent race conditions
@@ -630,13 +642,13 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
 
   // 5. Validate lookups
   if (studentQuery.empty) {
-    throw new functions.https.HttpsError("not-found", "No student record is associated with this QR Code.");
+    throw new HttpsError("not-found", "No student record is associated with this QR Code.");
   }
   const studentDoc = studentQuery.docs[0];
   const studentData = studentDoc.data();
   if (!attendanceQuery.empty) {
     const existingStatus = attendanceQuery.docs[0].data().status;
-    throw new functions.https.HttpsError("already-exists", `${studentData.fullName} was already marked '${existingStatus}' today.`);
+    throw new HttpsError("already-exists", `${studentData.fullName} was already marked '${existingStatus}' today.`);
   }
 
   // 6. Calculate late status
@@ -728,18 +740,20 @@ exports.redeemAttendancePasscode = functions.region("asia-southeast1").https.onC
  * Links a student profile to the authenticated user's UID based on phone number.
  * This is a simplified version that does not require OTP verification.
  */
-exports.linkStudentByPhone = functions.region("asia-southeast1").https.onCall(async (data, context) => {
+exports.linkStudentByPhone = onCall({
+  region: "asia-southeast1"
+}, async (request) => {
   // Force redeploy 1
-  if (!context.auth) {
+  if (!request.auth) {
     throw new HttpsError("unauthenticated", "You must be logged in to perform this action.");
   }
 
-  const { phoneNumber } = data;
+  const { phoneNumber } = request.data;
   if (!phoneNumber) {
     throw new HttpsError("invalid-argument", "The function must be called with a 'phoneNumber' argument.");
   }
   
-  const uid = context.auth.uid;
+  const uid = request.auth.uid;
 
   try {
 
@@ -764,7 +778,7 @@ exports.linkStudentByPhone = functions.region("asia-southeast1").https.onCall(as
     
     // If we're here, the student exists and is not linked. Let's link them.
     // We will also add the user's email to the student document for reference.
-    const userEmail = context.auth.token.email;
+    const userEmail = request.auth.token.email;
     await studentDoc.ref.update({ authUid: uid, email: userEmail });
     
     return { success: true, message: "Your account has been successfully linked!" };
@@ -780,6 +794,186 @@ exports.linkStudentByPhone = functions.region("asia-southeast1").https.onCall(as
   }
 });
 
+
+/**
+ * [Callable Function]
+ * Generates and sends a one-time password (OTP) to a user's Telegram account
+ * by calling the official Telegram Gateway API.
+ */
+exports.sendTelegramOtp = onCall({
+  region: "asia-southeast1",
+  secrets: ["TELEGRAM_GATEWAY_TOKEN"], // Reference the secret by name
+}, async (request) => {
+    if (!request.data.phoneNumber) {
+        throw new HttpsError("invalid-argument", "The function must be called with a 'phoneNumber' argument in E.164 format.");
+    }
+    const { phoneNumber } = request.data; // e.g., '+85512345678'
+
+    // Access the secret value through the process.env
+    const telegramToken = process.env.TELEGRAM_GATEWAY_TOKEN;
+    if (!telegramToken) {
+        throw new HttpsError("internal", "Telegram Gateway token not configured.");
+    }
+
+    try {
+        const response = await axios.post(`${TELEGRAM_GATEWAY_API_URL}/sendVerificationMessage`, 
+          {
+            phone_number: phoneNumber,
+            code_length: 6, // Let Telegram generate a 6-digit code
+            ttl: 600, // Code is valid for 10 minutes (600 seconds)
+          }, 
+          {
+            headers: { 
+              'Authorization': `Bearer ${telegramToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (response.data.ok === true) {
+            const requestId = response.data.result.request_id;
+            logger.log(`Successfully requested OTP for ${phoneNumber}. Request ID: ${requestId}`);
+            // Return the request_id to the client, which is needed for verification.
+            return { success: true, requestId: requestId };
+        } else {
+            // The API call was successful but Telegram returned an error.
+            logger.error("Telegram Gateway API returned an error:", response.data);
+            throw new HttpsError("internal", response.data.error || "Failed to send OTP via Telegram Gateway.");
+        }
+
+    } catch (error) {
+        logger.error(`Failed to send OTP to ${phoneNumber} via Telegram Gateway.`, error.response ? error.response.data : error.message);
+        throw new HttpsError("internal", "An error occurred while communicating with the Telegram service.");
+    }
+});
+
+/**
+ * [Callable Function]
+ * Verifies an OTP with the Telegram Gateway, and if valid, handles the user login/linking logic.
+ */
+exports.verifyTelegramOtp = onCall({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_GATEWAY_TOKEN"], // Reference the secret by name
+}, async (request) => {
+    const { requestId, otp, phoneNumber } = request.data;
+    if (!requestId || !otp || !phoneNumber) {
+        throw new HttpsError("invalid-argument", "The function must be called with 'requestId', 'otp', and 'phoneNumber'.");
+    }
+
+    // Access the secret value through the process.env
+    const telegramToken = process.env.TELEGRAM_GATEWAY_TOKEN;
+    if (!telegramToken) {
+        throw new HttpsError("internal", "Telegram Gateway token not configured.");
+    }
+
+    // 1. Verify the OTP with the Telegram Gateway
+    try {
+      const response = await axios.post(`${TELEGRAM_GATEWAY_API_URL}/checkVerificationStatus`, 
+        {
+          request_id: requestId,
+          code: otp,
+        }, 
+        {
+          headers: { 
+            'Authorization': `Bearer ${telegramToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.ok !== true || response.data.result?.verification_status?.status !== 'code_valid') {
+        const errorStatus = response.data.result?.verification_status?.status || 'unknown_error';
+        logger.warn(`OTP verification failed for request ${requestId} with status: ${errorStatus}`);
+        throw new HttpsError("invalid-argument", "The OTP is incorrect or has expired. Please try again.");
+      }
+      logger.log(`OTP for request ${requestId} verified successfully.`);
+
+    } catch (error) {
+       if (error instanceof HttpsError) {
+          throw error;
+       }
+       logger.error(`Failed to verify OTP for request ${requestId}.`, error.response ? error.response.data : error.message);
+       throw new HttpsError("internal", "An error occurred while verifying the OTP with the Telegram service.");
+    }
+    
+    // --- OTP is valid, proceed with student linking and login logic ---
+
+    // 2. Normalize phone number for DB lookup
+    const normalizedPhoneForDB = normalizePhone(phoneNumber);
+    let e164Phone = phoneNumber.replace(/\D/g, '');
+    if (e164Phone.startsWith('0')) {
+        e164Phone = '855' + e164Phone.substring(1);
+    } else if (!e164Phone.startsWith('855')) {
+        e164Phone = '855' + e164Phone;
+    }
+    const e164PhoneWithPlus = `+${e164Phone}`;
+
+
+    // 3. Find the student by phone number
+    const studentQuery = await db.collection("students").where("phone", "==", normalizedPhoneForDB).limit(1).get();
+    if (studentQuery.empty) {
+        throw new HttpsError("not-found", "This phone number is not registered with any student. Please contact an administrator for assistance.");
+    }
+    
+    const studentDoc = studentQuery.docs[0];
+    const studentData = studentDoc.data();
+    let authUid = studentData.authUid;
+
+    // 4. Handle Auth User Linking
+    try {
+        const authUser = await admin.auth().getUserByPhoneNumber(e164PhoneWithPlus);
+        
+        if (authUid && authUid !== authUser.uid) {
+            throw new HttpsError("already-exists", "This student account is already linked with another user.");
+        }
+        
+        if (!authUid) {
+            await studentDoc.ref.update({ authUid: authUser.uid });
+            logger.log(`Linked existing auth user ${authUser.uid} to student ${studentDoc.id}`);
+        }
+        
+        authUid = authUser.uid;
+
+    } catch (error) {
+        if (error.code === "auth/user-not-found") {
+            if (authUid) {
+                throw new HttpsError("internal", "Account data is inconsistent. Please contact an administrator.");
+            }
+            
+            const newUser = await admin.auth().createUser({
+                phoneNumber: e164PhoneWithPlus,
+                displayName: studentData.fullName || "New Student",
+            });
+            authUid = newUser.uid;
+            
+            await studentDoc.ref.update({ authUid: authUid });
+            logger.log(`Created and linked new auth user ${authUid} to student ${studentDoc.id}`);
+
+        } else if (error instanceof HttpsError) {
+            throw error;
+        } else {
+            logger.error("Error fetching auth user:", error);
+            throw new HttpsError("internal", "An unexpected error occurred while verifying your account.");
+        }
+    }
+
+    // 5. Generate a custom token for the client to sign in with
+    const customToken = await admin.auth().createCustomToken(authUid);
+    
+    // 6. Return token and full student data for the client
+    return {
+        success: true,
+        token: customToken,
+        studentData: {
+            ...studentData,
+            id: studentDoc.id,
+            uid: authUid,
+            authUid: authUid,
+        },
+    };
+});
+
+
 // Note: The 'linkStudentProfileWithVerifiedNumber' function that previously existed
 // has been removed and replaced by the two functions above.
 
@@ -788,95 +982,133 @@ exports.linkStudentByPhone = functions.region("asia-southeast1").https.onCall(as
  * Automatically deletes documents and their associated files that are older than 30 days.
  * Runs daily at midnight UTC.
  */
-exports.cleanupOldDocuments = functions.pubsub.schedule('0 0 * * *')
-  .timeZone('UTC')
-  .onRun(async (context) => {
-    console.log('Starting cleanup of old documents...');
+exports.cleanupOldDocuments = onSchedule('0 0 * * *', async (event) => {
+  console.log('Starting cleanup of old documents...');
     
-    try {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      // Query documents older than 30 days
-      const oldDocumentsQuery = await db.collection('documents')
-        .where('uploadedAt', '<=', admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
-        .get();
-      
-      if (oldDocumentsQuery.empty) {
-        console.log('No old documents found to delete.');
-        return null;
-      }
-      
-      const storage = getStorage();
-      const bucket = storage.bucket();
-      let deletedCount = 0;
-      let errorCount = 0;
-      
-      // Process each old document
-      for (const docSnapshot of oldDocumentsQuery.docs) {
-        const docData = docSnapshot.data();
-        const docId = docSnapshot.id;
-        
-        try {
-          // Delete the file from Firebase Storage
-          if (docData.pdfUrl) {
-            // Extract file path from URL
-            const urlParts = docData.pdfUrl.split('/');
-            const filePathEncoded = urlParts[urlParts.length - 1].split('?')[0];
-            const filePath = decodeURIComponent(filePathEncoded);
-            
-            try {
-              await bucket.file(filePath).delete();
-              console.log(`Deleted file: ${filePath}`);
-            } catch (storageError) {
-              console.warn(`Failed to delete file ${filePath}:`, storageError.message);
-              // Continue with document deletion even if file deletion fails
-            }
-          }
-          
-          // Check for related print requests and delete them too
-          const relatedPrintRequests = await db.collection('printRequests')
-            .where('documentId', '==', docId)
-            .get();
-          
-          for (const printRequestDoc of relatedPrintRequests.docs) {
-            await printRequestDoc.ref.delete();
-            console.log(`Deleted related print request: ${printRequestDoc.id}`);
-          }
-          
-          // Delete the document from Firestore
-          await docSnapshot.ref.delete();
-          console.log(`Deleted document: ${docId} (${docData.fileName})`);
-          deletedCount++;
-          
-        } catch (error) {
-          console.error(`Error deleting document ${docId}:`, error);
-          errorCount++;
-        }
-      }
-      
-      console.log(`Cleanup completed. Deleted: ${deletedCount} documents, Errors: ${errorCount}`);
-      
-      // Log summary to a cleanup log collection for admin monitoring
-      await db.collection('cleanupLogs').add({
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        deletedDocuments: deletedCount,
-        errors: errorCount,
-        cutoffDate: admin.firestore.Timestamp.fromDate(thirtyDaysAgo)
-      });
-      
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    // Query documents older than 30 days
+    const oldDocumentsQuery = await db.collection('documents')
+      .where('uploadedAt', '<=', admin.firestore.Timestamp.fromDate(thirtyDaysAgo))
+      .get();
+    
+    if (oldDocumentsQuery.empty) {
+      console.log('No old documents found to delete.');
       return null;
-      
-    } catch (error) {
-      console.error('Error during cleanup process:', error);
-      
-      // Log error for admin monitoring
-      await db.collection('cleanupLogs').add({
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        error: error.message,
-        success: false
-      });
-      
-      throw new Error('Cleanup process failed');
     }
-  });
+    
+    const storage = getStorage();
+    const bucket = storage.bucket();
+    let deletedCount = 0;
+    let errorCount = 0;
+    
+    // Process each old document
+    for (const docSnapshot of oldDocumentsQuery.docs) {
+      const docData = docSnapshot.data();
+      const docId = docSnapshot.id;
+      
+      try {
+        // Delete the file from Firebase Storage
+        if (docData.pdfUrl) {
+          // Extract file path from URL
+          const urlParts = docData.pdfUrl.split('/');
+          const filePathEncoded = urlParts[urlParts.length - 1].split('?')[0];
+          const filePath = decodeURIComponent(filePathEncoded);
+          
+          try {
+            await bucket.file(filePath).delete();
+            console.log(`Deleted file: ${filePath}`);
+          } catch (storageError) {
+            console.warn(`Failed to delete file ${filePath}:`, storageError.message);
+            // Continue with document deletion even if file deletion fails
+          }
+        }
+        
+        // Check for related print requests and delete them too
+        const relatedPrintRequests = await db.collection('printRequests')
+          .where('documentId', '==', docId)
+          .get();
+        
+        for (const printRequestDoc of relatedPrintRequests.docs) {
+          await printRequestDoc.ref.delete();
+          console.log(`Deleted related print request: ${printRequestDoc.id}`);
+        }
+        
+        // Delete the document from Firestore
+        await docSnapshot.ref.delete();
+        console.log(`Deleted document: ${docId} (${docData.fileName})`);
+        deletedCount++;
+        
+      } catch (error) {
+        console.error(`Error deleting document ${docId}:`, error);
+        errorCount++;
+      }
+    }
+    
+    console.log(`Cleanup completed. Deleted: ${deletedCount} documents, Errors: ${errorCount}`);
+    
+    // Log summary to a cleanup log collection for admin monitoring
+    await db.collection('cleanupLogs').add({
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      deletedDocuments: deletedCount,
+      errors: errorCount,
+      cutoffDate: admin.firestore.Timestamp.fromDate(thirtyDaysAgo)
+    });
+    
+    return null;
+    
+  } catch (error) {
+    console.error('Error during cleanup process:', error);
+    
+    // Log error for admin monitoring
+    await db.collection('cleanupLogs').add({
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      error: error.message,
+      success: false
+    });
+    
+    throw new Error('Cleanup process failed');
+  }
+});
+
+
+/**
+ * [Callable Function]
+ * Gets the next available receipt number.
+ * This function uses a Firestore transaction to ensure that each number is unique.
+ */
+exports.getNextReceiptNumber = onCall({
+  region: "asia-southeast1" // Explicitly setting the region
+}, async (request) => {
+    // This function must be called while authenticated.
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "Authentication is required.");
+    }
+
+    const counterRef = db.collection("counters").doc("receiptNumber");
+
+    try {
+        const nextNumber = await db.runTransaction(async (transaction) => {
+            const counterDoc = await transaction.get(counterRef);
+
+            // If the counter doesn't exist, initialize it at 100.
+            if (!counterDoc.exists) {
+                transaction.set(counterRef, { currentNumber: 100 });
+                return 100;
+            }
+
+            // Otherwise, increment the current number.
+            const newNumber = counterDoc.data().currentNumber + 1;
+            transaction.update(counterRef, { currentNumber: newNumber });
+            return newNumber;
+        });
+
+        return { receiptNumber: nextNumber.toString() };
+
+    } catch (error) {
+        console.error("Error getting next receipt number:", error);
+        throw new HttpsError("internal", "Could not generate a receipt number.");
+    }
+});

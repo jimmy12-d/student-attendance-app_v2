@@ -6,7 +6,8 @@ import { useRouter, usePathname } from "next/navigation"; // For redirection and
 
 // Firebase Authentication
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../firebase-config"; // Adjust path to your firebase-config.js
+import { auth, db } from "../../firebase-config"; // Adjust path to your firebase-config.js
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 // Redux
 import { useAppDispatch } from "../_stores/hooks"; // Assuming this is your typed dispatch hook
@@ -40,12 +41,39 @@ export default function LayoutAuthenticated({ children }: Props) {
 
   const [isAuthLoading, setIsAuthLoading] = useState(true); // True while checking auth status
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Track if user is authenticated
+  const [pendingAttendanceCount, setPendingAttendanceCount] = useState(0);
+  const [pendingPermissionsCount, setPendingPermissionsCount] = useState(0);
+  const [pendingPrintRequestsCount, setPendingPrintRequestsCount] = useState(0);
   // --- END OF NEW AUTHENTICATION STATES AND HOOKS ---
 
   const handleRouteChange = () => {
     setIsAsideMobileExpanded(false);
     setIsAsideLgActive(false);
   };
+
+  useEffect(() => {
+    const q = query(collection(db, "attendance"), where("status", "==", "pending"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPendingAttendanceCount(snapshot.size);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, "permissions"), where("status", "==", "pending"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPendingPermissionsCount(snapshot.size);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, "printRequests"), where("status", "==", "pending"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPendingPrintRequestsCount(snapshot.size);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // --- NEW useEffect for Firebase Auth State Changes ---
   useEffect(() => {
@@ -82,29 +110,44 @@ export default function LayoutAuthenticated({ children }: Props) {
 
   const layoutAsidePadding = "xl:pl-60";
 
-  // --- NEW: Handle Loading State ---
+  // --- LOADING STATE ---
   if (isAuthLoading) {
+    // You can replace this with a more sophisticated loading spinner component
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-slate-900">
-        {/* You can use your Spinner component or simple text */}
-        {/* <Spinner /> */}
-        <p className="text-lg dark:text-white">Authenticating...</p>
+      <div className="flex justify-center items-center h-screen">
+        <div>Loading...</div>
       </div>
     );
   }
-  // --- END OF LOADING STATE HANDLING ---
 
-  // --- NEW: Handle Not Authenticated State ---
-  // If still not authenticated after loading, and on a dashboard path,
-  // router.replace in useEffect should have already triggered.
-  // This return null is a safeguard or for the brief moment before redirect fully happens.
-  if (!isAuthenticated && pathname.startsWith('/dashboard')) {
-    return null; 
-  }
-  // --- END OF NOT AUTHENTICATED HANDLING ---
-
-  // Render dashboard if authenticated
+  // --- AUTHENTICATED CONTENT ---
+  // If authenticated, render the dashboard layout
   if (isAuthenticated) {
+
+    const updatedMenuAside = menuAside.map(item => {
+      if (item.label === "Attendance" && item.menu) {
+        const totalPending = pendingAttendanceCount + pendingPermissionsCount;
+
+        const updatedSubMenu = item.menu.map(subItem => {
+          if (subItem.href === "/dashboard/record" && pendingAttendanceCount > 0) {
+            return { ...subItem, notificationCount: pendingAttendanceCount };
+          }
+          if (subItem.href === "/dashboard/permission" && pendingPermissionsCount > 0) {
+            return { ...subItem, notificationCount: pendingPermissionsCount };
+          }
+          return subItem;
+        });
+
+        return totalPending > 0 
+          ? { ...item, notificationCount: totalPending, menu: updatedSubMenu }
+          : { ...item, menu: updatedSubMenu };
+      }
+      if (item.href === "/dashboard/approvals" && pendingPrintRequestsCount > 0) {
+        return { ...item, notificationCount: pendingPrintRequestsCount };
+      }
+      return item;
+    });
+
     return (
       <div className={`overflow-hidden lg:overflow-visible`}>
         <div
@@ -135,7 +178,7 @@ export default function LayoutAuthenticated({ children }: Props) {
           <AsideMenu
             isAsideMobileExpanded={isAsideMobileExpanded}
             isAsideLgActive={isAsideLgActive}
-            menu={menuAside}
+            menu={updatedMenuAside}
             onAsideLgClose={() => setIsAsideLgActive(false)}
             onRouteChange={handleRouteChange} // This prop should now be fine
           />

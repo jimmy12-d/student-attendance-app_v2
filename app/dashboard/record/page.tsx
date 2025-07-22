@@ -2,17 +2,18 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { mdiClipboardListOutline, mdiTrashCan } from "@mdi/js";
+import { mdiClipboardListOutline, mdiAlertCircleOutline } from "@mdi/js";
 import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
 import CardBox from "../../_components/CardBox";
 import CardBoxModal from "../../_components/CardBox/Modal";
 import NotificationBar from "../../_components/NotificationBar";
 import TableAttendance, { AttendanceRecord } from "./TableAttendance";
-import { Student } from "../../_interfaces";
+import { Student, ColorButtonKey } from "../../_interfaces";
+import { toast } from 'sonner'
+
 
 import { db } from "../../../firebase-config";
-// VVVV  IMPORT onSnapshot, query, and orderBy  VVVV
 import {
   collection,
   onSnapshot,
@@ -20,8 +21,10 @@ import {
   orderBy,
   doc,
   deleteDoc,
+  updateDoc,
   getDocs,
-  Timestamp
+  Timestamp,
+  serverTimestamp
 } from "firebase/firestore";
 
 export default function AttendanceRecordPage() {
@@ -29,16 +32,16 @@ export default function AttendanceRecordPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State for delete confirmation modal
-  const [isDeleteModalActive, setIsDeleteModalActive] = useState(false);
-  const [recordToDelete, setRecordToDelete] = useState<AttendanceRecord | null>(null);
+  // State for modal
+  const [isModalActive, setIsModalActive] = useState(false);
+  const [recordInModal, setRecordInModal] = useState<AttendanceRecord | null>(null);
+  const [modalAction, setModalAction] = useState<'approve' | 'reject' | 'delete' | null>(null);
+
 
   useEffect(() => {
     setLoading(true);
 
     const fetchAndListen = async () => {
-        // First, get a static map of all students. 
-        // This is efficient if your student list doesn't change often.
         const studentsSnapshot = await getDocs(collection(db, "students"));
         const studentsMap = new Map<string, Student>();
         studentsSnapshot.forEach(docSnap => {
@@ -46,14 +49,12 @@ export default function AttendanceRecordPage() {
         });
 
         const recordsCollection = collection(db, "attendance");
-        // Create a query to order records by timestamp, with the newest ones first
         const q = query(recordsCollection, orderBy("timestamp", "desc"));
 
-        // Set up the real-time listener on the attendance collection
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const fetchedRecords: AttendanceRecord[] = querySnapshot.docs.map(docSnap => {
                 const data = docSnap.data();
-                const student = studentsMap.get(data.studentId); // Look up student from our map
+                const student = studentsMap.get(data.studentId);
 
                 return {
                     id: docSnap.id,
@@ -63,10 +64,15 @@ export default function AttendanceRecordPage() {
                     shift: student ? student.shift : (data.shift || 'N/A'),
                     status: data.status || 'Unknown',
                     date: data.date,
-                    timestamp: data.timestamp, // Ensure this field name is correct
+                    timestamp: data.timestamp,
                 } as AttendanceRecord;
-            });
-            setAttendanceRecords(fetchedRecords);
+            }).filter(record => record.status);
+            
+            // Separate pending records and put them at the top
+            const pendingRecords = fetchedRecords.filter(r => r.status === 'pending');
+            const otherRecords = fetchedRecords.filter(r => r.status !== 'pending');
+            
+            setAttendanceRecords([...pendingRecords, ...otherRecords]);
             setLoading(false);
         }, (error) => {
             console.error("Error with real-time listener: ", error);
@@ -74,7 +80,6 @@ export default function AttendanceRecordPage() {
             setLoading(false);
         });
 
-        // Return a cleanup function to unsubscribe from the listener when the component unmounts
         return unsubscribe;
     };
 
@@ -83,29 +88,83 @@ export default function AttendanceRecordPage() {
     return () => {
         unsubscribePromise.then(unsubscribe => unsubscribe && unsubscribe());
     };
-  }, []); // Empty array ensures the listener is set up only once
+  }, []);
 
-  const handleOpenDeleteModal = (record: AttendanceRecord) => {
-    setRecordToDelete(record);
-    setIsDeleteModalActive(true);
+  const handleApproveRecord = (record: AttendanceRecord) => {
+    setRecordInModal(record);
+    setModalAction('approve');
+    setIsModalActive(true);
+  };
+  
+  const handleDeleteOrRejectRecord = (record: AttendanceRecord, reason: 'rejected' | 'deleted') => {
+    setRecordInModal(record);
+    setModalAction(reason === 'rejected' ? 'reject' : 'delete');
+    setIsModalActive(true);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!recordToDelete) return;
+  const handleConfirmAction = async () => {
+    if (!recordInModal || !modalAction) return;
+    
+    const recordId = recordInModal.id;
+
     try {
-      await deleteDoc(doc(db, "attendance", recordToDelete.id));
-      // No need to manually update state, onSnapshot will handle the update automatically!
+        if (modalAction === 'approve') {
+            const recordRef = doc(db, "attendance", recordId);
+            await updateDoc(recordRef, {
+                status: 'present', // Or logic to determine 'late'
+                approvedAt: serverTimestamp(),
+                approvedBy: 'Admin' // Replace with actual admin user
+            });
+            toast.success(`Approved attendance for ${recordInModal.studentName}.`);
+        } else if (modalAction === 'reject') {
+            const recordRef = doc(db, "attendance", recordId);
+            await updateDoc(recordRef, {
+                status: 'rejected',
+                rejectedAt: serverTimestamp(),
+                rejectedBy: 'Admin'
+            });
+             toast.warning(`Rejected attendance for ${recordInModal.studentName}.`);
+        } else if (modalAction === 'delete') {
+            await deleteDoc(doc(db, "attendance", recordId));
+            toast.success("Record deleted successfully.");
+        }
     } catch (err) {
-      console.error("Error deleting record: ", err);
-      showFeedback('error', 'Failed to delete record.');
+      console.error(`Error processing action: ${modalAction}`, err);
+      toast.error(`Failed to ${modalAction} record.`);
     }
-    setIsDeleteModalActive(false);
-    setRecordToDelete(null);
+    
+    setIsModalActive(false);
+    setRecordInModal(null);
+    setModalAction(null);
   };
-
-  // Dummy showFeedback function if you don't have one
-  const showFeedback = (type: string, message: string) => {
-      alert(message);
+  
+  const getModalContent = () => {
+    if (!modalAction || !recordInModal) return { title: '', buttonColor: 'info' as ColorButtonKey, buttonLabel: '', content: '' };
+    switch(modalAction) {
+      case 'approve':
+        return {
+          title: "Confirm Approval",
+          buttonColor: 'success' as ColorButtonKey,
+          buttonLabel: "Approve",
+          content: `Are you sure you want to mark ${recordInModal.studentName} as present?`
+        };
+      case 'reject':
+         return {
+          title: "Confirm Rejection",
+          buttonColor: 'danger' as ColorButtonKey,
+          buttonLabel: "Reject",
+          content: `Are you sure you want to reject the attendance request for ${recordInModal.studentName}?`
+        };
+      case 'delete':
+        return {
+          title: "Confirm Deletion",
+          buttonColor: 'danger' as ColorButtonKey,
+          buttonLabel: "Delete",
+          content: `Are you sure you want to permanently delete this record for ${recordInModal.studentName}? This cannot be undone.`
+        };
+      default:
+        return { title: 'Confirm Action', buttonColor: 'info' as ColorButtonKey, buttonLabel: 'Confirm', content: 'Are you sure?' };
+    }
   }
 
   return (
@@ -117,7 +176,7 @@ export default function AttendanceRecordPage() {
       />
 
       {error && (
-        <NotificationBar color="danger" icon={mdiClipboardListOutline} className="mb-4">
+        <NotificationBar color="danger" icon={mdiAlertCircleOutline} className="mb-4">
           {error}
         </NotificationBar>
       )}
@@ -128,21 +187,22 @@ export default function AttendanceRecordPage() {
         ) : (
           <TableAttendance
             records={attendanceRecords}
-            onDeleteRecord={handleOpenDeleteModal}
+            onApproveRecord={handleApproveRecord}
+            onDeleteRecord={handleDeleteOrRejectRecord}
           />
         )}
       </CardBox>
 
-      {recordToDelete && (
+      {isModalActive && recordInModal && (
         <CardBoxModal
-          title="Confirm Delete"
-          buttonColor="danger"
-          buttonLabel="Delete"
-          isActive={isDeleteModalActive}
-          onConfirm={handleConfirmDelete}
-          onCancel={() => setIsDeleteModalActive(false)}
+          title={getModalContent().title}
+          buttonColor={getModalContent().buttonColor}
+          buttonLabel={getModalContent().buttonLabel}
+          isActive={isModalActive}
+          onConfirm={handleConfirmAction}
+          onCancel={() => setIsModalActive(false)}
         >
-          <p>Are you sure you want to delete this record?</p>
+          <p>{getModalContent().content}</p>
         </CardBoxModal>
       )}
     </SectionMain>

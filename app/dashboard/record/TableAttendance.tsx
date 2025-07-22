@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import Button from "../../_components/Button"; // Adjust path as needed
 import Buttons from "../../_components/Buttons"; // Adjust path as needed
-import { mdiTrashCan } from "@mdi/js";
+import { mdiTrashCan, mdiCheck, mdiClose } from "@mdi/js";
 
 const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined): string => {
     if (!dateInput) return 'N/A';
@@ -49,12 +49,13 @@ export interface AttendanceRecord {
 
 type Props = {
   records: AttendanceRecord[];
-  onDeleteRecord: (record: AttendanceRecord) => void;
+  onDeleteRecord: (record: AttendanceRecord, reason?: 'rejected' | 'deleted') => void;
+  onApproveRecord: (record: AttendanceRecord) => void;
   perPage?: number;
 };
 
 
-const TableAttendance = ({ records, onDeleteRecord, perPage = 10 }: Props) => {
+const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 10 }: Props) => {
   const [currentPage, setCurrentPage] = useState(0);
   const recordsPaginated = records.slice(
     perPage * currentPage,
@@ -96,6 +97,7 @@ const TableAttendance = ({ records, onDeleteRecord, perPage = 10 }: Props) => {
                     record.status.toLowerCase() === 'late' ? 'bg-yellow-200 text-yellow-800 border border-yellow-300' :
                     record.status.toLowerCase() === 'absent' ? 'bg-red-200 text-red-800' : // Kept your existing absent style
                     record.status.toLowerCase() === 'permission' ? 'bg-purple-200 text-purple-800' :
+                    record.status.toLowerCase() === 'pending' ? 'bg-blue-200 text-blue-800 animate-pulse' :
                     'bg-gray-100 text-gray-800' // Default for other statuses
                   }`}>
                     {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
@@ -114,15 +116,34 @@ const TableAttendance = ({ records, onDeleteRecord, perPage = 10 }: Props) => {
                     : 'N/A'}
                 </td>
                 <td className="text-center align-middle before:hidden lg:w-1 whitespace-nowrap">
-                <Buttons type="justify-center" noWrap>
-                    <Button
-                    color="danger"
-                    icon={mdiTrashCan}
-                    onClick={() => onDeleteRecord(record)}
-                    small
-                    isGrouped
-                    />
-                </Buttons>
+                  {record.status === 'pending' ? (
+                    <Buttons type="justify-center" noWrap>
+                      <Button
+                        color="success"
+                        icon={mdiCheck}
+                        onClick={() => onApproveRecord(record)}
+                        small
+                        isGrouped
+                      />
+                      <Button
+                        color="danger"
+                        icon={mdiClose}
+                        onClick={() => onDeleteRecord(record, 'rejected')}
+                        small
+                        isGrouped
+                      />
+                    </Buttons>
+                  ) : (
+                    <Buttons type="justify-center" noWrap>
+                        <Button
+                        color="danger"
+                        icon={mdiTrashCan}
+                        onClick={() => onDeleteRecord(record, 'deleted')}
+                        small
+                        isGrouped
+                        />
+                    </Buttons>
+                  )}
                 </td>
               </tr>
             ))}

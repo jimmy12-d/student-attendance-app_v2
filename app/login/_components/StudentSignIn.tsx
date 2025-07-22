@@ -12,6 +12,7 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail
 } from "firebase/auth";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { 
   collection, 
   query, 
@@ -41,6 +42,10 @@ const StudentSignIn = () => {
   // New state for identifier login
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+
+  // New state for phone login
+  const [phone, setPhone] = useState("");
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
 
   const isMobileDevice = () => {
     if (typeof navigator === 'undefined') return false;
@@ -126,6 +131,49 @@ const StudentSignIn = () => {
     }
   };
   
+  const handlePhoneSignInRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    // Basic phone validation for Cambodia
+    const phoneRegex = /^(0|855)?([1-9]\d{7,8})$/;
+    if (!phoneRegex.test(phone)) {
+        setError("Please enter a valid Cambodian phone number.");
+        setIsSubmitting(false);
+        return;
+    }
+
+    try {
+        const functions = getFunctions(auth.app, "asia-southeast1");
+        // This function needs to be created in your Firebase Functions backend
+        // It should take a phone number in E.164 format and send an OTP via Telegram.
+        const sendTelegramOtp = httpsCallable(functions, 'sendTelegramOtp');
+        
+        // Normalize phone to E.164 format for Telegram Gateway
+        let e164Phone = phone.replace(/\D/g, '');
+        if (e164Phone.startsWith('0')) {
+            e164Phone = '855' + e164Phone.substring(1);
+        } else if (!e164Phone.startsWith('855')) {
+            e164Phone = '855' + e164Phone;
+        }
+
+        const result = await sendTelegramOtp({ phoneNumber: `+${e164Phone}` });
+        const resultData = result.data as { success: boolean; requestId?: string; error?: string };
+        
+        if (resultData.success && resultData.requestId) {
+          router.push(`/login/verify-otp?phone=${encodeURIComponent(phone)}&requestId=${resultData.requestId}`);
+        } else {
+          throw new Error(resultData.error || "Failed to get request ID from server.");
+        }
+
+    } catch (error: any) {
+        console.error("Phone sign-in error:", error);
+        setError(error.message || "Failed to send OTP. Please try again later.");
+        setIsSubmitting(false);
+    }
+  };
+
   const handleIdentifierSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -187,27 +235,65 @@ const StudentSignIn = () => {
         </div>
       )}
 
-      <form onSubmit={handleIdentifierSignIn} className="space-y-4">
-          <FormField label="Email" labelFor="identifier">
-              {(fd) => <input type="text" id="identifier" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="Gmail" required className={fd.className}/>}
-          </FormField>
-          <FormField label="Password" labelFor="password">
-              {(fd) => <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required className={fd.className}/>}
-          </FormField>
-          <div className="text-right text-sm">
-            <button type="button" onClick={handleForgotPassword} className="font-medium text-company-purple hover:underline">
-                Forgot Password?
-            </button>
-          </div>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            color="success"
-            className="w-full"
-          >
-            {isSubmitting ? "Logging In..." : "Log In"}
-          </Button>
-      </form>
+      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+        <button
+          onClick={() => setLoginMethod('email')}
+          className={`flex-1 py-2 text-center font-medium transition-colors ${loginMethod === 'email' ? 'text-company-purple border-b-2 border-company-purple' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+        >
+          Email
+        </button>
+        <button
+          onClick={() => setLoginMethod('phone')}
+          className={`flex-1 py-2 text-center font-medium transition-colors ${loginMethod === 'phone' ? 'text-company-purple border-b-2 border-company-purple' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+        >
+          Phone
+        </button>
+      </div>
+
+      {loginMethod === 'email' && (
+        <form onSubmit={handleIdentifierSignIn} className="space-y-4">
+            <FormField label="Email" labelFor="identifier">
+                {(fd) => <input type="text" id="identifier" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="Gmail" required className={fd.className}/>}
+            </FormField>
+            <FormField label="Password" labelFor="password">
+                {(fd) => <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" required className={fd.className}/>}
+            </FormField>
+            <div className="text-right text-sm">
+              <button type="button" onClick={handleForgotPassword} className="font-medium text-company-purple hover:underline">
+                  Forgot Password?
+              </button>
+            </div>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              color="success"
+              className="w-full"
+            >
+              {isSubmitting ? "Logging In..." : "Log In"}
+            </Button>
+        </form>
+      )}
+
+      {loginMethod === 'phone' && (
+        <form onSubmit={handlePhoneSignInRequest} className="space-y-4">
+            <FormField label="Phone Number" labelFor="phone">
+                {(fd) => <input type="tel" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g., 0967639355" required className={fd.className}/>}
+            </FormField>
+             {/* This div is for spacing to match the email form */}
+            <div className="text-right text-sm h-[20px]">
+                &nbsp;
+            </div>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              color="success"
+              className="w-full"
+            >
+              {isSubmitting ? "Sending OTP..." : "Sign In with Phone"}
+            </Button>
+        </form>
+      )}
+
 
       <div className="relative flex items-center justify-center w-full my-6 border-t border-gray-200 dark:border-slate-700">
         <div className="absolute px-4 text-sm -translate-y-1/2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">

@@ -79,6 +79,7 @@ export interface MainState {
   isAdmin: boolean;
   notifications: AppNotification[];
   unreadNotificationCount: number;
+  isBottomNavVisible: boolean;
   // You might add an isAuthenticated flag here, updated by onAuthStateChanged,
   // but usually checking userName or userUid is sufficient.
 }
@@ -101,6 +102,7 @@ const initialState: MainState = {
   isAdmin: false,
   notifications: [],
   unreadNotificationCount: 0,
+  isBottomNavVisible: true,
 
   /* Field focus with ctrl+k (to register only once) */
   isFieldFocusRegistered: false,
@@ -168,6 +170,12 @@ export const mainSlice = createSlice({
     markAllNotificationsAsRead: (state) => {
       state.notifications.forEach(n => n.isRead = true);
       state.unreadNotificationCount = 0;
+    },
+    setUnreadNotificationCount: (state, action: PayloadAction<number>) => {
+      state.unreadNotificationCount = action.payload;
+    },
+    setBottomNavVisible: (state, action: PayloadAction<boolean>) => {
+      state.isBottomNavVisible = action.payload;
     }
   },
 });
@@ -185,6 +193,8 @@ export const {
   addNotification,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  setUnreadNotificationCount,
+  setBottomNavVisible,
 } = mainSlice.actions;
 
 export default mainSlice.reducer;

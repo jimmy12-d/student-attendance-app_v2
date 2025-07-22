@@ -22,35 +22,24 @@ const NotificationSettings = () => {
     };
     
     if (permission === 'loading') {
-        return <div className="h-10 bg-slate-700/50 rounded-lg animate-pulse"></div>;
+        return <div className="w-11 h-6 bg-slate-700 rounded-full animate-pulse"></div>;
     }
 
     const isEnabled = permission === 'granted';
 
     return (
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 flex justify-between items-center">
-            <div>
-                <h3 className="font-semibold text-base text-slate-100">Push Notifications</h3>
-                <p className="text-sm text-slate-400">Receive alerts for announcements and updates.</p>
-            </div>
-            <div className="flex items-center gap-4">
-                 <span className={`text-xs font-bold ${isEnabled ? 'text-green-400' : 'text-slate-500'}`}>
-                    {isEnabled ? 'Enabled' : 'Disabled'}
-                </span>
-                <button
-                    onClick={handleToggle}
-                    className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${
-                        isEnabled ? 'bg-company-purple' : 'bg-slate-600'
-                    }`}
-                >
-                    <span
-                        className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${
-                            isEnabled ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                    />
-                </button>
-            </div>
-        </div>
+        <button
+            onClick={handleToggle}
+            className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${
+                isEnabled ? 'bg-company-purple' : 'bg-slate-600'
+            }`}
+        >
+            <span
+                className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${
+                    isEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+            />
+        </button>
     );
 };
 

@@ -16,7 +16,7 @@ export default function AsideMenuList({
   ...props
 }: Props) {
   return (
-    <ul className={className}>
+    <ul className={`${className} ${isDropdownList ? 'space-y-1' : 'space-y-2'}`}>
       {menu.map((item, index) => (
         <AsideMenuItem
           key={index}

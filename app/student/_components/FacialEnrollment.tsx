@@ -26,15 +26,24 @@ const captureInstructions = [
     { text: "Perfect! One last shot looking directly at the camera.", pose: 'straight' },
 ];
 
-const FaceShapeSVG = ({ guideColor }: { guideColor: string }) => (
+const FaceShapeSVG = ({ guideColor, animate = false }: { guideColor: string; animate?: boolean }) => (
     <svg viewBox="0 0 300 400" className="absolute top-0 left-0 w-full h-full pointer-events-none">
-        <path 
-            d="M 150,50 Q 50,150 50,250 C 50,350 100,400 150,390 C 200,400 250,350 250,250 Q 250,150 150,50 Z" 
+        <path
+            d="M 150, 50 A 100, 150 0 1, 0 150, 350 A 100, 150 0 1, 0 150, 50 Z"
             strokeWidth="6"
             strokeDasharray="15 10"
             fill="none"
             className={`transition-all duration-300 ${guideColor}`}
-        />
+        >
+            {animate && (
+                <animate
+                    attributeName="stroke"
+                    values="#64748b;#7e3af2;#64748b" /* slate-500 to company-purple */
+                    dur="2s"
+                    repeatCount="indefinite"
+                />
+            )}
+        </path>
     </svg>
 );
 
@@ -58,7 +67,7 @@ const ProgressIndicator = ({ currentStep }: { currentStep: number }) => (
 );
 
 // --- The Main Enrollment Modal Component ---
-const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, onCancel: () => void, onComplete: () => void }) => {
+export const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, onCancel: () => void, onComplete: () => void }) => {
     const webcamRef = useRef<Webcam>(null);
     const modelRef = useRef<faceDetection.FaceDetector | null>(null);
     const animationFrameId = useRef<number | null>(null);
@@ -70,6 +79,12 @@ const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, on
     const [guideColor, setGuideColor] = useState('stroke-slate-500');
     const [capturedImages, setCapturedImages] = useState<string[]>([]);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    // --- UI state ---
+    const [showIntro, setShowIntro] = useState(true);
+    const [useFrontCamera, setUseFrontCamera] = useState(true);
+
+    const toggleCamera = () => setUseFrontCamera(prev => !prev);
 
     // --- Sound ---
     useEffect(() => {
@@ -275,9 +290,55 @@ const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, on
 
     const showSpinner = status === 'LOADING_MODEL';
 
+    // If we are still on the intro screen, render it and exit early
+    if (showIntro) {
+        return (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl p-8 w-full max-w-sm mx-4 text-white shadow-2xl flex flex-col items-center">
+                    
+                    <div className="w-full flex justify-start">
+                        <button onClick={onCancel} className="text-blue-400 font-semibold">
+                            Cancel
+                        </button>
+                    </div>
+
+                    <div className="relative w-32 h-32 my-8 flex items-center justify-center">
+                        {status === 'LOADING_MODEL' && (
+                            <div className="absolute -inset-2 rounded-full border-4 border-company-purple border-t-transparent animate-spin"></div>
+                        )}
+                        <img src="/smiling-face.png" alt="Face ID Setup" className="w-32 h-32" />
+                    </div>
+
+
+                    <h3 className="text-center text-2xl font-bold mb-3">Set Up Face Recognition</h3>
+                    <p className="text-center text-slate-300 mb-8 max-w-xs">
+                        First, position your face in the camera frame. Then move your head in a circle to show all the angles of your face.
+                    </p>
+
+                    <Button
+                        color="info"
+                        label={status === 'LOADING_MODEL' ? 'Loading AI Model...' : 'Get Started'}
+                        onClick={() => setShowIntro(false)}
+                        className="w-full"
+                        roundedFull
+                        disabled={status === 'LOADING_MODEL'}
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-slate-800 rounded-2xl p-6 w-full max-w-lg mx-4 text-white shadow-xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-slate-900/80 backdrop-blur-md rounded-2xl p-6 w-full max-w-lg mx-4 text-white shadow-xl relative">
+                {/* Flip camera button */}
+                <button
+                    onClick={toggleCamera}
+                    title="Flip camera"
+                    className="absolute top-4 right-4 bg-slate-700/60 backdrop-blur-md p-2 rounded-full"
+                >
+                    🔄
+                </button>
                 <h2 className="text-2xl font-bold text-center mb-2">Face Recognition Setup</h2>
                 
                 <ProgressIndicator currentStep={captureStep} />
@@ -288,12 +349,13 @@ const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, on
 
                 <div className="relative w-full aspect-square mx-auto my-4 rounded-lg overflow-hidden">
                     <Webcam
+                        key={useFrontCamera ? 'user' : 'environment'}
                         audio={false}
                         ref={webcamRef}
                         screenshotFormat="image/jpeg"
                         className="w-full h-full object-cover"
-                        videoConstraints={{ width: 480, height: 480, facingMode: 'user' }}
-                        style={{ transform: "scaleX(-1)" }}
+                        videoConstraints={{ width: 480, height: 480, facingMode: useFrontCamera ? 'user' : { exact: 'environment' } }}
+                        style={{ transform: useFrontCamera ? "scaleX(-1)" : "none" }}
                         onUserMedia={handleWebcamReady}
                     />
                     <FaceShapeSVG guideColor={guideColor} />
@@ -306,16 +368,17 @@ const EnrollmentView = ({ userUid, onCancel, onComplete }: { userUid: string, on
                     ) : null}
                 </div>
 
-                <div className="flex justify-center items-center mt-4 h-12">
+                <div className="flex justify-center items-center mt-4 h-20">
                      {status === 'DETECTING' && (
-                        <Button 
-                            color="info" 
-                            label={`Capture Photo ${captureStep + 1} of 4`}
+                        <button
                             onClick={handleCapture}
-                            disabled={!isReadyForCapture} 
-                        />
+                            disabled={!isReadyForCapture}
+                            className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-colors duration-300 ${isReadyForCapture ? 'border-company-purple' : 'border-slate-600'} disabled:opacity-50`}
+                        >
+                            <div className="w-16 h-16 bg-white rounded-full"></div>
+                        </button>
                      )}
-                     {status === 'UPLOADING' || status === 'COMPLETE' && <p>{feedback.text}</p>}
+                     {status !== 'DETECTING' && (status === 'UPLOADING' || status === 'COMPLETE') && <p>{feedback.text}</p>}
                 </div>
 
                  <div className="text-center mt-4">

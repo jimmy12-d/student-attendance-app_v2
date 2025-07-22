@@ -5,21 +5,59 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '@/app/_components/Icon';
 import { mdiHome, mdiCalendarCheck, mdiFileDocumentEdit, mdiAccountCircle } from '@mdi/js';
+import { useEffect, useState } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../../firebase-config';
+import { useAppSelector } from '@/app/_stores/hooks';
 
 export const navItems = [
   { name: 'Home', href: '/student/home', icon: mdiHome },
-  // { name: 'Attendance', href: '/student/attendance', icon: mdiCalendarCheck },
+  { name: 'Attendance', href: '/student/attendance', icon: mdiCalendarCheck },
   { name: 'Mock Exam', href: '/student/mock-exam', icon: mdiFileDocumentEdit },
   { name: 'Account', href: '/student/account', icon: mdiAccountCircle },
 ];
 
 export default function StudentBottomNav() {
   const pathname = usePathname();
+  const [currentNavItems, setCurrentNavItems] = useState(navItems);
+  const isBottomNavVisible = useAppSelector((state) => state.main.isBottomNavVisible);
+
+
+  useEffect(() => {
+    const navSettingsRef = doc(db, 'appSettings', 'studentBottomNav');
+
+    const unsubscribe = onSnapshot(navSettingsRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const settings = docSnap.data().navItems;
+        const updatedNavItems = navItems.filter(item => settings[item.name] !== false);
+        setCurrentNavItems(updatedNavItems);
+      } else {
+        // If the document doesn't exist, show all default items
+        setCurrentNavItems(navItems);
+      }
+    }, (error) => {
+      console.error("Error fetching nav settings:", error);
+      // Fallback to default nav items on error
+      setCurrentNavItems(navItems);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (!isBottomNavVisible) {
+    return null;
+  }
 
   return (
-    <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[75%] max-w-sm mx-auto">
+    <motion.nav
+      initial={{ y: 100 }}
+      animate={{ y: 0 }}
+      exit={{ y: 100 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[75%] max-w-sm mx-auto z-40"
+    >
       <div className="relative flex items-center justify-around bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg rounded-full shadow-lg border border-white/20">
-        {navItems.map((item) => {
+        {currentNavItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           return (
             <Link
@@ -60,6 +98,6 @@ export default function StudentBottomNav() {
           );
         })}
       </div>
-    </nav>
+    </motion.nav>
   );
 } 

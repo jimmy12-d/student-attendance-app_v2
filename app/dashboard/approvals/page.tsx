@@ -337,7 +337,7 @@ export default function PrintApprovalsPage() {
           pdfUrl: request.pdfUrl,
           title: `${request.subject} - ${request.chapter} (${request.lessonNumber})`,
           copies: request.amountToPrint,
-          duplex: request.isBothSides,
+          duplex: request.isBothSides ? 'long-edge' : 'one-sided',
           paperSize: 'A4',
           customPageRange: request.customPageRange,
           requestId: request.id

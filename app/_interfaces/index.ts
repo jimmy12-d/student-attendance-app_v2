@@ -12,8 +12,10 @@ export type MenuAsideItem = {
   target?: string;
   color?: ColorButtonKey;
   isLogout?: boolean;
+  isDivider?: boolean;
   menu?: MenuAsideItem[];
   onClick?: (item: MenuAsideItem) => void;
+  notificationCount?: number; // Add this line
 };
 
 export type MenuNavBarItem = {
@@ -81,10 +83,12 @@ export type UserForm = {
 
 export interface Student {
   id: string; // Firestore document ID
+  studentId: string;
   fullName: string;
   phone?: string; // Optional, as it wasn't in the display list
   class: string;
   shift: string;
+  lastPaymentMonth?: string; // e.g., "YYYY-MM"
   createdAt?: Timestamp | Date; // Firestore timestamp or Date object
   gracePeriodMinutes?: number; // Optional, as it wasn't in the display list
 }

@@ -23,12 +23,21 @@ type GroupedSetting = {
   subjects: string[];
 }
 
+type NavSettings = {
+  [key: string]: boolean;
+};
+
 const MockExamManagementPage = () => {
   const [settings, setSettings] = useState<ExamSetting[]>([]);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isMock3Published, setIsMock3Published] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [navSettings, setNavSettings] = useState<NavSettings>({});
+  const [isUpdatingNav, setIsUpdatingNav] = useState(false);
+  const [isLoadingNav, setIsLoadingNav] = useState(true);
+
 
   // Define the relabeling map, same as in the student dashboard
   const SOCIAL_STUDIES_LABELS: { [key: string]: string } = useMemo(() => ({
@@ -65,7 +74,32 @@ const MockExamManagementPage = () => {
       }
       setIsLoadingSettings(false);
     };
+
+    const fetchNavSettings = async () => {
+      setIsLoadingNav(true);
+      try {
+        const navSettingsRef = doc(db, 'appSettings', 'studentBottomNav');
+        const docSnap = await getDoc(navSettingsRef);
+        if (docSnap.exists() && docSnap.data().navItems) {
+          setNavSettings(docSnap.data().navItems);
+        } else {
+          // Default settings if not present
+          setNavSettings({
+            'Home': true,
+            'Attendance': true,
+            'Mock Exam': true,
+            'Account': true,
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching nav settings:", err);
+        setError((prev) => (prev ? `${prev} & Failed to load navigation settings.` : "Failed to load navigation settings."));
+      }
+      setIsLoadingNav(false);
+    };
+
     fetchData();
+    fetchNavSettings();
   }, []);
 
   const handleToggleMock3 = async () => {
@@ -82,6 +116,23 @@ const MockExamManagementPage = () => {
       setIsUpdating(false);
     }
   };
+
+  const handleToggleNavItem = async (itemName: string) => {
+    setIsUpdatingNav(true);
+    const newSettings = { ...navSettings, [itemName]: !navSettings[itemName] };
+    
+    try {
+      const navSettingsRef = doc(db, 'appSettings', 'studentBottomNav');
+      await setDoc(navSettingsRef, { navItems: newSettings }, { merge: true });
+      setNavSettings(newSettings);
+    } catch (error) {
+      console.error(`Failed to update ${itemName} status:`, error);
+      setError("Failed to update navigation settings. Please try again.");
+    } finally {
+      setIsUpdatingNav(false);
+    }
+  };
+
 
   // Group settings by mock exam, then by type and maxScore
   const groupedSettings = useMemo(() => {
@@ -119,6 +170,8 @@ const MockExamManagementPage = () => {
   }, [settings]);
 
   const mockOrder = ['mock3', 'mock2', 'mock1'];
+  const toggleableNavItems = ['Attendance', 'Mock Exam'];
+
 
   return (
     <SectionMain>
@@ -153,6 +206,39 @@ const MockExamManagementPage = () => {
         </p>
       </CardBox>
 
+      <CardBox className="mb-6 p-4">
+        <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">Student Navigation</h2>
+        <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+          Control which pages appear in the student's bottom navigation bar.
+        </p>
+        {isLoadingNav ? (
+          <div className="text-center p-4">Loading settings...</div>
+        ) : (
+          <div className="space-y-4">
+            {toggleableNavItems.map((itemName) => (
+              <div key={itemName} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+                <span className="font-medium text-gray-800 dark:text-gray-200">{itemName}</span>
+                <label htmlFor={`toggle-${itemName}`} className="flex items-center cursor-pointer">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      id={`toggle-${itemName}`}
+                      className="sr-only"
+                      checked={navSettings[itemName] ?? false}
+                      onChange={() => handleToggleNavItem(itemName)}
+                      disabled={isUpdatingNav}
+                    />
+                    <div className={`block w-14 h-8 rounded-full transition-colors ${navSettings[itemName] ? 'bg-indigo-600' : 'bg-gray-600'}`}></div>
+                    <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${navSettings[itemName] ? 'translate-x-6' : ''}`}></div>
+                  </div>
+                </label>
+              </div>
+            ))}
+            {isUpdatingNav && <div className="text-sm text-gray-500 animate-pulse text-center pt-2">Updating...</div>}
+          </div>
+        )}
+      </CardBox>
+
       {isLoadingSettings ? (
         <CardBox><p className="text-center p-4">Loading settings...</p></CardBox>
       ) : (
@@ -175,7 +261,7 @@ const MockExamManagementPage = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{group.type}</td>
                         <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
                           {group.subjects.map(subject => {
-                            const label = group.type === 'Grade 12 Social'
+                            const label = group.type === 'Grade 12S'
                               ? SOCIAL_STUDIES_LABELS[subject.toLowerCase()] || subject
                               : subject;
                             return label.charAt(0).toUpperCase() + label.slice(1);

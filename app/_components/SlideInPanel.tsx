@@ -1,9 +1,11 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './Icon';
 import { mdiClose } from '@mdi/js';
+import { useAppDispatch } from '../_stores/hooks';
+import { setBottomNavVisible } from '../_stores/mainSlice';
 
 interface SlideInPanelProps {
   isOpen: boolean;
@@ -13,10 +15,24 @@ interface SlideInPanelProps {
 }
 
 const SlideInPanel: React.FC<SlideInPanelProps> = ({ isOpen, onClose, title, children }) => {
+  const dispatch = useAppDispatch();
   const panelVariants = {
     hidden: { y: '100%' },
     visible: { y: '0%' },
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      dispatch(setBottomNavVisible(false));
+    } else {
+      // Add a small delay to allow the panel to animate out before the nav appears
+      const timer = setTimeout(() => {
+        dispatch(setBottomNavVisible(true));
+      }, 300); // This duration should ideally match your exit animation
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, dispatch]);
+
 
   return (
     <AnimatePresence>
@@ -40,8 +56,8 @@ const SlideInPanel: React.FC<SlideInPanelProps> = ({ isOpen, onClose, title, chi
             style={{ maxHeight: '90vh' }}
           >
             <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold">{title}</h2>
-              <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-700">
+              <h2 className="text-xl font-bold text-white">{title}</h2>
+              <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-700 text-white">
                 <Icon path={mdiClose} size={24} />
               </button>
             </div>

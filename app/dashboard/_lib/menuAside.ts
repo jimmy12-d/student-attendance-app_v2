@@ -13,6 +13,8 @@ import {
   mdiPhone,
   mdiQrcodeScan,
   mdiCardAccountDetails,
+  mdiCreditCard,
+  mdiCashCheck
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -23,9 +25,17 @@ const menuAside: MenuAsideItem[] = [
     label: "Dashboard",
   },
   {
-    href: "/dashboard/pos-student",
-    icon: mdiPhone,
-    label: "POS Student",
+    label: 'POS',
+    icon: mdiCreditCard,
+    href: '/dashboard/pos-student',
+  },
+  {
+    label: 'ABA Approvals',
+    icon: mdiCashCheck,
+    href: '/dashboard/aba-approvals',
+  },
+  {
+    isDivider: true,
   },
   {
     href: "/dashboard/scan-qr",
