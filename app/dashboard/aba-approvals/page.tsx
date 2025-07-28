@@ -43,8 +43,6 @@ interface AbaTransaction {
 const AbaApprovalsPage = () => {
   const [transactions, setTransactions] = useState<AbaTransaction[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [fromDate, setFromDate] = useState(new Date().toISOString().split('T')[0])
-  const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
   const [isModalActive, setIsModalActive] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<AbaTransaction | null>(null)
   const [students, setStudents] = useState<Student[]>([])
@@ -176,6 +174,18 @@ const AbaApprovalsPage = () => {
   const fetchTransactions = async () => {
     setIsLoading(true)
     try {
+      // Calculate the last 3 days automatically since ABA only allows this range
+      const today = new Date();
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(today.getDate() - 3);
+      
+      const formatDate = (date: Date) => {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+      };
+
+      const fromDate = formatDate(threeDaysAgo);
+      const toDate = formatDate(today);
+
       const response = await fetch(`/api/aba`, {
         method: 'POST',
         headers: {
@@ -184,7 +194,7 @@ const AbaApprovalsPage = () => {
         body: JSON.stringify({ fromDate, toDate }),
       });
       const data = await response.json()
-
+      console.log(data);
       if (!response.ok) {
         toast.error(data.error || 'Failed to fetch transactions.')
         setTransactions([])
@@ -194,7 +204,7 @@ const AbaApprovalsPage = () => {
       if (data && Array.isArray(data.data)) {
         setTransactions(data.data)
       } else {
-        toast.info(data.description || "No transactions found for the selected dates.")
+        toast.info(data.description || "No transactions found for the last 3 days.")
         setTransactions([])
       }
     } catch (error) {
@@ -212,20 +222,14 @@ const AbaApprovalsPage = () => {
 
   return (
     <SectionMain>
-      <SectionTitleLineWithButton icon={mdiCashCheck} title="ABA PayWay Approvals" main>
-        <div className="flex items-center space-x-2">
-            <div className="flex space-x-2">
-              <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="dark:bg-gray-700 border border-gray-300 rounded-md px-2 py-1"/>
-              <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="dark:bg-gray-700 border border-gray-300 rounded-md px-2 py-1"/>
-            </div>
-          <Button
-            label="Fetch Transactions"
-            color="info"
-            onClick={fetchTransactions}
-            icon={mdiRefresh}
-            disabled={isLoading}
-          />
-        </div>
+      <SectionTitleLineWithButton icon={mdiCashCheck} title="ABA PayWay Approvals (Last 3 Days)" main>
+        <Button
+          label="Refresh Transactions"
+          color="info"
+          onClick={fetchTransactions}
+          icon={mdiRefresh}
+          disabled={isLoading}
+        />
       </SectionTitleLineWithButton>
 
       <CardBox className="mb-6" hasTable>
@@ -276,7 +280,7 @@ const AbaApprovalsPage = () => {
             ) : (
               <tr>
                 <td colSpan={6} className="text-center">
-                  No transactions found for the selected date range.
+                  No transactions found for the last 3 days.
                 </td>
               </tr>
             )}

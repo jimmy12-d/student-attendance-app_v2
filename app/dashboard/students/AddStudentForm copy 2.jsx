@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useMemo} from 'react';
 import { db } from '../../../firebase-config';
 import { collection, addDoc, doc, setDoc, serverTimestamp, query, orderBy, getDocs} from "firebase/firestore";
-import { toast } from 'sonner';
 
 /**
  * @typedef {object} Student
@@ -38,12 +37,11 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
   const [isFetchingSheetData, setIsFetchingSheetData] = useState(false);
   const [sheetError, setSheetError] = useState(null);
 
-  const [gradeTypeFilter, setGradeTypeFilter] = useState(''); // To filter classes by type
-
   // Form fields state
   const [fullName, setFullName] = useState('');
   const [nameKhmer, setNameKhmer] = useState('');
   const [phone, setPhone] = useState('');
+  const [school, setSchool] = useState('');
   const [scheduleType, setScheduleType] = useState('');
   const [motherName, setMotherName] = useState('');
   const [motherPhone, setMotherPhone] = useState('');
@@ -86,13 +84,14 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
       setPhone(initialData.phone || '');
       setStudentClass(initialData.class || '');
       setShift(initialData.shift || '');
-      setScheduleType(initialData.scheduleType || '');
+      setSchool(initialData.school || '');
       setMotherName(initialData.motherName || '');
       setMotherPhone(initialData.motherPhone || '');
       setFatherName(initialData.fatherName || '');
       setFatherPhone(initialData.fatherPhone || '');
       setPhotoUrl(initialData.photoUrl || '');
       setAy(initialData.ay || '2026');
+      setScheduleType(initialData.scheduleType || '');
     } else {
       // Reset all fields for a new entry
       setIsEditMode(false);
@@ -101,16 +100,16 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
       setPhone('');
       setStudentClass('');
       setShift('');
-      setScheduleType('');
+      setSchool('');
       setMotherName('');
       setMotherPhone('');
       setFatherName('');
       setFatherPhone('');
       setPhotoUrl('');
       setAy('2026');
+      setScheduleType('');
       setTimestampInput('');
       setSheetError(null);
-      setGradeTypeFilter(''); // Reset the filter for new entries
     }
   }, [initialData]);
 
@@ -189,29 +188,15 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
     }
   }, [studentClass, allClassData, loadingClasses]);
 
+
   const filteredClassOptions = useMemo(() => {
-    let options = classOptions;
-
-    // Filter by grade type if a filter is set
-    if (gradeTypeFilter && allClassData) {
-      const filteredClassNames = Object.keys(allClassData).filter(
-        (className) => allClassData[className].type === gradeTypeFilter
-      );
-      options = filteredClassNames.map((name) => ({
-        value: name,
-        label: name,
-      }));
+    if (!classSearchTerm.trim()) {
+      return classOptions; // If search term is empty, show all original class options
     }
-
-    // Filter by search term
-    if (classSearchTerm.trim()) {
-      return options.filter((option) =>
-        option.label.toLowerCase().includes(classSearchTerm.toLowerCase())
-      );
-    }
-
-    return options;
-  }, [classOptions, allClassData, gradeTypeFilter, classSearchTerm]); 
+    return classOptions.filter(option =>
+      option.label.toLowerCase().includes(classSearchTerm.toLowerCase())
+    );
+  }, [classOptions, classSearchTerm]); 
 
   // A more reliable function to format timestamps for dd/MM/yyyy format
 const formatTimestamp = (input) => {
@@ -259,24 +244,36 @@ const handleFetchData = async () => {
       setSheetError(errorMessage);
     } else {
       // Response was successful and has no error key
-      const gradeFromSheet = data.grade || '';
-      setGradeTypeFilter(gradeFromSheet); // Set the filter
-
       setFullName(data.name || '');
       setNameKhmer(data.nameKhmer || '');
       setPhone(data.phoneNumber || '');
 
-      // Do not auto-select a class after fetching.
-      // The `gradeTypeFilter` will narrow down the options, but the user must make the final selection.
-      setStudentClass('');
+      // New logic to find class name by type from sheet's grade
+      const gradeFromSheet = data.grade;
+      if (gradeFromSheet && allClassData && Object.keys(allClassData).length > 0) {
+        const matchingClassName = Object.keys(allClassData).find(
+          (className) => allClassData[className].type === gradeFromSheet
+        );
+
+        if (matchingClassName) {
+          setStudentClass(matchingClassName);
+        } else {
+          console.warn(`No class found with type matching sheet grade: "${gradeFromSheet}"`);
+          setStudentClass(''); // Clear if no match found
+        }
+      } else {
+        setStudentClass(''); // Fallback to empty if no grade or no class data
+      }
       
       setShift(data.shift || '');
-      setScheduleType(data.school || '');
+      setScheduleType(data.scheduleType || '');
+      setSchool(data.school || '');
       setMotherName(data.motherName || '');
       setMotherPhone(data.motherPhone || '');
       setFatherName(data.fatherName || '');
       setFatherPhone(data.fatherPhone || '');
       setPhotoUrl(data.photoUrl || '');
+      setAy(data.ay || '2026');
       setSheetError(null);
     }
 
@@ -294,7 +291,7 @@ const handleFetchData = async () => {
     setError(null);
 
     if (!fullName || !studentClass || !shift) {
-      toast.error("Full Name, Class, and Shift are required.");
+      setError("Full Name, Class, and Shift are required.");
       setLoading(false);
       return;
     }
@@ -308,6 +305,7 @@ const handleFetchData = async () => {
         shift,
         ay,
         scheduleType,
+        school,
         motherName,
         motherPhone,
         fatherName,
@@ -318,20 +316,18 @@ const handleFetchData = async () => {
       if (isEditMode && initialData?.id) {
         const studentRef = doc(db, "students", initialData.id);
         await setDoc(studentRef, { ...studentData, updatedAt: serverTimestamp() }, { merge: true });
-        toast.success(`Student '${studentData.fullName}' has been updated successfully!`);
         if (onStudentAdded) {
           onStudentAdded(initialData.id);
         }
       } else {
         const docRef = await addDoc(collection(db, "students"), { ...studentData, authUid: '', createdAt: serverTimestamp() });
-        toast.success(`Student '${studentData.fullName}' has been added successfully!`);
         if (onStudentAdded) {
           onStudentAdded(docRef.id);
         }
       }
     } catch (err) {
       console.error("Error saving student: ", err);
-      toast.error("Failed to save student. Please try again.");
+      setError("Failed to save student. Please try again.");
     }
     setLoading(false);
   };
@@ -377,39 +373,6 @@ const handleFetchData = async () => {
     }
     return () => document.removeEventListener("mousedown", handleClickOutsideScheduleType);
   }, [isScheduleTypeDropdownOpen]);
-
-  // Helper function to convert Google Drive link to a direct image link
-  const getDisplayableImageUrl = (url) => {
-    if (!url || typeof url !== 'string') {
-      return null;
-    }
-
-    if (url.includes("drive.google.com")) {
-      // Regex to find the file ID from various Google Drive URL formats
-      // Handles both /file/d/FILE_ID/ and ?id=FILE_ID
-      const regex = /(?:drive\.google\.com\/(?:file\/d\/|open\?id=))([a-zA-Z0-9_-]+)/;
-      const match = url.match(regex);
-      
-      if (match && match[1]) {
-        const fileId = match[1];
-        // Return the preview URL for iframe embedding
-        const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-        return previewUrl;
-      }
-    }
-    
-    // If it's not a Google Drive link or no ID was found, return it as is
-    return url;
-  };
-
-  const handleImageError = (e) => {
-    console.error('Image failed to load:', e.target.src);
-  };
-
-  const handleImageLoad = (e) => {
-    console.log('Image loaded successfully:', e.target.src);
-  };
-
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -482,7 +445,7 @@ const handleFetchData = async () => {
         </div>
       </div>
 
-       {/* Row 2: Phone and Schedule Type */}
+       {/* Row 2: Phone and School */}
        <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6 gap-y-6 md:gap-y-0">
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -494,6 +457,36 @@ const handleFetchData = async () => {
             name="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+          />
+        </div>
+        <div>
+          <label htmlFor="school" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            School
+          </label>
+          <input
+            type="text"
+            id="school"
+            name="school"
+            value={school}
+            onChange={(e) => setSchool(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+          />
+        </div>
+      </div>
+
+      {/* Row 2.5: Academic Year and Schedule Type */}
+      <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6 gap-y-6 md:gap-y-0">
+        <div>
+          <label htmlFor="ay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Academic Year
+          </label>
+          <input
+            type="text"
+            id="ay"
+            name="ay"
+            value={ay}
+            onChange={(e) => setAy(e.target.value)}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
           />
         </div>
@@ -531,23 +524,6 @@ const handleFetchData = async () => {
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Row 2.5: Academic Year */}
-      <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6 gap-y-6 md:gap-y-0">
-        <div>
-          <label htmlFor="ay" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Academic Year
-          </label>
-          <input
-            type="text"
-            id="ay"
-            name="ay"
-            value={ay}
-            onChange={(e) => setAy(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
-          />
         </div>
       </div>
 
@@ -627,7 +603,7 @@ const handleFetchData = async () => {
             )}
           </div>
         </div>
-        {/* SHIFT DROPDOWN */}
+        {/* SHIFT DROPDOWN (NOW DYNAMIC) */}
         <div>
           <label htmlFor="shift-button" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Shift
@@ -760,28 +736,11 @@ const handleFetchData = async () => {
         {photoUrl && (
           <div className="mt-4">
             <p className="block text-sm font-medium text-gray-700 dark:text-gray-300">Photo Preview</p>
-            <div className="mt-2">
-              {photoUrl.includes("drive.google.com") ? (
-                <iframe 
-                  src={getDisplayableImageUrl(photoUrl)}
-                  className="h-64 w-64 rounded-lg border border-gray-300"
-                  title="Student Photo Preview"
-                  frameBorder="0"
-                  allow="autoplay"
-                />
-              ) : (
-                <img 
-                  src={getDisplayableImageUrl(photoUrl)} 
-                  alt="Student Preview" 
-                  className="h-64 w-64 rounded-lg object-cover shadow-md"
-                />
-              )}
-            </div>
+            <img src={photoUrl} alt="Student Preview" className="mt-2 h-40 w-40 rounded-lg object-cover shadow-md" />
           </div>
         )}
       </div>
 
-      {/* This error display can be removed or kept as a fallback */}
       {error && <p className="text-red-500 text-sm mb-3 -mt-2">{error}</p>}
       <div className="flex justify-end space-x-3 pt-2">
         {onCancel && (
@@ -805,4 +764,4 @@ const handleFetchData = async () => {
   );
 }
 
-export default AddStudentForm; 
+export default AddStudentForm;

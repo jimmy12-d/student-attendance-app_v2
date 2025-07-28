@@ -41,28 +41,29 @@ export default function AsideMenuLayer({
         {/* Header with gradient */}
         <div className="relative bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 dark:from-purple-800 dark:via-purple-900 dark:to-indigo-900">
           {/* Subtle pattern overlay */}
-          <div 
+          <div
             className="absolute inset-0 opacity-20"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
             }}
           ></div>
-          
-          <div className="relative flex items-center justify-between h-16 px-4">
+
+          <div className="relative flex items-center justify-between h-16">
             <div className="flex items-center space-x-3 flex-1">
               <div className="flex-shrink-0">
                 <RodwellLogo />
               </div>
-              <div className="min-w-0">
-                <h1 className="text-white font-bold text-lg truncate">
-                  Rodwell Learning
+              <div>
+                {/* Added 'leading-tight' here */}
+                <h1 className="text-white font-bold text-lg leading-tight">
+                  Rodwell Learning Center
                 </h1>
                 <p className="text-purple-200 text-xs font-medium">
                   Admin Dashboard
                 </p>
               </div>
             </div>
-            
+
             <button
               className="hidden lg:inline-flex xl:hidden p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors duration-200 text-white"
               onClick={handleAsideLgCloseClick}

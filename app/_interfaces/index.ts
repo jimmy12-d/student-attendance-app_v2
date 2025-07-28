@@ -85,9 +85,18 @@ export interface Student {
   id: string; // Firestore document ID
   studentId: string;
   fullName: string;
+  nameKhmer?: string; // Optional Khmer name
   phone?: string; // Optional, as it wasn't in the display list
   class: string;
   shift: string;
+  ay?: string; // Academic Year
+  scheduleType?: string; // Schedule Type
+  school?: string; // School
+  motherName?: string; // Mother's Name
+  motherPhone?: string; // Mother's Phone
+  fatherName?: string; // Father's Name
+  fatherPhone?: string; // Father's Phone
+  photoUrl?: string; // Photo URL
   lastPaymentMonth?: string; // e.g., "YYYY-MM"
   createdAt?: Timestamp | Date; // Firestore timestamp or Date object
   gracePeriodMinutes?: number; // Optional, as it wasn't in the display list

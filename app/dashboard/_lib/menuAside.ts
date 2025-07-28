@@ -34,9 +34,7 @@ const menuAside: MenuAsideItem[] = [
     icon: mdiCashCheck,
     href: '/dashboard/aba-approvals',
   },
-  {
-    isDivider: true,
-  },
+
   {
     href: "/dashboard/scan-qr",
     icon: mdiMonitor,

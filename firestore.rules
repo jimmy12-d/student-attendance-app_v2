@@ -92,5 +92,13 @@ service cloud.firestore {
       allow create: if true; // Cloud Functions don't have auth context
       allow update, delete: if isAuthorizedUser();
     }
+    
+    // Temporary rule to support client SDK fallback
+    // Remove this once Firebase Admin SDK is properly configured with service account credentials
+    match /processedAbaTransactions/{transactionId} {
+      // READ: Allow authorized users (for the UI) and unauthenticated requests (for server API routes)
+      allow read: if isAuthorizedUser() || request.auth == null;
+      allow write: if false;
+    }
   }
 } 

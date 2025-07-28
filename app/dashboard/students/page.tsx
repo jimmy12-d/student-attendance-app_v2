@@ -20,7 +20,7 @@ import CardBoxModal from "../../_components/CardBox/Modal";
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { collection, getDocs, deleteDoc, doc, Timestamp } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, Timestamp, query, where } from "firebase/firestore";
 
 // Interface
 import { Student } from "../../_interfaces"; // Ensure this path is correct
@@ -41,7 +41,9 @@ export default function StudentsPage() {
     setLoading(true);
     setError(null);
     try {
-      const querySnapshot = await getDocs(collection(db, "students"));
+      const studentsRef = collection(db, "students");
+      const q = query(studentsRef, where("ay", "==", "2026"));
+      const querySnapshot = await getDocs(q);
       const studentsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),

@@ -1,17 +1,17 @@
 // app/dashboard/layout.tsx
-"use client"; // Already a client component, which is good
+"use client";
 
-import React, { ReactNode, useState, useEffect } from "react"; // Added useEffect
-import { useRouter, usePathname } from "next/navigation"; // For redirection and current path
+import React, { ReactNode, useState, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 
 // Firebase Authentication
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "../../firebase-config"; // Adjust path to your firebase-config.js
+import { auth, db } from "../../firebase-config";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 // Redux
-import { useAppDispatch } from "../_stores/hooks"; // Assuming this is your typed dispatch hook
-import { setUser } from "../_stores/mainSlice"; // Your setUser action
+import { useAppDispatch } from "../_stores/hooks";
+import { setUser } from "../_stores/mainSlice";
 
 // Your existing imports
 import { mdiForwardburger, mdiBackburger, mdiMenu } from "@mdi/js";
@@ -22,9 +22,6 @@ import NavBar from "./_components/NavBar";
 import NavBarItemPlain from "./_components/NavBar/Item/Plain";
 import AsideMenu from "./_components/AsideMenu";
 import FooterBar from "./_components/FooterBar";
-import FormField from "../_components/FormField";
-import { Field, Form, Formik } from "formik";
-//import Spinner from "../_components/Spinner"; // Optional: for loading state
 
 type Props = {
   children: ReactNode;
@@ -34,23 +31,28 @@ export default function LayoutAuthenticated({ children }: Props) {
   const [isAsideMobileExpanded, setIsAsideMobileExpanded] = useState(false);
   const [isAsideLgActive, setIsAsideLgActive] = useState(false);
 
-  // --- NEW AUTHENTICATION STATES AND HOOKS ---
+  // --- AUTHENTICATION & NOTIFICATION STATES ---
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const pathname = usePathname(); // Get current path
+  const pathname = usePathname();
 
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // True while checking auth status
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Track if user is authenticated
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // States for notification counts
   const [pendingAttendanceCount, setPendingAttendanceCount] = useState(0);
   const [pendingPermissionsCount, setPendingPermissionsCount] = useState(0);
   const [pendingPrintRequestsCount, setPendingPrintRequestsCount] = useState(0);
-  // --- END OF NEW AUTHENTICATION STATES AND HOOKS ---
+  const [pendingAbaApprovalsCount, setPendingAbaApprovalsCount] = useState(0);
 
   const handleRouteChange = () => {
     setIsAsideMobileExpanded(false);
     setIsAsideLgActive(false);
   };
 
+  // --- DATA FETCHING EFFECTS ---
+
+  // Firestore listeners for real-time counts
   useEffect(() => {
     const q = query(collection(db, "attendance"), where("status", "==", "pending"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -75,13 +77,33 @@ export default function LayoutAuthenticated({ children }: Props) {
     return () => unsubscribe();
   }, []);
 
-  // --- NEW useEffect for Firebase Auth State Changes ---
+  // Polling for ABA pending count from the dedicated API endpoint
+  useEffect(() => {
+    const fetchAbaCount = async () => {
+      try {
+        const response = await fetch('/api/aba/pending-count');
+        if (response.ok) {
+          const data = await response.json();
+          setPendingAbaApprovalsCount(data.pendingCount || 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch ABA pending count:", error);
+        setPendingAbaApprovalsCount(0);
+      }
+    };
+
+    fetchAbaCount(); // Fetch on initial load
+    const interval = setInterval(fetchAbaCount, 60000); // Re-fetch every 60 seconds
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, []);
+
+  // Auth state listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // User is signed in
         dispatch(
-          setUser({ // Dispatch to Redux
+          setUser({
             name: user.displayName,
             email: user.email,
             avatar: user.photoURL,
@@ -90,29 +112,22 @@ export default function LayoutAuthenticated({ children }: Props) {
         );
         setIsAuthenticated(true);
       } else {
-        // User is signed out
-        dispatch(setUser(null)); // Clear user in Redux
+        dispatch(setUser(null));
         setIsAuthenticated(false);
-        // Only redirect if actually on a dashboard page and not already going to login
         if (pathname.startsWith('/dashboard')) {
-          router.replace("/login"); // Use replace to prevent back button to protected route
+          router.replace("/login");
         }
       }
-      setIsAuthLoading(false); // Finished checking auth state
+      setIsAuthLoading(false);
     });
-
-    // Cleanup subscription on unmount
-    return () => {
-      unsubscribe();
-    };
-  }, [dispatch, router, pathname]); // Dependencies for the effect
-  // --- END OF NEW useEffect ---
+    return () => unsubscribe();
+  }, [dispatch, router, pathname]);
+  
+  // --- RENDER LOGIC ---
 
   const layoutAsidePadding = "xl:pl-60";
 
-  // --- LOADING STATE ---
   if (isAuthLoading) {
-    // You can replace this with a more sophisticated loading spinner component
     return (
       <div className="flex justify-center items-center h-screen">
         <div>Loading...</div>
@@ -120,14 +135,11 @@ export default function LayoutAuthenticated({ children }: Props) {
     );
   }
 
-  // --- AUTHENTICATED CONTENT ---
-  // If authenticated, render the dashboard layout
   if (isAuthenticated) {
-
+    // Dynamically update menu with notification counts before rendering
     const updatedMenuAside = menuAside.map(item => {
       if (item.label === "Attendance" && item.menu) {
         const totalPending = pendingAttendanceCount + pendingPermissionsCount;
-
         const updatedSubMenu = item.menu.map(subItem => {
           if (subItem.href === "/dashboard/record" && pendingAttendanceCount > 0) {
             return { ...subItem, notificationCount: pendingAttendanceCount };
@@ -137,23 +149,25 @@ export default function LayoutAuthenticated({ children }: Props) {
           }
           return subItem;
         });
-
-        return totalPending > 0 
+        return totalPending > 0
           ? { ...item, notificationCount: totalPending, menu: updatedSubMenu }
           : { ...item, menu: updatedSubMenu };
       }
       if (item.href === "/dashboard/approvals" && pendingPrintRequestsCount > 0) {
         return { ...item, notificationCount: pendingPrintRequestsCount };
       }
+      if (item.href === "/dashboard/aba-approvals" && pendingAbaApprovalsCount > 0) {
+        return { ...item, notificationCount: pendingAbaApprovalsCount };
+      }
       return item;
     });
 
     return (
-      <div className={`overflow-hidden lg:overflow-visible`}>
+      <div>
         <div
           className={`${layoutAsidePadding} ${
             isAsideMobileExpanded ? "ml-60 lg:ml-0" : ""
-          } pt-14 min-h-screen w-screen transition-position lg:w-auto bg-gray-50 dark:bg-slate-800 dark:text-slate-100`}
+          } pt-14 w-screen transition-position lg:w-auto bg-gray-50 dark:bg-slate-800 dark:text-slate-100`}
         >
           <NavBar
             menu={menuNavBar}
@@ -180,9 +194,9 @@ export default function LayoutAuthenticated({ children }: Props) {
             isAsideLgActive={isAsideLgActive}
             menu={updatedMenuAside}
             onAsideLgClose={() => setIsAsideLgActive(false)}
-            onRouteChange={handleRouteChange} // This prop should now be fine
+            onRouteChange={handleRouteChange}
           />
-          {children} {/* This is where your actual dashboard page content goes */}
+          {children}
           <FooterBar>
             Get more with{` `}
             <a
@@ -199,7 +213,5 @@ export default function LayoutAuthenticated({ children }: Props) {
     );
   }
 
-  // Fallback if not authenticated and not loading (e.g. if on a path that somehow uses this layout but isn't /dashboard/*)
-  // Or if the redirect to /login is still processing.
-  return null; 
+  return null;
 }

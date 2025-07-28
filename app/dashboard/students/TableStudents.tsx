@@ -1,7 +1,7 @@
 // app/dashboard/students/TableStudents.tsx
 "use client";
 
-import { mdiPencil, mdiTrashCan } from "@mdi/js";
+import { mdiPencil, mdiTrashCan, mdiAccount } from "@mdi/js";
 import React from "react";
 import { Student } from "../../_interfaces";
 import Button from "../../_components/Button";
@@ -37,7 +37,32 @@ const formatPhoneNumber = (phone: string | undefined | null): string => {
   return phone; // Return original if it doesn't match formats
 };
 
+// Helper function to convert Google Drive link to a direct image link
+const getDisplayableImageUrl = (url: string | undefined) => {
+  if (!url || typeof url !== 'string') {
+    return null;
+  }
+
+  if (url.includes("drive.google.com")) {
+    // Regex to find the file ID from various Google Drive URL formats
+    const regex = /(?:drive\.google\.com\/(?:file\/d\/|open\?id=))([a-zA-Z0-9_-]+)/;
+    const match = url.match(regex);
+    
+    if (match && match[1]) {
+      const fileId = match[1];
+      // Use the thumbnail endpoint which is more reliable for embedding
+      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w80`;
+    }
+  }
+  
+  // If it's not a Google Drive link or no ID was found, return it as is
+  return url;
+};
+
 const TableStudents = ({ students, onEdit, onDelete }: Props) => {
+  // Define the desired order of shifts
+  const shiftOrder: ('Morning' | 'Afternoon' | 'Evening')[] = ['Morning', 'Afternoon', 'Evening'];
+
   // Filter out students who are missing a class property to prevent 'undefined' groups
   const validStudents = students.filter(student => student.class);
 
@@ -45,94 +70,259 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
   const groupedStudents = validStudents.reduce((acc, student) => {
     const { class: studentClass, shift } = student;
     if (!acc[studentClass]) {
-      acc[studentClass] = { Morning: [], Afternoon: [] };
+      acc[studentClass] = { Morning: [], Afternoon: [], Evening: [] };
     }
-    // Ensure shift is either 'Morning' or 'Afternoon' to avoid adding to wrong keys
-    if (shift === 'Morning' || shift === 'Afternoon') {
-      acc[studentClass][shift].push(student);
+    if (shift && shiftOrder.includes(shift as any)) {
+      acc[studentClass][shift as 'Morning' | 'Afternoon' | 'Evening'].push(student);
     }
     return acc;
-  }, {} as Record<string, { Morning: Student[]; Afternoon: Student[] }>);
+  }, {} as Record<string, { Morning: Student[]; Afternoon: Student[]; Evening: Student[] }>);
 
   // Sort students by fullName within each class and shift
   for (const classGroup of Object.values(groupedStudents)) {
-    classGroup.Morning.sort((a, b) => a.fullName.localeCompare(b.fullName));
-    classGroup.Afternoon.sort((a, b) => a.fullName.localeCompare(b.fullName));
+    shiftOrder.forEach(shift => {
+      if (classGroup[shift]) {
+        classGroup[shift].sort((a, b) => a.fullName.localeCompare(b.fullName));
+      }
+    });
   }
 
-  // 2. Get a sorted list of unique class names
-  const sortedClasses = Object.keys(groupedStudents).sort((a, b) =>
+  // 2. Partition classes into day (morning/afternoon) and evening lists
+  const dayShiftClasses: string[] = [];
+  const eveningShiftClasses: string[] = [];
+
+  const sortedAllClasses = Object.keys(groupedStudents).sort((a, b) =>
     a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
   );
+
+  sortedAllClasses.forEach(className => {
+    const group = groupedStudents[className];
+    if (group.Morning.length > 0 || group.Afternoon.length > 0) {
+      dayShiftClasses.push(className);
+    }
+    if (group.Evening.length > 0) {
+      eveningShiftClasses.push(className);
+    }
+  });
 
   // Helper component for rendering a table for a specific class/shift
   const ClassTable = ({ studentList }: { studentList: Student[] }) => (
     studentList.length > 0 ? (
-      <div>
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-100 dark:bg-slate-700">
-              <th className="p-2 text-left w-12">Nº</th>
-              <th className="p-2 text-left">Name</th>
-              <th className="p-2 text-left">Phone</th>
-              <th className="p-2 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {studentList.map((student, index) => (
-              <tr key={student.id} className="border-b border-gray-100 dark:border-slate-800">
-                <td className="p-2 text-center">{index + 1}</td>
-                <td data-label="Name" className="p-2">{student.fullName}</td>
-                <td data-label="Phone" className="p-2">{formatPhoneNumber(student.phone)}</td>
-                <td className="p-2 before:hidden whitespace-nowrap text-right">
-                  <Buttons type="justify-end" noWrap>
-                    <Button color="success" icon={mdiPencil} onClick={() => onEdit(student)} small isGrouped />
-                    <Button color="danger" icon={mdiTrashCan} onClick={() => onDelete(student)} small isGrouped />
-                  </Buttons>
-                </td>
+      <div className="overflow-hidden">
+        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800">
+          <table className="w-full border-separate border-spacing-0">
+            <thead className="sticky top-0 z-10">
+              <tr>
+                <th className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600 rounded-tl-lg">
+                  Nº
+                </th>
+                <th className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600">
+                  Student
+                </th>
+                <th className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600">
+                  Phone
+                </th>
+                <th className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600 rounded-tr-lg">
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+              {studentList.map((student, index) => (
+                <tr 
+                  key={student.id} 
+                  className="group hover:bg-blue-50 dark:hover:bg-slate-700/50 transition-all duration-200 ease-in-out hover:shadow-sm"
+                >
+                  <td className="p-3 text-center">
+                    <span className="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors duration-200">
+                      {index + 1}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        {student.photoUrl ? (
+                          <div className="relative">
+                            <img
+                              src={getDisplayableImageUrl(student.photoUrl) || ''}
+                              alt={student.fullName}
+                              className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-lg ring-2 ring-blue-100 dark:ring-blue-900/30"
+                              onError={(e) => {
+                                // Fallback to initials if image fails to load
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = target.nextElementSibling as HTMLElement;
+                                if (fallback) {
+                                  fallback.style.display = 'flex';
+                                }
+                              }}
+                            />
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg hidden">
+                              {student.fullName.charAt(0).toUpperCase()}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg">
+                            {student.fullName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
+                          {student.fullName}
+                        </p>
+                        {student.nameKhmer && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {student.nameKhmer}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-3">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600 transition-colors duration-200">
+                      {formatPhoneNumber(student.phone)}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center justify-center space-x-2">
+                      <button
+                        onClick={() => onEdit(student)}
+                        className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-white hover:bg-blue-600 dark:text-blue-400 dark:hover:bg-blue-500 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                        title="Edit Student"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => onDelete(student)}
+                        className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:bg-red-500 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                        title="Delete Student"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     ) : (
-      <div className="text-center text-gray-500 dark:text-gray-400 py-4 h-full flex items-center justify-center">No students</div>
+      <div className="flex flex-col items-center justify-center py-12 px-4">
+        <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+          </svg>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center">No students assigned</p>
+      </div>
     )
   );
 
   return (
-    <div className="space-y-6 bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
-      {/* Titles */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-8">
-        <h2 className="text-2xl font-bold text-center">Morning Shift</h2>
-        <h2 className="text-2xl font-bold text-center">Afternoon Shift</h2>
-      </div>
-
-      <hr className="border-slate-200 dark:border-slate-800" />
-
-      {/* Class Rows */}
-      {sortedClasses.map((className) => (
-        <div key={className} className="grid grid-cols-1 lg:grid-cols-2 lg:gap-8 items-stretch">
+    <div className="space-y-8 p-6 pb-24 bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Morning & Afternoon Section */}
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              Day Shifts
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Morning & Afternoon Classes</p>
+          </div>
           
-          {/* Morning Card */}
-          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-4 flex flex-col">
-            <h3 className="font-bold text-lg mb-3 text-center">{className}</h3>
-            <div className="flex-grow">
-              <ClassTable studentList={groupedStudents[className].Morning} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="text-center">
+              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full shadow-lg mb-4">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span className="font-semibold">Morning Shift</span>
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full shadow-lg mb-4">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span className="font-semibold">Afternoon Shift</span>
+              </div>
             </div>
           </div>
 
-          {/* Afternoon Card */}
-          <div className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-lg p-4 flex flex-col">
-            <h3 className="font-bold text-lg mb-3 text-center">{className}</h3>
-            <div className="flex-grow">
-              <ClassTable studentList={groupedStudents[className].Afternoon} />
+          {dayShiftClasses.length > 0 ? (
+            <div className="space-y-6">
+              {dayShiftClasses.map(className => (
+                <div key={`${className}-day`} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{className}</h3>
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+                        {groupedStudents[className]['Morning'].length} students
+                      </span>
+                    </div>
+                    <ClassTable studentList={groupedStudents[className]['Morning']} />
+                  </div>
+                  <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{className}</h3>
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+                        {groupedStudents[className]['Afternoon'].length} students
+                      </span>
+                    </div>
+                    <ClassTable studentList={groupedStudents[className]['Afternoon']} />
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-
+          ) : (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+              </div>
+              <p className="text-gray-500 dark:text-gray-400">No students in Morning or Afternoon shifts.</p>
+            </div>
+          )}
         </div>
-      ))}
-    </div>
+
+        {/* Evening Section */}
+        {eveningShiftClasses.length > 0 && (
+          <div className="space-y-6 pt-8 border-t border-gray-200 dark:border-slate-700">
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
+                Evening Shift
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Night Classes</p>
+              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full shadow-lg">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+                <span className="font-semibold">Evening Classes</span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {eveningShiftClasses.map(className => (
+                <div key={`${className}-evening`} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{className}</h3>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
+                      {groupedStudents[className].Evening.length} students
+                    </span>
+                  </div>
+                  <ClassTable studentList={groupedStudents[className].Evening} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
   );
 };
 

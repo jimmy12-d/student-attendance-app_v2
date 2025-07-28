@@ -35,6 +35,27 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'fromDate and toDate are required in the request body' }, { status: 400 });
         }
 
+        // Helper function to format date as YYYY-MM-DD HH:mm:ss as required by the ABA API
+        const formatDateTime = (dateInput: string | Date) => {
+            const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+            
+            if (isNaN(date.getTime())) {
+                throw new Error(`Invalid date: ${dateInput}`);
+            }
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        };
+
+        // Format the dates properly
+        const formattedFromDate = formatDateTime(fromDate);
+        const formattedToDate = formatDateTime(toDate);
+
         const now = new Date();
         const req_time = now.getFullYear().toString() +
             String(now.getMonth() + 1).padStart(2, '0') +
@@ -46,9 +67,9 @@ export async function POST(request: NextRequest) {
         const requestBody = {
             req_time: req_time,
             merchant_id: ABA_PAYWAY_MERCHANT_ID,
-            from_date: null,
-            to_date: null,
-            from_amount: "0.01",
+            from_date: formattedFromDate,
+            to_date: formattedToDate,
+            from_amount: "50",
             to_amount: "1000",
             status: null,
             page: "1",

@@ -456,12 +456,15 @@ const POSStudentPage = () => {
                         </FormField>
                     </CardBox>
                     <CardBox className="flex-grow">
-                        {loading ? <LoadingSpinner /> : 
+                        {loading ? <LoadingSpinner /> :
                             <div className="space-y-2">
                                 {filteredStudents.map(student => (
-                                    <div key={student.id} 
-                                         className={`p-3 border rounded-lg cursor-pointer flex items-center justify-between
-                                         ${selectedStudent?.id === student.id ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}
+                                    <div key={student.id}
+                                         className={`p-3 border-2 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between
+                                         ${selectedStudent?.id === student.id
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105'
+                                            : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                         }`}
                                          onClick={() => handleSelectStudent(student)}>
                                         <div>
                                             <p className="font-semibold">{student.fullName}</p>
