@@ -74,40 +74,41 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 1
         <table>
           <thead>
             <tr>
-              <th>Student Name</th>
-              <th>Class</th>
-              <th>Shift</th>
-              <th>Status</th>
-              <th>Date</th>
-              <th>Time
-                <span title="Ordered by time" className="ml-1 align-middle text-xs text-gray-400">▼</span>
+              <th className="dark:text-white">Student Name</th>
+              <th className="dark:text-white">Class</th>
+              <th className="dark:text-white">Shift</th>
+              <th className="dark:text-white">Status</th>
+              <th className="dark:text-white">Date</th>
+              <th className="dark:text-white">
+                Time
+                <span title="Ordered by time" className="ml-1 align-middle text-xs text-gray-400 dark:text-gray-500">▼</span>
               </th>
-              <th>Actions</th>
+              <th className="dark:text-white">Actions</th>
             </tr>
           </thead>
           <tbody>
             {recordsPaginated.map((record: AttendanceRecord) => (
               <tr key={record.id}>
-                <td data-label="Student Name">{record.studentName}</td>
-                <td data-label="Class">{record.class || 'N/A'}</td>
-                <td data-label="Shift">{record.shift || 'N/A'}</td>
+                <td data-label="Student Name" className="dark:text-white">{record.studentName}</td>
+                <td data-label="Class" className="dark:text-white">{record.class || 'N/A'}</td>
+                <td data-label="Shift" className="dark:text-white">{record.shift || 'N/A'}</td>
                 <td data-label="Status">
                   <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    record.status.toLowerCase() === 'present' ? 'bg-green-200 text-green-800' :
-                    record.status.toLowerCase() === 'late' ? 'bg-yellow-200 text-yellow-800 border border-yellow-300' :
-                    record.status.toLowerCase() === 'absent' ? 'bg-red-200 text-red-800' : // Kept your existing absent style
-                    record.status.toLowerCase() === 'permission' ? 'bg-purple-200 text-purple-800' :
-                    record.status.toLowerCase() === 'pending' ? 'bg-blue-200 text-blue-800 animate-pulse' :
-                    'bg-gray-100 text-gray-800' // Default for other statuses
+                    record.status.toLowerCase() === 'present' ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200' :
+                    record.status.toLowerCase() === 'late' ? 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-600' :
+                    record.status.toLowerCase() === 'absent' ? 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200' :
+                    record.status.toLowerCase() === 'permission' ? 'bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200' :
+                    record.status.toLowerCase() === 'pending' ? 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 animate-pulse' :
+                    'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200' // Default for other statuses
                   }`}>
                     {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
                   </span>
                 </td>
-                <td data-label="Date" className="whitespace-nowrap">
+                <td data-label="Date" className="whitespace-nowrap dark:text-white">
                 {/* Use the formatting function on record.date */}
                 {formatDateToDDMMYYYY(record.date)}
                 </td>
-                <td data-label="Time" className="whitespace-nowrap">
+                <td data-label="Time" className="whitespace-nowrap dark:text-white">
                     {/* Your existing time formatting logic using record.timestamp */}
                     {record.timestamp instanceof Timestamp
                     ? record.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
@@ -167,7 +168,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 1
               />
             ))}
           </Buttons>
-          <small className="mt-6 md:mt-0">
+          <small className="mt-6 md:mt-0 dark:text-white">
             Page {currentPage + 1} of {numPages} (Total: {records.length} records)
           </small>
         </div>

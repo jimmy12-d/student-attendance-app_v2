@@ -236,12 +236,12 @@ const AbaApprovalsPage = () => {
         <table>
           <thead>
             <tr>
-              <th>Transaction ID</th>
-              <th>Date</th>
-              <th>Payment Type</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Action</th>
+              <th className="dark:text-white">Transaction ID</th>
+              <th className="dark:text-white">Date</th>
+              <th className="dark:text-white">Payment Type</th>
+              <th className="dark:text-white">Amount</th>
+              <th className="dark:text-white">Status</th>
+              <th className="dark:text-white">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -254,14 +254,20 @@ const AbaApprovalsPage = () => {
             ) : transactions.length > 0 ? (
               transactions.map((transaction) => (
                 <tr key={transaction.transaction_id}>
-                  <td data-label="Transaction ID">{transaction.transaction_id}</td>
-                  <td data-label="Date">{new Date(transaction.transaction_date).toLocaleString()}</td>
-                  <td data-label="Payment Type">{transaction.payment_type}</td>
-                  <td data-label="Amount" className="font-bold text-green-600">
+                  <td data-label="Transaction ID" className="dark:text-white">{transaction.transaction_id}</td>
+                  <td data-label="Date" className="dark:text-white">{new Date(transaction.transaction_date).toLocaleString()}</td>
+                  <td data-label="Payment Type" className="dark:text-white">{transaction.payment_type}</td>
+                  <td data-label="Amount" className="font-bold text-green-600 dark:text-green-400">
                     ${transaction.total_amount} {transaction.original_currency}
                   </td>
                   <td data-label="Status">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${transaction.payment_status === 'APPROVED' ? 'bg-green-100 text-green-800' : transaction.payment_status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      transaction.payment_status === 'APPROVED' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                        : transaction.payment_status === 'PENDING' 
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' 
+                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}>
                       {transaction.payment_status}
                     </span>
                   </td>
@@ -294,9 +300,9 @@ const AbaApprovalsPage = () => {
         onCancel={() => { setIsModalActive(false); setSearchTerm('')}}
       >
         <div className="space-y-4">
-          <div>
+          <div className="dark:text-white">
             <p><strong>Payment Type:</strong> {selectedTransaction?.payment_type}</p>
-            <p><strong>Amount:</strong> ${selectedTransaction?.total_amount} {selectedTransaction?.original_currency}</p>
+            <p><strong>Amount:</strong> <span className="text-green-600 dark:text-green-400">${selectedTransaction?.total_amount}</span> {selectedTransaction?.original_currency}</p>
           </div>
           <div className="relative">
             <input
@@ -319,8 +325,8 @@ const AbaApprovalsPage = () => {
                       disabled={isProcessing}
                     >
                       <div>
-                        <p className="font-semibold">{student.fullName}</p>
-                        <p className="text-sm text-gray-500">{student.studentId} - {student.class}</p>
+                        <p className="font-semibold dark:text-white">{student.fullName}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{student.studentId} - {student.class}</p>
                       </div>
                       {isProcessing ? <LoadingSpinner /> : <Icon path={mdiCheckCircle} className="text-green-500" />}
                     </button>
@@ -328,7 +334,7 @@ const AbaApprovalsPage = () => {
                 ))}
               </ul>
             ) : (
-              <p className="p-4 text-center text-gray-500">No students found.</p>
+              <p className="p-4 text-center text-gray-500 dark:text-gray-400">No students found.</p>
             )}
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo} from 'react';
 import { db } from '../../../firebase-config';
-import { collection, addDoc, doc, setDoc, serverTimestamp, query, orderBy, getDocs} from "firebase/firestore";
+import { collection, addDoc, setDoc, doc, query, where, getDocs, serverTimestamp, orderBy } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 /**
@@ -123,6 +123,7 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
         const classesCollectionRef = collection(db, "classes");
         const q = query(classesCollectionRef, orderBy("name"));
         const querySnapshot = await getDocs(q);
+        console.log("Fetched classes:", querySnapshot.docs.map(doc => doc.data()));
         
         const fetchedClassConfigs = {}; // To store all class data
         const dropdownOpts = [];      // For the class dropdown
@@ -300,6 +301,53 @@ const handleFetchData = async () => {
     }
 
     try {
+      // Check for duplicates
+      const studentsRef = collection(db, "students");
+      
+      // Create query for duplicate name or phone
+      const nameQuery = query(studentsRef, where("fullName", "==", fullName));
+      const phoneQuery = query(studentsRef, where("phone", "==", phone));
+      
+      // Execute both queries
+      const [nameSnapshot, phoneSnapshot] = await Promise.all([
+        getDocs(nameQuery),
+        getDocs(phoneQuery)
+      ]);
+
+      // Check for duplicates, excluding the current student in edit mode
+      const hasDuplicateName = nameSnapshot.docs.length > 0 && nameSnapshot.docs.some(doc => {
+        const docData = doc.data();
+        // In edit mode, check if this is not the current document
+        if (isEditMode && initialData?.id) {
+          return doc.id !== initialData.id && docData.fullName === fullName;
+        }
+        // In create mode, any match is a duplicate
+        return docData.fullName === fullName;
+      });
+      
+      const hasDuplicatePhone = phone && phoneSnapshot.docs.length > 0 && phoneSnapshot.docs.some(doc => {
+        const docData = doc.data();
+        // In edit mode, check if this is not the current document
+        if (isEditMode && initialData?.id) {
+          return doc.id !== initialData.id && docData.phone === phone;
+        }
+        // In create mode, any match is a duplicate
+        return docData.phone === phone;
+      });
+
+      if (hasDuplicateName) {
+        toast.error(`A student with the name "${fullName}" already exists.`);
+        setLoading(false);
+        return;
+
+      }
+
+      if (hasDuplicatePhone) {
+        toast.error(`A student with the phone number "${phone}" already exists.`);
+        setLoading(false);
+        return;
+      }
+
       const studentData = {
         fullName,
         nameKhmer,
@@ -805,4 +853,4 @@ const handleFetchData = async () => {
   );
 }
 
-export default AddStudentForm; 
+export default AddStudentForm;

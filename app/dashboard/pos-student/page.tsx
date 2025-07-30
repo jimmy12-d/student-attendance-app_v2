@@ -7,13 +7,8 @@ import {
   mdiCashRegister,
   mdiAccount,
   mdiClose,
-  mdiReceipt,
-  mdiPrinter,
-  mdiChevronDown,
-  mdiReload,
   mdiCheckCircle,
   mdiAlertCircle,
-  mdiInformation,
   mdiDownload,
 } from "@mdi/js";
 
@@ -29,36 +24,15 @@ import CardBoxModal from "../../_components/CardBox/Modal";
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc } from "firebase/firestore";
-import { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions';
+import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, where } from "firebase/firestore";
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-// Interface
-import { Student } from "../../_interfaces";
+// Components
+import { PrinterManager } from "./components/PrinterManager";
+import { TransactionManager } from "./components/TransactionManager";
 
-interface Transaction {
-    studentId: string;
-    studentName: string;
-    className: string;
-    subjects: string[];
-    amount: number;
-    receiptNumber: string;
-    paymentMonth: string;
-    paymentMethod: 'Cash' | 'Credit';
-    transactionId?: string;
-    date: string;
-    cashier?: string;
-}
-
-interface Printer {
-    id: string;
-    name: string;
-    displayName?: string;
-    location?: string;
-    type: 'printnode' | 'standard';
-    printNodeId?: number;
-    description?: string;
-    online?: boolean;
-}
+// Types
+import { Student, Transaction, Printer } from "./types";
 
 const POSStudentPage = () => {
     const [students, setStudents] = useState<Student[]>([]);
@@ -76,24 +50,26 @@ const POSStudentPage = () => {
     const [showMonthInput, setShowMonthInput] = useState(false);
     const [isPostTransactionModalActive, setIsPostTransactionModalActive] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Credit'>('Cash');
+    const [joinDate, setJoinDate] = useState('');
+    const [classStudyDays, setClassStudyDays] = useState<number[]>([]);
 
-
-    // Printer management state
-    const [printers, setPrinters] = useState<Printer[]>([]);
     const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
-    const [isPrinterDropdownOpen, setIsPrinterDropdownOpen] = useState(false);
-    const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
     
     const fetchStudents = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const querySnapshot = await getDocs(collection(db, "students"));
-            const studentsData = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : doc.data().createdAt,
-            })) as Student[];
+            const studentsRef = collection(db, "students");
+            const q = query(studentsRef, where("ay", "==", "2026"));
+            const querySnapshot = await getDocs(q);
+            const studentsData = querySnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt,
+                } as Student;
+            });
             setStudents(studentsData);
         } catch (err) {
             console.error("Error fetching students: ", err);
@@ -121,11 +97,14 @@ const POSStudentPage = () => {
             if (classDocSnap.exists()) {
                 const classData = classDocSnap.data();
                 const fetchedClassType = classData.type;
+                const studyDays = classData.studyDays || [1, 2, 3, 4, 5, 6]; // Get study days from class data or use default
                 setClassType(fetchedClassType);
+                setClassStudyDays(studyDays); // Store study days in state
 
                 if (fetchedClassType) {
                     const classTypeDocRef = doc(db, 'classTypes', fetchedClassType);
                     const classTypeDocSnap = await getDoc(classTypeDocRef);
+                    console.log("Fetched class type:", fetchedClassType, "with study days:", studyDays);
                     if (classTypeDocSnap.exists()) {
                         const classTypeData = classTypeDocSnap.data();
                         setPaymentAmount(classTypeData.price);
@@ -186,8 +165,9 @@ const POSStudentPage = () => {
         setPaymentMonth('');
         setDisplayPaymentMonth('');
         setShowMonthInput(false);
+        setJoinDate('');
+        setClassStudyDays([]);
     };
-    
     const handleCharge = async () => {
         if (!selectedStudent || paymentAmount === null || !classType || !paymentMonth) {
             toast.error("Please select a student and ensure all payment details are loaded and month is set.");
@@ -253,45 +233,7 @@ const POSStudentPage = () => {
         setIsProcessing(false);
     };
     
-    // Printer related functions from approvals page
-    const loadPrintersFromPrintNode = useCallback(async () => {
-        try {
-            setIsLoadingPrinters(true);
-            const response = await fetch('/api/printnode?action=printers');
-            const data = await response.json();
-            
-            if (data.success) {
-                const printNodePrinters: Printer[] = data.printers.map((printer: any) => ({
-                    id: `printnode-${printer.id}`,
-                    name: printer.name,
-                    displayName: printer.name,
-                    location: printer.computer?.name || 'Unknown location',
-                    type: 'printnode' as const,
-                    printNodeId: printer.id,
-                    description: printer.description,
-                    online: printer.computer?.state === 'connected'
-                }));
-                
-                setPrinters(printNodePrinters);
-                
-                const targetPrinter = printNodePrinters.find(p => p.name.includes('BP003'));
-                if (targetPrinter) {
-                    setSelectedPrinter(targetPrinter);
-                    toast.info(`Printer BP003 auto-selected.`);
-                }
-            } else {
-                toast.error('Failed to load printers from PrintNode');
-            }
-        } catch (error) {
-            toast.error('Could not connect to PrintNode service');
-        } finally {
-            setIsLoadingPrinters(false);
-        }
-    }, []);
 
-    useEffect(() => {
-        loadPrintersFromPrintNode();
-    }, [loadPrintersFromPrintNode]);
 
     const handlePrintReceipt = async () => {
         if (!lastTransaction || !selectedPrinter || !selectedPrinter.printNodeId) {
@@ -375,66 +317,10 @@ const POSStudentPage = () => {
     return (
         <SectionMain>
             <SectionTitleLineWithButton icon={mdiCashRegister} title="POS - Monthly Payments" main>
-                <div className="relative w-72 printer-dropdown">
-                    <button
-                        onClick={() => setIsPrinterDropdownOpen(!isPrinterDropdownOpen)}
-                        className="flex items-center justify-between w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
-                        disabled={isLoadingPrinters}
-                    >
-                        <div className="flex items-center">
-                        <Icon path={mdiPrinter} size={18} className={`mr-2 ${selectedPrinter?.online ? 'text-green-500' : 'text-red-500'}`} />
-                        <div className="text-left">
-                            {isLoadingPrinters ? (
-                                <span className="text-gray-500">Loading printers...</span>
-                            ) : selectedPrinter ? (
-                                <div>
-                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {selectedPrinter.displayName}
-                                    </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                                        {selectedPrinter.location}
-                                    </div>
-                                </div>
-                            ) : (
-                                <span className="text-gray-500">Select Printer</span>
-                            )}
-                        </div>
-                        </div>
-                        <Icon path={mdiChevronDown} size={16} className={`text-gray-400 transition-transform duration-200 ${isPrinterDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {isPrinterDropdownOpen && (
-                        <div className="absolute top-full right-0 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl z-50 py-2">
-                        <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Available Printers</span>
-                                <button onClick={loadPrintersFromPrintNode} className="text-blue-600 hover:text-blue-700">
-                                    <Icon path={mdiReload} size={14} />
-                                </button>
-                            </div>
-                        </div>
-                        {printers.length === 0 ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">No printers found</div>
-                        ) : (
-                            printers.map((printer) => (
-                            <button
-                                key={printer.id}
-                                onClick={() => { setSelectedPrinter(printer); setIsPrinterDropdownOpen(false); }}
-                                className={`w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700 ${selectedPrinter?.id === printer.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <div className="text-sm font-medium text-gray-900 dark:text-white">{printer.displayName}</div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">{printer.location}</div>
-                                    </div>
-                                    <div className={`w-2 h-2 rounded-full ${printer.online ? 'bg-green-500' : 'bg-red-500'}`} />
-                                </div>
-                            </button>
-                            ))
-                        )}
-                        </div>
-                    )}
-                </div>
+                <PrinterManager
+                    selectedPrinter={selectedPrinter}
+                    onPrinterSelect={setSelectedPrinter}
+                />
             </SectionTitleLineWithButton>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -479,169 +365,30 @@ const POSStudentPage = () => {
                 </div>
                 
                 <div className="lg:col-span-2">
-                    {/* Transaction Details */}
-                    <CardBox className="mb-6">
-                        <div className="p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center">
-                                    <Icon path={mdiReceipt} size={1} className="mr-2 text-blue-500" />
-                                    Transaction Details
-                                </h3>
-                                {selectedStudent && (
-                                    <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium">
-                                        Ready to Process
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Student Information Card */}
-                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
-                                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-3 flex items-center">
-                                        <Icon path={mdiAccount} size={0.8} className="mr-2" />
-                                        Student Information
-                                    </h4>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">Name:</span>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200">
-                                                {selectedStudent ? selectedStudent.fullName : 'No student selected'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">Class:</span>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200">
-                                                {selectedStudent ? selectedStudent.class : 'N/A'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">Grade:</span>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200">
-                                                {classType || 'N/A'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Payment Information Card */}
-                                <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-700">
-                                    <h4 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-3 flex items-center">
-                                        <Icon path={mdiCashRegister} size={0.8} className="mr-2" />
-                                        Payment Information
-                                    </h4>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">Amount:</span>
-                                            <span className="font-bold text-2xl text-emerald-600 dark:text-emerald-400">
-                                                {paymentAmount !== null ? `$${paymentAmount}` : '$0'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">Payment For:</span>
-                                            <span className="font-medium text-gray-800 dark:text-gray-200">
-                                                {displayPaymentMonth || 'Not set'}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600 dark:text-gray-400">Method:</span>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                paymentMethod === 'Cash' 
-                                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' 
-                                                    : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
-                                            }`}>
-                                                {paymentMethod}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Subjects Section */}
-                            {subjects.length > 0 && (
-                                <div className="mt-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-4 border border-purple-200 dark:border-purple-700">
-                                    <h4 className="font-semibold text-purple-800 dark:text-purple-200 mb-3 flex items-center">
-                                        <Icon path={mdiInformation} size={0.8} className="mr-2" />
-                                        Subjects Included
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {subjects.map((subject, index) => (
-                                            <span
-                                                key={index}
-                                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200 transition-all duration-200 hover:scale-105"
-                                            >
-                                                {subject}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Payment Month Input Section */}
-                            {showMonthInput && (
-                                <div className="mt-6 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-xl p-4 border border-orange-200 dark:border-orange-700">
-                                    <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-3">
-                                        Set First Payment Month
-                                    </h4>
-                                    <div className="flex items-center space-x-3">
-                                        <input
-                                            type="month"
-                                            value={paymentMonth}
-                                            onChange={(e) => {
-                                                setPaymentMonth(e.target.value);
-                                                const [year, month] = e.target.value.split('-');
-                                                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                                                    'July', 'August', 'September', 'October', 'November', 'December'];
-                                                setDisplayPaymentMonth(`${monthNames[parseInt(month) - 1]} ${year}`);
-                                            }}
-                                            className="flex-1 px-3 py-2 border border-orange-300 dark:border-orange-600 rounded-lg focus:ring-2 focus:ring-orange-500 dark:bg-gray-800"
-                                        />
-                                        <Button
-                                            label="Confirm"
-                                            color="success"
-                                            onClick={() => setShowMonthInput(false)}
-                                            disabled={!paymentMonth}
-                                            className="whitespace-nowrap"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Payment Method Selection */}
-                            <div className="mt-6">
-                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                    Payment Method
-                                </label>
-                                <div className="flex space-x-3">
-                                    <button
-                                        onClick={() => setPaymentMethod('Cash')}
-                                        className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
-                                            paymentMethod === 'Cash'
-                                                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 shadow-lg transform scale-105'
-                                                : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
-                                        }`}
-                                    >
-                                        <div className="text-center">
-                                            <div className="text-2xl mb-2">💵</div>
-                                            <div className="font-medium">Cash</div>
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => setPaymentMethod('Credit')}
-                                        className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
-                                            paymentMethod === 'Credit'
-                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105'
-                                                : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                                        }`}
-                                    >
-                                        <div className="text-center">
-                                            <div className="text-2xl mb-2">💳</div>
-                                            <div className="font-medium">Credit</div>
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </CardBox>
+                    <TransactionManager
+                        selectedStudent={selectedStudent}
+                        classType={classType}
+                        paymentAmount={paymentAmount}
+                        subjects={subjects}
+                        paymentMonth={paymentMonth}
+                        displayPaymentMonth={displayPaymentMonth}
+                        showMonthInput={showMonthInput}
+                        isProcessing={isProcessing}
+                        paymentMethod={paymentMethod}
+                        onPaymentMethodChange={setPaymentMethod}
+                        onMonthSelect={(month) => {
+                            const [year, monthNum] = month.split('-');
+                            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                'July', 'August', 'September', 'October', 'November', 'December'];
+                            setPaymentMonth(month);
+                            setDisplayPaymentMonth(`${monthNames[parseInt(monthNum) - 1]} ${year}`);
+                        }}
+                        onConfirmMonth={() => setShowMonthInput(false)}
+                        joinDate={joinDate}
+                        onJoinDateSelect={setJoinDate}
+                        fullAmount={paymentAmount || 0}
+                        classStudyDays={classStudyDays} // Using the actual study days from the class document
+                    />
 
                     {/* Action Buttons Section */}
                     {selectedStudent ? (
@@ -705,7 +452,7 @@ const POSStudentPage = () => {
                 <div className="space-y-4">
                     <p>What would you like to do next?</p>
                     <div className="flex justify-around">
-                        <Button label="Print" color="info" onClick={handlePrintReceipt} icon={mdiPrinter} />
+                        <Button label="Print" color="info" onClick={handlePrintReceipt} />
                         <Button label="Download" color="success" onClick={handleDownloadReceipt} icon={mdiDownload} />
                     </div>
                 </div>

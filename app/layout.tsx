@@ -27,10 +27,14 @@ const LayoutComponent = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <html lang="en" className={darkMode ? 'dark' : ''}>
-      <body id="student-attendance-app">
-        <DarkModeInit />
-        {children}
+    <html lang="en" className={`h-full ${darkMode ? 'dark' : ''}`}>
+      <body id="student-attendance-app" className={`h-full ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'}`}>
+        <div className="flex flex-col min-h-screen">
+          <DarkModeInit />
+          <main className="flex-grow">
+            {children}
+          </main>
+        </div>
         <Toaster position="top-center" richColors />
       </body>
     </html>

@@ -1,16 +1,23 @@
 // app/dashboard/students/TableStudents.tsx
 "use client";
 
-import { mdiPencil, mdiTrashCan, mdiAccount } from "@mdi/js";
-import React from "react";
+import { mdiPencil, mdiTrashCan, mdiAccount, mdiEye, mdiEyeOff } from "@mdi/js";
+import React, { useState } from "react";
 import { Student } from "../../_interfaces";
 import Button from "../../_components/Button";
 import Buttons from "../../_components/Buttons";
+import Icon from "../../_components/Icon";
 
 type Props = {
   students: Student[];
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
+};
+
+type ColumnConfig = {
+  id: string;
+  label: string;
+  enabled: boolean;
 };
 
 // Phone formatting utility
@@ -50,8 +57,9 @@ const getDisplayableImageUrl = (url: string | undefined) => {
     
     if (match && match[1]) {
       const fileId = match[1];
-      // Use the thumbnail endpoint which is more reliable for embedding
-      return `https://drive.google.com/thumbnail?id=${fileId}&sz=w80`;
+      // Try multiple Google Drive endpoints for better compatibility
+      // First try the direct download endpoint
+      return `https://drive.google.com/uc?export=download&id=${fileId}`;
     }
   }
   
@@ -60,6 +68,15 @@ const getDisplayableImageUrl = (url: string | undefined) => {
 };
 
 const TableStudents = ({ students, onEdit, onDelete }: Props) => {
+  // Column configuration state
+  const [columns, setColumns] = useState<ColumnConfig[]>([
+    { id: 'number', label: '#N', enabled: true },
+    { id: 'name', label: 'Name', enabled: true },
+    { id: 'phone', label: 'Phone', enabled: true },
+    { id: 'scheduleType', label: 'Schedule Type', enabled: false },
+    { id: 'actions', label: 'Actions', enabled: false },
+  ]);
+
   // Define the desired order of shifts
   const shiftOrder: ('Morning' | 'Afternoon' | 'Evening')[] = ['Morning', 'Afternoon', 'Evening'];
 
@@ -105,6 +122,18 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
     }
   });
 
+  // Toggle column visibility
+  const toggleColumn = (columnId: string) => {
+    setColumns(prev => 
+      prev.map(col => 
+        col.id === columnId ? { ...col, enabled: !col.enabled } : col
+      )
+    );
+  };
+
+  // Get enabled columns
+  const enabledColumns = columns.filter(col => col.enabled);
+
   // Helper component for rendering a table for a specific class/shift
   const ClassTable = ({ studentList }: { studentList: Student[] }) => (
     studentList.length > 0 ? (
@@ -113,103 +142,135 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
           <table className="w-full border-separate border-spacing-0">
             <thead className="sticky top-0 z-10">
               <tr>
-                <th className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600 rounded-tl-lg">
-                  Nº
-                </th>
-                <th className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600">
-                  Student
-                </th>
-                <th className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600">
-                  Phone
-                </th>
-                <th className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-center text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600 rounded-tr-lg">
-                  Actions
-                </th>
-              </tr>
-            </thead>
+                {enabledColumns.map((column, index) => (
+                  <th 
+                    key={column.id}
+                    className={`bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600 ${
+                      index === 0 ? 'rounded-tl-lg' : ''
+                    } ${index === enabledColumns.length - 1 ? 'rounded-tr-lg' : ''} ${
+                      column.id === 'number' || column.id === 'actions' ? 'text-center' : 'text-left'
+                    }`}
+                  >
+                    {column.label}
+                  </th>
+                ))}
+            </tr>
+          </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-              {studentList.map((student, index) => (
+            {studentList.map((student, index) => (
                 <tr 
                   key={student.id} 
                   className="group hover:bg-blue-50 dark:hover:bg-slate-700/50 transition-all duration-200 ease-in-out hover:shadow-sm"
                 >
-                  <td className="p-3 text-center">
-                    <span className="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors duration-200">
-                      {index + 1}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        {student.photoUrl ? (
-                          <div className="relative">
-                            <img
-                              src={getDisplayableImageUrl(student.photoUrl) || ''}
-                              alt={student.fullName}
-                              className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-lg ring-2 ring-blue-100 dark:ring-blue-900/30"
-                              onError={(e) => {
-                                // Fallback to initials if image fails to load
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                const fallback = target.nextElementSibling as HTMLElement;
-                                if (fallback) {
-                                  fallback.style.display = 'flex';
-                                }
-                              }}
-                            />
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg hidden">
-                              {student.fullName.charAt(0).toUpperCase()}
+                  {enabledColumns.map((column) => {
+                    switch (column.id) {
+                      case 'number':
+                        return (
+                          <td key="number" className="p-1 text-center">
+                            <span className="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors duration-200">
+                              {index + 1}
+                            </span>
+                          </td>
+                        );
+                      case 'name':
+                        return (
+                          <td key="name" className="p-3">
+                            <div className="flex items-center space-x-3">
+                              {/* <div className="flex-shrink-0">
+                                {student.photoUrl ? (
+                                  <div className="relative">
+                                    <img
+                                      src={getDisplayableImageUrl(student.photoUrl) || ''}
+                                      alt={student.fullName}
+                                      className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-lg ring-2 ring-blue-100 dark:ring-blue-900/30"
+                                      onError={(e) => {
+                                        // Fallback to initials if image fails to load
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        const fallback = target.nextElementSibling as HTMLElement;
+                                        if (fallback) {
+                                          fallback.style.display = 'flex';
+                                        }
+                                      }}
+                                    />
+                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg hidden">
+                                      {student.fullName.charAt(0).toUpperCase()}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg">
+                                    {student.fullName.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </div> */}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
+                                  {student.fullName}
+                                </p>
+                                {student.nameKhmer && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    {student.nameKhmer}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg">
-                            {student.fullName.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
-                          {student.fullName}
-                        </p>
-                        {student.nameKhmer && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                            {student.nameKhmer}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600 transition-colors duration-200">
-                      {formatPhoneNumber(student.phone)}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center justify-center space-x-2">
-                      <button
-                        onClick={() => onEdit(student)}
-                        className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-white hover:bg-blue-600 dark:text-blue-400 dark:hover:bg-blue-500 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-                        title="Edit Student"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => onDelete(student)}
-                        className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:bg-red-500 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
-                        title="Delete Student"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                          </td>
+                        );
+                      case 'phone':
+                        return (
+                          <td key="phone" className="p-3">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600 transition-colors duration-200">
+                              {formatPhoneNumber(student.phone)}
+                            </span>
+                          </td>
+                        );
+                      case 'scheduleType':
+                        return (
+                          <td key="scheduleType" className="p-3">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
+                              student.scheduleType === 'Fix' 
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 group-hover:bg-green-200 dark:group-hover:bg-green-800/50'
+                                : student.scheduleType === 'Flip-Flop'
+                                ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/50'
+                                : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600'
+                            }`}>
+                              {student.scheduleType || 'N/A'}
+                            </span>
+                          </td>
+                        );
+                      case 'actions':
+                        return (
+                          <td key="actions" className="p-3">
+                            <div className="flex items-center justify-center space-x-2">
+                              <button
+                                onClick={() => onEdit(student)}
+                                className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-white hover:bg-blue-600 dark:text-blue-400 dark:hover:bg-blue-500 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                title="Edit Student"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => onDelete(student)}
+                                className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:bg-red-500 rounded-lg transition-all duration-200 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                                title="Delete Student"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
+                </td>
+                        );
+                      default:
+                        return null;
+                    }
+                  })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
         </div>
       </div>
     ) : (
@@ -226,6 +287,41 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
 
   return (
     <div className="space-y-8 p-6 pb-24 bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Column Selection Panel */}
+      <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+            <svg className="w-6 h-6 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+            </svg>
+            Column Visibility
+          </h2>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {enabledColumns.length} of {columns.length} columns visible
+          </span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {columns.map((column) => (
+            <button
+              key={column.id}
+              onClick={() => toggleColumn(column.id)}
+              className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all duration-200 ${
+                column.enabled
+                  ? 'border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                  : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-500 dark:text-gray-400'
+              } hover:shadow-md hover:scale-105`}
+            >
+              <span className="font-medium text-sm">{column.label}</span>
+              <Icon
+                path={column.enabled ? mdiEye : mdiEyeOff}
+                size="16"
+                className={column.enabled ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'}
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Morning & Afternoon Section */}
       <div className="space-y-6">
         <div className="text-center space-y-2">
@@ -287,7 +383,7 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
                 </svg>
               </div>
               <p className="text-gray-500 dark:text-gray-400">No students in Morning or Afternoon shifts.</p>
-            </div>
+          </div>
           )}
         </div>
 
@@ -304,9 +400,9 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
                 <span className="font-semibold">Evening Classes</span>
-              </div>
             </div>
-            
+          </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {eveningShiftClasses.map(className => (
                 <div key={`${className}-evening`} className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
@@ -317,12 +413,12 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
                     </span>
                   </div>
                   <ClassTable studentList={groupedStudents[className].Evening} />
-                </div>
-              ))}
+        </div>
+      ))}
             </div>
           </div>
         )}
-      </div>
+    </div>
   );
 };
 

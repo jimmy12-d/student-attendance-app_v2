@@ -1,0 +1,223 @@
+import { useState } from 'react';
+import { toast } from 'sonner';
+import {
+    mdiCashRegister,
+    mdiAccount,
+    mdiInformation,
+    mdiReceipt,
+} from "@mdi/js";
+import Icon from "../../../_components/Icon";
+import Button from "../../../_components/Button";
+import CardBox from "../../../_components/CardBox";
+import { Student, Transaction } from '../types';
+import { calculateProratedAmount } from '../utils/dateUtils';
+
+interface TransactionManagerProps {
+    selectedStudent: Student | null;
+    classType: string | null;
+    paymentAmount: number | null;
+    subjects: string[];
+    paymentMonth: string;
+    displayPaymentMonth: string;
+    paymentMethod: 'Cash' | 'Credit';
+    showMonthInput: boolean;
+    isProcessing: boolean;
+    joinDate: string;
+    onPaymentMethodChange: (method: 'Cash' | 'Credit') => void;
+    onMonthSelect: (month: string) => void;
+    onConfirmMonth: () => void;
+    onJoinDateSelect: (date: string) => void;
+    classStudyDays?: number[] | null;
+    fullAmount: number;
+}
+
+export const TransactionManager = ({
+    selectedStudent,
+    classType,
+    paymentAmount,
+    subjects,
+    paymentMonth,
+    displayPaymentMonth,
+    paymentMethod,
+    showMonthInput,
+    isProcessing,
+    joinDate,
+    onPaymentMethodChange,
+    onMonthSelect,
+    onConfirmMonth,
+    onJoinDateSelect,
+    classStudyDays,
+    fullAmount,
+}: TransactionManagerProps) => {
+    return (
+        <CardBox className="mb-6">
+            <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center">
+                        <Icon path={mdiReceipt} size={1} className="mr-2 text-blue-500" />
+                        Transaction Details
+                    </h3>
+                    {selectedStudent && (
+                        <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium">
+                            Ready to Process
+                        </div>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Student Information Card */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
+                        <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-3 flex items-center">
+                            <Icon path={mdiAccount} size={0.8} className="mr-2" />
+                            Student Information
+                        </h4>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Name:</span>
+                                <span className="font-medium text-gray-800 dark:text-gray-200">
+                                    {selectedStudent ? selectedStudent.fullName : 'No student selected'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Class:</span>
+                                <span className="font-medium text-gray-800 dark:text-gray-200">
+                                    {selectedStudent ? selectedStudent.class : 'N/A'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Grade:</span>
+                                <span className="font-medium text-gray-800 dark:text-gray-200">
+                                    {classType || 'N/A'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Payment Information Card */}
+                    <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-700">
+                        <h4 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-3 flex items-center">
+                            <Icon path={mdiCashRegister} size={0.8} className="mr-2" />
+                            Payment Information
+                        </h4>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Amount:</span>
+                                <span className="font-bold text-2xl text-emerald-600 dark:text-emerald-400">
+                                    {paymentAmount !== null ? `$${paymentAmount.toFixed(2)}` : '$0.00'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Payment For:</span>
+                                <span className="font-medium text-gray-800 dark:text-gray-200">
+                                    {displayPaymentMonth || 'Not set'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Method:</span>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    paymentMethod === 'Cash' 
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' 
+                                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                                }`}>
+                                    {paymentMethod}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Payment Month Input Section */}
+                {showMonthInput && (
+                    <div className="mt-6 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 rounded-xl p-4 border border-orange-200 dark:border-orange-700">
+                        <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-3">
+                            Set Student Details
+                        </h4>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
+                                    Join Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={joinDate}
+                                    onChange={(e) => onJoinDateSelect(e.target.value)}
+                                    className="w-full px-3 py-2 border border-orange-300 dark:border-orange-600 rounded-lg focus:ring-2 focus:ring-orange-500 dark:bg-gray-800"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
+                                    First Payment Month
+                                </label>
+                                <div className="flex items-center space-x-3">
+                                    <input
+                                        type="month"
+                                        value={paymentMonth}
+                                        onChange={(e) => onMonthSelect(e.target.value)}
+                                        className="flex-1 px-3 py-2 border border-orange-300 dark:border-orange-600 rounded-lg focus:ring-2 focus:ring-orange-500 dark:bg-gray-800"
+                                    />
+                                    <Button
+                                        label="Confirm"
+                                        color="success"
+                                        onClick={onConfirmMonth}
+                                        disabled={!paymentMonth || !joinDate}
+                                        className="whitespace-nowrap"
+                                    />
+                                </div>
+                            </div>
+                            {joinDate && paymentMonth && (
+                                <div className="mt-2 p-3 bg-white dark:bg-gray-800 rounded-lg border border-orange-200 dark:border-orange-700">
+                                    <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                                        Payment Details:
+                                    </p>
+                                    <div className="mt-1 space-y-1">
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            Full Monthly Fee: ${fullAmount.toFixed(2)}
+                                        </p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            Portion Amount: ${calculateProratedAmount(fullAmount, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2)}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Payment Method Selection */}
+                <div className="mt-6">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                        Payment Method
+                    </label>
+                    <div className="flex space-x-3">
+                        <button
+                            onClick={() => onPaymentMethodChange('Cash')}
+                            className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
+                                paymentMethod === 'Cash'
+                                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 shadow-lg transform scale-105'
+                                    : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                            }`}
+                        >
+                            <div className="text-center">
+                                <div className="text-2xl mb-2">💵</div>
+                                <div className="font-medium">Cash</div>
+                            </div>
+                        </button>
+                        <button
+                            onClick={() => onPaymentMethodChange('Credit')}
+                            className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
+                                paymentMethod === 'Credit'
+                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105'
+                                    : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                            }`}
+                        >
+                            <div className="text-center">
+                                <div className="text-2xl mb-2">💳</div>
+                                <div className="font-medium">Credit</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </CardBox>
+    );
+};
