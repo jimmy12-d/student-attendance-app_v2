@@ -38,6 +38,7 @@ interface AbaTransaction {
   refund_amount: number;
   payment_amount: number;
   payment_currency: string;
+  payer_name: string;
 }
 
 const AbaApprovalsPage = () => {
@@ -238,6 +239,7 @@ const AbaApprovalsPage = () => {
             <tr>
               <th className="dark:text-white">Transaction ID</th>
               <th className="dark:text-white">Date</th>
+              <th className="dark:text-white">Payer Name</th>
               <th className="dark:text-white">Payment Type</th>
               <th className="dark:text-white">Amount</th>
               <th className="dark:text-white">Status</th>
@@ -247,7 +249,7 @@ const AbaApprovalsPage = () => {
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="text-center">
+                <td colSpan={7} className="text-center">
                   <LoadingSpinner />
                 </td>
               </tr>
@@ -256,6 +258,7 @@ const AbaApprovalsPage = () => {
                 <tr key={transaction.transaction_id}>
                   <td data-label="Transaction ID" className="dark:text-white">{transaction.transaction_id}</td>
                   <td data-label="Date" className="dark:text-white">{new Date(transaction.transaction_date).toLocaleString()}</td>
+                  <td data-label="Payer Name" className="dark:text-white">{transaction.payer_name || 'N/A'}</td>
                   <td data-label="Payment Type" className="dark:text-white">{transaction.payment_type}</td>
                   <td data-label="Amount" className="font-bold text-green-600 dark:text-green-400">
                     ${transaction.total_amount} {transaction.original_currency}
@@ -285,7 +288,7 @@ const AbaApprovalsPage = () => {
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="text-center">
+                <td colSpan={7} className="text-center">
                   No transactions found for the last 3 days.
                 </td>
               </tr>

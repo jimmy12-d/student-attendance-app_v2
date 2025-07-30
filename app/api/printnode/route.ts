@@ -147,7 +147,7 @@ async function generateReceiptPdf(transaction: any, pageHeight: number): Promise
     page.drawText(transaction.studentName, { x: valueX, y, font, size: detailFontSize, maxWidth: width - margin - valueX });
     y -= 13;
     page.drawText('Class:', { x: labelX, y, font: boldFont, size: detailFontSize });
-    page.drawText(`${transaction.className} (${transaction.classType})`, { x: valueX, y, font, size: detailFontSize, maxWidth: width - margin - valueX });
+    page.drawText(transaction.className, { x: valueX, y, font, size: detailFontSize, maxWidth: width - margin - valueX });
     y -= 13;
 
     page.drawLine({ start: { x: margin, y: y }, end: { x: width - margin, y: y }, thickness: 0.5 });
@@ -155,7 +155,9 @@ async function generateReceiptPdf(transaction: any, pageHeight: number): Promise
 
     page.drawText('DESCRIPTION', { x: margin, y, font: boldFont, size: detailFontSize });
     y -= 13;
-    page.drawText(`Monthly Fee - ${transaction.classType}`, { x: margin + 4, y, font, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
+    page.drawText(`Full Amount: $${transaction.fullAmount.toFixed(2)}`, { x: margin + 4, y, font, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
+    y -= 13;
+    page.drawText(`Final Amount: $${transaction.amount.toFixed(2)}`, { x: margin + 4, y, font: boldFont, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
     y -= 13;
     page.drawText('Subjects Included:', { x: margin + 4, y, font: boldFont, size: detailFontSize });
     y -= 11;

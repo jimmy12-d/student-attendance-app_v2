@@ -10,13 +10,16 @@ export interface Transaction {
     studentId: string;
     studentName: string;
     className: string;
+    classType: string;
     subjects: string[];
+    fullAmount: number;
     amount: number;
     receiptNumber: string;
     paymentMonth: string;
     paymentMethod: 'Cash' | 'Credit';
     transactionId?: string;
     date: string;
+    joinDate: string;
     cashier?: string;
 }
 

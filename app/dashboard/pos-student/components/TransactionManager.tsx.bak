@@ -6,7 +6,11 @@ import {
     mdiInformation,
     mdiReceipt,
 } from "@mdi/js";
-import Icon from "../../../_components/Icon";
+import Icon from                             <div className="text-center">
+                                <img src="/credit-card-icon.png" alt="Credit Card" className="h-8 w-auto mx-auto mb-2" />
+                                <div className="font-medium">Credit</div>
+                            </div>                            <img src="/credit-card-icon.png" alt="Credit Card" className="h-8 w-auto mx-auto mb-2" />
+                                <div className="font-medium">Credit</div>./../../_components/Icon";
 import Button from "../../../_components/Button";
 import CardBox from "../../../_components/CardBox";
 import { Student, Transaction } from '../types';
@@ -19,11 +23,11 @@ interface TransactionManagerProps {
     subjects: string[];
     paymentMonth: string;
     displayPaymentMonth: string;
-    paymentMethod: 'Cash' | 'QrCode';
+    paymentMethod: 'Cash' | 'Credit';
     showMonthInput: boolean;
     isProcessing: boolean;
     joinDate: string;
-    onPaymentMethodChange: (method: 'Cash' | 'QrCode') => void;
+    onPaymentMethodChange: (method: 'Cash' | 'Credit') => void;
     onJoinDateSelect: (date: string) => void;
     classStudyDays?: number[] | null;
     fullAmount: number;
@@ -173,16 +177,16 @@ export const TransactionManager = ({
                     </label>
                     <div className="flex space-x-3">
                         <button
-                            onClick={() => onPaymentMethodChange('QrCode')}
+                            onClick={() => onPaymentMethodChange('Credit')}
                             className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
-                                paymentMethod === 'QrCode'
+                                paymentMethod === 'Credit'
                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105'
                                     : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                             }`}
                         >
                             <div className="text-center">
-                                <img src="/scan.png" alt="QR Code" className="h-12 w-auto mx-auto mb-2" />
-                                <div className="font-medium">Qr Code</div>
+                                <div className="text-2xl mb-2">�</div>
+                                <div className="font-medium">Credit</div>
                             </div>
                         </button>
                         <button
@@ -194,7 +198,7 @@ export const TransactionManager = ({
                             }`}
                         >
                             <div className="text-center">
-                                <img src="/cash.png" alt="Cash" className="h-14 w-auto mx-auto mb-2" />
+                                <div className="text-2xl mb-2">�</div>
                                 <div className="font-medium">Cash</div>
                             </div>
                         </button>

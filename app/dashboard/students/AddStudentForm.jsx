@@ -123,7 +123,6 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
         const classesCollectionRef = collection(db, "classes");
         const q = query(classesCollectionRef, orderBy("name"));
         const querySnapshot = await getDocs(q);
-        console.log("Fetched classes:", querySnapshot.docs.map(doc => doc.data()));
         
         const fetchedClassConfigs = {}; // To store all class data
         const dropdownOpts = [];      // For the class dropdown

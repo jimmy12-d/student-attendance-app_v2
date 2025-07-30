@@ -17,6 +17,7 @@ import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithB
 import AddStudentForm from "./AddStudentForm";
 import TableStudents from "./TableStudents";
 import CardBoxModal from "../../_components/CardBox/Modal";
+import { toast } from 'sonner';
 
 // Firebase
 import { db } from "../../../firebase-config";
@@ -89,14 +90,28 @@ export default function StudentsPage() {
       try {
         await deleteDoc(doc(db, "students", studentToDelete.id));
         setStudents(prevStudents => prevStudents.filter(s => s.id !== studentToDelete.id));
+        toast.success(`${studentToDelete.fullName} has been deleted successfully`);
         console.log("Student deleted:", studentToDelete.id);
       } catch (err) {
         console.error("Error deleting student:", err);
+        toast.error("Failed to delete student. Please try again.");
         setError("Failed to delete student.");
       }
     }
     setIsDeleteModalActive(false);
     setStudentToDelete(null);
+  };
+
+  // Delete function for modal (used by the new modal delete button)
+  const handleDeleteStudent = async (student: Student) => {
+    try {
+      await deleteDoc(doc(db, "students", student.id));
+      setStudents(prevStudents => prevStudents.filter(s => s.id !== student.id));
+      console.log("Student deleted:", student.id);
+    } catch (err) {
+      console.error("Error deleting student:", err);
+      throw err; // Re-throw to be handled by the toast in TableStudents
+    }
   };
 
   // --- Edit Logic ---
@@ -171,7 +186,7 @@ export default function StudentsPage() {
               <TableStudents
                 students={students}
                 onEdit={handleEditStudent} // Pass the updated handler
-                onDelete={openDeleteModal}
+                onDelete={handleDeleteStudent}
               />
             </CardBox>
           )}

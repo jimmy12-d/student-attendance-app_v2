@@ -1,4 +1,5 @@
 import { isSchoolDay } from "../../_lib/attendanceLogic";
+// import { cambodianHolidaysSet } from "../../_lib/attendanceUtils";
 
 export const getWorkingDaysInMonth = (year: number, month: number, classStudyDays?: number[] | null) => {
     const startDate = new Date(year, month, 1);
@@ -35,7 +36,6 @@ export const calculateProratedAmount = (
     
     // Calculate working days in month
     const totalWorkingDays = getWorkingDaysInMonth(year, month - 1, classStudyDays);
-    console.log(`Total working days in month ${paymentMonth}:`, totalWorkingDays);
     // Calculate remaining working days from join date (inclusive)
     let remainingWorkingDays = 0;
     
@@ -52,15 +52,6 @@ export const calculateProratedAmount = (
     // Calculate prorated amount with more precision
     const ratio = remainingWorkingDays / totalWorkingDays;
     const exactAmount = fullAmount * ratio;
-    
-    // Log for debugging
-    console.log({
-        joinDate: normalizedJoinDate,
-        totalWorkingDays,
-        remainingWorkingDays,
-        ratio: ratio.toFixed(4), // Show 4 decimal places for debugging
-        exactAmount: exactAmount.toFixed(2)
-    });
     
     return exactAmount; // Return exact amount without rounding
 };

@@ -87,14 +87,59 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify(requestBody)
         });
 
-        const data = await response.json();
+        const listData = await response.json();
 
         if (!response.ok) {
-            console.error('ABA PayWay API Error:', data);
-            return NextResponse.json({ error: 'Failed to fetch transactions from ABA PayWay', details: data }, { status: response.status });
+            console.error('ABA PayWay API Error:', listData);
+            return NextResponse.json({ error: 'Failed to fetch transactions from ABA PayWay', details: listData }, { status: response.status });
         }
 
-        return NextResponse.json(data);
+        // If we have transactions, fetch details for each one
+        if (listData.data && Array.isArray(listData.data)) {
+            const detailedTransactions = await Promise.all(
+                listData.data.map(async (transaction) => {
+                    const detailsRequestBody = {
+                        req_time: req_time,
+                        merchant_id: ABA_PAYWAY_MERCHANT_ID,
+                        transaction_id: transaction.transaction_id,
+                        hash: ""
+                    };
+
+                    // Create hash for transaction detail request
+                    detailsRequestBody.hash = CryptoJS.HmacSHA512(
+                        detailsRequestBody.req_time + 
+                        detailsRequestBody.merchant_id + 
+                        detailsRequestBody.transaction_id,
+                        ABA_PAYWAY_API_KEY
+                    ).toString(CryptoJS.enc.Base64);
+
+                    const detailResponse = await fetch(`${ABA_PAYWAY_API_URL}/api/payment-gateway/v1/payments/transaction-detail`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(detailsRequestBody)
+                    });
+
+                    const detailData = await detailResponse.json();
+                    
+                    if (detailResponse.ok && detailData.data) {
+                        // Combine list data with detail data
+                        return {
+                            ...transaction,
+                            payer_name: `${detailData.data.first_name || ''} ${detailData.data.last_name || ''}`.trim() || 'N/A'
+                        };
+                    }
+                    
+                    return {
+                        ...transaction,
+                        payer_name: 'N/A'
+                    };
+                })
+            );
+
+            return NextResponse.json({ ...listData, data: detailedTransactions });
+        }
+
+        return NextResponse.json(listData);
 
     } catch (error) {
         console.error('Error fetching ABA transactions:', error);
