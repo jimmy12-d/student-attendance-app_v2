@@ -5,11 +5,8 @@ import Head from 'next/head';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'sonner';
-import * as pdfjsLib from 'pdfjs-dist';
 import { mdiPrinter, mdiUploadOutline, mdiFileDocumentOutline, mdiCheck } from '@mdi/js';
-
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdfjs/pdf.worker.min.mjs`;
+import dynamic from 'next/dynamic';
 
 // Firebase imports
 import { db, storage } from '../../firebase-config';
@@ -127,6 +124,15 @@ export default function PrintRequestPage() {
   const getPdfPageCount = async (file: File): Promise<number> => {
     try {
       setIsProcessingPdf(true);
+      
+      // Dynamic import to avoid SSR issues
+      const pdfjsLib = await import('pdfjs-dist');
+      
+      // Set worker source dynamically
+      if (typeof window !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdfjs/pdf.worker.min.mjs`;
+      }
+      
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       return pdf.numPages;
@@ -587,6 +593,14 @@ export default function PrintRequestPage() {
                             if (file) {
                             setIsProcessingPdf(true); // You'll need this state defined in PrintRequestPage
                             try {
+                                // Dynamic import to avoid SSR issues
+                                const pdfjsLib = await import('pdfjs-dist');
+                                
+                                // Set worker source dynamically
+                                if (typeof window !== 'undefined') {
+                                  pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdfjs/pdf.worker.min.mjs`;
+                                }
+                                
                                 // Ensure pdfjs-dist is imported and configured at the top of the file
                                 const arrayBuffer = await file.arrayBuffer();
                                 const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });

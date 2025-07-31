@@ -29,17 +29,11 @@ const menuAside: MenuAsideItem[] = [
     icon: mdiCreditCard,
     href: '/dashboard/pos-student',
   },
-  {
-    label: 'ABA Approvals',
-    icon: mdiCashCheck,
-    href: '/dashboard/aba-approvals',
-  },
-
-  {
-    href: "/dashboard/scan-qr",
-    icon: mdiMonitor,
-    label: "Scan QR",
-  },
+  // {
+  //   label: 'ABA Approvals',
+  //   icon: mdiCashCheck,
+  //   href: '/dashboard/aba-approvals',
+  // },
   {
     href: "/dashboard/students",
     icon: mdiAccountCircle,
@@ -76,21 +70,21 @@ const menuAside: MenuAsideItem[] = [
       },
     ]
   },
-  {
-    href: "/dashboard/mock-exams",
-    label: "Mock Control",
-    icon: mdiNotebookEditOutline,
-  },
-  {
-    href: "/dashboard/approvals",
-    label: "Print Approvals",
-    icon: mdiFileDocumentCheckOutline,
-  },
-  {
-    href: "/dashboard/notification",
-    label: "Notification",
-    icon: mdiBellOutline,
-  },
+  // {
+  //   href: "/dashboard/mock-exams",
+  //   label: "Mock Control",
+  //   icon: mdiNotebookEditOutline,
+  // },
+  // {
+  //   href: "/dashboard/approvals",
+  //   label: "Print Approvals",
+  //   icon: mdiFileDocumentCheckOutline,
+  // },
+  // {
+  //   href: "/dashboard/notification",
+  //   label: "Notification",
+  //   icon: mdiBellOutline,
+  // },
 ];
 
 export default menuAside;

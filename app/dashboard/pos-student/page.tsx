@@ -25,7 +25,7 @@ import CardBoxModal from "../../_components/CardBox/Modal";
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, where, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, where, deleteDoc, orderBy } from "firebase/firestore";
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // Components
@@ -68,7 +68,11 @@ const POSStudentPage = () => {
         setError(null);
         try {
             const studentsRef = collection(db, "students");
-            const q = query(studentsRef, where("ay", "==", "2026"));
+            const q = query(
+                studentsRef,
+                where("ay", "==", "2026"),
+                orderBy("createdAt", "desc") // Sort by createdAt in descending order
+            );
             const querySnapshot = await getDocs(q);
             const studentsData = querySnapshot.docs.map(doc => {
                 const data = doc.data();
@@ -526,10 +530,6 @@ const POSStudentPage = () => {
     };
 
     const handleRemoveTransaction = async (transaction: Transaction) => {
-        if (!window.confirm('Are you sure you want to remove this transaction? This will also update the student\'s last payment month.')) {
-            return;
-        }
-
         try {
             // Remove the transaction
             await deleteDoc(doc(db, "transactions", transaction.transactionId));

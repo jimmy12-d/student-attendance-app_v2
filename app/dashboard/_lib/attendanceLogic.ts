@@ -65,7 +65,8 @@ export const getStudentDailyStatus = (
     const studentCreatedAt = student.createdAt instanceof Timestamp ? student.createdAt.toDate() : student.createdAt instanceof Date ? student.createdAt : null;
     if (studentCreatedAt) studentCreatedAt.setHours(0,0,0,0);
 
-    const studentClassKey = student.class;
+    // Extract class ID by removing "Class " prefix (e.g., "Class 12A" -> "12A")
+    const studentClassKey = student.class?.replace(/^Class\s+/i, '') || '';
     const classConfig = studentClassKey && allClassConfigs ? allClassConfigs[studentClassKey] : undefined;
     const classStudyDays = classConfig?.studyDays;
 
@@ -91,15 +92,28 @@ export const getStudentDailyStatus = (
             const shiftConfig = (studentClassKey && classConfig?.shifts) ? classConfig.shifts[studentShiftKey] : undefined;
             if (shiftConfig && shiftConfig.startTime) {
                 const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
-                const shiftStartTimeForToday = new Date(today);
-                shiftStartTimeForToday.setHours(startHour, startMinute);
-                const studentGrace = (student as any).gracePeriodMinutes ?? STANDARD_ON_TIME_GRACE_MINUTES;
-                const onTimeDeadlineForToday = new Date(shiftStartTimeForToday);
-                onTimeDeadlineForToday.setMinutes(shiftStartTimeForToday.getMinutes() + studentGrace);
-                const lateCutOffForToday = new Date(onTimeDeadlineForToday);
-                lateCutOffForToday.setMinutes(onTimeDeadlineForToday.getMinutes() + LATE_WINDOW_DURATION_MINUTES);
-                if (new Date() > lateCutOffForToday) return { status: "Absent" };
-                else return { status: "Pending" };
+                const shiftStartTimeForToday = new Date();
+                shiftStartTimeForToday.setHours(startHour, startMinute, 0, 0);
+                
+                const currentTime = new Date();
+                
+                // If current time is before shift start time, it's pending
+                if (currentTime < shiftStartTimeForToday) {
+                    return { status: "Pending" };
+                } else {
+                    // If current time is past shift start time, check grace period and late window
+                    const studentGrace = (student as any).gracePeriodMinutes ?? STANDARD_ON_TIME_GRACE_MINUTES;
+                    const onTimeDeadlineForToday = new Date(shiftStartTimeForToday);
+                    onTimeDeadlineForToday.setMinutes(shiftStartTimeForToday.getMinutes() + studentGrace);
+                    const lateCutOffForToday = new Date(onTimeDeadlineForToday);
+                    lateCutOffForToday.setMinutes(onTimeDeadlineForToday.getMinutes() + LATE_WINDOW_DURATION_MINUTES);
+                    
+                    if (currentTime > lateCutOffForToday) {
+                        return { status: "Absent" };
+                    } else {
+                        return { status: "Pending" };
+                    }
+                }
             } else return { status: "Absent (Config Missing)" };
         } else if (checkDate < today) return { status: "Absent" };
         else return { status: undefined };

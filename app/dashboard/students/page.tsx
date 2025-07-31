@@ -119,7 +119,6 @@ export default function StudentsPage() {
 
   // --- Edit Logic ---
   const handleEditStudent = (student: Student) => {
-    console.log("Editing student:", student);
     setStudentToEdit(student); // Set the student to edit
     setIsFormActive(true);     // Show the form
   };

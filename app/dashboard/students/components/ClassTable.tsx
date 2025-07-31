@@ -20,6 +20,7 @@ interface ClassTableProps {
   selectedStudents?: Set<string>;
   onStudentSelect?: (studentId: string, isSelected: boolean) => void;
   onSelectAll?: (studentIds: string[], isSelected: boolean) => void;
+  getAttendanceStatus?: (student: Student) => string;
 }
 
 export const ClassTable: React.FC<ClassTableProps> = ({ 
@@ -36,7 +37,8 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   onBatchUpdate,
   selectedStudents = new Set(),
   onStudentSelect,
-  onSelectAll
+  onSelectAll,
+  getAttendanceStatus
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasMore = studentList.length > initialLimit;
@@ -167,6 +169,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   onBatchUpdate={onBatchUpdate}
                   isSelected={selectedStudents.has(student.id)}
                   onSelect={onStudentSelect}
+                  getAttendanceStatus={getAttendanceStatus}
                 />
               ))}
             </tbody>

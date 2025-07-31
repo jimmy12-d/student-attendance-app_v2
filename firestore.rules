@@ -45,7 +45,44 @@ service cloud.firestore {
 
     match /attendance/{attendanceId} {
       // Only admins can create or update attendance records.
-      allow create, update: if isAuthorizedUser();
+      allow write: if isAuthorizedUser();
+      
+      // An admin can read any record.
+      // A student can read their OWN attendance records.
+      // IMPORTANT: This requires your 'attendance' documents to have an 'authUid' field.
+      allow read: if true; // Temporary for debugging
+    }
+
+    match /classConfigs/{classId} {
+      // Allow any authenticated user to read class configurations.
+      allow read: if request.auth != null;
+      
+      // Only admins can create, update, or delete class configurations.
+      allow write: if isAuthorizedUser();
+    }
+
+    match /classTypes/{classId} {
+      // Allow any authenticated user to read class types/configurations.
+      allow read: if request.auth != null;
+      
+      // Only admins can create, update, or delete class types.
+      allow write: if isAuthorizedUser();
+    }
+
+    match /classes/{classId} {
+      // Allow any authenticated user to read class configurations.
+      allow read: if request.auth != null;
+      
+      // Only admins can create, update, or delete class configurations.
+      allow write: if isAuthorizedUser();
+    }
+
+    match /permissions/{permissionId} {
+      // Allow any authenticated user to read permissions (needed for attendance logic).
+      allow read: if request.auth != null;
+      
+      // Only admins can create, update, or delete permissions.
+      allow write: if isAuthorizedUser();
     }
 
     match /documents/{documentId} {

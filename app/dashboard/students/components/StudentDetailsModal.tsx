@@ -320,9 +320,6 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                         className="w-full h-full border-none"
                         title={`${student.fullName} photo`}
                         frameBorder="0"
-                        onLoad={() => {
-                          console.log('Modal: Google Drive iframe loaded successfully for:', student.fullName);
-                        }}
                       />
                     ) : (
                       <img

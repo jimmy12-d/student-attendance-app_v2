@@ -1,7 +1,7 @@
 // app/dashboard/students/TableStudents.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Student } from "../../_interfaces";
 import { ColumnToggle, ColumnConfig } from "./components/ColumnToggle";
 import { ShiftSection } from "./components/ShiftSection";
@@ -12,7 +12,12 @@ import { toast } from 'sonner';
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { doc, writeBatch } from "firebase/firestore";
+import { doc, writeBatch, collection, getDocs } from "firebase/firestore";
+
+// Attendance logic imports
+import { getStudentDailyStatus, isSchoolDay } from '../_lib/attendanceLogic';
+import { AllClassConfigs } from '../_lib/configForAttendanceLogic';
+import { PermissionRecord } from '../../_interfaces';
 
 type Props = {
   students: Student[];
@@ -31,13 +36,136 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
     { id: 'paymentStatus', label: 'Payment', enabled: false },
     { id: 'scheduleType', label: 'Type', enabled: false },
     { id: 'warning', label: 'Warning', enabled: false },
+    { id: 'todaysStatus', label: "Today's Status", enabled: true }, // Enable by default for debugging
   ]);
+
+  // Attendance data state
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs | null>(null);
+  const [permissions, setPermissions] = useState<PermissionRecord[]>([]);
+  const [loadingAttendanceData, setLoadingAttendanceData] = useState(true);
 
   // Batch edit state
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [batchClass, setBatchClass] = useState('');
   const [batchShift, setBatchShift] = useState('Morning');
   const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+
+  // Fetch attendance data for today's status
+  useEffect(() => {
+    const fetchAttendanceData = async () => {
+      try {
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;  
+        // Test classes collection structure
+        try {
+          const classesSnapshot = await getDocs(collection(db, 'classes'));
+          if (classesSnapshot.size > 0) {
+            classesSnapshot.docs.forEach(doc => {});
+          }
+        } catch (error) {
+          console.error('Error testing classes collection:', error);
+        }
+        
+        // Fetch today's attendance
+        const attendanceRef = collection(db, 'attendance');
+        
+        const attendanceSnapshot = await getDocs(attendanceRef);
+ 
+        const attendanceData = attendanceSnapshot.docs
+          .map(doc => {
+            return { id: doc.id, ...doc.data() };
+          })
+          .filter((record: any) => record.date === todayStr);
+        
+        // Fetch all class configs from 'classes' collection
+        const classConfigSnapshot = await getDocs(collection(db, 'classes'));
+        
+        const allConfigs: AllClassConfigs = {};
+        classConfigSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+
+          if (data.shifts) { // Only add if shifts property exists
+            allConfigs[doc.id] = data as any;
+          }
+        });
+
+        const permissionsSnapshot = await getDocs(collection(db, 'permissions'));
+        
+        const permissionsData = permissionsSnapshot.docs
+          .map(doc => {
+            return { id: doc.id, ...doc.data() };
+          })
+          .filter((record: any) => 
+            record.status === 'approved' &&
+            record.permissionStartDate <= todayStr && 
+            record.permissionEndDate >= todayStr
+          ) as PermissionRecord[];
+        
+        setAttendance(attendanceData);
+        setAllClassConfigs(allConfigs);
+        setPermissions(permissionsData);
+        setLoadingAttendanceData(false);
+      } catch (error) {
+        console.error('Error fetching attendance data:', error);
+        console.error('Error details:', {
+          name: error?.name,
+          message: error?.message,
+          code: error?.code,
+          stack: error?.stack
+        });
+        setLoadingAttendanceData(false);
+      }
+    };
+
+    fetchAttendanceData();
+  }, []);
+
+  // Calculate today's attendance status for a student
+  const getStudentAttendanceStatus = (student: Student): string => {
+
+    if (!allClassConfigs || loadingAttendanceData) {
+      return "unknown";
+    }
+
+    try {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      // Find attendance record for this student today
+      const attendanceRecord = attendance.find((record: any) => 
+        record.studentId === student.id && record.date === todayStr
+      );
+      
+      // Find permissions for this student today
+      const studentPermissions = permissions.filter(permission => 
+        permission.studentId === student.id && 
+        permission.status === 'approved' &&
+        todayStr >= permission.permissionStartDate && 
+        todayStr <= permission.permissionEndDate
+      );
+
+      // Extract class ID by removing "Class " prefix
+      const classId = student.class?.replace(/^Class\s+/i, '') || '';
+ 
+      const classConfig = allClassConfigs ? allClassConfigs[classId] : undefined;
+
+      const result = getStudentDailyStatus(
+        student,
+        todayStr,
+        attendanceRecord,
+        allClassConfigs,
+        studentPermissions
+      );
+            
+      const finalStatus = result.status?.toLowerCase() || "unknown";
+      
+      return finalStatus;
+    } catch (error) {
+      console.error('Error calculating attendance status for', student.fullName, ':', error);
+      return "unknown";
+    }
+  };
 
   // Auto-enable #N column when entering batch edit mode
   React.useEffect(() => {
@@ -429,6 +557,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                   selectedStudents={selectedStudents}
                   onStudentSelect={handleStudentSelect}
                   onSelectAll={handleSelectAll}
+                  getAttendanceStatus={getStudentAttendanceStatus}
                 />
                 <ClassTable 
                   studentList={groupedStudents[className]['Afternoon']} 
@@ -444,6 +573,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                   selectedStudents={selectedStudents}
                   onStudentSelect={handleStudentSelect}
                   onSelectAll={handleSelectAll}
+                  getAttendanceStatus={getStudentAttendanceStatus}
                 />
               </div>
             ))}
@@ -493,6 +623,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                 selectedStudents={selectedStudents}
                 onStudentSelect={handleStudentSelect}
                 onSelectAll={handleSelectAll}
+                getAttendanceStatus={getStudentAttendanceStatus}
               />
             ))}
           </div>
