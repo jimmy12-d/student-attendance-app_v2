@@ -15,6 +15,7 @@ import NotificationBar from "../../_components/NotificationBar";
 import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
 import AddStudentForm from "./AddStudentForm";
+import EditStudentForm from "./EditStudentForm";
 import TableStudents from "./TableStudents";
 import CardBoxModal from "../../_components/CardBox/Modal";
 import { toast } from 'sonner';
@@ -130,6 +131,7 @@ export default function StudentsPage() {
 
   return (
     <SectionMain>
+
       <SectionTitleLineWithButton
         icon={mdiTableBorder}
         title="Students"
@@ -171,13 +173,18 @@ export default function StudentsPage() {
             <h2 className="text-xl font-semibold mb-4">
               {studentToEdit ? "Edit Student" : "Add New Student"}
             </h2>
-            <AddStudentForm
-              onStudentAdded={handleStudentFormSubmit}
-              onCancel={handleFormClose}
-              // If studentToEdit is null, pass undefined instead.
-              // Otherwise, pass studentToEdit.
-              initialData={studentToEdit ? studentToEdit : undefined} 
-            />
+            {studentToEdit ? (
+              <EditStudentForm
+                onStudentUpdated={handleStudentFormSubmit}
+                onCancel={handleFormClose}
+                studentData={studentToEdit}
+              />
+            ) : (
+              <AddStudentForm
+                onStudentAdded={handleStudentFormSubmit}
+                onCancel={handleFormClose}
+              />
+            )}
           </div>
         </CardBox>
       )}
@@ -198,6 +205,7 @@ export default function StudentsPage() {
                 onDelete={handleDeleteStudent}
                 isBatchEditMode={isBatchEditMode}
                 onBatchUpdate={fetchStudents}
+                onExitBatchEdit={() => setIsBatchEditMode(false)}
               />
             </CardBox>
           )}

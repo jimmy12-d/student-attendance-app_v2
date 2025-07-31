@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Icon from './Icon';
 import { mdiChevronDown } from '@mdi/js';
 
@@ -28,10 +29,23 @@ const CustomSingleSelectDropdown: React.FC<Props> = ({
   fieldData,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const otherInputRef = useRef<HTMLInputElement>(null);
   
   const isOtherSelected = selectedValue && !options.some(opt => opt.value === selectedValue);
+
+  const updateDropdownPosition = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  };
 
   const handleSelect = (value: string) => {
     onChange(value);
@@ -44,18 +58,32 @@ const CustomSingleSelectDropdown: React.FC<Props> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
+    
+    const handleScroll = () => {
+      if (isOpen) {
+        updateDropdownPosition();
+      }
+    };
+
     if (isOpen) {
+      updateDropdownPosition();
       document.addEventListener("mousedown", handleClickOutside);
+      window.addEventListener("scroll", handleScroll, true);
+      window.addEventListener("resize", handleScroll);
       if (isOtherSelected) {
         setTimeout(() => otherInputRef.current?.focus(), 0);
       }
     }
+    
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
     };
   }, [isOpen, isOtherSelected]);
 
@@ -71,8 +99,9 @@ const CustomSingleSelectDropdown: React.FC<Props> = ({
     : defaultButtonClasses;
 
   return (
-    <div className="relative w-full" ref={dropdownRef}>
+    <div className="relative w-full">
       <button
+        ref={buttonRef}
         type="button"
         id={id}
         onClick={() => setIsOpen(!isOpen)}
@@ -84,8 +113,16 @@ const CustomSingleSelectDropdown: React.FC<Props> = ({
         <Icon path={mdiChevronDown} w="h-5 w-5" className={`ml-2 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
-      {isOpen && (
-        <div className="z-20 absolute mt-1 w-full bg-white rounded-lg shadow-xl dark:bg-gray-700 border border-gray-200 dark:border-gray-600 max-h-72 flex flex-col">
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          ref={dropdownRef}
+          className="fixed z-[1000] bg-white rounded-lg shadow-xl dark:bg-gray-700 border border-gray-200 dark:border-gray-600 max-h-72 flex flex-col"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`
+          }}
+        >
           <ul className="flex-grow overflow-y-auto py-1" role="listbox">
             {options.map(option => (
               <li key={option.value} className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer text-sm text-gray-900 dark:text-gray-100"
@@ -105,7 +142,8 @@ const CustomSingleSelectDropdown: React.FC<Props> = ({
               />
             </li>
           </ul>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 const CustomDropdown = ({ 
   label, 
@@ -14,6 +15,7 @@ const CustomDropdown = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0, positionAbove: false });
   const dropdownRef = useRef(null);
 
   const filteredOptions = searchable && searchTerm.trim() 
@@ -24,20 +26,71 @@ const CustomDropdown = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      // Check if click is on the dropdown content or search input
+      const dropdownContent = document.querySelector('[data-dropdown-content]');
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) && 
+          (!dropdownContent || !dropdownContent.contains(event.target))) {
         setIsOpen(false);
         setSearchTerm('');
       }
     };
 
+    const updatePosition = () => {
+      if (dropdownRef.current && isOpen) {
+        const rect = dropdownRef.current.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        
+        // Calculate actual dropdown height needed
+        const baseHeight = 40; // padding and border
+        const searchHeight = searchable ? 60 : 0; // search input height
+        const itemHeight = 30; // approximate height per item
+        const currentOptions = searchable && searchTerm.trim() 
+          ? options.filter(option => option.label.toLowerCase().includes(searchTerm.toLowerCase()))
+          : options;
+        const maxItems = Math.min(currentOptions.length + 1, 6); // +1 for clear option, max 6 visible
+        const actualDropdownHeight = Math.min(baseHeight + searchHeight + (itemHeight * maxItems), 240);
+        
+        // Position dropdown above if there's more space above and not enough below
+        const shouldPositionAbove = spaceBelow < actualDropdownHeight && spaceAbove > spaceBelow;
+        
+        setDropdownPosition({
+          top: shouldPositionAbove ? rect.top - actualDropdownHeight - 4 : rect.bottom + 4,
+          left: rect.left,
+          width: rect.width,
+          positionAbove: shouldPositionAbove
+        });
+      }
+    };
+
+    const handleScroll = (event) => {
+      if (isOpen) {
+        updatePosition(); // Always update position on scroll
+      }
+    };
+
     if (isOpen) {
+      updatePosition();
       document.addEventListener("mousedown", handleClickOutside);
+      window.addEventListener("resize", updatePosition);
+      // Use passive listeners for better performance and avoid preventing scroll
+      window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
+      document.addEventListener("scroll", handleScroll, { passive: true, capture: true });
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", handleScroll, { passive: true, capture: true });
+      document.removeEventListener("scroll", handleScroll, { passive: true, capture: true });
     }
 
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", handleScroll, { passive: true, capture: true });
+      document.removeEventListener("scroll", handleScroll, { passive: true, capture: true });
+    };
+  }, [isOpen, searchTerm]);
 
   const handleSelect = (optionValue) => {
     onChange(optionValue);
@@ -49,10 +102,10 @@ const CustomDropdown = ({
 
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         {label}
       </label>
-      <div className="mt-1 relative" ref={dropdownRef}>
+      <div className="mt-1 relative z-50" ref={dropdownRef}>
         <button
           type="button"
           id={id}
@@ -71,8 +124,19 @@ const CustomDropdown = ({
           </svg>
         </button>
 
-        {isOpen && (
-          <div className="z-50 absolute mt-1 w-full bg-white rounded-lg shadow-lg dark:bg-gray-700 border border-gray-200 dark:border-gray-600 max-h-60 flex flex-col">
+        {isOpen && typeof document !== 'undefined' && createPortal(
+          <div 
+            data-dropdown-content
+            className={`fixed bg-white rounded-lg shadow-lg dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex flex-col min-w-[200px] z-[1000] ${
+              dropdownPosition.positionAbove ? 'max-h-60' : 'max-h-60'
+            }`}
+            style={{ 
+              top: dropdownPosition.top,
+              left: dropdownPosition.left,
+              width: dropdownPosition.width,
+              maxHeight: '240px' // Fixed max height for scrolling
+            }}
+          >
             {searchable && (
               <div className="p-2 border-b border-gray-200 dark:border-gray-600">
                 <input
@@ -86,7 +150,11 @@ const CustomDropdown = ({
               </div>
             )}
 
-            <ul className="flex-grow overflow-y-auto py-1 text-sm text-gray-700 dark:text-gray-200" aria-labelledby={id}>
+            <ul 
+              className="flex-grow overflow-y-auto py-1 text-sm text-gray-700 dark:text-gray-200" 
+              aria-labelledby={id}
+              style={{ maxHeight: searchable ? '180px' : '200px' }}
+            >
               {/* Clear selection option */}
               <li>
                 <button 
@@ -118,7 +186,8 @@ const CustomDropdown = ({
                 </li>
               )}
             </ul>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

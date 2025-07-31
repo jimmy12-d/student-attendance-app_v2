@@ -130,7 +130,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                 <td key="name" className="p-3">
                   <div className="flex items-center space-x-3">
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold truncate transition-all duration-300 group-hover:text-base group-hover:scale-105 transform-gpu ${
+                      <p className={`text-sm font-semibold truncate transition-all duration-300 transform-gpu ${
                         isBatchEditMode && isSelected 
                           ? 'text-blue-600 dark:text-blue-400' 
                           : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'
@@ -138,7 +138,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                         {student.fullName}
                       </p>
                       {student.nameKhmer && (
-                        <p className={`text-xs truncate transition-all duration-300 group-hover:text-sm group-hover:scale-105 transform-gpu ${
+                        <p className={`text-xs truncate transition-all duration-300 transform-gpu ${
                           isBatchEditMode && isSelected 
                             ? 'text-blue-500 dark:text-blue-500' 
                             : 'text-gray-500 dark:text-gray-400'

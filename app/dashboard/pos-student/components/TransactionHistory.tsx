@@ -14,6 +14,8 @@ interface TransactionHistoryProps {
     onRemoveTransaction: (transaction: Transaction) => void;
     onDownloadReceipt?: (transaction: Transaction) => void;
     onReprintReceipt?: (transaction: Transaction) => void;
+    downloadingTransactionId?: string;
+    reprintingTransactionId?: string;
 }
 
 export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
@@ -23,7 +25,9 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     isLoading,
     onRemoveTransaction,
     onDownloadReceipt,
-    onReprintReceipt
+    onReprintReceipt,
+    downloadingTransactionId,
+    reprintingTransactionId
 }) => {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [transactionToRemove, setTransactionToRemove] = useState<Transaction | null>(null);
@@ -119,21 +123,23 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                                 {onDownloadReceipt && (
                                                     <Button
                                                         color="info"
-                                                        label="Download"
+                                                        label={downloadingTransactionId === transaction.transactionId ? "Downloading..." : "Download"}
                                                         onClick={() => onDownloadReceipt(transaction)}
                                                         icon={mdiDownload}
                                                         small
                                                         className="text-xs"
+                                                        disabled={downloadingTransactionId === transaction.transactionId}
                                                     />
                                                 )}
                                                 {onReprintReceipt && (
                                                     <Button
                                                         color="success"
-                                                        label="Reprint"
+                                                        label={reprintingTransactionId === transaction.transactionId ? "Reprinting..." : "Reprint"}
                                                         onClick={() => onReprintReceipt(transaction)}
                                                         icon={mdiPrinter}
                                                         small
                                                         className="text-xs"
+                                                        disabled={reprintingTransactionId === transaction.transactionId}
                                                     />
                                                 )}
                                             </div>

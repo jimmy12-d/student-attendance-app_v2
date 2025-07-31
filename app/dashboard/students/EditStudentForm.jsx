@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../../firebase-config';
-import { collection, addDoc, setDoc, doc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, setDoc, doc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 // Components
-import TimestampFetcher from './components/TimestampFetcher';
 import CustomDropdown from './components/CustomDropdown';
-import PhotoPreview from './components/PhotoPreview';
 import CollapsibleSection from './components/CollapsibleSection';
 
 // Hooks
@@ -34,15 +32,16 @@ import { useStudentForm } from './hooks/useStudentForm';
  */
 
 /**
- * @typedef {object} AddStudentFormProps
- * @property {(id: string) => void} onStudentAdded
+ * @typedef {object} EditStudentFormProps
+ * @property {(id: string) => void} onStudentUpdated
  * @property {() => void} onCancel
+ * @property {Student} studentData - Required for edit form
  */
 
 /**
- * @param {AddStudentFormProps} props
+ * @param {EditStudentFormProps} props
  */
-function AddStudentForm({ onStudentAdded, onCancel }) {
+function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -67,16 +66,15 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     warning, setWarning,
     isStudentInfoCollapsed, setIsStudentInfoCollapsed,
     isParentInfoCollapsed, setIsParentInfoCollapsed,
-    populateFromSheetData,
     getFormData
-  } = useStudentForm();
+  } = useStudentForm(studentData);
 
   const scheduleTypeOptions = [
     { value: 'Fix', label: 'Fix' },
     { value: 'Flip-Flop', label: 'Flip-Flop' },
   ];
 
-  // Effect to set grade type filter when adding a student
+  // Effect to set grade type filter when editing a student
   useEffect(() => {
     if (studentClass && allClassData && !loadingClasses) {
       const classData = allClassData[studentClass];
@@ -84,7 +82,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
         setGradeTypeFilter(classData.type);
       }
     }
-  }, [studentClass, allClassData, loadingClasses]);
+  }, [studentClass, allClassData, loadingClasses, setGradeTypeFilter]);
 
   // Effect to validate selected shift against the selected class
   useEffect(() => {
@@ -104,21 +102,12 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     } else {
       setShift('');
     }
-  }, [studentClass, allClassData, loadingClasses, shift]);
+  }, [studentClass, allClassData, loadingClasses, shift, setShift]);
 
+  // Always show all class options for better search functionality
   const filteredClassOptions = useMemo(() => {
-    // In add mode, filter classes based on gradeTypeFilter (from fetched data)
-    if (gradeTypeFilter && allClassData) {
-      const filteredClassNames = Object.keys(allClassData).filter(
-        (className) => allClassData[className].type === gradeTypeFilter
-      );
-      return filteredClassNames.map((name) => ({
-        value: name,
-        label: name,
-      }));
-    }
     return classOptions;
-  }, [classOptions, allClassData, gradeTypeFilter]);
+  }, [classOptions]);
 
   const availableShiftOptions = useMemo(() => {
     if (!studentClass || !allClassData || loadingClasses) {
@@ -133,10 +122,6 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
 
     return [];
   }, [studentClass, allClassData, loadingClasses, allShiftOptions]);
-
-  const handleSheetDataFetched = (data) => {
-    populateFromSheetData(data);
-  };
 
   const handleDiscountChange = (e) => {
     const value = e.target.value;
@@ -158,7 +143,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     }
 
     try {
-      // Check for duplicates
+      // Check for duplicates, excluding the current student
       const studentsRef = collection(db, "students");
       const nameQuery = query(studentsRef, where("fullName", "==", fullName));
       const phoneQuery = query(studentsRef, where("phone", "==", phone));
@@ -168,9 +153,16 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
         getDocs(phoneQuery)
       ]);
 
-      // Check for duplicates
-      const hasDuplicateName = nameSnapshot.docs.length > 0;
-      const hasDuplicatePhone = phone && phoneSnapshot.docs.length > 0;
+      // Check for duplicates, excluding the current student
+      const hasDuplicateName = nameSnapshot.docs.length > 0 && nameSnapshot.docs.some(doc => {
+        const docData = doc.data();
+        return doc.id !== studentData.id && docData.fullName === fullName;
+      });
+      
+      const hasDuplicatePhone = phone && phoneSnapshot.docs.length > 0 && phoneSnapshot.docs.some(doc => {
+        const docData = doc.data();
+        return doc.id !== studentData.id && docData.phone === phone;
+      });
 
       if (hasDuplicateName) {
         toast.error(`A student with the name "${fullName}" already exists.`);
@@ -184,36 +176,34 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
         return;
       }
 
-      const studentData = getFormData();
+      const updatedStudentData = getFormData();
 
-      const docRef = await addDoc(collection(db, "students"), { ...studentData, authUid: '', createdAt: serverTimestamp() });
-      toast.success(`Student '${studentData.fullName}' has been added successfully!`);
-      if (onStudentAdded) {
-        onStudentAdded(docRef.id);
+      const studentRef = doc(db, "students", studentData.id);
+      await setDoc(studentRef, { ...updatedStudentData, updatedAt: serverTimestamp() }, { merge: true });
+      
+      toast.success(`Student '${updatedStudentData.fullName}' has been updated successfully!`);
+      
+      if (onStudentUpdated) {
+        onStudentUpdated(studentData.id);
       }
     } catch (err) {
-      console.error("Error saving student: ", err);
-      toast.error("Failed to save student. Please try again.");
+      console.error("Error updating student: ", err);
+      toast.error("Failed to update student. Please try again.");
+      setError("Failed to update student. Please try again.");
     }
     setLoading(false);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Timestamp Fetcher */}
-      <TimestampFetcher 
-        onDataFetched={handleSheetDataFetched}
-        onError={setError}
-      />
-
       {/* Student Information Section */}
       <CollapsibleSection
         title="Student Information"
-        isCollapsed={isStudentInfoCollapsed}
+        isCollapsed={!isStudentInfoCollapsed}
         onToggle={() => setIsStudentInfoCollapsed(!isStudentInfoCollapsed)}
-        showOnlyInEditMode={false}
-        isEditMode={false}
-        className="mt-2"
+        showOnlyInEditMode={true}
+        isEditMode={true}
+        className="space-y-6"
       >
         {/* Row 1: Full Name and Khmer Name */}
         <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0">
@@ -323,13 +313,13 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
         title="Parent/Guardian Information"
         isCollapsed={isParentInfoCollapsed}
         onToggle={() => setIsParentInfoCollapsed(!isParentInfoCollapsed)}
-        showOnlyInEditMode={false}
-        isEditMode={false}
+        showOnlyInEditMode={true}
+        isEditMode={true}
         className="pt-4 relative z-0"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0">
           <div>
-            <label htmlFor="motherName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="motherName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Mother's Name
             </label>
             <input
@@ -342,7 +332,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
             />
           </div>
           <div>
-            <label htmlFor="motherPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="motherPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Mother's Phone
             </label>
             <input
@@ -357,7 +347,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0 mt-6">
           <div>
-            <label htmlFor="fatherName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="fatherName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Father's Name
             </label>
             <input
@@ -370,7 +360,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
             />
           </div>
           <div>
-            <label htmlFor="fatherPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="fatherPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Father's Phone
             </label>
             <input
@@ -384,22 +374,75 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
           </div>
         </div>
       </CollapsibleSection>
-      
-      {/* Row 5: Photo URL and Preview */}
-      <div className="pt-6">
-        <label htmlFor="photoUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Photo URL
-        </label>
-        <input
-          type="text"
-          id="photoUrl"
-          name="photoUrl"
-          value={photoUrl}
-          onChange={(e) => setPhotoUrl(e.target.value)}
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
-          placeholder="https://example.com/image.jpg"
-        />
-        <PhotoPreview photoUrl={photoUrl} />
+
+      {/* Admin Information Section */}
+      <div className="pt-4">
+        <p className="text-lg font-semibold text-gray-800 dark:text-white mb-6">Admin Information</p>
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8">
+            <div>
+              <label htmlFor="discount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Discount Amount ($)
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">$</span>
+                </div>
+                <input
+                  type="text"
+                  id="discount"
+                  name="discount"
+                  value={discount}
+                  onChange={handleDiscountChange}
+                  placeholder="0.00"
+                  className="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                Enter discount amount in USD (e.g., 10.50)
+              </p>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="note" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Admin Note
+            </label>
+            <textarea
+              id="note"
+              name="note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              placeholder="Add any administrative notes here..."
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black resize-none"
+            />
+          </div>
+          <div>
+            <label htmlFor="warning" className="block text-sm font-medium text-red-700 dark:text-red-400 mb-3">
+              Student Warning
+            </label>
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="flex items-start space-x-4">
+                <input
+                  type="checkbox"
+                  id="warning"
+                  name="warning"
+                  checked={warning}
+                  onChange={(e) => setWarning(e.target.checked)}
+                  className="h-5 w-5 text-red-600 border-red-300 rounded focus:ring-red-500 focus:ring-2 mt-0.5"
+                />
+                <div className="flex-1">
+                  <label htmlFor="warning" className="text-sm font-medium text-red-800 dark:text-red-200 cursor-pointer">
+                    This student requires special attention or close monitoring
+                  </label>
+                  <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                    Check this box to flag students who need extra supervision or have behavioral concerns. This will display a warning badge in the student details.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {error && <p className="text-red-500 text-sm mb-3 -mt-2">{error}</p>}
@@ -419,11 +462,11 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
           disabled={loading}
           className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
-          {loading ? 'Adding...' : 'Add Student'}
+          {loading ? 'Updating...' : 'Update Student'}
         </button>
       </div>
     </form>
   );
 }
 
-export default AddStudentForm;
+export default EditStudentForm;

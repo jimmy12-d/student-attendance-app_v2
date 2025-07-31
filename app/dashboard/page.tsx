@@ -326,7 +326,7 @@ export default function DashboardPage() {
 
   return (
     <SectionMain>
-      <SectionTitleLineWithButton icon={mdiChartTimelineVariant} title="Dashboard Overview" main>
+      <SectionTitleLineWithButton icon={mdiChartTimelineVariant} title="Dashboard Overview" main>        
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
             <Icon path={mdiAccount} size={0.8} />
@@ -542,7 +542,7 @@ export default function DashboardPage() {
 
                 {/* Student Count Display - More prominent */}
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
                     <div className="text-center">
                       <div className="text-lg font-bold text-gray-900 dark:text-gray-100">{classData.totalStudents}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">Total Students in {classData.shift}</div>
@@ -556,7 +556,7 @@ export default function DashboardPage() {
 
         {/* Quick Class Summary for collapsed view */}
         {!showClassDetails && (
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6">
+          <div className="bg-gray-100 dark:bg-slate-900/70 rounded-xl p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{classStats.length}</div>

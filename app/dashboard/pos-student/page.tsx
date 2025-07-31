@@ -53,6 +53,8 @@ const POSStudentPage = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [downloadingTransactionId, setDownloadingTransactionId] = useState<string | undefined>();
+    const [reprintingTransactionId, setReprintingTransactionId] = useState<string | undefined>();
     const [paymentMonth, setPaymentMonth] = useState(''); // For storing YYYY-MM
     const [displayPaymentMonth, setDisplayPaymentMonth] = useState(''); // For display
     const [showMonthInput, setShowMonthInput] = useState(false);
@@ -401,6 +403,7 @@ const POSStudentPage = () => {
             return;
         }
 
+        setReprintingTransactionId(transaction.transactionId);
         try {
             const response = await fetch('/api/printnode', {
                 method: 'POST',
@@ -443,10 +446,13 @@ const POSStudentPage = () => {
         } catch (error) {
             console.error(error);
             toast.error(error instanceof Error ? error.message : "Failed to reprint receipt.");
+        } finally {
+            setReprintingTransactionId(undefined);
         }
     };
 
     const handleDownloadTransaction = async (transaction: Transaction) => {
+        setDownloadingTransactionId(transaction.transactionId);
         try {
             const response = await fetch('/api/printnode', {
                 method: 'POST',
@@ -493,6 +499,8 @@ const POSStudentPage = () => {
         } catch (error) {
             console.error(error);
             toast.error(error instanceof Error ? error.message : "Failed to download receipt.");
+        } finally {
+            setDownloadingTransactionId(undefined);
         }
     };
 
@@ -704,7 +712,7 @@ const POSStudentPage = () => {
                 >
                     <div className="space-y-4">
                         <p>What would you like to do next?</p>
-                        <div className="flex justify-around">
+                        <div className="flex justify-around space-x-2">
                             <Button 
                                 label={isPrinting ? "Printing..." : "Print"} 
                                 color="info" 
@@ -716,6 +724,13 @@ const POSStudentPage = () => {
                                 color="success" 
                                 onClick={handleDownloadReceipt} 
                                 icon={mdiDownload}
+                                disabled={isPrinting || isDownloading}
+                            />
+                            <Button 
+                                label="Cancel" 
+                                color="outline" 
+                                onClick={closePostTransactionModal}
+                                icon={mdiClose}
                                 disabled={isPrinting || isDownloading}
                             />
                         </div>
@@ -731,6 +746,8 @@ const POSStudentPage = () => {
                 onRemoveTransaction={handleRemoveTransaction}
                 onDownloadReceipt={handleDownloadTransaction}
                 onReprintReceipt={handleReprintTransaction}
+                downloadingTransactionId={downloadingTransactionId}
+                reprintingTransactionId={reprintingTransactionId}
             />
         </SectionMain>
     );

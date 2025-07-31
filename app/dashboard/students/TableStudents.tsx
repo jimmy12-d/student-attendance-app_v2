@@ -25,9 +25,10 @@ type Props = {
   onDelete: (student: Student) => void;
   isBatchEditMode?: boolean;
   onBatchUpdate?: () => void;
+  onExitBatchEdit?: () => void;
 };
 
-const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, onBatchUpdate }: Props) => {
+const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, onBatchUpdate, onExitBatchEdit }: Props) => {
   // Column configuration state
   const [columns, setColumns] = useState<ColumnConfig[]>([
     { id: 'number', label: '#N', enabled: true },
@@ -36,7 +37,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
     { id: 'paymentStatus', label: 'Payment', enabled: false },
     { id: 'scheduleType', label: 'Type', enabled: false },
     { id: 'warning', label: 'Warning', enabled: false },
-    { id: 'todaysStatus', label: "Today's Status", enabled: true }, // Enable by default for debugging
+    // { id: 'todaysStatus', label: "Today's Status (Not)", enabled: false }, // Enable by default for debugging
   ]);
 
   // Attendance data state
@@ -360,6 +361,11 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
       if (onBatchUpdate) {
         onBatchUpdate();
       }
+
+      // Exit batch edit mode after successful update
+      if (onExitBatchEdit) {
+        onExitBatchEdit();
+      }
     } catch (error) {
       console.error("Error updating students:", error);
       toast.error("Failed to update students");
@@ -388,7 +394,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
           </div>
 
           {/* Batch Edit Controls */}
-          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl relative z-40">
+          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl relative z-30">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
                 <svg className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -408,7 +414,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              <div>
+              <div className="relative">
                 <CustomDropdown
                   label="New Class"
                   value={batchClass}
@@ -420,7 +426,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                 />
               </div>
               
-              <div>
+              <div className="relative">
                 <CustomDropdown
                   label="New Shift"
                   value={batchShift}
