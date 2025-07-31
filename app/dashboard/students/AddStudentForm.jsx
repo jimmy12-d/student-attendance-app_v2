@@ -114,6 +114,16 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
     }
   }, [initialData]);
 
+  // Effect to set grade type filter when editing a student (to show classes of the same type)
+  useEffect(() => {
+    if (isEditMode && studentClass && allClassData && !loadingClasses) {
+      const classData = allClassData[studentClass];
+      if (classData && classData.type) {
+        setGradeTypeFilter(classData.type);
+      }
+    }
+  }, [isEditMode, studentClass, allClassData, loadingClasses]);
+
   // Effect to fetch class data
   useEffect(() => {
     const fetchClasses = async () => {
@@ -192,7 +202,14 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
   const filteredClassOptions = useMemo(() => {
     let options = classOptions;
 
-    // Filter by grade type if a filter is set
+    // If user is actively searching, show all classes that match the search term
+    if (classSearchTerm.trim()) {
+      return classOptions.filter((option) =>
+        option.label.toLowerCase().includes(classSearchTerm.toLowerCase())
+      );
+    }
+
+    // Otherwise, filter by grade type if a filter is set (for default view)
     if (gradeTypeFilter && allClassData) {
       const filteredClassNames = Object.keys(allClassData).filter(
         (className) => allClassData[className].type === gradeTypeFilter
@@ -201,13 +218,6 @@ function AddStudentForm({ onStudentAdded, onCancel, initialData }) {
         value: name,
         label: name,
       }));
-    }
-
-    // Filter by search term
-    if (classSearchTerm.trim()) {
-      return options.filter((option) =>
-        option.label.toLowerCase().includes(classSearchTerm.toLowerCase())
-      );
     }
 
     return options;

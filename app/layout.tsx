@@ -28,6 +28,13 @@ const LayoutComponent = ({ children }: { children: ReactNode }) => {
 
   return (
     <html lang="en" className={`h-full ${darkMode ? 'dark' : ''}`}>
+      <head>
+        <title>Rodwell Portal</title>
+        <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
+        <meta name="description" content="Rodwell Learning Center Student Attendance App" />
+      </head>
       <body id="student-attendance-app" className={`h-full ${darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'}`}>
         <div className="flex flex-col min-h-screen">
           <DarkModeInit />
@@ -40,7 +47,6 @@ const LayoutComponent = ({ children }: { children: ReactNode }) => {
     </html>
   );
 };
-
 
 export default function RootLayout({
   children,

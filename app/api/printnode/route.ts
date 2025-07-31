@@ -28,11 +28,26 @@ class PrintNodeClient {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`PrintNode API error: ${response.status} - ${error}`);
+      let errorMessage;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || JSON.stringify(errorData);
+        } else {
+          errorMessage = await response.text();
+        }
+      } catch {
+        errorMessage = `HTTP ${response.status} ${response.statusText}`;
+      }
+      throw new Error(`PrintNode API error: ${response.status} - ${errorMessage}`);
     }
 
-    return response.json();
+    try {
+      return await response.json();
+    } catch (parseError) {
+      throw new Error(`PrintNode API returned invalid JSON: ${parseError}`);
+    }
   }
 
   // Get all available printers
@@ -102,10 +117,10 @@ async function generateReceiptPdf(transaction: any, pageHeight: number): Promise
     const margin = 15; // Increased side margins
 
     // --- Logo ---
-    const logoPath = path.resolve('./public', 'rodwell_logo.png');
+    const logoPath = path.resolve('./public', 'icon-192x192.png');
     const logoImageBytes = await fs.readFile(logoPath);
     const logoImage = await pdfDoc.embedPng(logoImageBytes);
-    const logoDims = logoImage.scale(0.025);
+    const logoDims = logoImage.scale(0.33);
     page.drawImage(logoImage, {
       x: (width - logoDims.width) / 2, // Center the logo
       y: height - logoDims.height, // Reduced top margin
@@ -113,7 +128,7 @@ async function generateReceiptPdf(transaction: any, pageHeight: number): Promise
       height: logoDims.height,
     });
 
-    let y = height - logoDims.height - 10; // Adjusted starting Y
+    let y = height - logoDims.height - 20; // Adjusted starting Y
 
     const centerTextX = (text: string, textFont: any, size: number) => (width - textFont.widthOfTextAtSize(text, size)) / 2;
 
@@ -302,7 +317,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('\n✅ [PrintNode API] Received POST request at:', new Date().toISOString());
+  const isProduction = process.env.NODE_ENV === 'production';
+  const requestUrl = request.url;
+  console.log(`\n✅ [PrintNode API] Received POST request at: ${new Date().toISOString()}`);
+  console.log(`[PrintNode API] Environment: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+  console.log(`[PrintNode API] Request URL: ${requestUrl}`);
+  
   try {
     if (!PRINTNODE_API_KEY || PRINTNODE_API_KEY === 'your_printnode_api_key_here') {
       console.error('❌ [PrintNode API] FATAL: PRINTNODE_API_KEY is not configured in environment variables.');
@@ -311,7 +331,7 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-    console.log('🔑 [PrintNode API] API Key is present for POST.');
+    console.log(`🔑 [PrintNode API] API Key is present for POST (${PRINTNODE_API_KEY.substring(0, 8)}...)`);
 
     const body = await request.json();
     console.log('📦 [PrintNode API] Request body received from frontend:', body);
@@ -363,27 +383,51 @@ export async function POST(request: NextRequest) {
 
     // First, check if printer is available
     console.log(`[PrintNode API] Checking status of printer ID: ${printerId}`);
-    const printer = await client.getPrinter(printerId);
-    console.log('[PrintNode API] Raw printer data from API:', printer); // New log
+    
+    let printer;
+    try {
+      printer = await client.getPrinter(printerId);
+      console.log('[PrintNode API] Raw printer data from API:', JSON.stringify(printer, null, 2));
+    } catch (printerError) {
+      console.error(`[PrintNode API] Error fetching printer ${printerId}:`, printerError);
+      
+      // Check if this is a network/API error vs printer not found
+      if (printerError instanceof Error && printerError.message.includes('PrintNode API error')) {
+        return NextResponse.json(
+          { 
+            error: 'PrintNode API communication failed',
+            details: `Cannot communicate with PrintNode service: ${printerError.message}. Please check your internet connection and PrintNode account status.`
+          },
+          { status: 503 }
+        );
+      }
+      
+      return NextResponse.json(
+        { 
+          error: 'Failed to check printer status',
+          details: printerError instanceof Error ? printerError.message : 'Unknown printer error'
+        },
+        { status: 503 }
+      );
+    }
 
     if (!printer) {
       console.error(`[PrintNode API] Printer with ID ${printerId} not found.`);
       return NextResponse.json(
-        { error: 'Printer not found' },
+        { error: 'Printer not found. Please check if the PrintNode client is running and the printer is configured.' },
         { status: 404 }
       );
     }
-    console.log(`[PrintNode API] Printer found: ${printer.name}, State: ${printer.computer?.state}`);
+    
+    console.log(`[PrintNode API] Printer found: ${printer.name}`);
+    console.log(`[PrintNode API] Computer state: ${printer.computer?.state}, Computer name: ${printer.computer?.name}`);
+    console.log(`[PrintNode API] Computer ID: ${printer.computer?.id}, Computer createTimestamp: ${printer.computer?.createTimestamp}`);
 
-    if (printer.computer?.state !== 'connected') {
-      console.error(`[PrintNode API] Printer offline. State: ${printer.computer?.state}`);
-      return NextResponse.json(
-        { 
-          error: 'Printer offline',
-          details: `PrintNode client is ${printer.computer?.state || 'disconnected'}`
-        },
-        { status: 503 }
-      );
+    // More lenient computer state check - allow PrintNode to handle routing
+    if (printer.computer?.state && printer.computer.state !== 'connected') {
+      console.warn(`[PrintNode API] Printer/computer not connected. State: ${printer.computer?.state}`);
+      // Don't fail immediately - let PrintNode try to deliver the job
+      console.log(`[PrintNode API] Continuing with print job submission despite computer state: ${printer.computer?.state}`);
     }
 
     const printJob = {
@@ -394,15 +438,69 @@ export async function POST(request: NextRequest) {
       source: 'Student Attendance App',
       options: {
         copies: copies,
+        paper: '80 x 297mm', // Set appropriate thermal paper size
+        media: 'No Cash Drawer', // Disable cash drawer
+        bin: 'Document[PartialCut]', // Use full cut for receipts
+        fit_to_page: false, // Disable scaling to fit page (requires Engine6 on Windows)
+        pages: '-' // Print all pages without modification
       }
     };
 
-    console.log('📤 [PrintNode API] Submitting print job to PrintNode:', printJob.options);
+    console.log('📤 [PrintNode API] Submitting print job to PrintNode with options:', {
+      copies: printJob.options.copies,
+      paper: printJob.options.paper,
+      media: printJob.options.media,
+      bin: printJob.options.bin,
+      fit_to_page: printJob.options.fit_to_page,
+      pages: printJob.options.pages
+    });
 
     // Submit print job
-    const result = await client.submitPrintJob(printJob);
-
-    console.log('✅ [PrintNode API] Print job submitted successfully:', result);
+    let result;
+    try {
+      console.log('📤 [PrintNode API] Submitting print job to PrintNode...');
+      result = await client.submitPrintJob(printJob);
+      console.log('✅ [PrintNode API] Print job submitted successfully:', JSON.stringify(result, null, 2));
+    } catch (submitError) {
+      console.error('❌ [PrintNode API] Failed to submit print job:', submitError);
+      
+      // More specific error handling for print job submission
+      if (submitError instanceof Error) {
+        if (submitError.message.includes('PrintNode API error: 503')) {
+          return NextResponse.json(
+            { 
+              error: 'PrintNode service temporarily unavailable',
+              details: 'The PrintNode service is currently unavailable. This may be due to network issues or the PrintNode client not being connected. Please ensure the PrintNode client is running on the target computer and try again.'
+            },
+            { status: 503 }
+          );
+        } else if (submitError.message.includes('PrintNode API error: 401')) {
+          return NextResponse.json(
+            { 
+              error: 'PrintNode authentication failed',
+              details: 'Invalid PrintNode API key. Please check your PrintNode account settings.'
+            },
+            { status: 401 }
+          );
+        } else if (submitError.message.includes('PrintNode API error: 404')) {
+          return NextResponse.json(
+            { 
+              error: 'Printer not accessible',
+              details: 'The specified printer is not accessible through PrintNode. Please check if the printer is still configured and the PrintNode client is running.'
+            },
+            { status: 404 }
+          );
+        }
+      }
+      
+      return NextResponse.json(
+        { 
+          error: 'Failed to submit print job',
+          details: submitError instanceof Error ? submitError.message : 'Unknown submission error'
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -414,8 +512,11 @@ export async function POST(request: NextRequest) {
       },
       settings: {
         copies,
-        duplex,
-        paperSize
+        paper: '80 x 297mm',
+        media: 'No Cash Drawer',
+        bin: 'Document[PartialCut]',
+        fit_to_page: false,
+        pages: '-'
       },
       message: `Print job submitted to ${printer.name}`,
       printNodeJobId: result.id

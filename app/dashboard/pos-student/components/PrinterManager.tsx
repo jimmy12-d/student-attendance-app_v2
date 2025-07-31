@@ -18,7 +18,26 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
         try {
             setIsLoadingPrinters(true);
             const response = await fetch('/api/printnode?action=printers');
-            const data = await response.json();
+            
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                // Handle non-JSON responses
+                const textResponse = await response.text();
+                if (response.status === 503) {
+                    throw new Error(`PrintNode service unavailable. Please ensure the PrintNode client is running and try again.`);
+                }
+                throw new Error(`Server error: ${response.status} - ${textResponse}`);
+            }
+
+            if (!response.ok) {
+                let errorMessage = data.details || data.error || 'Failed to load printers';
+                if (response.status === 503) {
+                    errorMessage = `PrintNode service unavailable: ${errorMessage}`;
+                }
+                throw new Error(errorMessage);
+            }
             
             if (data.success) {
                 const printNodePrinters: Printer[] = data.printers.map((printer: any) => ({
@@ -40,10 +59,11 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
                     toast.info(`Printer BP003 auto-selected.`);
                 }
             } else {
-                toast.error('Failed to load printers from PrintNode');
+                toast.error(data.error || 'Failed to load printers from PrintNode');
             }
         } catch (error) {
-            toast.error('Could not connect to PrintNode service');
+            console.error('PrintNode service error:', error);
+            toast.error(error instanceof Error ? error.message : 'Could not connect to PrintNode service');
         } finally {
             setIsLoadingPrinters(false);
         }

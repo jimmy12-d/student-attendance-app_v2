@@ -290,8 +290,30 @@ const POSStudentPage = () => {
                 }),
             });
 
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.details || 'Print job failed');
+            let result;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    throw new Error(`Invalid JSON response from server`);
+                }
+            } else {
+                // Handle non-JSON responses
+                const textResponse = await response.text();
+                if (response.status === 503) {
+                    throw new Error(`PrintNode service unavailable. Please ensure the PrintNode client is running on your computer and try again.`);
+                }
+                throw new Error(`Server error: ${response.status} - ${textResponse}`);
+            }
+
+            if (!response.ok) {
+                let errorMessage = result?.details || result?.error || 'Print job failed';
+                if (response.status === 503) {
+                    errorMessage = `PrintNode service unavailable: ${errorMessage}`;
+                }
+                throw new Error(errorMessage);
+            }
             
             toast.success("Receipt sent to printer.");
             closePostTransactionModal();
@@ -322,7 +344,22 @@ const POSStudentPage = () => {
                     action: 'generate'
                 })
             });
-            const result = await response.json();
+
+            let result;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    throw new Error(`Invalid JSON response from server`);
+                }
+            } else {
+                // Handle non-JSON responses
+                const textResponse = await response.text();
+                throw new Error(`Server error: ${response.status} - ${textResponse}`);
+            }
+
+            if (!response.ok) throw new Error(result?.details || result?.error || 'Failed to generate PDF');
             if (!result.success || !result.pdfBase64) throw new Error('Failed to generate PDF.');
 
             const byteCharacters = atob(result.pdfBase64);
@@ -373,8 +410,30 @@ const POSStudentPage = () => {
                 }),
             });
 
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.details || 'Reprint job failed');
+            let result;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    throw new Error(`Invalid JSON response from server`);
+                }
+            } else {
+                // Handle non-JSON responses
+                const textResponse = await response.text();
+                if (response.status === 503) {
+                    throw new Error(`PrintNode service unavailable. Please ensure the PrintNode client is running on your computer and try again.`);
+                }
+                throw new Error(`Server error: ${response.status} - ${textResponse}`);
+            }
+
+            if (!response.ok) {
+                let errorMessage = result?.details || result?.error || 'Reprint job failed';
+                if (response.status === 503) {
+                    errorMessage = `PrintNode service unavailable: ${errorMessage}`;
+                }
+                throw new Error(errorMessage);
+            }
             
             toast.success("Receipt sent to printer for reprinting.");
         } catch (error) {
@@ -395,7 +454,21 @@ const POSStudentPage = () => {
                 })
             });
             
-            const result = await response.json();
+            let result;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    throw new Error(`Invalid JSON response from server`);
+                }
+            } else {
+                // Handle non-JSON responses
+                const textResponse = await response.text();
+                throw new Error(`Server error: ${response.status} - ${textResponse}`);
+            }
+
+            if (!response.ok) throw new Error(result?.details || result?.error || 'Failed to generate PDF');
             if (!result.success || !result.pdfBase64) throw new Error('Failed to generate PDF.');
 
             const byteCharacters = atob(result.pdfBase64);
