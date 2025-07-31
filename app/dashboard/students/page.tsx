@@ -5,7 +5,7 @@ import {
   mdiAccountPlus,
   mdiMonitorCellphone,
   mdiTableBorder,
-  mdiReload,
+  mdiPencilBox,
 } from "@mdi/js";
 import Button from "../../_components/Button";
 import CardBox from "../../_components/CardBox";
@@ -37,6 +37,9 @@ export default function StudentsPage() {
 
   // State for student to be edited
   const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+
+  // Batch edit state
+  const [isBatchEditMode, setIsBatchEditMode] = useState(false);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -121,6 +124,11 @@ export default function StudentsPage() {
     setIsFormActive(true);     // Show the form
   };
 
+  // Batch edit functions
+  const handleToggleBatchEdit = () => {
+    setIsBatchEditMode(!isBatchEditMode);
+  };
+
   return (
     <SectionMain>
       <SectionTitleLineWithButton
@@ -130,22 +138,24 @@ export default function StudentsPage() {
       >
         {!isFormActive && ( // Use isFormActive here
           <>
+          <div className="flex items-center space-x-4"> {/* New flex container for the buttons */}
             <Button
-              onClick={fetchStudents}
-              icon={mdiReload}
-              label="Refresh"
-              color="info"
+              onClick={handleToggleBatchEdit}
+              icon={mdiPencilBox}
+              label={isBatchEditMode ? "Exit Batch Edit" : "Batch Edit"}
+              color={isBatchEditMode ? "danger" : "warning"}
+              roundedFull
               small
-              className="mr-2"
             />
             <Button
               onClick={handleShowCreateForm} // Changed to show create form
               icon={mdiAccountPlus}
               label="Create Student"
-              color="contrast"
+              color="white"
               roundedFull
               small
             />
+             </div>
           </>
         )}
       </SectionTitleLineWithButton>
@@ -187,6 +197,8 @@ export default function StudentsPage() {
                 students={students}
                 onEdit={handleEditStudent} // Pass the updated handler
                 onDelete={handleDeleteStudent}
+                isBatchEditMode={isBatchEditMode}
+                onBatchUpdate={fetchStudents}
               />
             </CardBox>
           )}

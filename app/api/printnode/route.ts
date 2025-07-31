@@ -110,25 +110,31 @@ async function downloadPdfAsBase64(pdfUrl: string): Promise<string> {
 
 async function generateReceiptPdf(transaction: any, pageHeight: number): Promise<string> {
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([226.77, pageHeight]); // Use dynamic height
-    const { width, height } = page.getSize();
+    
+    // Force content to start at the very top by using a minimal page height
+    // and setting no top margin - this prevents driver centering
+    const page = pdfDoc.addPage([226.77, pageHeight]); 
+    const { width,  height } = page.getSize();
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const margin = 15; // Increased side margins
+    const margin = 15; // Side margins only
 
+    // Start content at the absolute top of the page (no top margin)
+    // This forces the driver to print from the very beginning of the paper
+    
     // --- Logo ---
     const logoPath = path.resolve('./public', 'icon-192x192.png');
     const logoImageBytes = await fs.readFile(logoPath);
     const logoImage = await pdfDoc.embedPng(logoImageBytes);
     const logoDims = logoImage.scale(0.33);
     page.drawImage(logoImage, {
-      x: (width - logoDims.width) / 2, // Center the logo
-      y: height - logoDims.height, // Reduced top margin
+      x: (width - logoDims.width) / 2, // Center the logo horizontally
+      y: height - logoDims.height, // Start at the very top (no margin)
       width: logoDims.width,
       height: logoDims.height,
     });
 
-    let y = height - logoDims.height - 20; // Adjusted starting Y
+    let y = height - logoDims.height - 10; // Minimal gap after logo
 
     const centerTextX = (text: string, textFont: any, size: number) => (width - textFont.widthOfTextAtSize(text, size)) / 2;
 
@@ -438,11 +444,19 @@ export async function POST(request: NextRequest) {
       source: 'Student Attendance App',
       options: {
         copies: copies,
-        paper: '80 x 297mm', // Set appropriate thermal paper size
+        paper: '80 x 210mm', // Set appropriate thermal paper size
         media: 'No Cash Drawer', // Disable cash drawer
-        bin: 'Document[PartialCut]', // Use full cut for receipts
-        fit_to_page: false, // Disable scaling to fit page (requires Engine6 on Windows)
-        pages: '-' // Print all pages without modification
+        bin: 'Document[PartialCut]', // Use partial cut for receipts
+        fit_to_page: false, // CRITICAL: Disable scaling to prevent centering
+        pages: '-', // Print all pages without modification
+        margins: {
+          top: 0,    // No top margin
+          bottom: 0, // No bottom margin  
+          left: 0,   // No left margin
+          right: 0   // No right margin
+        },
+        scale: 'noscale', // Prevent any scaling
+        position: 'topleft' // Force content to top-left corner
       }
     };
 
@@ -452,7 +466,10 @@ export async function POST(request: NextRequest) {
       media: printJob.options.media,
       bin: printJob.options.bin,
       fit_to_page: printJob.options.fit_to_page,
-      pages: printJob.options.pages
+      pages: printJob.options.pages,
+      margins: printJob.options.margins,
+      scale: printJob.options.scale,
+      position: printJob.options.position
     });
 
     // Submit print job
@@ -512,11 +529,14 @@ export async function POST(request: NextRequest) {
       },
       settings: {
         copies,
-        paper: '80 x 297mm',
+        paper: '80 x 210mm',
         media: 'No Cash Drawer',
         bin: 'Document[PartialCut]',
         fit_to_page: false,
-        pages: '-'
+        pages: '-',
+        margins: { top: 0, bottom: 0, left: 0, right: 0 },
+        scale: 'noscale',
+        position: 'topleft'
       },
       message: `Print job submitted to ${printer.name}`,
       printNodeJobId: result.id

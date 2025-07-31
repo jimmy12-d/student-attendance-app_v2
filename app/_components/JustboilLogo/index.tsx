@@ -22,7 +22,7 @@ export default function RodwellLogo({
     // If width/height props are provided, we might not want the w-12 h-12 Tailwind classes.
   } else {
     // Fallback to Tailwind classes if width/height props are not provided
-    imageClassName = `w-12 h-12 m-2 ${className}`;
+    imageClassName = `w-16 h-16 ${className}`;
   }
 
   return (

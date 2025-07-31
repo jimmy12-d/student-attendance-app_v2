@@ -24,18 +24,27 @@ export const ClassTable: React.FC<ClassTableProps> = ({
 }) => {
   const [showAll, setShowAll] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const displayedStudents = showAll ? studentList : studentList.slice(0, initialLimit);
   const hasMore = studentList.length > initialLimit;
 
   const handleViewDetails = (student: Student) => {
+    const index = studentList.findIndex(s => s.id === student.id);
     setSelectedStudent(student);
+    setSelectedIndex(index);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedStudent(null);
+    setSelectedIndex(-1);
+  };
+
+  const handleNavigate = (student: Student, index: number) => {
+    setSelectedStudent(student);
+    setSelectedIndex(index);
   };
 
   const handleDeleteWithToast = async (student: Student) => {
@@ -123,6 +132,9 @@ export const ClassTable: React.FC<ClassTableProps> = ({
         onClose={handleCloseModal}
         onEdit={onEdit}
         onDelete={handleDeleteWithToast}
+        students={studentList}
+        currentIndex={selectedIndex}
+        onNavigate={handleNavigate}
       />
     </div>
   );

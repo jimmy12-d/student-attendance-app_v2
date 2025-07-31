@@ -3,6 +3,7 @@ export interface Student {
     fullName: string;
     class: string;
     lastPaymentMonth?: string;
+    discount?: number;
     createdAt: Date;
 }
 

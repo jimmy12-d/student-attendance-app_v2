@@ -54,47 +54,49 @@ export default function AsideMenuLayer({
           {/* Glow effect at bottom */}
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-300/50 to-transparent"></div>
 
-          <div className="relative flex items-center justify-between px-4 py-4 h-20">
-            <div className="flex items-center space-x-4 flex-1 min-w-0">
+          {/* Enhanced layout with better spacing */}
+          <div className="relative px-4 py-2 min-h-[88px]">
+            {/* Close button positioned absolutely for better space utilization */}
+            <button
+              className="hidden lg:inline-flex xl:hidden absolute top-3 right-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 hover:scale-105 transition-all duration-200 text-white border border-white/20 backdrop-blur-sm group z-10"
+              onClick={handleAsideLgCloseClick}
+            >
+              <Icon path={mdiClose} size={16} className="group-hover:rotate-90 transition-transform duration-200" />
+            </button>
+
+            {/* Main content with improved layout */}
+            <div className="flex items-start space-x-3">
               {/* Logo container with enhanced styling */}
-              <div className="flex-shrink-0 p-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20 shadow-lg">
+              <div className="flex-shrink-0 p-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20 shadow-lg mt-1">
                 <RodwellLogo />
               </div>
               
-              {/* Text content with better typography */}
-              <div className="flex-1 min-w-0">
-                <h1 className="text-white font-bold text-lg leading-tight tracking-wide drop-shadow-sm truncate">
+              {/* Text content with spacious layout */}
+              <div className="flex-1 min-w-0 pt-1">
+                <h1 className="text-white font-bold text-base leading-snug tracking-wide drop-shadow-sm">
                   Rodwell Learning Center
                 </h1>
-                <div className="flex items-center space-x-2 mt-1">
-                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
-                  <p className="text-purple-100 text-xs font-medium tracking-wide">
-                    Admin Dashboard
-                  </p>
-                </div>
+
               </div>
             </div>
-
-            {/* Enhanced close button */}
-            <button
-              className="hidden lg:inline-flex xl:hidden p-2.5 rounded-xl bg-white/10 hover:bg-white/20 hover:scale-105 transition-all duration-200 text-white border border-white/20 backdrop-blur-sm group"
-              onClick={handleAsideLgCloseClick}
-            >
-              <Icon path={mdiClose} size={18} className="group-hover:rotate-90 transition-transform duration-200" />
-            </button>
           </div>
         </div>
 
         {/* Navigation Menu */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
           <nav>
             <AsideMenuList menu={menu} onRouteChange={props.onRouteChange} />
           </nav>
         </div>
 
-        {/* Footer with Logout */}
-        <div className="border-t border-gray-200 dark:border-gray-700 p-3 bg-gray-50/50 dark:bg-gray-800/50">
-          <AsideMenuItem item={logoutItem} onRouteChange={props.onRouteChange} />
+        {/* Enhanced Footer with Modern Logout Design */}
+        <div className="relative border-t border-gray-200/20 dark:border-gray-700/30 bg-gradient-to-r from-gray-50/80 via-gray-100/60 to-gray-50/80 dark:from-gray-800/80 dark:via-gray-700/60 dark:to-gray-800/80 backdrop-blur-sm">
+          {/* Subtle glow effect at top */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-gray-300/20"></div>
+          
+          <div className="p-2 flex items-center justify-between">
+            <AsideMenuItem item={logoutItem} onRouteChange={props.onRouteChange} />
+          </div>
         </div>
       </div>
     </aside>

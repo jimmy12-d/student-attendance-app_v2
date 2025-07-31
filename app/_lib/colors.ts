@@ -91,8 +91,8 @@ export const getButtonColor = (
       facebook: "bg-blue-800 dark:bg-blue-700 text-white",
     },
     bgHover: {
-      white: "hover:bg-gray-100",
-      whiteDark: "hover:bg-gray-100 dark:hover:bg-slate-800",
+      white: "hover:bg-gray-300",
+      whiteDark: "hover:bg-gray-200 dark:hover:bg-slate-800",
       lightDark: "hover:bg-gray-200 dark:hover:bg-slate-700",
       contrast: "hover:bg-gray-700 dark:hover:bg-slate-100",
       success:

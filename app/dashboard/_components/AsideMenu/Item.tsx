@@ -78,11 +78,13 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
     <>
       {item.icon && (
         <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-300 ${
-          isLinkActive 
-            ? 'bg-blue-600 text-white shadow-lg' 
-            : isHovered 
-              ? 'bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400' 
-              : 'text-gray-600 dark:text-gray-400'
+          item.isLogout
+            ? 'text-white'
+            : isLinkActive 
+              ? 'bg-blue-600 text-white shadow-lg' 
+              : isHovered 
+                ? 'bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400' 
+                : 'text-gray-600 dark:text-gray-400'
         }`}>
           <Icon
             path={item.icon}
@@ -95,11 +97,13 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
       <div className="flex-1 min-w-0 ml-3">
         <div className="flex items-center justify-between">
           <span className={`text-sm font-medium truncate transition-colors duration-300 ${
-            isLinkActive 
-              ? 'text-blue-600 dark:text-blue-400' 
-              : isHovered 
-                ? 'text-gray-900 dark:text-white' 
-                : 'text-gray-700 dark:text-gray-300'
+            item.isLogout
+              ? 'text-white font-semibold'
+              : isLinkActive 
+                ? 'text-blue-600 dark:text-blue-400' 
+                : isHovered 
+                  ? 'text-gray-900 dark:text-white' 
+                  : 'text-gray-700 dark:text-gray-300'
           }`}>
             {item.label}
           </span>
@@ -138,9 +142,9 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
 
   const componentClass = [
     "group relative flex items-center w-full rounded-xl transition-all duration-300 ease-in-out",
-    isDropdownList ? "py-2 px-4 mx-2 my-1" : "py-3 px-4 mx-3 my-1",
+    isDropdownList ? "py-2 px-4 mx-2 my-1" : item.isLogout ? "py-1.5 px-3 mx-3 my-1" : "py-3 px-4 mx-3 my-1",
     item.color && item.isLogout
-      ? getButtonColor(item.color, false, true)
+      ? "bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl border border-red-400/30 backdrop-blur-sm"
       : isLinkActive
         ? "bg-blue-50 dark:bg-blue-900/20 shadow-md border-l-4 border-blue-600"
         : isHovered
@@ -157,8 +161,11 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
       onClick={handleMenuClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileHover={{ 
+        scale: item.isLogout ? 1.03 : 1.02,
+        boxShadow: item.isLogout ? "0 10px 25px -5px rgba(239, 68, 68, 0.3)" : undefined
+      }}
+      whileTap={{ scale: 0.97 }}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {

@@ -7,15 +7,22 @@ import { ColumnToggle, ColumnConfig } from "./components/ColumnToggle";
 import { ShiftSection } from "./components/ShiftSection";
 import { ClassTable } from "./components/ClassTable";
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
+import CustomDropdown from "./components/CustomDropdown";
 import { toast } from 'sonner';
+
+// Firebase
+import { db } from "../../../firebase-config";
+import { doc, writeBatch } from "firebase/firestore";
 
 type Props = {
   students: Student[];
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
+  isBatchEditMode?: boolean;
+  onBatchUpdate?: () => void;
 };
 
-const TableStudents = ({ students, onEdit, onDelete }: Props) => {
+const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, onBatchUpdate }: Props) => {
   // Column configuration state
   const [columns, setColumns] = useState<ColumnConfig[]>([
     { id: 'number', label: '#N', enabled: true },
@@ -23,20 +30,71 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
     { id: 'phone', label: 'Phone', enabled: true },
     { id: 'paymentStatus', label: 'Payment', enabled: false },
     { id: 'scheduleType', label: 'Type', enabled: false },
+    { id: 'warning', label: 'Warning', enabled: false },
   ]);
+
+  // Batch edit state
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [batchClass, setBatchClass] = useState('');
+  const [batchShift, setBatchShift] = useState('Morning');
+  const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+
+  // Auto-enable #N column when entering batch edit mode
+  React.useEffect(() => {
+    if (isBatchEditMode) {
+      setColumns(prev => 
+        prev.map(col => 
+          col.id === 'number' ? { ...col, enabled: true } : col
+        )
+      );
+    } else {
+      // Clear selections when exiting batch edit mode
+      setSelectedStudents(new Set());
+      setBatchClass('');
+      setBatchShift('Morning');
+    }
+  }, [isBatchEditMode]);
+
+  // Get unique class options from existing students
+  const getClassOptions = () => {
+    const uniqueClasses = [...new Set(students.map(student => student.class).filter(Boolean))];
+    return uniqueClasses.sort().map(className => ({
+      value: className,
+      label: className
+    }));
+  };
+
+  // Shift options
+  const shiftOptions = [
+    { value: 'Morning', label: 'Morning' },
+    { value: 'Afternoon', label: 'Afternoon' },
+    { value: 'Evening', label: 'Evening' }
+  ];
 
   // Modal state
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [currentStudentList, setCurrentStudentList] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleViewDetails = (student: Student) => {
+  const handleViewDetails = (student: Student, studentList: Student[]) => {
+    const index = studentList.findIndex(s => s.id === student.id);
     setSelectedStudent(student);
+    setSelectedIndex(index);
+    setCurrentStudentList(studentList);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedStudent(null);
+    setSelectedIndex(-1);
+    setCurrentStudentList([]);
+  };
+
+  const handleNavigate = (student: Student, index: number) => {
+    setSelectedStudent(student);
+    setSelectedIndex(index);
   };
 
   const handleDeleteWithToast = async (student: Student) => {
@@ -97,6 +155,11 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
 
   // Toggle column visibility
   const toggleColumn = (columnId: string) => {
+    // Prevent disabling #N column when in batch edit mode
+    if (isBatchEditMode && columnId === 'number') {
+      return;
+    }
+    
     setColumns(prev => 
       prev.map(col => 
         col.id === columnId ? { ...col, enabled: !col.enabled } : col
@@ -107,10 +170,218 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
   // Get enabled columns
   const enabledColumns = columns.filter(col => col.enabled);
 
+  // Batch edit functions
+  const handleStudentSelect = (studentId: string, isSelected: boolean) => {
+    setSelectedStudents(prev => {
+      const newSet = new Set(prev);
+      if (isSelected) {
+        newSet.add(studentId);
+      } else {
+        newSet.delete(studentId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (studentIds: string[], isSelected: boolean) => {
+    setSelectedStudents(prev => {
+      const newSet = new Set(prev);
+      studentIds.forEach(id => {
+        if (isSelected) {
+          newSet.add(id);
+        } else {
+          newSet.delete(id);
+        }
+      });
+      return newSet;
+    });
+  };
+
+  const handleBatchApply = () => {
+    if (selectedStudents.size === 0) {
+      toast.error("Please select at least one student");
+      return;
+    }
+    if (!batchClass.trim()) {
+      toast.error("Please enter a class name");
+      return;
+    }
+    setShowBatchConfirm(true);
+  };
+
+  const confirmBatchUpdate = async () => {
+    try {
+      const batch = writeBatch(db);
+      
+      selectedStudents.forEach(studentId => {
+        const studentRef = doc(db, "students", studentId);
+        batch.update(studentRef, {
+          class: batchClass.trim(),
+          shift: batchShift
+        });
+      });
+
+      await batch.commit();
+      
+      toast.success(`Updated ${selectedStudents.size} students`);
+      setSelectedStudents(new Set());
+      setBatchClass('');
+      setBatchShift('Morning');
+      setShowBatchConfirm(false);
+      
+      if (onBatchUpdate) {
+        onBatchUpdate();
+      }
+    } catch (error) {
+      console.error("Error updating students:", error);
+      toast.error("Failed to update students");
+    }
+  };
+
   return (
     <div className="space-y-8 p-6 pb-24 bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Batch Edit Mode Notification */}
+      {isBatchEditMode && (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/30 dark:to-yellow-900/30 border border-orange-200 dark:border-orange-700 rounded-2xl p-4 shadow-lg">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-300">Batch Edit Mode Active</h3>
+                <p className="text-sm text-orange-700 dark:text-orange-400">
+                  Select students using checkboxes, then choose class and shift to apply to all selected students.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Batch Edit Controls */}
+          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl relative z-40">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Batch Operations
+              </h3>
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  selectedStudents.size > 0 
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' 
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                }`}>
+                  {selectedStudents.size} student{selectedStudents.size !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <div>
+                <CustomDropdown
+                  label="New Class"
+                  value={batchClass}
+                  onChange={setBatchClass}
+                  options={getClassOptions()}
+                  placeholder="Select class"
+                  searchable={true}
+                  id="batch-class"
+                />
+              </div>
+              
+              <div>
+                <CustomDropdown
+                  label="New Shift"
+                  value={batchShift}
+                  onChange={setBatchShift}
+                  options={shiftOptions}
+                  placeholder="Select shift"
+                  id="batch-shift"
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <div className="mt-6">
+                  <button
+                    onClick={handleBatchApply}
+                    disabled={selectedStudents.size === 0 || !batchClass.trim()}
+                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Apply to {selectedStudents.size} Selected Student{selectedStudents.size !== 1 ? 's' : ''}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Selected Students List */}
+            {selectedStudents.size > 0 && (
+              <div className="mt-6 border-t border-gray-200 dark:border-slate-600 pt-4">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v11a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2H9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h6m-6 4h6m-6 4h4" />
+                  </svg>
+                  Selected Students ({selectedStudents.size})
+                </h4>
+                <div className="max-h-32 overflow-y-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {students
+                      .filter(student => selectedStudents.has(student.id))
+                      .sort((a, b) => a.fullName.localeCompare(b.fullName))
+                      .map(student => (
+                        <div
+                          key={student.id}
+                          className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg px-3 py-2"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-blue-800 dark:text-blue-300 truncate">
+                              {student.fullName}
+                            </p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                              {student.class} - {student.shift}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleStudentSelect(student.id, false)}
+                            className="ml-2 flex-shrink-0 w-5 h-5 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-colors duration-200"
+                            title="Remove from selection"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+                
+                {selectedStudents.size > 0 && (
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={() => setSelectedStudents(new Set())}
+                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 flex items-center"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Clear All Selections
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Column Selection Panel */}
-      <ColumnToggle columns={columns} onToggleColumn={toggleColumn} />
+      <ColumnToggle columns={columns} onToggleColumn={toggleColumn} isBatchEditMode={isBatchEditMode} />
 
       {/* Morning & Afternoon Section */}
       <div className="space-y-6">
@@ -153,6 +424,11 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
                   className={className}
                   studentCount={groupedStudents[className]['Morning'].length}
                   shift="Morning"
+                  isBatchEditMode={isBatchEditMode}
+                  onBatchUpdate={onBatchUpdate}
+                  selectedStudents={selectedStudents}
+                  onStudentSelect={handleStudentSelect}
+                  onSelectAll={handleSelectAll}
                 />
                 <ClassTable 
                   studentList={groupedStudents[className]['Afternoon']} 
@@ -163,6 +439,11 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
                   className={className}
                   studentCount={groupedStudents[className]['Afternoon'].length}
                   shift="Afternoon"
+                  isBatchEditMode={isBatchEditMode}
+                  onBatchUpdate={onBatchUpdate}
+                  selectedStudents={selectedStudents}
+                  onStudentSelect={handleStudentSelect}
+                  onSelectAll={handleSelectAll}
                 />
               </div>
             ))}
@@ -207,6 +488,11 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
                 className={className}
                 studentCount={groupedStudents[className].Evening.length}
                 shift="Evening"
+                isBatchEditMode={isBatchEditMode}
+                onBatchUpdate={onBatchUpdate}
+                selectedStudents={selectedStudents}
+                onStudentSelect={handleStudentSelect}
+                onSelectAll={handleSelectAll}
               />
             ))}
           </div>
@@ -220,7 +506,56 @@ const TableStudents = ({ students, onEdit, onDelete }: Props) => {
         onClose={handleCloseModal}
         onEdit={onEdit}
         onDelete={handleDeleteWithToast}
+        students={currentStudentList}
+        currentIndex={selectedIndex}
+        onNavigate={handleNavigate}
       />
+
+      {/* Batch Edit Confirmation Modal */}
+      {showBatchConfirm && (
+        <div className="fixed inset-0 bg-[rgba(0,0,0,0.6)] flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-shrink-0">
+                <svg className="w-8 h-8 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.93L13.732 4.242a2 2 0 00-3.464 0L1.732 16.07c-.77 1.263.192 2.93 1.732 2.93z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                Confirm Batch Update
+              </h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 dark:text-gray-300 mb-3">
+                You are about to update <strong>{selectedStudents.size}</strong> student{selectedStudents.size !== 1 ? 's' : ''}:
+              </p>
+              <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3 mb-3">
+                <p className="text-sm"><strong>New Class:</strong> {batchClass || 'Not selected'}</p>
+                <p className="text-sm"><strong>New Shift:</strong> {batchShift}</p>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                This action cannot be undone. Are you sure you want to continue?
+              </p>
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowBatchConfirm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmBatchUpdate}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
+              >
+                Confirm Update
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

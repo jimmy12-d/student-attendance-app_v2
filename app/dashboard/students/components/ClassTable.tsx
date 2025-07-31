@@ -10,11 +10,16 @@ interface ClassTableProps {
   enabledColumns: ColumnConfig[];
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
-  onViewDetails: (student: Student) => void;
+  onViewDetails: (student: Student, studentList: Student[]) => void;
   initialLimit?: number;
   className?: string;
   studentCount?: number;
   shift?: 'Morning' | 'Afternoon' | 'Evening';
+  isBatchEditMode?: boolean;
+  onBatchUpdate?: () => void;
+  selectedStudents?: Set<string>;
+  onStudentSelect?: (studentId: string, isSelected: boolean) => void;
+  onSelectAll?: (studentIds: string[], isSelected: boolean) => void;
 }
 
 export const ClassTable: React.FC<ClassTableProps> = ({ 
@@ -26,10 +31,24 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   initialLimit = 5,
   className,
   studentCount,
-  shift = 'Morning'
+  shift = 'Morning',
+  isBatchEditMode = false,
+  onBatchUpdate,
+  selectedStudents = new Set(),
+  onStudentSelect,
+  onSelectAll
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasMore = studentList.length > initialLimit;
+
+  // Check if all students in this class are selected
+  const allSelected = studentList.length > 0 && studentList.every(student => selectedStudents.has(student.id));
+  const someSelected = studentList.some(student => selectedStudents.has(student.id));
+
+  // Wrapper function to pass the studentList context
+  const handleViewDetails = (student: Student) => {
+    onViewDetails(student, studentList);
+  };
 
   // Determine badge colors based on shift
   const getBadgeColors = () => {
@@ -70,7 +89,30 @@ export const ClassTable: React.FC<ClassTableProps> = ({
     <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-4 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
       {/* Header with expand/collapse icon */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{className}</h3>
+        <div className="flex items-center space-x-3">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{className}</h3>
+          {isBatchEditMode && studentList.length > 0 && onSelectAll && (
+            <button
+              onClick={() => onSelectAll(studentList.map(s => s.id), !allSelected)}
+              className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-colors duration-200 ${
+                allSelected 
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+                  : someSelected
+                  ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-700'
+                  : 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-slate-600'
+              } hover:opacity-80`}
+              title={allSelected ? 'Deselect all' : 'Select all'}
+            >
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={() => {}}
+                className="rounded text-blue-600 focus:ring-blue-500"
+              />
+              <span>{allSelected ? 'All' : someSelected ? 'Some' : 'None'}</span>
+            </button>
+          )}
+        </div>
         <div className="flex items-center space-x-3">
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getBadgeColors()}`}>
             {studentCount || studentList.length} students
@@ -120,7 +162,11 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   enabledColumns={enabledColumns}
                   onEdit={onEdit}
                   onDelete={onDelete}
-                  onViewDetails={onViewDetails}
+                  onViewDetails={handleViewDetails}
+                  isBatchEditMode={isBatchEditMode}
+                  onBatchUpdate={onBatchUpdate}
+                  isSelected={selectedStudents.has(student.id)}
+                  onSelect={onStudentSelect}
                 />
               ))}
             </tbody>

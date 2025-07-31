@@ -11,7 +11,7 @@ export default function HomePage() {
     const isLoggedIn = localStorage.getItem('token'); 
 
     if (isLoggedIn) {
-      router.push('/student/mock-exam');
+      router.push('/student/home');
     } else {
       router.push('/login');
     }

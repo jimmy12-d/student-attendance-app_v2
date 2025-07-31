@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Student } from '../../../_interfaces';
 import { ColumnConfig } from './ColumnToggle';
+import { db } from '../../../../firebase-config';
+import { doc, updateDoc } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 // Utility function to convert Google Drive share URL to thumbnail URL
 const getDisplayableImageUrl = (url: string): string | null => {
@@ -61,6 +64,10 @@ interface StudentRowProps {
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
   onViewDetails: (student: Student) => void;
+  isBatchEditMode?: boolean;
+  onBatchUpdate?: () => void;
+  isSelected?: boolean;
+  onSelect?: (studentId: string, isSelected: boolean) => void;
 }
 
 export const StudentRow: React.FC<StudentRowProps> = ({ 
@@ -69,32 +76,51 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   enabledColumns, 
   onEdit, 
   onDelete,
-  onViewDetails
+  onViewDetails,
+  isBatchEditMode = false,
+  onBatchUpdate,
+  isSelected = false,
+  onSelect
 }) => {
   return (
-    <tr className="group hover:bg-blue-50 dark:hover:bg-slate-700/50 transition-all duration-200 ease-in-out hover:shadow-sm">
+    <tr className={`group transition-all duration-200 ease-in-out hover:shadow-sm ${
+      isBatchEditMode && isSelected 
+        ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' 
+        : 'hover:bg-blue-50 dark:hover:bg-slate-700/50'
+    }`}>
         {enabledColumns.map((column) => {
           switch (column.id) {
             case 'number':
               return (
                 <td key="number" className="p-1 text-center">
-                  <div className="relative group/index">
-                    <span className="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors duration-200 group-hover/index:opacity-0">
-                      {index + 1}
-                    </span>
-                    
-                    {/* Hover overlay with eye icon */}
-                    <div 
-                      className="absolute inset-0 bg-blue-600 bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover/index:opacity-100 transition-opacity duration-200 cursor-pointer"
-                      onClick={() => onViewDetails(student)}
-                      title="View student details"
-                    >
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+                  {isBatchEditMode ? (
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => onSelect?.(student.id, e.target.checked)}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600"
+                      />
                     </div>
-                  </div>
+                  ) : (
+                    <div className="relative group/index">
+                      <span className="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors duration-200 group-hover/index:opacity-0">
+                        {index + 1}
+                      </span>
+                      
+                      {/* Hover overlay with eye icon */}
+                      <div 
+                        className="absolute inset-0 bg-blue-600 bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover/index:opacity-100 transition-opacity duration-200 cursor-pointer"
+                        onClick={() => onViewDetails(student)}
+                        title="View student details"
+                      >
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
                 </td>
               );
             case 'name':
@@ -102,11 +128,19 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                 <td key="name" className="p-3">
                   <div className="flex items-center space-x-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all duration-300 group-hover:text-base group-hover:scale-105 transform-gpu">
+                      <p className={`text-sm font-semibold truncate transition-all duration-300 group-hover:text-base group-hover:scale-105 transform-gpu ${
+                        isBatchEditMode && isSelected 
+                          ? 'text-blue-600 dark:text-blue-400' 
+                          : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                      }`}>
                         {student.fullName}
                       </p>
                       {student.nameKhmer && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate transition-all duration-300 group-hover:text-sm group-hover:scale-105 transform-gpu">
+                        <p className={`text-xs truncate transition-all duration-300 group-hover:text-sm group-hover:scale-105 transform-gpu ${
+                          isBatchEditMode && isSelected 
+                            ? 'text-blue-500 dark:text-blue-500' 
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}>
                           {student.nameKhmer}
                         </p>
                       )}
@@ -167,6 +201,29 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       No Record
+                    </span>
+                  )}
+                </div>
+              </td>
+            );
+
+          case 'warning':
+            return (
+              <td key="warning" className="p-3">
+                <div className="flex items-center justify-center">
+                  {student.warning ? (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      Warning
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Normal
                     </span>
                   )}
                 </div>
