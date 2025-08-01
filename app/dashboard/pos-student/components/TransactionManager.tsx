@@ -86,8 +86,11 @@ export const TransactionManager = ({
     };
 
     const handleDateSelect = (day: number) => {
-        const selectedDate = new Date(currentYear, currentMonth, day);
-        const dateString = selectedDate.toISOString().split('T')[0];
+        // Create date string directly to avoid timezone issues
+        const year = currentYear;
+        const month = String(currentMonth + 1).padStart(2, '0'); // +1 because months are 0-indexed
+        const dayStr = String(day).padStart(2, '0');
+        const dateString = `${year}-${month}-${dayStr}`;
         onJoinDateSelect(dateString);
         setShowDatePicker(false);
     };

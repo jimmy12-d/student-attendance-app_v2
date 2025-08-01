@@ -12,9 +12,17 @@ interface ColumnToggleProps {
   columns: ColumnConfig[];
   onToggleColumn: (columnId: string) => void;
   isBatchEditMode?: boolean;
+  allClassesCollapsed?: boolean;
+  onToggleAllClasses?: () => void;
 }
 
-export const ColumnToggle: React.FC<ColumnToggleProps> = ({ columns, onToggleColumn, isBatchEditMode = false }) => {
+export const ColumnToggle: React.FC<ColumnToggleProps> = ({ 
+  columns, 
+  onToggleColumn, 
+  isBatchEditMode = false, 
+  allClassesCollapsed = false, 
+  onToggleAllClasses 
+}) => {
   const enabledColumns = columns.filter(col => col.enabled);
 
   return (
@@ -69,6 +77,55 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({ columns, onToggleCol
           );
         })}
       </div>
+      
+      {/* Global Class Controls */}
+      {onToggleAllClasses && (
+        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-600">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+              Class Visibility
+            </h3>
+          </div>
+          <button
+            onClick={onToggleAllClasses}
+            className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 w-full md:w-auto ${
+              allClassesCollapsed
+                ? 'border-green-300 dark:border-green-600 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                : 'border-yellow-300 dark:border-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+            } hover:shadow-md hover:scale-105`}
+          >
+            <span className="font-medium text-sm flex items-center">
+              {/* Mac-style traffic light buttons */}
+              <div className="flex items-center space-x-1 mr-3">
+                {/* Minimize button */}
+                <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                  allClassesCollapsed 
+                    ? 'bg-yellow-300 dark:bg-yellow-400 opacity-50' 
+                    : 'bg-yellow-400 dark:bg-yellow-500 shadow-sm'
+                }`}>
+                  {!allClassesCollapsed && (
+                    <div className="w-2 h-0.5 bg-yellow-800 dark:bg-yellow-900 rounded-full"></div>
+                  )}
+                </div>
+                {/* Zoom button */}
+                <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+                  !allClassesCollapsed 
+                    ? 'bg-green-300 dark:bg-green-400 opacity-50' 
+                    : 'bg-green-400 dark:bg-green-500 shadow-sm'
+                }`}>
+                  {allClassesCollapsed && (
+                    <div className="w-1.5 h-1.5 border border-green-800 dark:border-green-900 rounded-sm"></div>
+                  )}
+                </div>
+              </div>
+              {allClassesCollapsed ? 'Show All Classes' : 'Hide All Classes'}
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
