@@ -11,6 +11,7 @@ import {
   mdiAlertCircle,
   mdiDownload,
   mdiHistory,
+  mdiPrinter,
 } from "@mdi/js";
 
 import SectionMain from "../../_components/Section/Main";
@@ -55,6 +56,7 @@ const POSStudentPage = () => {
     const [isDownloading, setIsDownloading] = useState(false);
     const [downloadingTransactionId, setDownloadingTransactionId] = useState<string | undefined>();
     const [reprintingTransactionId, setReprintingTransactionId] = useState<string | undefined>();
+    const [removingTransactionId, setRemovingTransactionId] = useState<string | undefined>();
     const [paymentMonth, setPaymentMonth] = useState(''); // For storing YYYY-MM
     const [displayPaymentMonth, setDisplayPaymentMonth] = useState(''); // For display
     const [showMonthInput, setShowMonthInput] = useState(false);
@@ -215,14 +217,41 @@ const POSStudentPage = () => {
         setIsProcessing(true);
 
         try {
-            // --- Get the next receipt number from the cloud function ---
-            const functions = getFunctions(undefined, 'asia-southeast1'); // Set region here
-            const getNextReceiptNumber = httpsCallable(functions, 'getNextReceiptNumber');
+            // --- Generate receipt number in yymmxxx format ---
+            // Use the payment month (what the student is paying for) not the current month
+            const [paymentYear, paymentMonthNum] = paymentMonth.split("-");
+            const year = paymentYear.slice(-2); // Last 2 digits of payment year
+            const month = paymentMonthNum; // Payment month already formatted as MM
+            
+            // Get the next sequential number for this payment month
+            // Query existing transactions to find the highest receipt number for this yymm
+            const receiptPrefix = `${year}${month}`;
+            const transactionsRef = collection(db, "transactions");
+            const q = query(transactionsRef, where("receiptNumber", ">=", receiptPrefix + "000"), where("receiptNumber", "<=", receiptPrefix + "999"));
+            const querySnapshot = await getDocs(q);
+            
+            let highestSequential = 0;
+            querySnapshot.docs.forEach(doc => {
+                const data = doc.data();
+                const receiptNumber = data.receiptNumber;
+                if (receiptNumber && receiptNumber.startsWith(receiptPrefix)) {
+                    const sequentialPart = receiptNumber.slice(-3); // Last 3 digits
+                    const sequentialNum = parseInt(sequentialPart, 10);
+                    if (!isNaN(sequentialNum) && sequentialNum > highestSequential) {
+                        highestSequential = sequentialNum;
+                    }
+                }
+            });
+            
+            const sequentialNumber = highestSequential + 1; // Next sequential number
+            
+            // Format: yymmxxx (e.g., 25080001 for year 2025, month 08, sequence 001)
+            const receiptNumber = `${year}${month}${String(sequentialNumber).padStart(3, '0')}`;
 
-            const result = await getNextReceiptNumber();
-            const receiptNumber = (result.data as { receiptNumber: string }).receiptNumber;
-
-            const calculatedAmount = calculateProratedAmount(paymentAmount || 0, new Date(joinDate), paymentMonth, classStudyDays);
+            const scholarshipAmount = selectedStudent.discount && selectedStudent.discount > 0 ? selectedStudent.discount : 0;
+            const calculatedAmount = calculateProratedAmount(paymentAmount || 0, new Date(joinDate), paymentMonth, classStudyDays, scholarshipAmount);
+            
+            // The calculatedAmount now already includes the scholarship discount and proration
             // Round to 4 decimal places
             const roundedAmount = Number(calculatedAmount.toFixed(4));
             const transactionData: any = {
@@ -538,6 +567,7 @@ const POSStudentPage = () => {
     };
 
     const handleRemoveTransaction = async (transaction: Transaction) => {
+        setRemovingTransactionId(transaction.transactionId);
         try {
             // Remove the transaction
             await deleteDoc(doc(db, "transactions", transaction.transactionId));
@@ -562,6 +592,8 @@ const POSStudentPage = () => {
         } catch (error) {
             console.error("Error removing transaction:", error);
             toast.error("Failed to remove transaction");
+        } finally {
+            setRemovingTransactionId(null);
         }
     };
 
@@ -605,7 +637,14 @@ const POSStudentPage = () => {
                                              }`}
                                              onClick={() => handleSelectStudent(student)}>
                                             <div className="flex-grow min-w-0 mr-2">
-                                                <p className="font-semibold truncate">{student.fullName}</p>
+                                                <div className="flex items-center justify-between">
+                                                    <p className="font-semibold truncate">{student.fullName}</p>
+                                                    {student.lastPaymentMonth && (
+                                                        <span className="text-xs bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-300 px-2 py-1 rounded-full ml-2 flex-shrink-0">
+                                                            {new Date(student.lastPaymentMonth + '-01').toLocaleString('default', { month: 'long' })}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-sm text-gray-500 truncate">{student.class}</p>
                                             </div>
                                             <div className="flex items-center flex-shrink-0">
@@ -680,7 +719,22 @@ const POSStudentPage = () => {
                                             className="min-w-0"
                                         />
                                         <Button 
-                                            label={isProcessing ? "Processing..." : `Charge $${selectedStudent?.lastPaymentMonth ? (paymentAmount || 0).toFixed(2) : calculateProratedAmount(paymentAmount || 0, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2)}`} 
+                                            label={isProcessing ? "Processing..." : `Charge $${(() => {
+                                                if (!selectedStudent || paymentAmount === null) return '0.00';
+                                                
+                                                const scholarshipAmount = selectedStudent.discount && selectedStudent.discount > 0 ? selectedStudent.discount : 0;
+                                                
+                                                let finalAmount;
+                                                if (selectedStudent.lastPaymentMonth) {
+                                                    // For returning students, apply scholarship to full amount
+                                                    finalAmount = Math.max(0, paymentAmount - scholarshipAmount);
+                                                } else {
+                                                    // For new students, calculate prorated amount with scholarship
+                                                    finalAmount = calculateProratedAmount(paymentAmount, new Date(joinDate), paymentMonth, classStudyDays, scholarshipAmount);
+                                                }
+                                                
+                                                return finalAmount.toFixed(2);
+                                            })()}`} 
                                             color="success" 
                                             onClick={handleCharge} 
                                             disabled={isProcessing || paymentAmount === null || !selectedPrinter?.online || !paymentMonth || !joinDate} 
@@ -704,34 +758,83 @@ const POSStudentPage = () => {
             </div>
             {isPostTransactionModalActive && (
                 <CardBoxModal
-                    title="Transaction Complete"
+                    title="🎉 Transaction Completed Successfully!"
                     isActive={true}
                     onConfirm={closePostTransactionModal}
                     onCancel={closePostTransactionModal}
                     buttonLabel="Done"
+                    modalClassName="p-4 max-w-lg"
                 >
-                    <div className="space-y-4">
-                        <p>What would you like to do next?</p>
-                        <div className="flex justify-around space-x-2">
+                    <div className="space-y-6">
+                        {/* Success Message with Transaction Details */}
+                        <div className="text-center bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
+                            <div className="flex items-center justify-center mb-3">
+                                <div className="bg-green-100 dark:bg-green-800 p-3 rounded-full">
+                                    <Icon path={mdiCheckCircle} size={1.5} className="text-green-600 dark:text-green-400" />
+                                </div>
+                            </div>
+                            {lastTransaction && (
+                                <div className="space-y-2">
+                                    <h3 className="text-lg font-semibold text-green-800 dark:text-green-200">
+                                        Payment Processed
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-2 text-sm">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600 dark:text-gray-400">Student:</span>
+                                            <span className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.studentName}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600 dark:text-gray-400">Receipt #:</span>
+                                            <span className="font-mono font-medium text-blue-600 dark:text-blue-400">{lastTransaction.receiptNumber}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600 dark:text-gray-400">Amount:</span>
+                                            <span className="font-bold text-lg text-green-600 dark:text-green-400">${lastTransaction.amount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600 dark:text-gray-400">Month:</span>
+                                            <span className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.paymentMonth}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Action Question */}
+                        <div className="text-center">
+                            <h4 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">
+                                What would you like to do next?
+                            </h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                You can print a receipt, download a copy, or continue with the next transaction
+                            </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <Button 
-                                label={isPrinting ? "Printing..." : "Print"} 
+                                label={isPrinting ? "Printing..." : "Print Receipt"} 
                                 color="info" 
                                 onClick={handlePrintReceipt}
                                 disabled={isPrinting || isDownloading}
+                                icon={mdiPrinter}
+                                className="w-full text-center justify-center"
                             />
                             <Button 
-                                label={isDownloading ? "Downloading..." : "Download"} 
+                                label={isDownloading ? "Downloading..." : "Download PDF"} 
                                 color="success" 
                                 onClick={handleDownloadReceipt} 
                                 icon={mdiDownload}
                                 disabled={isPrinting || isDownloading}
+                                className="w-full text-center justify-center"
                             />
                             <Button 
-                                label="Cancel" 
+                                label="Continue" 
                                 color="outline" 
                                 onClick={closePostTransactionModal}
                                 icon={mdiClose}
                                 disabled={isPrinting || isDownloading}
+                                className="w-full text-center justify-center"
                             />
                         </div>
                     </div>

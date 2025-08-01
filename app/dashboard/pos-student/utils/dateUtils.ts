@@ -19,9 +19,13 @@ export const calculateProratedAmount = (
     fullAmount: number,
     joinDate: Date,
     paymentMonth: string,
-    classStudyDays?: number[] | null
+    classStudyDays?: number[] | null,
+    scholarshipAmount?: number
 ) => {
     const [year, month] = paymentMonth.split('-').map(Number);
+    
+    // Apply scholarship discount to the full amount first
+    const discountedFullAmount = Math.max(0, fullAmount - (scholarshipAmount || 0));
     
     // Normalize dates to start of day to avoid time component issues
     const normalizedJoinDate = new Date(joinDate.getFullYear(), joinDate.getMonth(), joinDate.getDate());
@@ -31,8 +35,8 @@ export const calculateProratedAmount = (
     // If join date is after this month, return 0
     if (normalizedJoinDate > monthEndDate) return 0;
     
-    // Only return full amount if join date is exactly on or before the first day of the month
-    if (normalizedJoinDate.getTime() === monthStartDate.getTime() || normalizedJoinDate < monthStartDate) return fullAmount;
+    // Only return discounted full amount if join date is exactly on or before the first day of the month
+    if (normalizedJoinDate.getTime() === monthStartDate.getTime() || normalizedJoinDate < monthStartDate) return discountedFullAmount;
     
     // Calculate working days in month
     const totalWorkingDays = getWorkingDaysInMonth(year, month - 1, classStudyDays);
@@ -51,7 +55,7 @@ export const calculateProratedAmount = (
     
     // Calculate prorated amount with more precision
     const ratio = remainingWorkingDays / totalWorkingDays;
-    const exactAmount = fullAmount * ratio;
+    const exactAmount = discountedFullAmount * ratio;
     
     return exactAmount; // Return exact amount without rounding
 };

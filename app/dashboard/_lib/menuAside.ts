@@ -29,11 +29,11 @@ const menuAside: MenuAsideItem[] = [
     icon: mdiCreditCard,
     href: '/dashboard/pos-student',
   },
-  {
-    label: 'ABA Approvals',
-    icon: mdiCashCheck,
-    href: '/dashboard/aba-approvals',
-  },
+  // {
+  //   label: 'ABA Approvals',
+  //   icon: mdiCashCheck,
+  //   href: '/dashboard/aba-approvals',
+  // },
   {
     href: "/dashboard/students",
     icon: mdiAccountCircle,

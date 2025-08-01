@@ -236,7 +236,7 @@ const LoginForm = () => {
         dispatch(setUser(userPayload));
 
         // Redirect to a student-specific dashboard
-        router.push("/student/attendance");
+        router.push("/student/home");
       }
     } catch (error: any) {
       console.error("OTP Verification or Student Check Error:", error);

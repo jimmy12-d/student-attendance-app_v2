@@ -59,8 +59,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   // Handle zoom toggle with callback to parent
   const handleZoomToggle = () => {
     if (onZoomToggle && className) {
-      // Allow zoom toggle even when minimized or when there are few students
-      // Use className instead of classId so all shifts share the same zoom state
+      // Always toggle between Normal and Zoom (ignore minimize state)
       onZoomToggle(className, !isExpanded);
     }
   };
@@ -70,6 +69,10 @@ export const ClassTable: React.FC<ClassTableProps> = ({
     setIsClassCollapsed(collapsed);
     if (onClassToggle && className) {
       onClassToggle(className, collapsed);
+    }
+    // When restoring from minimize, also clear zoom state to go to Normal
+    if (!collapsed && isExpanded && onZoomToggle) {
+      onZoomToggle(className, false);
     }
   };
 
@@ -117,7 +120,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                     ? 'bg-yellow-100 dark:bg-yellow-200 shadow-sm'
                     : 'bg-yellow-400 dark:bg-yellow-500 shadow-sm'
                 }`}
-                title={isClassCollapsed ? 'Restore class (show students)' : 'Minimize class (hide students)'}
+                title={isClassCollapsed ? 'Restore to normal view' : 'Minimize class (hide students)'}
               >
                 <div className={`w-2 h-0.5 rounded-full transition-all duration-200 ${
                   isClassCollapsed 
@@ -133,7 +136,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                     ? 'bg-green-500 dark:bg-green-600 shadow-sm'
                     : 'bg-green-300 dark:bg-green-400 shadow-sm'
                 }`}
-                title={isExpanded ? 'Show limited view' : 'Show all students (overrides minimize)'}
+                title={isExpanded ? 'Return to normal view' : 'Show all students'}
               >
                 <Icon
                   path={isExpanded ? mdiChevronDown : mdiChevronUp}
@@ -181,7 +184,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   ? 'bg-yellow-100 dark:bg-yellow-200 shadow-sm'
                   : 'bg-yellow-400 dark:bg-yellow-500 shadow-sm'
               }`}
-              title={isClassCollapsed ? 'Restore class (show students)' : 'Minimize class (hide students)'}
+              title={isClassCollapsed ? 'Restore to normal view' : 'Minimize class (hide students)'}
             >
               <div className={`w-2 h-0.5 rounded-full transition-all duration-300 ${
                 isClassCollapsed 
@@ -197,7 +200,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   ? 'bg-green-500 dark:bg-green-600 shadow-sm'
                   : 'bg-green-300 dark:bg-green-400 shadow-sm'
               }`}
-              title={isExpanded ? 'Show limited view' : 'Show all students (overrides minimize)'}
+              title={isExpanded ? 'Return to normal view' : 'Show all students'}
             >
               <Icon
                 path={isExpanded ? mdiChevronDown : mdiChevronUp}

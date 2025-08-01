@@ -10,6 +10,7 @@ import CollapsibleSection from './components/CollapsibleSection';
 // Hooks
 import { useClassData } from './hooks/useClassData';
 import { useStudentForm } from './hooks/useStudentForm';
+import { useStudentCounts } from './hooks/useStudentCounts';
 
 /**
  * @typedef {object} Student
@@ -26,7 +27,7 @@ import { useStudentForm } from './hooks/useStudentForm';
  * @property {string} [fatherName]
  * @property {string} [fatherPhone]
  * @property {string} [photoUrl]
- * @property {number} [discount]
+ * @property {number} [scholarship]
  * @property {string} [note]
  * @property {boolean} [warning]
  */
@@ -47,6 +48,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
 
   // Custom hooks
   const { allClassData, classOptions, allShiftOptions, loadingClasses } = useClassData();
+  const { studentCounts, loadingCounts, getClassCountText } = useStudentCounts();
   const {
     fullName, setFullName,
     nameKhmer, setNameKhmer,
@@ -61,7 +63,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     ay, setAy,
     studentClass, setStudentClass,
     gradeTypeFilter, setGradeTypeFilter,
-    discount, setDiscount,
+    scholarship, setScholarship,
     note, setNote,
     warning, setWarning,
     isStudentInfoCollapsed, setIsStudentInfoCollapsed,
@@ -106,8 +108,15 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
 
   // Always show all class options for better search functionality
   const filteredClassOptions = useMemo(() => {
-    return classOptions;
-  }, [classOptions]);
+    if (loadingCounts) {
+      return classOptions;
+    }
+    
+    return classOptions.map(option => ({
+      ...option,
+      label: `${option.label}${getClassCountText(option.value, shift)}`
+    }));
+  }, [classOptions, loadingCounts, getClassCountText, shift]);
 
   const availableShiftOptions = useMemo(() => {
     if (!studentClass || !allClassData || loadingClasses) {
@@ -123,11 +132,11 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     return [];
   }, [studentClass, allClassData, loadingClasses, allShiftOptions]);
 
-  const handleDiscountChange = (e) => {
+  const handleScholarshipChange = (e) => {
     const value = e.target.value;
     // Allow empty string or valid decimal numbers
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setDiscount(value);
+      setScholarship(value);
     }
   };
 
@@ -381,8 +390,8 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
         <div className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8">
             <div>
-              <label htmlFor="discount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Discount Amount ($)
+              <label htmlFor="scholarship" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Scholarship Amount ($)
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -390,16 +399,16 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                 </div>
                 <input
                   type="text"
-                  id="discount"
-                  name="discount"
-                  value={discount}
-                  onChange={handleDiscountChange}
+                  id="scholarship"
+                  name="scholarship"
+                  value={scholarship}
+                  onChange={handleScholarshipChange}
                   placeholder="0.00"
                   className="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Enter discount amount in USD (e.g., 10.50)
+                Enter scholarship amount in USD (e.g., 10.50)
               </p>
             </div>
           </div>

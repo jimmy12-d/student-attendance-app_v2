@@ -16,6 +16,7 @@ interface TransactionHistoryProps {
     onReprintReceipt?: (transaction: Transaction) => void;
     downloadingTransactionId?: string;
     reprintingTransactionId?: string;
+    removingTransactionId?: string; // Add this prop to track removal state
 }
 
 export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
@@ -27,22 +28,27 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     onDownloadReceipt,
     onReprintReceipt,
     downloadingTransactionId,
-    reprintingTransactionId
+    reprintingTransactionId,
+    removingTransactionId // Add this to the destructured props
 }) => {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [transactionToRemove, setTransactionToRemove] = useState<Transaction | null>(null);
 
     const handleRemoveClick = (transaction: Transaction) => {
+        // Prevent starting a new removal if one is already in progress
+        if (removingTransactionId) return;
+        
         setTransactionToRemove(transaction);
         setShowConfirmModal(true);
     };
 
     const handleConfirmRemove = () => {
-        if (transactionToRemove) {
-            onRemoveTransaction(transactionToRemove);
-            setShowConfirmModal(false);
-            setTransactionToRemove(null);
-        }
+        // Prevent removal if one is already in progress
+        if (removingTransactionId || !transactionToRemove) return;
+        
+        onRemoveTransaction(transactionToRemove);
+        setShowConfirmModal(false);
+        setTransactionToRemove(null);
     };
 
     const handleCancelRemove = () => {
@@ -145,11 +151,12 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                             </div>
                                             <Button
                                                 color="danger"
-                                                label="Remove"
+                                                label={removingTransactionId === transaction.transactionId ? "Removing..." : "Remove"}
                                                 onClick={() => handleRemoveClick(transaction)}
                                                 icon={mdiDelete}
                                                 small
                                                 className="text-xs"
+                                                disabled={!!removingTransactionId} // Disable all remove buttons when any removal is in progress
                                             />
                                         </div>
                                     </div>
@@ -167,8 +174,9 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                 isActive={showConfirmModal}
                 onConfirm={handleConfirmRemove}
                 onCancel={handleCancelRemove}
-                buttonLabel="Remove"
+                buttonLabel={removingTransactionId ? "Removing..." : "Remove"}
                 buttonColor="danger"
+                disabled={!!removingTransactionId} // Disable confirm button when removal is in progress
             >
                 <div className="flex items-start space-x-3 p-2">
                     <div className="flex-shrink-0">

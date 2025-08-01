@@ -12,6 +12,7 @@ import CollapsibleSection from './components/CollapsibleSection';
 // Hooks
 import { useClassData } from './hooks/useClassData';
 import { useStudentForm } from './hooks/useStudentForm';
+import { useStudentCounts } from './hooks/useStudentCounts';
 
 /**
  * @typedef {object} Student
@@ -28,7 +29,7 @@ import { useStudentForm } from './hooks/useStudentForm';
  * @property {string} [fatherName]
  * @property {string} [fatherPhone]
  * @property {string} [photoUrl]
- * @property {number} [discount]
+ * @property {number} [scholarship]
  * @property {string} [note]
  * @property {boolean} [warning]
  */
@@ -48,6 +49,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
 
   // Custom hooks
   const { allClassData, classOptions, allShiftOptions, loadingClasses } = useClassData();
+  const { studentCounts, loadingCounts, getClassCountText } = useStudentCounts();
   const {
     fullName, setFullName,
     nameKhmer, setNameKhmer,
@@ -62,7 +64,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     ay, setAy,
     studentClass, setStudentClass,
     gradeTypeFilter, setGradeTypeFilter,
-    discount, setDiscount,
+    scholarship, setScholarship,
     note, setNote,
     warning, setWarning,
     isStudentInfoCollapsed, setIsStudentInfoCollapsed,
@@ -108,17 +110,28 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
 
   const filteredClassOptions = useMemo(() => {
     // In add mode, filter classes based on gradeTypeFilter (from fetched data)
+    let baseOptions = classOptions;
+    
     if (gradeTypeFilter && allClassData) {
       const filteredClassNames = Object.keys(allClassData).filter(
         (className) => allClassData[className].type === gradeTypeFilter
       );
-      return filteredClassNames.map((name) => ({
+      baseOptions = filteredClassNames.map((name) => ({
         value: name,
         label: name,
       }));
     }
-    return classOptions;
-  }, [classOptions, allClassData, gradeTypeFilter]);
+    
+    // Add student counts to the labels
+    if (loadingCounts) {
+      return baseOptions;
+    }
+    
+    return baseOptions.map(option => ({
+      ...option,
+      label: `${option.label}${getClassCountText(option.value, shift)}`
+    }));
+  }, [classOptions, allClassData, gradeTypeFilter, loadingCounts, getClassCountText, shift]);
 
   const availableShiftOptions = useMemo(() => {
     if (!studentClass || !allClassData || loadingClasses) {
@@ -138,11 +151,11 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     populateFromSheetData(data);
   };
 
-  const handleDiscountChange = (e) => {
+  const handleScholarshipChange = (e) => {
     const value = e.target.value;
     // Allow empty string or valid decimal numbers
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setDiscount(value);
+      setScholarship(value);
     }
   };
 

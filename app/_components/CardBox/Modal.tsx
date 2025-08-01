@@ -16,6 +16,7 @@ type Props = {
   modalClassName?: string;
   onConfirm?: () => void;
   onCancel?: () => void;
+  disabled?: boolean;
 };
 
 const CardBoxModal = ({
@@ -27,6 +28,7 @@ const CardBoxModal = ({
   modalClassName = "w-11/12 md:w-3/5 lg:w-2/5 xl:w-4/12", // <-- DEFAULT WIDTHS
   onConfirm,
   onCancel,
+  disabled = false,
 }: Props) => {
   if (!isActive) {
     return null;
@@ -40,6 +42,7 @@ const CardBoxModal = ({
         color={buttonColor}
         onClick={onConfirm}
         isGrouped
+        disabled={disabled}
       />
       {!!onCancel && (
         <Button

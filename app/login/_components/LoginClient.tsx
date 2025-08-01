@@ -19,7 +19,7 @@ const LoginClient = () => {
         if (user) {
           // If user is logged in, redirect them away from the login page.
           setIsAuthenticated(true);
-          router.replace('/student/attendance');
+          router.replace('/student/home');
         } else {
           // If no user, stop loading and show the login button.
           setLoading(false);
