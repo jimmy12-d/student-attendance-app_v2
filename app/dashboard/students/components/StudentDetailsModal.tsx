@@ -381,7 +381,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   )}
                   {student.discount && student.discount > 0 && (
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Scholarship Amount</label>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Discount Amount</label>
                       <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">${student.discount.toFixed(2)}</p>
                     </div>
                   )}

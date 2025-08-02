@@ -42,7 +42,6 @@ const CardBoxModal = ({
         color={buttonColor}
         onClick={onConfirm}
         isGrouped
-        disabled={disabled}
       />
       {!!onCancel && (
         <Button

@@ -55,6 +55,9 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
   // Global collapse state
   const [allClassesCollapsed, setAllClassesCollapsed] = useState(false);
   const [collapsedClasses, setCollapsedClasses] = useState<Set<string>>(new Set());
+  
+  // Zoom state management
+  const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
 
   // Fetch attendance data for today's status
   useEffect(() => {
@@ -319,6 +322,19 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
   // Check if a class is collapsed
   const isClassCollapsed = (className: string) => {
     return allClassesCollapsed || collapsedClasses.has(className);
+  };
+
+  // Handle zoom toggle for classes
+  const handleZoomToggle = (className: string, isExpanded: boolean) => {
+    setExpandedClasses(prev => {
+      const newSet = new Set(prev);
+      if (isExpanded) {
+        newSet.add(className);
+      } else {
+        newSet.delete(className);
+      }
+      return newSet;
+    });
   };
 
   // Batch edit functions
@@ -600,6 +616,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                   getAttendanceStatus={getStudentAttendanceStatus}
                   forceCollapsed={isClassCollapsed(className)}
                   onClassToggle={handleClassToggle}
+                  expandedClasses={expandedClasses}
+                  onZoomToggle={handleZoomToggle}
                 />
                 <ClassTable 
                   studentList={groupedStudents[className]['Afternoon']} 
@@ -618,6 +636,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                   getAttendanceStatus={getStudentAttendanceStatus}
                   forceCollapsed={isClassCollapsed(className)}
                   onClassToggle={handleClassToggle}
+                  expandedClasses={expandedClasses}
+                  onZoomToggle={handleZoomToggle}
                 />
               </div>
             ))}
@@ -670,6 +690,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                 getAttendanceStatus={getStudentAttendanceStatus}
                 forceCollapsed={isClassCollapsed(className)}
                 onClassToggle={handleClassToggle}
+                expandedClasses={expandedClasses}
+                onZoomToggle={handleZoomToggle}
               />
             ))}
           </div>

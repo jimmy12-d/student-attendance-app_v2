@@ -49,7 +49,6 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   onZoomToggle
 }) => {
   const [isClassCollapsed, setIsClassCollapsed] = useState(forceCollapsed);
-  const hasMore = studentList.length > initialLimit;
   
   // Get unique identifier for this class (combining className and shift for uniqueness)
   const classId = `${className}-${shift}`;
@@ -59,7 +58,8 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   // Handle zoom toggle with callback to parent
   const handleZoomToggle = () => {
     if (onZoomToggle && className) {
-      // Always toggle between Normal and Zoom (ignore minimize state)
+      // Allow zoom toggle even when minimized or when there are few students
+      // Use className instead of classId so all shifts share the same zoom state
       onZoomToggle(className, !isExpanded);
     }
   };
@@ -69,10 +69,6 @@ export const ClassTable: React.FC<ClassTableProps> = ({
     setIsClassCollapsed(collapsed);
     if (onClassToggle && className) {
       onClassToggle(className, collapsed);
-    }
-    // When restoring from minimize, also clear zoom state to go to Normal
-    if (!collapsed && isExpanded && onZoomToggle) {
-      onZoomToggle(className, false);
     }
   };
 
@@ -120,7 +116,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                     ? 'bg-yellow-100 dark:bg-yellow-200 shadow-sm'
                     : 'bg-yellow-400 dark:bg-yellow-500 shadow-sm'
                 }`}
-                title={isClassCollapsed ? 'Restore to normal view' : 'Minimize class (hide students)'}
+                title={isClassCollapsed ? 'Restore class (show students)' : 'Minimize class (hide students)'}
               >
                 <div className={`w-2 h-0.5 rounded-full transition-all duration-200 ${
                   isClassCollapsed 
@@ -136,7 +132,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                     ? 'bg-green-500 dark:bg-green-600 shadow-sm'
                     : 'bg-green-300 dark:bg-green-400 shadow-sm'
                 }`}
-                title={isExpanded ? 'Return to normal view' : 'Show all students'}
+                title={isExpanded ? 'Compact view (limited height)' : 'Expanded view (full height)'}
               >
                 <Icon
                   path={isExpanded ? mdiChevronDown : mdiChevronUp}
@@ -184,7 +180,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   ? 'bg-yellow-100 dark:bg-yellow-200 shadow-sm'
                   : 'bg-yellow-400 dark:bg-yellow-500 shadow-sm'
               }`}
-              title={isClassCollapsed ? 'Restore to normal view' : 'Minimize class (hide students)'}
+              title={isClassCollapsed ? 'Restore class (show students)' : 'Minimize class (hide students)'}
             >
               <div className={`w-2 h-0.5 rounded-full transition-all duration-300 ${
                 isClassCollapsed 
@@ -200,7 +196,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   ? 'bg-green-500 dark:bg-green-600 shadow-sm'
                   : 'bg-green-300 dark:bg-green-400 shadow-sm'
               }`}
-              title={isExpanded ? 'Return to normal view' : 'Show all students'}
+              title={isExpanded ? 'Compact view (limited height)' : 'Expanded view (full height)'}
             >
               <Icon
                 path={isExpanded ? mdiChevronDown : mdiChevronUp}
@@ -248,10 +244,10 @@ export const ClassTable: React.FC<ClassTableProps> = ({
         <div className="overflow-hidden transition-all duration-500 ease-in-out">
           <div className={`transition-all duration-500 ease-in-out ${
             isExpanded 
-              ? "overflow-visible opacity-100" 
-              : "max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800 opacity-100"
+              ? "overflow-x-auto overflow-y-auto max-h-screen opacity-100" 
+              : "max-h-80 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800 opacity-100 scroll-smooth"
           }`}>
-            <table className="w-full border-separate border-spacing-0 transition-all duration-300">
+            <table className="w-full border-separate border-spacing-0 transition-all duration-300 min-w-full">
               <thead className="sticky top-0 z-10">
                 <tr>
                   {enabledColumns.map((column, index) => (
@@ -269,7 +265,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                {(isExpanded ? studentList : studentList.slice(0, initialLimit)).map((student, index) => (
+                {studentList.map((student, index) => (
                   <StudentRow
                     key={student.id}
                     student={student}
