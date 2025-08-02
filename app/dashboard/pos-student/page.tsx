@@ -141,11 +141,19 @@ const POSStudentPage = () => {
     };
 
     const filteredStudents = students.filter(student => {
-        const searchLower = searchQuery.toLowerCase();
-        const nameMatch = student.fullName && student.fullName.toLowerCase().includes(searchLower);
+        // If no search query, show all students
+        if (!searchQuery || searchQuery.trim() === '') {
+            return true;
+        }
         
-        // For phone search, remove all non-digit characters from both search query and phone number
-        const phoneMatch = student.phone && 
+        const searchLower = searchQuery.toLowerCase().trim();
+        
+        // Search by name
+        const nameMatch = student.fullName && 
+            student.fullName.toLowerCase().includes(searchLower);
+        
+        // Search by phone - remove all non-digit characters from both search query and phone number
+        const phoneMatch = student.phone && searchQuery.replace(/\D/g, '') !== '' &&
             student.phone.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, ''));
         
         return nameMatch || phoneMatch;
@@ -744,7 +752,9 @@ const POSStudentPage = () => {
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <p className="text-sm text-gray-500 truncate">{student.class}</p>
                                                     {student.lastPaymentMonth && (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium 
+                                                                       bg-green-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 
+                                                                       border border-purple-800 dark:border-purple-400">
                                                             {formatPaymentMonth(student.lastPaymentMonth)}
                                                         </span>
                                                     )}

@@ -12,7 +12,7 @@ interface ColumnToggleProps {
   columns: ColumnConfig[];
   onToggleColumn: (columnId: string) => void;
   isBatchEditMode?: boolean;
-  allClassesCollapsed?: boolean;
+  allClassesCollapsed?: boolean; // This actually means "all classes zoomed" when true
   onToggleAllClasses?: () => void;
 }
 
@@ -20,7 +20,7 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
   columns, 
   onToggleColumn, 
   isBatchEditMode = false, 
-  allClassesCollapsed = false, 
+  allClassesCollapsed = false, // This actually means "all classes zoomed" when true
   onToggleAllClasses 
 }) => {
   const enabledColumns = columns.filter(col => col.enabled);
@@ -94,34 +94,24 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
             className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 w-full md:w-auto ${
               allClassesCollapsed
                 ? 'border-green-300 dark:border-green-600 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
-                : 'border-yellow-300 dark:border-yellow-600 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                : 'border-red-300 dark:border-red-600 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
             } hover:shadow-md hover:scale-105`}
           >
             <span className="font-medium text-sm flex items-center">
-              {/* Mac-style traffic light buttons */}
-              <div className="flex items-center space-x-1 mr-3">
-                {/* Minimize button */}
-                <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
+              {/* Arrow icon for class visibility toggle */}
+              <svg 
+                className={`w-4 h-4 mr-3 transition-transform duration-200 ${
                   allClassesCollapsed 
-                    ? 'bg-yellow-300 dark:bg-yellow-400 opacity-50' 
-                    : 'bg-yellow-400 dark:bg-yellow-500 shadow-sm'
-                }`}>
-                  {!allClassesCollapsed && (
-                    <div className="w-2 h-0.5 bg-yellow-800 dark:bg-yellow-900 rounded-full"></div>
-                  )}
-                </div>
-                {/* Zoom button */}
-                <div className={`w-3 h-3 rounded-full flex items-center justify-center ${
-                  !allClassesCollapsed 
-                    ? 'bg-green-300 dark:bg-green-400 opacity-50' 
-                    : 'bg-green-400 dark:bg-green-500 shadow-sm'
-                }`}>
-                  {allClassesCollapsed && (
-                    <div className="w-1.5 h-1.5 border border-green-800 dark:border-green-900 rounded-sm"></div>
-                  )}
-                </div>
-              </div>
-              {allClassesCollapsed ? 'Show All Classes' : 'Hide All Classes'}
+                    ? 'transform rotate-0 text-green-600 dark:text-green-400' 
+                    : 'transform rotate-180 text-red-600 dark:text-red-400'
+                }`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+              {allClassesCollapsed ? 'Zoom All Classes' : 'Hide All Classes'}
             </span>
           </button>
         </div>

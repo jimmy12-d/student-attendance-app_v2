@@ -379,12 +379,12 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                       </p>
                     </div>
                   )}
-                  {student.discount && student.discount > 0 && (
+                  {student.discount > 0 ? ( // Condition now explicitly yields true or false
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Discount Amount</label>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Scholarship Amount</label>
                       <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">${student.discount.toFixed(2)}</p>
                     </div>
-                  )}
+                  ) : null} {/* If student.discount is 0 or less, render null (which means nothing) */}
                 </div>
               </div>
 

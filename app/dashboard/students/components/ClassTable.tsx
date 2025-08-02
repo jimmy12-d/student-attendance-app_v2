@@ -55,16 +55,34 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   // Use just className for zoom state so all shifts of same class share zoom state
   const isExpanded = expandedClasses.has(className || '');
 
-  // Handle zoom toggle with callback to parent
+  // Three-state system: 0=hidden, 1=normal, 2=zoomed
+  const getViewState = () => {
+    if (isClassCollapsed) return 0; // Hidden
+    if (isExpanded) return 2; // Zoomed
+    return 1; // Normal (default)
+  };
+
+  // Zoom button cycles: 1 → 2 → 1 (normal ↔ zoom)
   const handleZoomToggle = () => {
     if (onZoomToggle && className) {
-      // Allow zoom toggle even when minimized or when there are few students
-      // Use className instead of classId so all shifts share the same zoom state
-      onZoomToggle(className, !isExpanded);
+      const currentState = getViewState();
+      if (currentState === 0) {
+        // From hidden: go to normal first, then user can zoom again
+        setIsClassCollapsed(false);
+        if (onClassToggle) {
+          onClassToggle(className, false);
+        }
+      } else if (currentState === 1) {
+        // From normal: go to zoom
+        onZoomToggle(className, true);
+      } else if (currentState === 2) {
+        // From zoom: go back to normal
+        onZoomToggle(className, false);
+      }
     }
   };
 
-  // Handle class toggle with callback to parent
+  // Minimize button toggles: 1 ↔ 0 (normal ↔ hidden)
   const handleClassToggle = (collapsed: boolean) => {
     setIsClassCollapsed(collapsed);
     if (onClassToggle && className) {
@@ -151,7 +169,12 @@ export const ClassTable: React.FC<ClassTableProps> = ({
             0 students
           </span>
         </div>
-        {!isClassCollapsed && (
+        {/* Empty state - show when not hidden (state 0) */}
+        <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
+          getViewState() === 0 
+            ? "max-h-0 opacity-0 -translate-y-2" 
+            : "max-h-screen opacity-100 translate-y-0"
+        }`}>
           <div className="flex flex-col items-center justify-center py-12 px-4 transition-all duration-500 ease-in-out transform">
             <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4 transition-all duration-300">
               <svg className="w-8 h-8 text-gray-400 transition-all duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +183,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 text-center transition-all duration-300">No students assigned</p>
           </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -239,53 +262,58 @@ export const ClassTable: React.FC<ClassTableProps> = ({
         </div>
       </div>
 
-      {/* Table - show when not collapsed OR when expanded (zoom overrides minimize) */}
-      {(!isClassCollapsed || isExpanded) && (
-        <div className="overflow-hidden transition-all duration-500 ease-in-out">
-          <div className={`transition-all duration-500 ease-in-out ${
-            isExpanded 
-              ? "overflow-x-auto overflow-y-auto max-h-screen opacity-100" 
-              : "max-h-80 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800 opacity-100 scroll-smooth"
-          }`}>
-            <table className="w-full border-separate border-spacing-0 transition-all duration-300 min-w-full">
-              <thead className="sticky top-0 z-10">
-                <tr>
-                  {enabledColumns.map((column, index) => (
-                    <th 
-                      key={column.id}
-                      className={`bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600 transition-all duration-300 ${
-                        index === 0 ? 'rounded-tl-lg' : ''
-                      } ${index === enabledColumns.length - 1 ? 'rounded-tr-lg' : ''} ${
-                        column.id === 'number' || column.id === 'edit' ? 'text-center' : 'text-left'
-                      }`}
-                    >
-                      {column.label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                {studentList.map((student, index) => (
-                  <StudentRow
-                    key={student.id}
-                    student={student}
-                    index={index}
-                    enabledColumns={enabledColumns}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onViewDetails={handleViewDetails}
-                    isBatchEditMode={isBatchEditMode}
-                    onBatchUpdate={onBatchUpdate}
-                    isSelected={selectedStudents.has(student.id)}
-                    onSelect={onStudentSelect}
-                    getAttendanceStatus={getAttendanceStatus}
-                  />
+      {/* Table - Three-state system: 0=hidden, 1=normal (default), 2=zoomed */}
+      <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
+        (() => {
+          const state = getViewState();
+          if (state === 0) return "max-h-0 opacity-0 -translate-y-2"; // Hidden
+          if (state === 2) return "max-h-screen opacity-100 translate-y-0"; // Zoomed
+          return "max-h-80 opacity-100 translate-y-0"; // Normal (default)
+        })()
+      }`}>
+        <div className={`transition-all duration-300 ease-in-out ${
+          getViewState() === 2 
+            ? "overflow-x-auto overflow-y-auto" 
+            : "overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800 scroll-smooth"
+        }`}>
+          <table className="w-full border-separate border-spacing-0 transition-all duration-300 min-w-full">
+            <thead className="sticky top-0 z-10">
+              <tr>
+                {enabledColumns.map((column, index) => (
+                  <th 
+                    key={column.id}
+                    className={`bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600 p-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600 transition-all duration-300 ${
+                      index === 0 ? 'rounded-tl-lg' : ''
+                    } ${index === enabledColumns.length - 1 ? 'rounded-tr-lg' : ''} ${
+                      column.id === 'number' || column.id === 'edit' ? 'text-center' : 'text-left'
+                    }`}
+                  >
+                    {column.label}
+                  </th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+              {studentList.map((student, index) => (
+                <StudentRow
+                  key={student.id}
+                  student={student}
+                  index={index}
+                  enabledColumns={enabledColumns}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onViewDetails={handleViewDetails}
+                  isBatchEditMode={isBatchEditMode}
+                  onBatchUpdate={onBatchUpdate}
+                  isSelected={selectedStudents.has(student.id)}
+                  onSelect={onStudentSelect}
+                  getAttendanceStatus={getAttendanceStatus}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 };
