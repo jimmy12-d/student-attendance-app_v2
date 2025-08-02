@@ -108,7 +108,7 @@ async function downloadPdfAsBase64(pdfUrl: string): Promise<string> {
   }
 }
 
-async function generateReceiptPdf(transaction: any, pageHeight: number, action: string = 'print'): Promise<string> {
+async function generateReceiptPdf(transaction: any, pageHeight: number): Promise<string> {
     const pdfDoc = await PDFDocument.create();
     
     // Force content to start at the very top by using a minimal page height
@@ -119,11 +119,8 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, action: 
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const margin = 15; // Side margins only
 
-    // Add top padding for downloads, but not for printing (printer already has empty space)
-    const topPadding = action === 'generate' ? 10 : 0;
-
-    // Start content at the absolute top of the page (no top margin for printing)
-    // Add padding for downloads to provide better spacing
+    // Start content at the absolute top of the page (no top margin)
+    // This forces the driver to print from the very beginning of the paper
     
     // --- Logo ---
     const logoPath = path.resolve('./public', 'icon-192x192.png');
@@ -132,12 +129,12 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, action: 
     const logoDims = logoImage.scale(0.33);
     page.drawImage(logoImage, {
       x: (width - logoDims.width) / 2, // Center the logo horizontally
-      y: height - logoDims.height - topPadding, // Add top padding for downloads
+      y: height - logoDims.height, // Start at the very top (no margin)
       width: logoDims.width,
       height: logoDims.height,
     });
 
-    let y = height - logoDims.height - topPadding - 15; // Minimal gap after logo, accounting for padding
+    let y = height - logoDims.height - 10; // Minimal gap after logo
 
     const centerTextX = (text: string, textFont: any, size: number) => (width - textFont.widthOfTextAtSize(text, size)) / 2;
 
@@ -252,7 +249,7 @@ export async function GET(request: NextRequest) {
         cashier: "Admin"
       };
 
-      const pdfBase64 = await generateReceiptPdf(mockTransaction, 600, 'debug');
+      const pdfBase64 = await generateReceiptPdf(mockTransaction, 600);
       const pdfBuffer = Buffer.from(pdfBase64, 'base64');
       
       return new NextResponse(pdfBuffer, {
@@ -367,8 +364,8 @@ export async function POST(request: NextRequest) {
     let contentBase64;
 
     if (transactionData) {
-        console.log(`📄 [PrintNode API] Generating PDF receipt with height: ${pageHeight} for action: ${action}`);
-        contentBase64 = await generateReceiptPdf(transactionData, pageHeight, action);
+        console.log(`📄 [PrintNode API] Generating PDF receipt with height: ${pageHeight}`);
+        contentBase64 = await generateReceiptPdf(transactionData, pageHeight);
     } else if (pdfUrl) {
       console.log('📄 [PrintNode API] Downloading PDF from:', pdfUrl);
       contentBase64 = await downloadPdfAsBase64(pdfUrl);

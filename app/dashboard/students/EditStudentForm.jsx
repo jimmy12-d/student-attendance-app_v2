@@ -10,7 +10,7 @@ import CollapsibleSection from './components/CollapsibleSection';
 // Hooks
 import { useClassData } from './hooks/useClassData';
 import { useStudentForm } from './hooks/useStudentForm';
-import { useStudentCounts } from './hooks/useStudentCounts';
+import { useStudentCount } from './hooks/useStudentCount';
 
 /**
  * @typedef {object} Student
@@ -27,7 +27,7 @@ import { useStudentCounts } from './hooks/useStudentCounts';
  * @property {string} [fatherName]
  * @property {string} [fatherPhone]
  * @property {string} [photoUrl]
- * @property {number} [scholarship]
+ * @property {number} [discount]
  * @property {string} [note]
  * @property {boolean} [warning]
  */
@@ -45,10 +45,11 @@ import { useStudentCounts } from './hooks/useStudentCounts';
 function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [classOptionsWithCounts, setClassOptionsWithCounts] = useState([]);
 
   // Custom hooks
   const { allClassData, classOptions, allShiftOptions, loadingClasses } = useClassData();
-  const { studentCounts, loadingCounts, getClassCountText } = useStudentCounts();
+  const { clearCacheForClass } = useStudentCount();
   const {
     fullName, setFullName,
     nameKhmer, setNameKhmer,
@@ -63,7 +64,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     ay, setAy,
     studentClass, setStudentClass,
     gradeTypeFilter, setGradeTypeFilter,
-    scholarship, setScholarship,
+    discount, setDiscount,
     note, setNote,
     warning, setWarning,
     isStudentInfoCollapsed, setIsStudentInfoCollapsed,
@@ -106,17 +107,83 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     }
   }, [studentClass, allClassData, loadingClasses, shift, setShift]);
 
+  // Effect to update class options with student counts
+  useEffect(() => {
+    const updateClassOptionsWithCounts = async () => {
+      if (!classOptions.length || !allClassData || loadingClasses) {
+        setClassOptionsWithCounts(classOptions);
+        return;
+      }
+
+      const optionsWithCounts = await Promise.all(
+        classOptions.map(async (option) => {
+          const className = option.value;
+          const classData = allClassData[className];
+          
+          // If no shift is selected, just show the class name
+          if (!shift || !classData?.shifts || !Object.keys(classData.shifts).includes(shift)) {
+            return {
+              ...option,
+              label: className
+            };
+          }
+          
+          // If shift is selected and this class has that shift, get student count
+          try {
+            const studentsRef = collection(db, "students");
+            const q = query(
+              studentsRef, 
+              where("class", "==", className),
+              where("shift", "==", shift),
+              where("ay", "==", "2026") // Filter by current academic year
+            );
+            const querySnapshot = await getDocs(q);
+            
+            let count = querySnapshot.size;
+            
+            // If we need to exclude a specific student (for edit mode)
+            if (studentData?.id) {
+              const hasExcludedStudent = querySnapshot.docs.some(doc => doc.id === studentData.id);
+              if (hasExcludedStudent) {
+                count -= 1;
+              }
+            }
+            
+            return {
+              ...option,
+              label: `${className} (${count})`
+            };
+          } catch (error) {
+            console.error(`Error fetching count for ${className}-${shift}:`, error);
+            return {
+              ...option,
+              label: className
+            };
+          }
+        })
+      );
+      
+      setClassOptionsWithCounts(optionsWithCounts);
+    };
+
+    updateClassOptionsWithCounts();
+
+    // Listen for refresh events
+    const handleRefresh = () => {
+      updateClassOptionsWithCounts();
+    };
+
+    window.addEventListener('refreshClassCounts', handleRefresh);
+    
+    return () => {
+      window.removeEventListener('refreshClassCounts', handleRefresh);
+    };
+  }, [classOptions, allClassData, shift, loadingClasses, studentData?.id]);
+
   // Always show all class options for better search functionality
   const filteredClassOptions = useMemo(() => {
-    if (loadingCounts) {
-      return classOptions;
-    }
-    
-    return classOptions.map(option => ({
-      ...option,
-      label: `${option.label}${getClassCountText(option.value, shift)}`
-    }));
-  }, [classOptions, loadingCounts, getClassCountText, shift]);
+    return classOptionsWithCounts;
+  }, [classOptionsWithCounts]);
 
   const availableShiftOptions = useMemo(() => {
     if (!studentClass || !allClassData || loadingClasses) {
@@ -132,11 +199,11 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     return [];
   }, [studentClass, allClassData, loadingClasses, allShiftOptions]);
 
-  const handleScholarshipChange = (e) => {
+  const handleDiscountChange = (e) => {
     const value = e.target.value;
     // Allow empty string or valid decimal numbers
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setScholarship(value);
+      setDiscount(value);
     }
   };
 
@@ -189,6 +256,26 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
 
       const studentRef = doc(db, "students", studentData.id);
       await setDoc(studentRef, { ...updatedStudentData, updatedAt: serverTimestamp() }, { merge: true });
+      
+      // Clear cache for both old and new class/shift combinations if they changed
+      if (studentData.class !== updatedStudentData.class || studentData.shift !== updatedStudentData.shift) {
+        clearCacheForClass(studentData.class, studentData.shift); // Old combination
+        clearCacheForClass(updatedStudentData.class, updatedStudentData.shift); // New combination
+        
+        // Refresh class options with updated counts
+        setTimeout(() => {
+          const updateEvent = new CustomEvent('refreshClassCounts');
+          window.dispatchEvent(updateEvent);
+        }, 100);
+      } else {
+        clearCacheForClass(updatedStudentData.class, updatedStudentData.shift);
+        
+        // Refresh class options with updated counts
+        setTimeout(() => {
+          const updateEvent = new CustomEvent('refreshClassCounts');
+          window.dispatchEvent(updateEvent);
+        }, 100);
+      }
       
       toast.success(`Student '${updatedStudentData.fullName}' has been updated successfully!`);
       
@@ -268,23 +355,6 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
             options={scheduleTypeOptions}
             placeholder="Select Type"
           />
-        </div>
-
-        {/* Row 2.5: Academic Year */}
-        <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0 mt-6">
-          <div>
-            <label htmlFor="ay" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Academic Year
-            </label>
-            <input
-              type="text"
-              id="ay"
-              name="ay"
-              value={ay}
-              onChange={(e) => setAy(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
-            />
-          </div>
         </div>
 
         {/* Row 3: Class and Shift */}
@@ -390,8 +460,8 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
         <div className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8">
             <div>
-              <label htmlFor="scholarship" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Scholarship Amount ($)
+              <label htmlFor="discount" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Discount Amount ($)
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -399,16 +469,16 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                 </div>
                 <input
                   type="text"
-                  id="scholarship"
-                  name="scholarship"
-                  value={scholarship}
-                  onChange={handleScholarshipChange}
+                  id="discount"
+                  name="discount"
+                  value={discount}
+                  onChange={handleDiscountChange}
                   placeholder="0.00"
                   className="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
                 />
               </div>
               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Enter scholarship amount in USD (e.g., 10.50)
+                Enter discount amount in USD (e.g., 10.50)
               </p>
             </div>
           </div>

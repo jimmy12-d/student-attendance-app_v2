@@ -15,7 +15,7 @@ export const useStudentForm = (initialData) => {
   const [ay, setAy] = useState('2026');
   const [studentClass, setStudentClass] = useState('');
   const [gradeTypeFilter, setGradeTypeFilter] = useState('');
-  const [scholarship, setScholarship] = useState('');
+  const [discount, setDiscount] = useState('');
   const [note, setNote] = useState('');
   const [warning, setWarning] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -40,7 +40,7 @@ export const useStudentForm = (initialData) => {
       setFatherPhone(initialData.fatherPhone || '');
       setPhotoUrl(initialData.photoUrl || '');
       setAy(initialData.ay || '2026');
-      setScholarship(initialData.discount ? initialData.discount.toString() : '');
+      setDiscount(initialData.discount ? initialData.discount.toString() : '');
       setNote(initialData.note || '');
       setWarning(initialData.warning || false);
       // Default to collapsed in edit mode
@@ -61,7 +61,7 @@ export const useStudentForm = (initialData) => {
       setFatherPhone('');
       setPhotoUrl('');
       setAy('2026');
-      setScholarship('');
+      setDiscount('');
       setNote('');
       setWarning(false);
       setGradeTypeFilter('');
@@ -104,8 +104,8 @@ export const useStudentForm = (initialData) => {
     };
 
     // Only add fields if they have values (avoid undefined)
-    if (scholarship && scholarship.trim() !== '') {
-      data.discount = parseFloat(scholarship);
+    if (discount && discount.trim() !== '') {
+      data.discount = parseFloat(discount);
     }
     
     if (note && note.trim() !== '') {
@@ -133,7 +133,7 @@ export const useStudentForm = (initialData) => {
     ay, setAy,
     studentClass, setStudentClass,
     gradeTypeFilter, setGradeTypeFilter,
-    scholarship, setScholarship,
+    discount, setDiscount,
     note, setNote,
     warning, setWarning,
     isEditMode,

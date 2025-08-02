@@ -99,7 +99,7 @@ export interface Student {
   fatherPhone?: string; // Father's Phone
   photoUrl?: string; // Photo URL
   lastPaymentMonth?: string; // e.g., "YYYY-MM"
-  discount?: number; // Scholarship amount in dollars (stored as discount field for backward compatibility)
+  discount?: number; // Discount amount in dollars
   note?: string; // Admin note for the student
   warning?: boolean; // Warning flag for problematic students
   createdAt?: Timestamp | Date; // Firestore timestamp or Date object

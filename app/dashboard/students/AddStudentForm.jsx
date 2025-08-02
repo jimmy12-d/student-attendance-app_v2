@@ -12,7 +12,7 @@ import CollapsibleSection from './components/CollapsibleSection';
 // Hooks
 import { useClassData } from './hooks/useClassData';
 import { useStudentForm } from './hooks/useStudentForm';
-import { useStudentCounts } from './hooks/useStudentCounts';
+import { useStudentCount } from './hooks/useStudentCount';
 
 /**
  * @typedef {object} Student
@@ -29,7 +29,7 @@ import { useStudentCounts } from './hooks/useStudentCounts';
  * @property {string} [fatherName]
  * @property {string} [fatherPhone]
  * @property {string} [photoUrl]
- * @property {number} [scholarship]
+ * @property {number} [discount]
  * @property {string} [note]
  * @property {boolean} [warning]
  */
@@ -46,10 +46,11 @@ import { useStudentCounts } from './hooks/useStudentCounts';
 function AddStudentForm({ onStudentAdded, onCancel }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [classOptionsWithCounts, setClassOptionsWithCounts] = useState([]);
 
   // Custom hooks
   const { allClassData, classOptions, allShiftOptions, loadingClasses } = useClassData();
-  const { studentCounts, loadingCounts, getClassCountText } = useStudentCounts();
+  const { clearCacheForClass } = useStudentCount();
   const {
     fullName, setFullName,
     nameKhmer, setNameKhmer,
@@ -64,7 +65,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     ay, setAy,
     studentClass, setStudentClass,
     gradeTypeFilter, setGradeTypeFilter,
-    scholarship, setScholarship,
+    discount, setDiscount,
     note, setNote,
     warning, setWarning,
     isStudentInfoCollapsed, setIsStudentInfoCollapsed,
@@ -108,30 +109,86 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     }
   }, [studentClass, allClassData, loadingClasses, shift]);
 
-  const filteredClassOptions = useMemo(() => {
-    // In add mode, filter classes based on gradeTypeFilter (from fetched data)
-    let baseOptions = classOptions;
-    
-    if (gradeTypeFilter && allClassData) {
-      const filteredClassNames = Object.keys(allClassData).filter(
-        (className) => allClassData[className].type === gradeTypeFilter
+  // Effect to update class options with student counts
+  useEffect(() => {
+    const updateClassOptionsWithCounts = async () => {
+      if (!classOptions.length || !allClassData || loadingClasses) {
+        setClassOptionsWithCounts(classOptions);
+        return;
+      }
+
+      // For add mode, apply grade type filter first
+      let baseOptions = classOptions;
+      if (gradeTypeFilter && allClassData) {
+        const filteredClassNames = Object.keys(allClassData).filter(
+          (className) => allClassData[className].type === gradeTypeFilter
+        );
+        baseOptions = filteredClassNames.map((name) => ({
+          value: name,
+          label: name,
+        }));
+      }
+
+      const optionsWithCounts = await Promise.all(
+        baseOptions.map(async (option) => {
+          const className = option.value;
+          const classData = allClassData[className];
+          
+          // If no shift is selected, just show the class name
+          if (!shift || !classData?.shifts || !Object.keys(classData.shifts).includes(shift)) {
+            return {
+              ...option,
+              label: className
+            };
+          }
+          
+          // If shift is selected and this class has that shift, get student count
+          try {
+            const studentsRef = collection(db, "students");
+            const q = query(
+              studentsRef, 
+              where("class", "==", className),
+              where("shift", "==", shift),
+              where("ay", "==", "2026") // Filter by current academic year
+            );
+            const querySnapshot = await getDocs(q);
+            
+            const count = querySnapshot.size;
+            
+            return {
+              ...option,
+              label: `${className} (${count})`
+            };
+          } catch (error) {
+            console.error(`Error fetching count for ${className}-${shift}:`, error);
+            return {
+              ...option,
+              label: className
+            };
+          }
+        })
       );
-      baseOptions = filteredClassNames.map((name) => ({
-        value: name,
-        label: name,
-      }));
-    }
+      
+      setClassOptionsWithCounts(optionsWithCounts);
+    };
+
+    updateClassOptionsWithCounts();
+
+    // Listen for refresh events
+    const handleRefresh = () => {
+      updateClassOptionsWithCounts();
+    };
+
+    window.addEventListener('refreshClassCounts', handleRefresh);
     
-    // Add student counts to the labels
-    if (loadingCounts) {
-      return baseOptions;
-    }
-    
-    return baseOptions.map(option => ({
-      ...option,
-      label: `${option.label}${getClassCountText(option.value, shift)}`
-    }));
-  }, [classOptions, allClassData, gradeTypeFilter, loadingCounts, getClassCountText, shift]);
+    return () => {
+      window.removeEventListener('refreshClassCounts', handleRefresh);
+    };
+  }, [classOptions, allClassData, shift, loadingClasses, gradeTypeFilter]);
+
+  const filteredClassOptions = useMemo(() => {
+    return classOptionsWithCounts;
+  }, [classOptionsWithCounts]);
 
   const availableShiftOptions = useMemo(() => {
     if (!studentClass || !allClassData || loadingClasses) {
@@ -151,11 +208,11 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     populateFromSheetData(data);
   };
 
-  const handleScholarshipChange = (e) => {
+  const handleDiscountChange = (e) => {
     const value = e.target.value;
     // Allow empty string or valid decimal numbers
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setScholarship(value);
+      setDiscount(value);
     }
   };
 
@@ -200,6 +257,16 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
       const studentData = getFormData();
 
       const docRef = await addDoc(collection(db, "students"), { ...studentData, authUid: '', createdAt: serverTimestamp() });
+      
+      // Clear cache for the class/shift combination
+      clearCacheForClass(studentData.class, studentData.shift);
+      
+      // Refresh class options with updated counts
+      setTimeout(() => {
+        const updateEvent = new CustomEvent('refreshClassCounts');
+        window.dispatchEvent(updateEvent);
+      }, 100);
+      
       toast.success(`Student '${studentData.fullName}' has been added successfully!`);
       if (onStudentAdded) {
         onStudentAdded(docRef.id);
@@ -282,23 +349,6 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
             options={scheduleTypeOptions}
             placeholder="Select Type"
           />
-        </div>
-
-        {/* Row 2.5: Academic Year */}
-        <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0 mt-6">
-          <div>
-            <label htmlFor="ay" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Academic Year
-            </label>
-            <input
-              type="text"
-              id="ay"
-              name="ay"
-              value={ay}
-              onChange={(e) => setAy(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
-            />
-          </div>
         </div>
 
         {/* Row 3: Class and Shift */}

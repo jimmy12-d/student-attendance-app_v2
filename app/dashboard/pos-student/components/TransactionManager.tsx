@@ -210,14 +210,13 @@ export const TransactionManager = ({
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                                    {isNewStudent ? 'Final Amount:' : 'Final Amount:'}
+                                    {isNewStudent ? 'Prorated Amount:' : 'Full Amount:'}
                                 </span>
                                 <span className="font-bold text-2xl text-emerald-600 dark:text-emerald-400">
-                                    {joinDate && paymentMonth ? (() => {
-                                        const scholarshipAmount = selectedStudent?.discount && selectedStudent.discount > 0 ? selectedStudent.discount : 0;
-                                        const finalAmount = calculateProratedAmount(fullAmount, new Date(joinDate), paymentMonth, classStudyDays, scholarshipAmount);
-                                        return `$${finalAmount.toFixed(2)}`;
-                                    })() : '$0.00'}
+                                    {joinDate && paymentMonth 
+                                        ? `$${calculateProratedAmount(fullAmount, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2)}`
+                                        : '$0.00'
+                                    }
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
@@ -332,21 +331,8 @@ export const TransactionManager = ({
                                         <p className="text-sm text-gray-600 dark:text-gray-400">
                                             Full Price: ${fullAmount.toFixed(2)}
                                         </p>
-                                        {selectedStudent?.discount && selectedStudent.discount > 0 && (
-                                            <p className="text-sm text-green-600 dark:text-green-400">
-                                                Scholarship Discount: -${selectedStudent.discount.toFixed(2)}
-                                            </p>
-                                        )}
-                                        {selectedStudent?.discount && selectedStudent.discount > 0 && (
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                                After Scholarship: ${Math.max(0, fullAmount - selectedStudent.discount).toFixed(2)}
-                                            </p>
-                                        )}
                                         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                            Final Amount: ${(() => {
-                                                const scholarshipAmount = selectedStudent?.discount && selectedStudent.discount > 0 ? selectedStudent.discount : 0;
-                                                return calculateProratedAmount(fullAmount, new Date(joinDate), paymentMonth, classStudyDays, scholarshipAmount).toFixed(2);
-                                            })()}
+                                            Calculated Amount: ${calculateProratedAmount(fullAmount, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2)}
                                         </p>
                                     </div>
                                 </div>

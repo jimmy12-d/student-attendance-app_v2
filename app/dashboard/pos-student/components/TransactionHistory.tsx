@@ -84,7 +84,9 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                                         <p className="text-sm text-gray-600 dark:text-gray-400">{new Date(transaction.date).toLocaleDateString('en-US', { 
                                                             year: 'numeric', 
                                                             month: 'long', 
-                                                            day: 'numeric' 
+                                                            day: 'numeric' ,
+                                                            hour: 'numeric',
+                                                            minute: 'numeric'
                                                         })}</p>
                                                     </div>
                                                 </div>

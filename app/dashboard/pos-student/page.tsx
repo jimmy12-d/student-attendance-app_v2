@@ -143,6 +143,19 @@ const POSStudentPage = () => {
         student.fullName && student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    // Function to format payment month from YYYY-MM to readable text
+    const formatPaymentMonth = (paymentMonth: string | null | undefined): string => {
+        if (!paymentMonth) return '';
+        
+        try {
+            const [year, month] = paymentMonth.split('-').map(Number);
+            const date = new Date(year, month - 1); // month is 0-indexed
+            return date.toLocaleString('default', { month: 'short' });
+        } catch {
+            return '';
+        }
+    };
+
     const handleSelectStudent = (student: Student) => {
         setSelectedStudent(student);
         setLastTransaction(null);
@@ -606,7 +619,14 @@ const POSStudentPage = () => {
                                              onClick={() => handleSelectStudent(student)}>
                                             <div className="flex-grow min-w-0 mr-2">
                                                 <p className="font-semibold truncate">{student.fullName}</p>
-                                                <p className="text-sm text-gray-500 truncate">{student.class}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <p className="text-sm text-gray-500 truncate">{student.class}</p>
+                                                    {student.lastPaymentMonth && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                            {formatPaymentMonth(student.lastPaymentMonth)}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="flex items-center flex-shrink-0">
                                                 {selectedStudent?.id === student.id && <Icon path={mdiCheckCircle} className="text-blue-500" />}
