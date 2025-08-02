@@ -3,7 +3,7 @@ import { Student } from '../../../_interfaces';
 import { ColumnConfig } from './ColumnToggle';
 import { StudentRow } from './StudentRow';
 import Icon from '../../../_components/Icon';
-import { mdiChevronDown, mdiChevronUp, mdiChevronRight } from '@mdi/js';
+import { mdiChevronDown, mdiChevronUp, mdiChevronRight,mdiAccountSchool } from '@mdi/js';
 
 interface ClassTableProps {
   studentList: Student[];
@@ -108,13 +108,13 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   const getBadgeColors = () => {
     switch (shift) {
       case 'Morning':
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-800 dark:border-blue-300';
       case 'Afternoon':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300';
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-800 dark:border-yellow-300';
       case 'Evening':
-        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300';
+        return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-800 dark:border-purple-300';
       default:
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-800 dark:border-blue-300';
     }
   };
 
@@ -255,26 +255,31 @@ export const ClassTable: React.FC<ClassTableProps> = ({
             </button>
           )}
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3">          
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getBadgeColors()}`}>
-            {studentCount || studentList.length} students
+            {/* Add the Icon component here */}
+            <Icon path={mdiAccountSchool} size={18} className="mr-1" />
+            {studentCount || studentList.length} Students
           </span>
         </div>
       </div>
 
       {/* Table - Three-state system: 0=hidden, 1=normal (default), 2=zoomed */}
-      <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
+      <div className={`transition-all duration-500 ease-in-out ${
         (() => {
           const state = getViewState();
-          if (state === 0) return "max-h-0 opacity-0 -translate-y-2"; // Hidden
-          if (state === 2) return "max-h-screen opacity-100 translate-y-0"; // Zoomed
-          return "max-h-80 opacity-100 translate-y-0"; // Normal (default)
+          if (state === 0) return "max-h-0 opacity-0 -translate-y-2 overflow-hidden"; // Hidden
+          if (state === 2) return "max-h-screen opacity-100 translate-y-0 overflow-hidden"; // Zoomed
+          return "max-h-80 opacity-100 translate-y-0 overflow-hidden"; // Normal (default) - scrollable
         })()
       }`}>
         <div className={`transition-all duration-300 ease-in-out ${
-          getViewState() === 2 
-            ? "overflow-x-auto overflow-y-auto" 
-            : "overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800 scroll-smooth"
+          (() => {
+            const state = getViewState();
+            if (state === 2) return "h-full overflow-x-auto overflow-y-auto"; // Zoomed - full scroll
+            if (state === 1) return "max-h-80 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800 scroll-smooth"; // Normal - limited scroll with custom scrollbar
+            return "overflow-hidden"; // Hidden
+          })()
         }`}>
           <table className="w-full border-separate border-spacing-0 transition-all duration-300 min-w-full">
             <thead className="sticky top-0 z-10">

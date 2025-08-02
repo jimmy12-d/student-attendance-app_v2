@@ -1,0 +1,44 @@
+[debug] [2025-08-02T08:07:50.362Z] ----------------------------------------------------------------------
+[debug] [2025-08-02T08:07:50.367Z] Command:       /usr/local/bin/node /usr/local/bin/firebase deploy --only hosting
+[debug] [2025-08-02T08:07:50.368Z] CLI Version:   14.8.0
+[debug] [2025-08-02T08:07:50.368Z] Platform:      darwin
+[debug] [2025-08-02T08:07:50.368Z] Node Version:  v20.9.0
+[debug] [2025-08-02T08:07:50.368Z] Time:          Sat Aug 02 2025 15:07:50 GMT+0700 (Indochina Time)
+[debug] [2025-08-02T08:07:50.368Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-08-02T08:07:50.471Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-08-02T08:07:50.471Z] > authorizing via signed-in user (kemhoutlem@gmail.com)
+[debug] [2025-08-02T08:07:50.471Z] [iam] checking project rodwell-attendance for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-08-02T08:07:50.471Z] Checked if tokens are valid: false, expires at: 1754119069442
+[debug] [2025-08-02T08:07:50.472Z] Checked if tokens are valid: false, expires at: 1754119069442
+[debug] [2025-08-02T08:07:50.472Z] > refreshing access token with scopes: []
+[debug] [2025-08-02T08:07:50.472Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-08-02T08:07:50.472Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-02T08:07:50.783Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-08-02T08:07:50.783Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-08-02T08:07:50.798Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions [none]
+[debug] [2025-08-02T08:07:50.798Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-08-02T08:07:50.798Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-08-02T08:07:51.926Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions 200
+[debug] [2025-08-02T08:07:51.926Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-08-02T08:07:51.927Z] Checked if tokens are valid: true, expires at: 1754125669784
+[debug] [2025-08-02T08:07:51.927Z] Checked if tokens are valid: true, expires at: 1754125669784
+[debug] [2025-08-02T08:07:51.927Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance [none]
+[debug] [2025-08-02T08:07:52.514Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance 200
+[debug] [2025-08-02T08:07:52.514Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance {"projectId":"rodwell-attendance","projectNumber":"50079853705","displayName":"rodwell-attendance","name":"projects/rodwell-attendance","resources":{"hostingSite":"rodwell-attendance"},"state":"ACTIVE","etag":"1_4b5e5a04-6213-4fa6-b7af-cba7fac698fa"}
+[debug] [2025-08-02T08:07:53.830Z] defaultcredentials: writing to file /Users/jimmy/.config/firebase/kemhoutlem_gmail_com_application_default_credentials.json
+[debug] [2025-08-02T08:07:53.831Z] Checked if tokens are valid: true, expires at: 1754125669784
+[debug] [2025-08-02T08:07:53.831Z] Checked if tokens are valid: true, expires at: 1754125669784
+[debug] [2025-08-02T08:07:53.831Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites pageToken=&pageSize=10
+[debug] [2025-08-02T08:07:54.771Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites 200
+[debug] [2025-08-02T08:07:54.772Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites {"sites":[{"name":"projects/rodwell-attendance/sites/rodwell-attendance","defaultUrl":"https://rodwell-attendance.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-08-02T08:07:54.772Z] Checked if tokens are valid: true, expires at: 1754125669784
+[debug] [2025-08-02T08:07:54.772Z] Checked if tokens are valid: true, expires at: 1754125669784
+[debug] [2025-08-02T08:07:54.773Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites 
+[debug] [2025-08-02T08:07:55.366Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites 200
+[debug] [2025-08-02T08:07:55.366Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites {"sites":[{"name":"projects/rodwell-attendance/sites/rodwell-attendance","defaultUrl":"https://rodwell-attendance.web.app","type":"DEFAULT_SITE"}]}
+[debug] [2025-08-02T08:07:55.366Z] Checked if tokens are valid: true, expires at: 1754125669784
+[debug] [2025-08-02T08:07:55.366Z] Checked if tokens are valid: true, expires at: 1754125669784
+[debug] [2025-08-02T08:07:55.367Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/webApps/-/config [none]
+[debug] [2025-08-02T08:07:56.187Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/webApps/-/config 200
+[debug] [2025-08-02T08:07:56.188Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance/webApps/-/config {"projectId":"rodwell-attendance","appId":"1:50079853705:web:5e9d3dcb42b4d0d874aa58","storageBucket":"rodwell-attendance.firebasestorage.app","apiKey":"AIzaSyBlUIZfsrgVvfw4fL2poyITh0bfM9Iumag","authDomain":"rodwell-attendance.firebaseapp.com","messagingSenderId":"50079853705"}

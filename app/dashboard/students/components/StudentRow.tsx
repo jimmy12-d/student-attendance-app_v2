@@ -101,18 +101,18 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                         type="checkbox"
                         checked={isSelected}
                         onChange={(e) => onSelect?.(student.id, e.target.checked)}
-                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600"
+                        className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600"
                       />
                     </div>
                   ) : (
                     <div className="relative group/index">
-                      <span className="inline-flex items-center justify-center w-8 h-8 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors duration-200 group-hover/index:opacity-0">
+                      <span className="inline-flex items-center justify-center w-8 h-8 text-sm font-mediumtext-purple-600 dark:text-purple-400 rounded-full bg-white/70 dark:bg-slate-700/70 backdrop-blur-sm rounded-fullgroup-hover:bg-purple-200 dark:group-hover:bg-purple-800/50 transition-colors duration-200 group-hover/index:opacity-0">
                         {index + 1}
                       </span>
                       
                       {/* Hover overlay with eye icon */}
                       <div 
-                        className="absolute inset-0 bg-blue-600 bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover/index:opacity-100 transition-opacity duration-200 cursor-pointer"
+                        className="absolute inset-0 bg-purple-600 bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover/index:opacity-100 transition-opacity duration-200 cursor-pointer"
                         onClick={() => onViewDetails(student)}
                         title="View student details"
                       >
@@ -132,8 +132,8 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-semibold truncate transition-all duration-300 transform-gpu ${
                         isBatchEditMode && isSelected 
-                          ? 'text-blue-600 dark:text-blue-400' 
-                          : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                          ? 'text-purple-600 dark:text-purple-400' 
+                          : 'text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400'
                       }`}>
                         {student.fullName}
                       </p>
@@ -163,7 +163,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               <td key="scheduleType" className="p-3">
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
                   student.scheduleType === 'Fix' 
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 group-hover:bg-green-200 dark:group-hover:bg-green-800/50'
+                    ? 'bg-sky-100 dark:bg-sky-900/30 text-sky-800 dark:text-sky-300 group-hover:bg-sky-200 dark:group-hover:bg-sky-800/50'
                     : student.scheduleType === 'Flip-Flop'
                     ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/50'
                     : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600'
