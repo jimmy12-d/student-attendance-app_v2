@@ -17,6 +17,7 @@ type Props = {
   onConfirm?: () => void;
   onCancel?: () => void;
   disabled?: boolean;
+  closeButtonColor?: ColorButtonKey;
 };
 
 const CardBoxModal = ({
@@ -29,6 +30,7 @@ const CardBoxModal = ({
   onConfirm,
   onCancel,
   disabled = false,
+  closeButtonColor,
 }: Props) => {
   if (!isActive) {
     return null;
@@ -69,7 +71,7 @@ const CardBoxModal = ({
           {!!onCancel && (
             <Button
               icon={mdiClose}
-              color="whiteDark"
+              color={closeButtonColor || "whiteDark"}
               onClick={onCancel}
               small
               roundedFull

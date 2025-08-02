@@ -11,6 +11,7 @@ import {
   mdiAlertCircle,
   mdiDownload,
   mdiHistory,
+  mdiPrinter,
 } from "@mdi/js";
 
 import SectionMain from "../../_components/Section/Main";
@@ -139,9 +140,16 @@ const POSStudentPage = () => {
         setIsProcessing(false);
     };
 
-    const filteredStudents = students.filter(student =>
-        student.fullName && student.fullName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredStudents = students.filter(student => {
+        const searchLower = searchQuery.toLowerCase();
+        const nameMatch = student.fullName && student.fullName.toLowerCase().includes(searchLower);
+        
+        // For phone search, remove all non-digit characters from both search query and phone number
+        const phoneMatch = student.phone && 
+            student.phone.replace(/\D/g, '').includes(searchQuery.replace(/\D/g, ''));
+        
+        return nameMatch || phoneMatch;
+    });
 
     // Function to format payment month from YYYY-MM to readable text
     const formatPaymentMonth = (paymentMonth: string | null | undefined): string => {
@@ -156,6 +164,30 @@ const POSStudentPage = () => {
         }
     };
 
+    // Function to format phone number with dashes
+    const formatPhoneNumber = (phone: string | undefined | null): string => {
+    if (!phone) return 'N/A';
+    const cleaned = ('' + phone).replace(/\D/g, '');
+
+    let digits = cleaned;
+    // Standardize to 10 digits if it's a 9-digit number missing the leading 0
+    if (digits.length === 9 && !digits.startsWith('0')) {
+        digits = '0' + digits;
+    }
+    
+    // Format 10-digit numbers (0XX-XXX-XXXX)
+    if (digits.length === 10) {
+        return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    }
+
+    // Format 9-digit numbers (0XX-XXX-XXX)
+    if (digits.length === 9) {
+        return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}`;
+    }
+    
+    return phone; // Return original if it doesn't match formats
+    };
+    
     const handleSelectStudent = (student: Student) => {
         setSelectedStudent(student);
         setLastTransaction(null);
@@ -214,6 +246,43 @@ const POSStudentPage = () => {
         setJoinDate('');
         setClassStudyDays([]);
     };
+    const generateCustomReceiptNumber = async (paymentMonth: string) => {
+        try {
+            // Extract year and month from paymentMonth (format: YYYY-MM)
+            const [year, month] = paymentMonth.split('-');
+            const yearSuffix = year.slice(-2); // Get last 2 digits of year
+            const monthFormatted = month.padStart(2, '0'); // Ensure 2 digits
+            const prefix = `${yearSuffix}${monthFormatted}`;
+
+            // Query existing transactions with the same year-month prefix
+            const transactionsRef = collection(db, "transactions");
+            const q = query(
+                transactionsRef,
+                where("receiptNumber", ">=", prefix + "000"),
+                where("receiptNumber", "<", prefix + "999"),
+                orderBy("receiptNumber", "desc")
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            let nextSequence = 1;
+            if (!querySnapshot.empty) {
+                // Get the highest sequence number
+                const latestReceipt = querySnapshot.docs[0].data().receiptNumber;
+                const sequencePart = latestReceipt.slice(-3); // Get last 3 digits
+                nextSequence = parseInt(sequencePart) + 1;
+            }
+
+            // Format as 3-digit sequence (001, 002, etc.)
+            const sequenceFormatted = nextSequence.toString().padStart(3, '0');
+            return `${prefix}${sequenceFormatted}`;
+
+        } catch (error) {
+            console.error("Error generating custom receipt number:", error);
+            throw new Error("Failed to generate receipt number");
+        }
+    };
+
     const handleCharge = async () => {
         if (!selectedStudent || paymentAmount === null || !classType || !paymentMonth) {
             toast.error("Please select a student and ensure all payment details are loaded and month is set.");
@@ -228,12 +297,8 @@ const POSStudentPage = () => {
         setIsProcessing(true);
 
         try {
-            // --- Get the next receipt number from the cloud function ---
-            const functions = getFunctions(undefined, 'asia-southeast1'); // Set region here
-            const getNextReceiptNumber = httpsCallable(functions, 'getNextReceiptNumber');
-
-            const result = await getNextReceiptNumber();
-            const receiptNumber = (result.data as { receiptNumber: string }).receiptNumber;
+            // Generate custom receipt number based on payment month
+            const receiptNumber = await generateCustomReceiptNumber(paymentMonth);
 
             const calculatedAmount = calculateProratedAmount(paymentAmount || 0, new Date(joinDate), paymentMonth, classStudyDays);
             // Round to 4 decimal places
@@ -542,6 +607,56 @@ const POSStudentPage = () => {
         fetchTransactionHistory(student.id);
     };
 
+    const handleRefreshTransactionData = async () => {
+        // Refresh both transaction history and student list
+        if (selectedStudent) {
+            fetchTransactionHistory(selectedStudent.id);
+        }
+        
+        // Refresh students list
+        await fetchStudents(); 
+        
+        // If a student is currently selected, update their information
+        if (selectedStudent) {
+            // Find the updated student from the refreshed list and update selected student
+            const studentsRef = collection(db, "students");
+            const studentDoc = await getDoc(doc(db, "students", selectedStudent.id));
+            if (studentDoc.exists()) {
+                const updatedStudentData = {
+                    id: studentDoc.id,
+                    ...studentDoc.data(),
+                    createdAt: studentDoc.data().createdAt instanceof Timestamp ? studentDoc.data().createdAt.toDate() : studentDoc.data().createdAt,
+                } as Student;
+                
+                // Update the selected student with fresh data
+                setSelectedStudent(updatedStudentData);
+                
+                // Recalculate payment details based on updated lastPaymentMonth
+                if (updatedStudentData.lastPaymentMonth) {
+                    const [year, month] = updatedStudentData.lastPaymentMonth.split("-").map(Number);
+                    let nextMonth = month + 1;
+                    let nextYear = year;
+                    if (nextMonth > 12) {
+                        nextMonth = 1;
+                        nextYear++;
+                    }
+                    const nextPaymentMonth = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+                    setPaymentMonth(nextPaymentMonth);
+                    const nextPaymentDate = new Date(nextYear, nextMonth - 1);
+                    setDisplayPaymentMonth(nextPaymentDate.toLocaleString('default', { month: 'long', year: 'numeric' }));
+                    setShowMonthInput(false);
+                    setJoinDate(new Date().toISOString().split('T')[0]);
+                } else {
+                    // If no payment history, show month input
+                    setPaymentMonth('');
+                    setDisplayPaymentMonth('');
+                    setShowMonthInput(true);
+                    setJoinDate('');
+                }
+            }
+        }
+    };
+
     const decrementMonth = (dateStr: string) => {
         const [year, month] = dateStr.split("-").map(Number);
         if (month === 1) {
@@ -595,7 +710,7 @@ const POSStudentPage = () => {
                                 <div className="relative">
                                     <input
                                         type="search"
-                                        placeholder="Search Students..."
+                                        placeholder="Search by name or phone..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
@@ -618,7 +733,14 @@ const POSStudentPage = () => {
                                              }`}
                                              onClick={() => handleSelectStudent(student)}>
                                             <div className="flex-grow min-w-0 mr-2">
-                                                <p className="font-semibold truncate">{student.fullName}</p>
+                                                <div className="flex items-center justify-between">
+                                                    <p className="font-semibold truncate flex-1">{student.fullName}</p>
+                                                    {student.phone && (
+                                                        <p className="text-sm text-gray-500 dark:text-gray-500 ml-2 flex-shrink-0">
+                                                            {formatPhoneNumber(student.phone)}
+                                                        </p>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <p className="text-sm text-gray-500 truncate">{student.class}</p>
                                                     {student.lastPaymentMonth && (
@@ -724,36 +846,95 @@ const POSStudentPage = () => {
             </div>
             {isPostTransactionModalActive && (
                 <CardBoxModal
-                    title="Transaction Complete"
+                    title="🎉 Transaction Complete"
                     isActive={true}
                     onConfirm={closePostTransactionModal}
                     onCancel={closePostTransactionModal}
                     buttonLabel="Done"
+                    closeButtonColor="danger"
                 >
-                    <div className="space-y-4">
-                        <p>What would you like to do next?</p>
-                        <div className="flex justify-around space-x-2">
+                    <div className="space-y-6 py-2 pr-4">
+                        {/* Success Message */}
+                        <div className="text-center">
+                            <div className="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                                <Icon path={mdiCheckCircle} className="text-green-600 dark:text-green-400" size={24} />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Payment Successful!
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400">
+                                Transaction for <span className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction?.studentName}</span> has been processed successfully.
+                            </p>
+                        </div>
+
+                        {/* Transaction Details Card */}
+                        {lastTransaction && (
+                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">Receipt #</span>
+                                        <p className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.receiptNumber}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">Amount</span>
+                                        <p className="font-medium text-green-600 dark:text-green-400">${lastTransaction.amount.toFixed(2)}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">Payment Month</span>
+                                        <p className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.paymentMonth}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500 dark:text-gray-400">Method</span>
+                                        <p className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.paymentMethod}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Action Question */}
+                        <div className="text-center">
+                            <p className="text-gray-700 dark:text-gray-300 font-medium mb-4">
+                                What would you like to do next?
+                            </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-col sm:flex-row gap-3">
                             <Button 
-                                label={isPrinting ? "Printing..." : "Print"} 
+                                label={isPrinting ? "Printing..." : "Print Receipt"} 
                                 color="info" 
                                 onClick={handlePrintReceipt}
                                 disabled={isPrinting || isDownloading}
+                                icon={mdiPrinter}
+                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-200 hover:shadow-lg"
                             />
                             <Button 
-                                label={isDownloading ? "Downloading..." : "Download"} 
+                                label={isDownloading ? "Downloading..." : "Download PDF"} 
                                 color="success" 
                                 onClick={handleDownloadReceipt} 
                                 icon={mdiDownload}
                                 disabled={isPrinting || isDownloading}
+                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-200 hover:shadow-lg"
                             />
-                            <Button 
-                                label="Cancel" 
+                            {/* <Button 
+                                label="Close" 
                                 color="outline" 
                                 onClick={closePostTransactionModal}
                                 icon={mdiClose}
                                 disabled={isPrinting || isDownloading}
-                            />
+                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-200 hover:shadow-lg"
+                            /> */}
                         </div>
+
+                        {/* Loading States */}
+                        {(isPrinting || isDownloading) && (
+                            <div className="flex items-center justify-center space-x-2 text-blue-600 dark:text-blue-400 mt-4">
+                                <LoadingSpinner />
+                                <span className="text-sm font-medium">
+                                    {isPrinting ? "Sending to printer..." : "Generating PDF..."}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 </CardBoxModal>
             )}
@@ -768,6 +949,7 @@ const POSStudentPage = () => {
                 onReprintReceipt={handleReprintTransaction}
                 downloadingTransactionId={downloadingTransactionId}
                 reprintingTransactionId={reprintingTransactionId}
+                onRefreshData={handleRefreshTransactionData}
             />
         </SectionMain>
     );

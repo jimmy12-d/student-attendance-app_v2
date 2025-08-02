@@ -176,7 +176,7 @@ export const TransactionManager = ({
                     {/* Student Information Card */}
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
                         <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-3 flex items-center">
-                            <Icon path={mdiAccount} size={0.8} className="mr-2" />
+                            <Icon path={mdiAccount} size={24} className="mr-4" />
                             Student Information
                         </h4>
                         <div className="space-y-2">
@@ -204,13 +204,13 @@ export const TransactionManager = ({
                     {/* Payment Information Card */}
                     <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-700">
                         <h4 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-3 flex items-center">
-                            <Icon path={mdiCashRegister} size={0.8} className="mr-2" />
+                            <Icon path={mdiCashRegister} size={24} className="mr-4" />
                             Payment Information
                         </h4>
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                                    {isNewStudent ? 'Prorated Amount:' : 'Full Amount:'}
+                                    {isNewStudent ? 'Charge Amount:' : 'Full Amount:'}
                                 </span>
                                 <span className="font-bold text-2xl text-emerald-600 dark:text-emerald-400">
                                     {joinDate && paymentMonth 
@@ -332,7 +332,7 @@ export const TransactionManager = ({
                                             Full Price: ${fullAmount.toFixed(2)}
                                         </p>
                                         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                            Calculated Amount: ${calculateProratedAmount(fullAmount, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2)}
+                                            Final Amount: ${calculateProratedAmount(fullAmount, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2)}
                                         </p>
                                     </div>
                                 </div>

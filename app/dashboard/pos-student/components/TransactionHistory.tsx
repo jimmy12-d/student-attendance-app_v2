@@ -16,6 +16,7 @@ interface TransactionHistoryProps {
     onReprintReceipt?: (transaction: Transaction) => void;
     downloadingTransactionId?: string;
     reprintingTransactionId?: string;
+    onRefreshData?: () => void; // Add refresh callback
 }
 
 export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
@@ -27,7 +28,8 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     onDownloadReceipt,
     onReprintReceipt,
     downloadingTransactionId,
-    reprintingTransactionId
+    reprintingTransactionId,
+    onRefreshData
 }) => {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [transactionToRemove, setTransactionToRemove] = useState<Transaction | null>(null);
@@ -37,11 +39,22 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         setShowConfirmModal(true);
     };
 
-    const handleConfirmRemove = () => {
+    const handleConfirmRemove = async () => {
         if (transactionToRemove) {
-            onRemoveTransaction(transactionToRemove);
-            setShowConfirmModal(false);
-            setTransactionToRemove(null);
+            try {
+                await onRemoveTransaction(transactionToRemove);
+                setShowConfirmModal(false);
+                setTransactionToRemove(null);
+                
+                // Auto refresh data after successful refund
+                if (onRefreshData) {
+                    onRefreshData();
+                }
+            } catch (error) {
+                // Handle error if needed, but still close modal
+                setShowConfirmModal(false);
+                setTransactionToRemove(null);
+            }
         }
     };
 
@@ -122,17 +135,6 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                         
                                         <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-600">
                                             <div className="flex space-x-2">
-                                                {onDownloadReceipt && (
-                                                    <Button
-                                                        color="info"
-                                                        label={downloadingTransactionId === transaction.transactionId ? "Downloading..." : "Download"}
-                                                        onClick={() => onDownloadReceipt(transaction)}
-                                                        icon={mdiDownload}
-                                                        small
-                                                        className="text-xs"
-                                                        disabled={downloadingTransactionId === transaction.transactionId}
-                                                    />
-                                                )}
                                                 {onReprintReceipt && (
                                                     <Button
                                                         color="success"
@@ -144,10 +146,21 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                                         disabled={reprintingTransactionId === transaction.transactionId}
                                                     />
                                                 )}
+                                                {onDownloadReceipt && (
+                                                    <Button
+                                                        color="info"
+                                                        label={downloadingTransactionId === transaction.transactionId ? "Downloading..." : "Download"}
+                                                        onClick={() => onDownloadReceipt(transaction)}
+                                                        icon={mdiDownload}
+                                                        small
+                                                        className="text-xs"
+                                                        disabled={downloadingTransactionId === transaction.transactionId}
+                                                    />
+                                                )}
                                             </div>
                                             <Button
                                                 color="danger"
-                                                label="Remove"
+                                                label="Refund"
                                                 onClick={() => handleRemoveClick(transaction)}
                                                 icon={mdiDelete}
                                                 small
@@ -172,11 +185,11 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                 buttonLabel="Remove"
                 buttonColor="danger"
             >
-                <div className="flex items-start space-x-3 p-2">
+                <div className="flex items-start space-x-1 pr-4 -ml-2">
                     <div className="flex-shrink-0">
                         <Icon 
                             path={mdiAlertCircle} 
-                            size={1.5} 
+                            size={16} 
                             className="text-red-500" 
                         />
                     </div>
