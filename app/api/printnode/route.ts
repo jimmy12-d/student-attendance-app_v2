@@ -154,7 +154,15 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
     const valueX = 85; // Increased to prevent overlap
 
     page.drawText('Date:', { x: labelX, y, font: boldFont, size: detailFontSize });
-    page.drawText(new Date(transaction.date).toLocaleString(), { x: valueX, y, font, size: detailFontSize, maxWidth: width - margin - valueX });
+    page.drawText(new Date(transaction.date).toLocaleString('en-US', { 
+      timeZone: 'Asia/Phnom_Penh',
+      year: 'numeric',
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }), { x: valueX, y, font, size: detailFontSize, maxWidth: width - margin - valueX });
     y -= 13;
     page.drawText('Method:', { x: labelX, y, font: boldFont, size: detailFontSize });
     page.drawText(transaction.paymentMethod, { x: valueX, y, font, size: detailFontSize });
