@@ -95,8 +95,8 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
             onClick={onToggleAllClasses}
             className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 w-full md:w-auto ${
               allClassesCollapsed
-                ? 'border-green-300 dark:border-green-600 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
-                : 'border-red-300 dark:border-red-600 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
+                ? 'border-red-300 dark:border-red-600 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
+                : 'border-green-300 dark:border-green-600 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
             } hover:shadow-md hover:scale-105`}
           >
             <span className="font-medium text-sm flex items-center">
@@ -104,8 +104,8 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
               <svg 
                 className={`w-4 h-4 mr-3 transition-transform duration-200 ${
                   allClassesCollapsed 
-                    ? 'transform rotate-0 text-green-600 dark:text-green-400' 
-                    : 'transform rotate-180 text-red-600 dark:text-red-400'
+                    ? 'transform rotate-180 text-red-600 dark:text-red-400' 
+                    : 'transform rotate-0 text-green-600 dark:text-green-400'
                 }`} 
                 fill="none" 
                 stroke="currentColor" 
@@ -113,7 +113,7 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
               </svg>
-              {allClassesCollapsed ? 'Zoom All Classes' : 'Hide All Classes'}
+              {allClassesCollapsed ? 'Show All Classes' : 'Hide All Classes'}
             </span>
           </button>
         </div>

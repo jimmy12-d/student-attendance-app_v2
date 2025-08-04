@@ -863,17 +863,17 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           setAllClassesCollapsed(newState);
           
           if (newState) {
-            // When switching to "Zoom All Classes" state, expand ALL classes
-            const allClasses = sortedAllClasses;
-            setExpandedClasses(new Set(allClasses));
-            // Clear individual collapsed classes so all are visible and expanded
-            setCollapsedClasses(new Set());
-          } else {
             // When switching to "Hide All Classes" state, collapse ALL classes
             const allClasses = sortedAllClasses;
             setCollapsedClasses(new Set(allClasses));
             // Clear expanded classes
             setExpandedClasses(new Set());
+          } else {
+            // When switching to "Show All Classes" state, expand ALL classes
+            const allClasses = sortedAllClasses;
+            setExpandedClasses(new Set(allClasses));
+            // Clear individual collapsed classes so all are visible and expanded
+            setCollapsedClasses(new Set());
           }
         }}
       />

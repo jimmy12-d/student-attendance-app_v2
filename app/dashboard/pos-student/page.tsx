@@ -968,7 +968,7 @@ const POSStudentPage = () => {
                                         </div>
                                     )}
                                     {/* Show discount if applicable */}
-                                    {lastTransaction.discountAmount && lastTransaction.discountAmount > 0 && (
+                                    {lastTransaction.discountAmount > 0 && (
                                         <div>
                                             <span className="text-gray-500 dark:text-gray-400">Discount</span>
                                             <p className="font-medium text-emerald-600 dark:text-emerald-400">-${lastTransaction.discountAmount.toFixed(2)}</p>

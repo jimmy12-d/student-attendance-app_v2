@@ -6,6 +6,8 @@ import { db } from '../../../../firebase-config';
 import { RawAttendanceRecord } from '../../_lib/attendanceLogic';
 import { PermissionRecord } from '../../../_interfaces';
 import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
+import { PermissionRequestForm } from '../../../student/_components/PermissionRequestForm';
+import { AdminPermissionForm } from './AdminPermissionForm';
 
 // Utility function to convert Google Drive share URL to thumbnail URL
 const getDisplayableImageUrl = (url: string): string | null => {
@@ -66,6 +68,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs>({});
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showPermissionForm, setShowPermissionForm] = useState(false);
 
   // Navigation logic
   const canNavigatePrev = students.length > 1 && currentIndex > 0;
@@ -278,7 +281,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
       
       {/* Modal */}
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className={`relative transform rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all duration-200 sm:my-8 sm:w-full sm:max-w-5xl ${
+        <div className={`relative transform rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all duration-200 sm:my-8 sm:w-full sm:max-w-4xl ${
           isTransitioning 
             ? slideDirection === 'left' 
               ? 'translate-x-4 opacity-80' 
@@ -522,19 +525,45 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                     </div>
                   ) : (
                     <div className="bg-white dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 overflow-hidden">
-                      <div className="px-2 py-2 text-center">
-                        <button
-                          onClick={() => setShowAttendanceModal(true)}
-                          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m6 0v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7h16zM9 11h6m-6 4h6" />
-                          </svg>
-                          View Attendance
-                        </button>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                          Click to view detailed
-                        </p>
+                      <div className="px-2 py-2 text-start">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setShowAttendanceModal(true)}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+                          >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m6 0v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7h16zM9 11h6m-6 4h6" />
+                            </svg>
+                            View Attendance
+                          </button>
+                          
+                          <button
+                            onClick={() => setShowPermissionForm(!showPermissionForm)}
+                            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors duration-200"
+                          >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            {showPermissionForm ? 'Hide Permission' : 'Add Permission'}
+                          </button>
+                        </div>
+                        
+                        {showPermissionForm && (
+                          <div className="mt-4 p-4 bg-gray-50 dark:bg-slate-600 rounded-lg">
+                            <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                              <svg className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              Create Permission for {student.fullName}
+                            </h5>
+                            <AdminPermissionForm 
+                              student={student} 
+                              onSuccess={() => {
+                                setShowPermissionForm(false);
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
