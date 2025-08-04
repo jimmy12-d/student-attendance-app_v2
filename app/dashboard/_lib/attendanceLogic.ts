@@ -11,7 +11,7 @@ import {
 export interface RawAttendanceRecord {
   studentId: string;
   date: string; // YYYY-MM-DD
-  status: 'present' | 'late' | string; // Allow other statuses if any
+  status?: 'present' | 'late' | 'pending' | string; // Make status optional since some records might not have it
   timestamp?: Timestamp;
   class?: string;
   shift?: string;
@@ -20,7 +20,7 @@ export interface RawAttendanceRecord {
 
 // Interfaces (can be moved to a shared file later)
 export interface CalculatedStatus {
-  status?: "Present" | "Late" | "Absent" | "Permission" | "No School" | "Not Applicable (Holiday/Weekend)" | "Not Yet Enrolled" | "Pending" | "Unknown" | "Absent (Config Missing)";
+  status?: "Present" | "Late" | "Absent" | "Permission" | "No School" | "Not Yet Enrolled" | "Pending" | "Unknown" | "Absent (Config Missing)";
   time?: string;
 }
 
@@ -49,6 +49,7 @@ export const getMonthDetailsForLogic = (year: number, month: number) => { // mon
   const monthStartDateString = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   return { year, month, monthStartDateString, monthEndDateStringUsedForQuery: effectiveEndDateString, daysInMonthToConsider };
 };
+
 // --- The Authoritative Status Calculation Function ---
 export const getStudentDailyStatus = (
     student: Student,
@@ -70,10 +71,16 @@ export const getStudentDailyStatus = (
     const classConfig = studentClassKey && allClassConfigs ? allClassConfigs[studentClassKey] : undefined;
     const classStudyDays = classConfig?.studyDays;
 
-    if (studentCreatedAt && checkDate <= studentCreatedAt) return { status: "Not Yet Enrolled" };
+    if (studentCreatedAt && checkDate <= studentCreatedAt && (!attendanceRecord || !attendanceRecord.status || attendanceRecord.status !== "present")) return { status: "Not Yet Enrolled" };
     if (!isSchoolDay(checkDate, classStudyDays)) return { status: "No School" };
 
     if (attendanceRecord) {
+        // Check if the attendance record has a valid status property
+        if (!attendanceRecord.status) {
+            console.warn(`Attendance record missing status for student ${student.studentId} on ${checkDateStr}:`, attendanceRecord);
+            return { status: "Unknown" };
+        }
+        
         const status = attendanceRecord.status === 'present' ? "Present" :
                        attendanceRecord.status === 'late'   ? "Late"    : "Unknown";
         let time;
@@ -132,7 +139,6 @@ export const calculateConsecutiveAbsences = (
     let consecutiveAbsences = 0;
     const today = new Date();
     today.setHours(0,0,0,0);
-
     const attendanceMap = new Map(allAttendanceRecordsForStudent.map(att => [att.date, att]));
 
     // Iterate backwards from today
@@ -159,7 +165,7 @@ export const calculateConsecutiveAbsences = (
             // A "Present", "Late", or "Permission" day definitively BREAKS the streak.
             break; 
         }
-        // If the status is "No School", "Not Applicable", or "Not Yet Enrolled", we skip counting those days
+        // If the status is "No School" or "Not Yet Enrolled", we skip counting those days
     }
 
     return { 
@@ -207,4 +213,29 @@ export const calculateMonthlyLates = (
         }
     });
     return { count: lateCount, details: `${lateCount} lates in ${monthLabel}` };
+};
+
+// Helper function to validate and debug attendance records
+export const validateAttendanceRecords = (records: RawAttendanceRecord[]): { 
+  valid: RawAttendanceRecord[], 
+  invalid: RawAttendanceRecord[], 
+  summary: string 
+} => {
+    const valid: RawAttendanceRecord[] = [];
+    const invalid: RawAttendanceRecord[] = [];
+    
+    records.forEach(record => {
+        if (!record.status || (record.status !== 'present' && record.status !== 'late' && record.status !== 'absent')) {
+            invalid.push(record);
+        } else {
+            valid.push(record);
+        }
+    });
+    
+    const summary = `Found ${valid.length} valid and ${invalid.length} invalid attendance records`;
+    if (invalid.length > 0) {
+        console.warn(summary, { invalid });
+    }
+    
+    return { valid, invalid, summary };
 };

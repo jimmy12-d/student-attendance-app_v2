@@ -16,11 +16,15 @@ interface ClassTableProps {
   studentCount?: number;
   shift?: 'Morning' | 'Afternoon' | 'Evening';
   isBatchEditMode?: boolean;
+  isTakeAttendanceMode?: boolean;
   onBatchUpdate?: () => void;
   selectedStudents?: Set<string>;
   onStudentSelect?: (studentId: string, isSelected: boolean) => void;
   onSelectAll?: (studentIds: string[], isSelected: boolean) => void;
   getAttendanceStatus?: (student: Student) => string;
+  getTodayAttendanceStatus?: (student: Student) => { status?: string; time?: string };
+  isStudentCurrentlyPresent?: (student: Student) => boolean;
+  onAttendanceChange?: (studentId: string, isPresent: boolean) => void;
   forceCollapsed?: boolean;
   onClassToggle?: (className: string, collapsed: boolean) => void;
   expandedClasses?: Set<string>;
@@ -38,11 +42,15 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   studentCount,
   shift = 'Morning',
   isBatchEditMode = false,
+  isTakeAttendanceMode = false,
   onBatchUpdate,
   selectedStudents = new Set(),
   onStudentSelect,
   onSelectAll,
   getAttendanceStatus,
+  getTodayAttendanceStatus,
+  isStudentCurrentlyPresent,
+  onAttendanceChange,
   forceCollapsed = false,
   onClassToggle,
   expandedClasses = new Set(),
@@ -98,6 +106,92 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   // Check if all students in this class are selected
   const allSelected = studentList.length > 0 && studentList.every(student => selectedStudents.has(student.id));
   const someSelected = studentList.some(student => selectedStudents.has(student.id));
+
+  // Calculate statistics based on enabled columns
+  const getColumnStatistics = () => {
+    const stats: Array<{ label: string; count: number; color: string }> = [];
+    
+    // Payment statistics (if payment column is enabled)
+    const paymentColumnEnabled = enabledColumns.some(col => col.id === 'paymentStatus');
+    if (paymentColumnEnabled) {
+      const paidCount = studentList.filter(student => 
+        student.lastPaymentMonth && student.lastPaymentMonth.trim() !== ''
+      ).length;
+      stats.push({
+        label: 'Paid',
+        count: paidCount,
+        color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-700'
+      });
+    }
+
+    // Attendance statistics (if attendance column is enabled)
+    const attendanceColumnEnabled = enabledColumns.some(col => col.id === 'todayAttendance');
+    if (attendanceColumnEnabled && getTodayAttendanceStatus) {
+      const presentCount = studentList.filter(student => {
+        const status = getTodayAttendanceStatus(student);
+        return status.status === 'Present';
+      }).length;
+      stats.push({
+        label: 'Present',
+        count: presentCount,
+        color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+      });
+    }
+
+    // Type/Schedule statistics (if scheduleType column is enabled)
+    const typeColumnEnabled = enabledColumns.some(col => col.id === 'scheduleType');
+    if (typeColumnEnabled) {
+      // Count different schedule types
+      const typeCounts: Record<string, number> = {};
+      studentList.forEach(student => {
+        const type = student.scheduleType || 'Unknown';
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+      });
+
+      // Define color classes for each schedule type
+      const scheduleTypeColors: Record<string, string> = {
+        'Fix': 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-800 dark:text-fuchsia-300 border border-fuchsia-800 dark:border-fuchsia-300',
+        'Flip-Flop': 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-800 dark:border-orange-300',
+        'Unknown': 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-slate-600'
+      };
+      
+      // Find the most common type and apply its color
+      let maxType = '';
+      let maxCount = 0;
+      Object.entries(typeCounts).forEach(([type, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          maxType = type;
+        }
+      });
+      
+      if (maxType && maxCount > 0) {
+        stats.push({
+          label: maxType,
+          count: maxCount,
+          // Use the defined colors, falling back to 'Unknown' if not specifically matched
+          color: scheduleTypeColors[maxType] || scheduleTypeColors['Unknown']
+        });
+      }
+    }
+
+    // Warning statistics (if warning column is enabled)
+    const warningColumnEnabled = enabledColumns.some(col => col.id === 'warning');
+    if (warningColumnEnabled) {
+      const warningCount = studentList.filter(student => student.warning === true).length;
+      if (warningCount > 0) {
+        stats.push({
+          label: 'Warnings',
+          count: warningCount,
+          color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700'
+        });
+      }
+    }
+
+    return stats;
+  };
+
+  const columnStats = getColumnStatistics();
 
   // Wrapper function to pass the studentList context
   const handleViewDetails = (student: Student) => {
@@ -165,9 +259,11 @@ export const ClassTable: React.FC<ClassTableProps> = ({
             </div>
             <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{className}</h3>
           </div>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getBadgeColors()}`}>
-            0 students
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getBadgeColors()}`}>
+              0 students
+            </span>
+          </div>
         </div>
         {/* Empty state - show when not hidden (state 0) */}
         <div className={`transition-all duration-500 ease-in-out overflow-hidden ${
@@ -255,12 +351,23 @@ export const ClassTable: React.FC<ClassTableProps> = ({
             </button>
           )}
         </div>
-        <div className="flex items-center space-x-3">          
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getBadgeColors()}`}>
+        <div className="flex items-center space-x-2">       
+          {/* Additional statistics badges based on enabled columns */}
+          {columnStats.map((stat, index) => (
+            <span 
+              key={`${stat.label}-${index}`}
+              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${stat.color}`}
+            >
+              {stat.label}: {stat.count}
+            </span>
+          ))}   
+          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getBadgeColors()}`}>
             {/* Add the Icon component here */}
             <Icon path={mdiAccountSchool} size={18} className="mr-1" />
             {studentCount || studentList.length} Students
           </span>
+          
+
         </div>
       </div>
 
@@ -269,14 +376,14 @@ export const ClassTable: React.FC<ClassTableProps> = ({
         (() => {
           const state = getViewState();
           if (state === 0) return "max-h-0 opacity-0 -translate-y-2 overflow-hidden"; // Hidden
-          if (state === 2) return "max-h-screen opacity-100 translate-y-0 overflow-hidden"; // Zoomed
+          if (state === 2) return "opacity-100 translate-y-0 overflow-visible"; // Zoomed - no height limit
           return "max-h-80 opacity-100 translate-y-0 overflow-hidden"; // Normal (default) - scrollable
         })()
       }`}>
         <div className={`transition-all duration-300 ease-in-out ${
           (() => {
             const state = getViewState();
-            if (state === 2) return "h-full overflow-x-auto overflow-y-auto"; // Zoomed - full scroll
+            if (state === 2) return "overflow-x-auto"; // Zoomed - no height restriction, only horizontal scroll if needed
             if (state === 1) return "max-h-80 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800 scroll-smooth"; // Normal - limited scroll with custom scrollbar
             return "overflow-hidden"; // Hidden
           })()
@@ -309,10 +416,14 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   onDelete={onDelete}
                   onViewDetails={handleViewDetails}
                   isBatchEditMode={isBatchEditMode}
+                  isTakeAttendanceMode={isTakeAttendanceMode}
                   onBatchUpdate={onBatchUpdate}
                   isSelected={selectedStudents.has(student.id)}
                   onSelect={onStudentSelect}
                   getAttendanceStatus={getAttendanceStatus}
+                  getTodayAttendanceStatus={getTodayAttendanceStatus}
+                  isStudentCurrentlyPresent={isStudentCurrentlyPresent}
+                  onAttendanceChange={onAttendanceChange}
                 />
               ))}
             </tbody>

@@ -208,17 +208,59 @@ export const TransactionManager = ({
                             Payment Information
                         </h4>
                         <div className="space-y-2">
+                            {/* Show full amount first */}
                             <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">
-                                    {isNewStudent ? 'Charge Amount:' : 'Full Amount:'}
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Full Price:</span>
+                                <span className="font-medium text-gray-700 dark:text-gray-300">
+                                    ${fullAmount.toFixed(2)}
+                                </span>
+                            </div>
+                            
+                            {/* Show prorated amount if applicable for new students */}
+                            {isNewStudent && joinDate && paymentMonth && selectedStudent?.discount && selectedStudent.discount > 0 && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">After Discount:</span>
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                                        ${Math.max(0, fullAmount - selectedStudent.discount).toFixed(2)}
+                                    </span>
+                                </div>
+                            )}
+                            
+                            {/* Show discount if applicable */}
+                            {selectedStudent?.discount && selectedStudent.discount > 0 && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-emerald-600 dark:text-emerald-400">Scholarship Discount:</span>
+                                    <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                                        -${selectedStudent.discount.toFixed(2)}
+                                    </span>
+                                </div>
+                            )}
+                            
+                            {/* Show final charge amount */}
+                            <div className="flex justify-between items-center pt-2 border-t border-emerald-200 dark:border-emerald-700">
+                                <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                                    Final Charge:
                                 </span>
                                 <span className="font-bold text-2xl text-emerald-600 dark:text-emerald-400">
                                     {joinDate && paymentMonth 
-                                        ? `$${calculateProratedAmount(fullAmount, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2)}`
+                                        ? (() => {
+                                            const discountAmount = selectedStudent?.discount || 0;
+                                            if (isNewStudent) {
+                                                // New student: apply discount first, then prorate
+                                                const discountedPrice = Math.max(0, fullAmount - discountAmount);
+                                                const finalAmount = calculateProratedAmount(discountedPrice, new Date(joinDate), paymentMonth, classStudyDays);
+                                                return `$${finalAmount.toFixed(2)}`;
+                                            } else {
+                                                // Existing student: full amount minus discount
+                                                const finalAmount = Math.max(0, fullAmount - discountAmount);
+                                                return `$${finalAmount.toFixed(2)}`;
+                                            }
+                                        })()
                                         : '$0.00'
                                     }
                                 </span>
                             </div>
+                            
                             <div className="flex justify-between items-center">
                                 <span className="text-sm text-gray-600 dark:text-gray-400">Payment For:</span>
                                 <span className="font-medium text-gray-800 dark:text-gray-200">
@@ -331,8 +373,18 @@ export const TransactionManager = ({
                                         <p className="text-sm text-gray-600 dark:text-gray-400">
                                             Full Price: ${fullAmount.toFixed(2)}
                                         </p>
+                                        {/* Show discount if applicable */}
+                                        {selectedStudent?.discount && selectedStudent.discount > 0 && (
+                                            <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                                                Scholarship Discount: -${selectedStudent.discount.toFixed(2)}
+                                            </p>
+                                        )}
                                         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                            Final Amount: ${calculateProratedAmount(fullAmount, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2)}
+                                            Final Charge: ${(() => {
+                                                // Apply discount first, then prorate
+                                                const discountedPrice = Math.max(0, fullAmount - (selectedStudent?.discount || 0));
+                                                return calculateProratedAmount(discountedPrice, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2);
+                                            })()}
                                         </p>
                                     </div>
                                 </div>

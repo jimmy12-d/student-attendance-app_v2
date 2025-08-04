@@ -12,6 +12,7 @@ interface ColumnToggleProps {
   columns: ColumnConfig[];
   onToggleColumn: (columnId: string) => void;
   isBatchEditMode?: boolean;
+  isTakeAttendanceMode?: boolean;
   allClassesCollapsed?: boolean; // This actually means "all classes zoomed" when true
   onToggleAllClasses?: () => void;
 }
@@ -20,6 +21,7 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
   columns, 
   onToggleColumn, 
   isBatchEditMode = false, 
+  isTakeAttendanceMode = false,
   allClassesCollapsed = false, // This actually means "all classes zoomed" when true
   onToggleAllClasses 
 }) => {
@@ -40,7 +42,7 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {columns.map((column) => {
-          const isLocked = isBatchEditMode && column.id === 'number';
+          const isLocked = (isBatchEditMode || isTakeAttendanceMode) && column.id === 'number';
           return (
             <button
               key={column.id}

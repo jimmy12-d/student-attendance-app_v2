@@ -15,10 +15,12 @@ export interface Transaction {
     classType: string;
     subjects: string[];
     fullAmount: number;
-    amount: number;
+    proratedAmount?: number; // Amount after prorating but before discount
+    discountAmount?: number; // Discount amount applied
+    amount: number; // Final amount after all calculations
     receiptNumber: string;
     paymentMonth: string;
-    paymentMethod: 'Cash' | 'Credit';
+    paymentMethod: 'Cash' | 'QrCode';
     transactionId?: string;
     date: string;
     joinDate: string;

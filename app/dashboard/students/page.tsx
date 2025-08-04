@@ -6,6 +6,7 @@ import {
   mdiMonitorCellphone,
   mdiTableBorder,
   mdiPencilBox,
+  mdiClipboardCheck,
 } from "@mdi/js";
 import Button from "../../_components/Button";
 import CardBox from "../../_components/CardBox";
@@ -41,6 +42,9 @@ export default function StudentsPage() {
 
   // Batch edit state
   const [isBatchEditMode, setIsBatchEditMode] = useState(false);
+  
+  // Take attendance state
+  const [isTakeAttendanceMode, setIsTakeAttendanceMode] = useState(false);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -127,6 +131,19 @@ export default function StudentsPage() {
   // Batch edit functions
   const handleToggleBatchEdit = () => {
     setIsBatchEditMode(!isBatchEditMode);
+    // Exit take attendance mode when entering batch edit mode
+    if (!isBatchEditMode) {
+      setIsTakeAttendanceMode(false);
+    }
+  };
+
+  // Take attendance functions
+  const handleToggleTakeAttendance = () => {
+    setIsTakeAttendanceMode(!isTakeAttendanceMode);
+    // Exit batch edit mode when entering take attendance mode
+    if (!isTakeAttendanceMode) {
+      setIsBatchEditMode(false);
+    }
   };
 
   return (
@@ -140,6 +157,14 @@ export default function StudentsPage() {
         {!isFormActive && ( // Use isFormActive here
           <>
           <div className="flex items-center space-x-4"> {/* New flex container for the buttons */}
+            <Button
+              onClick={handleToggleTakeAttendance}
+              icon={mdiClipboardCheck}
+              label={isTakeAttendanceMode ? "Exit Take Attendance" : "Take Attendance"}
+              color={isTakeAttendanceMode ? "danger" : "info"}
+              roundedFull
+              small
+            />
             <Button
               onClick={handleToggleBatchEdit}
               icon={mdiPencilBox}
@@ -204,8 +229,10 @@ export default function StudentsPage() {
                 onEdit={handleEditStudent} // Pass the updated handler
                 onDelete={handleDeleteStudent}
                 isBatchEditMode={isBatchEditMode}
+                isTakeAttendanceMode={isTakeAttendanceMode}
                 onBatchUpdate={fetchStudents}
                 onExitBatchEdit={() => setIsBatchEditMode(false)}
+                onExitTakeAttendance={() => setIsTakeAttendanceMode(false)}
               />
             </CardBox>
           )}

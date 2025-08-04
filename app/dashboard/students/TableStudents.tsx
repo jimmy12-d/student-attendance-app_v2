@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { doc, writeBatch, collection, getDocs } from "firebase/firestore";
+import { doc, writeBatch, collection, getDocs, addDoc } from "firebase/firestore";
 
 // Attendance logic imports
 import { getStudentDailyStatus, isSchoolDay } from '../_lib/attendanceLogic';
@@ -24,11 +24,13 @@ type Props = {
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
   isBatchEditMode?: boolean;
+  isTakeAttendanceMode?: boolean;
   onBatchUpdate?: () => void;
   onExitBatchEdit?: () => void;
+  onExitTakeAttendance?: () => void;
 };
 
-const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, onBatchUpdate, onExitBatchEdit }: Props) => {
+const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance }: Props) => {
   // Column configuration state
   const [columns, setColumns] = useState<ColumnConfig[]>([
     { id: 'number', label: '#N', enabled: true },
@@ -37,7 +39,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
     { id: 'paymentStatus', label: 'Payment', enabled: false },
     { id: 'scheduleType', label: 'Type', enabled: false },
     { id: 'warning', label: 'Warning', enabled: false },
-    // { id: 'todaysStatus', label: "Today's Status (Not)", enabled: false }, // Enable by default for debugging
+    { id: 'todayAttendance', label: 'Attendance', enabled: false },
   ]);
 
   // Attendance data state
@@ -51,6 +53,10 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
   const [batchClass, setBatchClass] = useState('');
   const [batchShift, setBatchShift] = useState('Morning');
   const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+
+  // Take attendance state
+  const [attendanceChanges, setAttendanceChanges] = useState<Map<string, boolean>>(new Map());
+  const [savingAttendance, setSavingAttendance] = useState(false);
 
   // Global collapse state
   const [allClassesCollapsed, setAllClassesCollapsed] = useState(false);
@@ -175,6 +181,38 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
     }
   };
 
+  // Get today's detailed attendance status including time
+  const getTodayAttendanceStatus = (student: Student) => {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      
+      // Find today's attendance record for this student
+      const attendanceRecord = attendance.find(record => 
+        record.studentId === student.id && record.date === todayStr
+      );
+
+      // Find approved permissions for this student for today
+      const studentPermissions = permissions.filter(
+        permission => permission.studentId === student.id && 
+        permission.permissionStartDate <= todayStr && 
+        permission.permissionEndDate >= todayStr
+      );
+
+      const result = getStudentDailyStatus(
+        student,
+        todayStr,
+        attendanceRecord,
+        allClassConfigs,
+        studentPermissions
+      );
+            
+      return result;
+    } catch (error) {
+      console.error('Error calculating today attendance status for', student.fullName, ':', error);
+      return { status: "Unknown" };
+    }
+  };
+
   // Auto-enable #N column when entering batch edit mode
   React.useEffect(() => {
     if (isBatchEditMode) {
@@ -291,8 +329,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
 
   // Toggle column visibility
   const toggleColumn = (columnId: string) => {
-    // Prevent disabling #N column when in batch edit mode
-    if (isBatchEditMode && columnId === 'number') {
+    // Prevent disabling #N column when in batch edit mode or take attendance mode
+    if ((isBatchEditMode || isTakeAttendanceMode) && columnId === 'number') {
       return;
     }
     
@@ -409,6 +447,127 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
       toast.error("Failed to update students");
     }
   };
+
+  // Take attendance functions
+  const handleAttendanceChange = (studentId: string, isPresent: boolean) => {
+    setAttendanceChanges(prev => {
+      const newMap = new Map(prev);
+      newMap.set(studentId, isPresent);
+      return newMap;
+    });
+  };
+
+  const isStudentCurrentlyPresent = (student: Student): boolean => {
+    // Check if we have a local change first
+    if (attendanceChanges.has(student.id)) {
+      return attendanceChanges.get(student.id) || false;
+    }
+    
+    // Otherwise check existing attendance records
+    const todayStr = new Date().toISOString().split('T')[0];
+    const existingRecord = attendance.find(record => 
+      record.studentId === student.id && record.date === todayStr
+    );
+    
+    return existingRecord?.status === 'present';
+  };
+
+  const saveAttendance = async () => {
+    if (attendanceChanges.size === 0) {
+      toast.error("No attendance changes to save");
+      return;
+    }
+
+    setSavingAttendance(true);
+    try {
+      const batch = writeBatch(db);
+      const todayStr = new Date().toISOString().split('T')[0];
+      const currentTime = new Date();
+      
+      for (const [studentId, isPresent] of attendanceChanges.entries()) {
+        const student = students.find(s => s.id === studentId);
+        if (!student) continue;
+
+        // Check if attendance record already exists for today
+        const existingRecord = attendance.find(record => 
+          record.studentId === studentId && record.date === todayStr
+        );
+
+        if (existingRecord) {
+          // Update existing record
+          const attendanceRef = doc(db, "attendance", existingRecord.id);
+          batch.update(attendanceRef, {
+            status: isPresent ? 'present' : 'absent',
+            timestamp: currentTime,
+            scannedBy: `Manual attendance by teacher`
+          });
+        } else {
+          // Create new record
+          const attendanceRef = doc(collection(db, "attendance"));
+          batch.set(attendanceRef, {
+            authUid: "manual-entry", // Placeholder for manual entry
+            class: student.class,
+            date: todayStr,
+            scannedBy: `Manual attendance by teacher`,
+            shift: student.shift,
+            status: isPresent ? 'present' : 'absent',
+            studentId: studentId,
+            studentName: student.fullName,
+            timestamp: currentTime
+          });
+        }
+      }
+
+      await batch.commit();
+      
+      toast.success(`Saved attendance for ${attendanceChanges.size} students`);
+      setAttendanceChanges(new Map());
+      
+      // Refresh attendance data
+      fetchAttendanceData();
+      
+      // Exit take attendance mode after successful save
+      if (onExitTakeAttendance) {
+        onExitTakeAttendance();
+      }
+    } catch (error) {
+      console.error("Error saving attendance:", error);
+      toast.error("Failed to save attendance");
+    } finally {
+      setSavingAttendance(false);
+    }
+  };
+
+  // Function to refresh attendance data
+  const fetchAttendanceData = async () => {
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const attendanceRef = collection(db, 'attendance');
+      const attendanceSnapshot = await getDocs(attendanceRef);
+      
+      const attendanceData = attendanceSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter((record: any) => record.date === todayStr);
+      
+      setAttendance(attendanceData);
+    } catch (error) {
+      console.error('Error refreshing attendance data:', error);
+    }
+  };
+
+  // Auto-enable #N column when entering take attendance mode
+  React.useEffect(() => {
+    if (isTakeAttendanceMode) {
+      setColumns(prev => 
+        prev.map(col => 
+          col.id === 'number' ? { ...col, enabled: true } : col
+        )
+      );
+    } else {
+      // Clear attendance changes when exiting take attendance mode
+      setAttendanceChanges(new Map());
+    }
+  }, [isTakeAttendanceMode]);
 
   return (
     <div className="space-y-8 p-6 pb-24 bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -552,11 +711,152 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
         </div>
       )}
 
+      {/* Take Attendance Mode Notification */}
+      {isTakeAttendanceMode && (
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 border border-green-200 dark:border-green-700 rounded-2xl p-4 shadow-lg">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-green-800 dark:text-green-300">Take Attendance Mode Active</h3>
+                <p className="text-sm text-green-700 dark:text-green-400">
+                  Use checkboxes in the #N column to mark students as present (checked) or absent (unchecked).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Take Attendance Controls */}
+          <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl relative z-30">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Attendance for {new Date().toLocaleDateString()}
+              </h3>
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                  attendanceChanges.size > 0 
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' 
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                }`}>
+                  {attendanceChanges.size} change{attendanceChanges.size !== 1 ? 's' : ''} pending
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-center">
+              <button
+                onClick={saveAttendance}
+                disabled={attendanceChanges.size === 0 || savingAttendance}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center min-w-[200px]"
+              >
+                {savingAttendance ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Save Attendance ({attendanceChanges.size} changes)
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Changed Students List */}
+            {attendanceChanges.size > 0 && (
+              <div className="mt-6 border-t border-gray-200 dark:border-slate-600 pt-4">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v11a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2H9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h6m-6 4h6m-6 4h4" />
+                  </svg>
+                  Pending Changes ({attendanceChanges.size})
+                </h4>
+                <div className="max-h-32 overflow-y-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {students
+                      .filter(student => attendanceChanges.has(student.id))
+                      .sort((a, b) => a.fullName.localeCompare(b.fullName))
+                      .map(student => {
+                        const isPresent = attendanceChanges.get(student.id);
+                        return (
+                          <div
+                            key={student.id}
+                            className={`flex items-center justify-between border rounded-lg px-3 py-2 ${
+                              isPresent 
+                                ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
+                                : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+                            }`}
+                          >
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate mr-2">
+                              {student.fullName}
+                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                isPresent 
+                                  ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100'
+                                  : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-100'
+                              }`}>
+                                {isPresent ? 'Present' : 'Absent'}
+                              </span>
+                              <button
+                                onClick={() => setAttendanceChanges(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(student.id);
+                                  return newMap;
+                                })}
+                                className="flex-shrink-0 w-5 h-5 bg-gray-600 hover:bg-gray-700 text-white rounded-full flex items-center justify-center transition-colors duration-200"
+                                title="Undo change"
+                              >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+                
+                {attendanceChanges.size > 0 && (
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={() => setAttendanceChanges(new Map())}
+                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors duration-200 flex items-center"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      Clear All Changes
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Column Selection Panel */}
       <ColumnToggle 
         columns={columns} 
         onToggleColumn={toggleColumn} 
         isBatchEditMode={isBatchEditMode}
+        isTakeAttendanceMode={isTakeAttendanceMode}
         allClassesCollapsed={allClassesCollapsed}
         onToggleAllClasses={() => {
           const newState = !allClassesCollapsed;
@@ -620,11 +920,15 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                   studentCount={groupedStudents[className]['Morning'].length}
                   shift="Morning"
                   isBatchEditMode={isBatchEditMode}
+                  isTakeAttendanceMode={isTakeAttendanceMode}
                   onBatchUpdate={onBatchUpdate}
                   selectedStudents={selectedStudents}
                   onStudentSelect={handleStudentSelect}
                   onSelectAll={handleSelectAll}
                   getAttendanceStatus={getStudentAttendanceStatus}
+                  getTodayAttendanceStatus={getTodayAttendanceStatus}
+                  isStudentCurrentlyPresent={isStudentCurrentlyPresent}
+                  onAttendanceChange={handleAttendanceChange}
                   forceCollapsed={isClassCollapsed(className)}
                   onClassToggle={handleClassToggle}
                   expandedClasses={expandedClasses}
@@ -640,11 +944,15 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                   studentCount={groupedStudents[className]['Afternoon'].length}
                   shift="Afternoon"
                   isBatchEditMode={isBatchEditMode}
+                  isTakeAttendanceMode={isTakeAttendanceMode}
                   onBatchUpdate={onBatchUpdate}
                   selectedStudents={selectedStudents}
                   onStudentSelect={handleStudentSelect}
                   onSelectAll={handleSelectAll}
                   getAttendanceStatus={getStudentAttendanceStatus}
+                  getTodayAttendanceStatus={getTodayAttendanceStatus}
+                  isStudentCurrentlyPresent={isStudentCurrentlyPresent}
+                  onAttendanceChange={handleAttendanceChange}
                   forceCollapsed={isClassCollapsed(className)}
                   onClassToggle={handleClassToggle}
                   expandedClasses={expandedClasses}
@@ -694,11 +1002,15 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, on
                 studentCount={groupedStudents[className].Evening.length}
                 shift="Evening"
                 isBatchEditMode={isBatchEditMode}
+                isTakeAttendanceMode={isTakeAttendanceMode}
                 onBatchUpdate={onBatchUpdate}
                 selectedStudents={selectedStudents}
                 onStudentSelect={handleStudentSelect}
                 onSelectAll={handleSelectAll}
                 getAttendanceStatus={getStudentAttendanceStatus}
+                getTodayAttendanceStatus={getTodayAttendanceStatus}
+                isStudentCurrentlyPresent={isStudentCurrentlyPresent}
+                onAttendanceChange={handleAttendanceChange}
                 forceCollapsed={isClassCollapsed(className)}
                 onClassToggle={handleClassToggle}
                 expandedClasses={expandedClasses}

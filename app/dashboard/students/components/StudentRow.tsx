@@ -65,10 +65,14 @@ interface StudentRowProps {
   onDelete: (student: Student) => void;
   onViewDetails: (student: Student) => void;
   isBatchEditMode?: boolean;
+  isTakeAttendanceMode?: boolean;
   onBatchUpdate?: () => void;
   isSelected?: boolean;
   onSelect?: (studentId: string, isSelected: boolean) => void;
   getAttendanceStatus?: (student: Student) => string;
+  getTodayAttendanceStatus?: (student: Student) => { status?: string; time?: string };
+  isStudentCurrentlyPresent?: (student: Student) => boolean;
+  onAttendanceChange?: (studentId: string, isPresent: boolean) => void;
 }
 
 export const StudentRow: React.FC<StudentRowProps> = ({ 
@@ -79,10 +83,14 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   onDelete,
   onViewDetails,
   isBatchEditMode = false,
+  isTakeAttendanceMode = false,
   onBatchUpdate,
   isSelected = false,
   onSelect,
-  getAttendanceStatus
+  getAttendanceStatus,
+  getTodayAttendanceStatus,
+  isStudentCurrentlyPresent,
+  onAttendanceChange
 }) => {
   return (
     <tr className={`group transition-all duration-200 ease-in-out hover:shadow-sm ${
@@ -102,6 +110,16 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                         checked={isSelected}
                         onChange={(e) => onSelect?.(student.id, e.target.checked)}
                         className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 dark:focus:ring-purple-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600"
+                      />
+                    </div>
+                  ) : isTakeAttendanceMode ? (
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={isStudentCurrentlyPresent?.(student) || false}
+                        onChange={(e) => onAttendanceChange?.(student.id, e.target.checked)}
+                        className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600"
+                        title={`Mark ${student.fullName} as ${isStudentCurrentlyPresent?.(student) ? 'absent' : 'present'}`}
                       />
                     </div>
                   ) : (
@@ -163,7 +181,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               <td key="scheduleType" className="p-3">
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-200 ${
                   student.scheduleType === 'Fix' 
-                    ? 'bg-sky-100 dark:bg-sky-900/30 text-sky-800 dark:text-sky-300 group-hover:bg-sky-200 dark:group-hover:bg-sky-800/50'
+                    ? 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-800 dark:text-fuchsia-300 group-hover:bg-fuchsia-200 dark:group-hover:bg-fuchsia-800/50'
                     : student.scheduleType === 'Flip-Flop'
                     ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/50'
                     : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600'
@@ -232,75 +250,77 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               </td>
             );
 
-          case 'todaysStatus':
-            const attendanceStatus = getAttendanceStatus ? getAttendanceStatus(student) : 'unknown';
+          case 'todayAttendance':
+            const todayStatus = getTodayAttendanceStatus ? getTodayAttendanceStatus(student) : { status: 'Unknown' };
             
             return (
-              <td key="todaysStatus" className="p-3">
+              <td key="todayAttendance" className="p-3">
                 <div className="flex items-center justify-center">
-                  {attendanceStatus === 'present' ? (
+                  {todayStatus.status === 'Present' ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       Present
+
                     </span>
-                  ) : attendanceStatus === 'late' ? (
+                  ) : todayStatus.status === 'Late' ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       Late
+                      {todayStatus.time && (
+                        <span className="ml-1 text-xs opacity-75">({todayStatus.time})</span>
+                      )}
                     </span>
-                  ) : attendanceStatus === 'absent' ? (
+                  ) : todayStatus.status === 'Absent' ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                       Absent
                     </span>
-                  ) : attendanceStatus === 'pending' ? (
+                  ) : todayStatus.status === 'Permission' ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Pending
-                    </span>
-                  ) : attendanceStatus === 'permission' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       Permission
                     </span>
-                  ) : attendanceStatus === 'holiday' ? (
+                  ) : todayStatus.status === 'Pending' ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Holiday
+                      Pending
                     </span>
-                  ) : attendanceStatus === 'not-student-day' ? (
+                  ) : todayStatus.status === 'No School' ? (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      No School
+                    </span>
+                  ) : 
+                  todayStatus.status === 'Not Yet Enrolled' ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Not School Day
+                      Join Today
                     </span>
                   ) : (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Unknown
+                      {todayStatus.status || 'Unknown'}
                     </span>
                   )}
                 </div>
               </td>
             );
-
-          default:
-            return null;
         }
       })}
     </tr>

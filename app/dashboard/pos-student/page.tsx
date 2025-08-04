@@ -308,9 +308,25 @@ const POSStudentPage = () => {
             // Generate custom receipt number based on payment month
             const receiptNumber = await generateCustomReceiptNumber(paymentMonth);
 
-            const calculatedAmount = calculateProratedAmount(paymentAmount || 0, new Date(joinDate), paymentMonth, classStudyDays);
+            // Apply discount first, then prorate for new students
+            const discountAmount = selectedStudent.discount || 0;
+            
+            let proratedAmount: number;
+            let finalAmount: number;
+            
+            if (selectedStudent.lastPaymentMonth) {
+                // Existing student: use full amount, then apply discount
+                proratedAmount = paymentAmount || 0;
+                finalAmount = Math.max(0, proratedAmount - discountAmount);
+            } else {
+                // New student: apply discount first, then prorate the discounted amount
+                const discountedPrice = Math.max(0, (paymentAmount || 0) - discountAmount);
+                proratedAmount = calculateProratedAmount(discountedPrice, new Date(joinDate), paymentMonth, classStudyDays);
+                finalAmount = proratedAmount;
+            }
+            
             // Round to 4 decimal places
-            const roundedAmount = Number(calculatedAmount.toFixed(4));
+            const roundedAmount = Number(finalAmount.toFixed(4));
             const transactionData: any = {
                 studentId: selectedStudent.id,
                 studentName: selectedStudent.fullName,
@@ -318,7 +334,9 @@ const POSStudentPage = () => {
                 classType: classType,
                 subjects: subjects,
                 fullAmount: Number(paymentAmount.toFixed(4)),
-                amount: roundedAmount,
+                proratedAmount: Number(proratedAmount.toFixed(4)), // Store final prorated amount
+                discountAmount: Number(discountAmount.toFixed(4)), // Store discount amount
+                amount: roundedAmount, // Final amount
                 receiptNumber: receiptNumber,
                 paymentMonth: displayPaymentMonth, // Use the display month for receipt
                 paymentMethod: paymentMethod,
@@ -346,7 +364,22 @@ const POSStudentPage = () => {
             const finalTransaction = { ...transactionData, transactionId: docRef.id };
             
             setLastTransaction(finalTransaction);
-            toast.success(`Charged ${selectedStudent.fullName} $${roundedAmount.toFixed(2)} (from full price: $${paymentAmount.toFixed(2)})`);
+            
+            // Create success message that includes discount information
+            let successMessage = `Charged ${selectedStudent.fullName} $${roundedAmount.toFixed(2)}`;
+            if (discountAmount > 0) {
+                if (selectedStudent.lastPaymentMonth) {
+                    // Existing student: Full price - discount
+                    successMessage += ` (Full: $${paymentAmount.toFixed(2)}, Discount: -$${discountAmount.toFixed(2)})`;
+                } else {
+                    // New student: Full price - discount, then prorated
+                    const discountedPrice = Math.max(0, (paymentAmount || 0) - discountAmount);
+                    successMessage += ` (Full: $${paymentAmount.toFixed(2)}, After Discount: $${discountedPrice.toFixed(2)}, Prorated: $${proratedAmount.toFixed(2)})`;
+                }
+            } else {
+                successMessage += ` (from full price: $${paymentAmount.toFixed(2)})`;
+            }
+            toast.success(successMessage);
 
             // Show post-transaction modal instead of printing automatically
             setIsPostTransactionModalActive(true);
@@ -701,6 +734,22 @@ const POSStudentPage = () => {
         }
     };
 
+    // Helper function to calculate final charge amount including discount
+    const calculateFinalChargeAmount = (): number => {
+        if (!selectedStudent || !paymentAmount || !joinDate || !paymentMonth) return 0;
+        
+        const discountAmount = selectedStudent.discount || 0;
+        
+        if (selectedStudent.lastPaymentMonth) {
+            // Existing student: use full amount, then apply discount
+            return Math.max(0, paymentAmount - discountAmount);
+        } else {
+            // New student: apply discount first, then prorate the discounted amount
+            const discountedPrice = Math.max(0, paymentAmount - discountAmount);
+            return calculateProratedAmount(discountedPrice, new Date(joinDate), paymentMonth, classStudyDays);
+        }
+    };
+
     return (
         <SectionMain>
             <SectionTitleLineWithButton icon={mdiCashRegister} title="POS - Monthly Payments" main>
@@ -756,6 +805,13 @@ const POSStudentPage = () => {
                                                                        bg-green-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 
                                                                        border border-purple-800 dark:border-purple-400">
                                                             {formatPaymentMonth(student.lastPaymentMonth)}
+                                                        </span>
+                                                    )}
+                                                    {student.discount > 0 && (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium 
+                                                                       bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 
+                                                                       border border-emerald-200 dark:border-emerald-700">
+                                                            Scholarship
                                                         </span>
                                                     )}
                                                 </div>
@@ -832,7 +888,7 @@ const POSStudentPage = () => {
                                             className="min-w-0"
                                         />
                                         <Button 
-                                            label={isProcessing ? "Processing..." : `Charge $${selectedStudent?.lastPaymentMonth ? (paymentAmount || 0).toFixed(2) : calculateProratedAmount(paymentAmount || 0, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2)}`} 
+                                            label={isProcessing ? "Processing..." : `Charge $${calculateFinalChargeAmount().toFixed(2)}`} 
                                             color="success" 
                                             onClick={handleCharge} 
                                             disabled={isProcessing || paymentAmount === null || !selectedPrinter?.online || !paymentMonth || !joinDate} 
@@ -886,7 +942,7 @@ const POSStudentPage = () => {
                                         <p className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.receiptNumber}</p>
                                     </div>
                                     <div>
-                                        <span className="text-gray-500 dark:text-gray-400">Amount</span>
+                                        <span className="text-gray-500 dark:text-gray-400">Final Charge</span>
                                         <p className="font-medium text-green-600 dark:text-green-400">${lastTransaction.amount.toFixed(2)}</p>
                                     </div>
                                     <div>
@@ -897,6 +953,27 @@ const POSStudentPage = () => {
                                         <span className="text-gray-500 dark:text-gray-400">Method</span>
                                         <p className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.paymentMethod}</p>
                                     </div>
+                                    {/* Show full amount if different from final amount */}
+                                    {lastTransaction.fullAmount && lastTransaction.fullAmount !== lastTransaction.amount && (
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">Full Price</span>
+                                            <p className="font-medium text-gray-700 dark:text-gray-300">${lastTransaction.fullAmount.toFixed(2)}</p>
+                                        </div>
+                                    )}
+                                    {/* Show prorated amount if different from full amount */}
+                                    {lastTransaction.proratedAmount && lastTransaction.proratedAmount !== lastTransaction.fullAmount && (
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">Prorated</span>
+                                            <p className="font-medium text-gray-700 dark:text-gray-300">${lastTransaction.proratedAmount.toFixed(2)}</p>
+                                        </div>
+                                    )}
+                                    {/* Show discount if applicable */}
+                                    {lastTransaction.discountAmount && lastTransaction.discountAmount > 0 && (
+                                        <div>
+                                            <span className="text-gray-500 dark:text-gray-400">Discount</span>
+                                            <p className="font-medium text-emerald-600 dark:text-emerald-400">-${lastTransaction.discountAmount.toFixed(2)}</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

@@ -53,7 +53,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
   const [modalSelectedMonth, setModalSelectedMonth] = useState<string>(
     initialMonthValue || getCurrentYearMonthString()
   );
-  
+
   const handleMonthChange = (direction: 'prev' | 'next') => {
     const [yearStr, monthStr] = modalSelectedMonth.split('-');
     let currentYear = parseInt(yearStr);
@@ -79,6 +79,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     
     setModalSelectedMonth(`${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`);
   };
+  console.log("Modal selected month:", modalSelectedMonth);
   useEffect(() => {
     if (!isActive || !student || !allClassConfigs || !modalSelectedMonth) {
       setCalendarGrid([]);
@@ -134,7 +135,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
         isPast: currentDate < todayForComparison,
         status: calculatedStatus.status,
         time: calculatedStatus.time,
-        isSchoolDayCell: !["No School", "Not Yet Enrolled"].includes(calculatedStatus.status || ""),
+        isSchoolDayCell: !["Not Applicable (Holiday/Weekend)", "Not Yet Enrolled", "No School"].includes(calculatedStatus.status || ""),
       };
       
       week.push(cellData);
@@ -155,7 +156,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
       case "Permission": return "bg-purple-200 text-purple-800";
       case "Pending": return "bg-blue-100 text-blue-700";
       case "Absent (Config Missing)": return "bg-orange-100 text-orange-700";
-      case "No School": return "text-gray-400";
+      case "Not Applicable (Holiday/Weekend)": return "text-gray-400";
       case "Not Yet Enrolled": return "text-gray-400 dark:text-slate-500";
       case "Unknown": return "bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200";
       default: return "text-transparent";
@@ -194,12 +195,12 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     }
     return { isPrevDisabled: prevDisabled, isNextDisabled: nextDisabled };
   }, [modalSelectedMonth, student.createdAt]); 
+
   return (
     <CardBoxModal
       title={`Attendance: ${student.fullName}`}
       isActive={isActive}
-     // onConfirm={onClose}
-      onCancel={onClose}
+      onConfirm={onClose}
       buttonLabel="Close"
       buttonColor="info"
       modalClassName="w-11/12 md:w-4/5 lg:w-3/5 xl:max-w-4xl"
@@ -244,9 +245,9 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
                                 {cell.time ? `(${cell.time})` : ''}
                               </span>
                             )}
-                            {(cell.status === "No School" || cell.status === "Not Yet Enrolled") && (
+                            {(cell.status === "Not Applicable (Holiday/Weekend)" || cell.status === "Not Yet Enrolled") && (
                                <span className={`text-xxs leading-tight opacity-70 ${getStatusColor(cell.status)} ${cell.isToday ? 'font-medium' : ''}`}>
-                                   {cell.status === "No School" ? "Non-School" : "Not Enrolled"}
+                                   {cell.status === "Not Applicable (Holiday/Weekend)" ? "Non-School" : "Not Enrolled"}
                                </span>
                             )}
                           </div>

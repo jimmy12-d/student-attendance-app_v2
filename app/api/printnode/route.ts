@@ -187,7 +187,20 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
     y -= 13;
     page.drawText(`Full Amount: $${transaction.fullAmount.toFixed(2)}`, { x: margin + 4, y, font, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
     y -= 13;
-    page.drawText(`Final Amount: $${transaction.amount.toFixed(2)}`, { x: margin + 4, y, font: boldFont, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
+    
+    // Show prorated amount if different from full amount
+    if (transaction.proratedAmount && transaction.proratedAmount !== transaction.fullAmount) {
+        page.drawText(`Prorated Amount: $${transaction.proratedAmount.toFixed(2)}`, { x: margin + 4, y, font, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
+        y -= 13;
+    }
+    
+    // Show discount if applicable
+    if (transaction.discountAmount && transaction.discountAmount > 0) {
+        page.drawText(`Scholarship Discount: -$${transaction.discountAmount.toFixed(2)}`, { x: margin + 4, y, font, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
+        y -= 13;
+    }
+    
+    page.drawText(`Final Charge: $${transaction.amount.toFixed(2)}`, { x: margin + 4, y, font: boldFont, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
     y -= 13;
     page.drawText('Subjects Included:', { x: margin + 4, y, font: boldFont, size: detailFontSize });
     y -= 11;

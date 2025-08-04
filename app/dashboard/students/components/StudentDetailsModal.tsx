@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student } from '../../../_interfaces';
+import DailyStatusDetailsModal from '../../_components/DailyStatusDetailsModal';
+import { Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../../../firebase-config';
+import { RawAttendanceRecord } from '../../_lib/attendanceLogic';
+import { PermissionRecord } from '../../../_interfaces';
+import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
 
 // Utility function to convert Google Drive share URL to thumbnail URL
 const getDisplayableImageUrl = (url: string): string | null => {
@@ -53,6 +59,13 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  
+  // Monthly attendance state
+  const [attendanceRecords, setAttendanceRecords] = useState<RawAttendanceRecord[]>([]);
+  const [approvedPermissions, setApprovedPermissions] = useState<PermissionRecord[]>([]);
+  const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs>({});
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
 
   // Navigation logic
   const canNavigatePrev = students.length > 1 && currentIndex > 0;
@@ -90,10 +103,88 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     }
   };
 
+  // Fetch monthly attendance data
+  const fetchAttendanceData = async (studentId: string) => {
+    setIsLoadingAttendance(true);
+    try {
+      // Get current month
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1; // JavaScript months are 0-indexed
+      
+      // Create start and end dates for the current month
+      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
+      const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
+      
+      // Fetch attendance records
+      const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('studentId', '==', studentId),
+        where('date', '>=', startDate),
+        where('date', '<=', endDate)
+      );
+      
+      const attendanceSnapshot = await getDocs(attendanceQuery);
+      const attendanceData: RawAttendanceRecord[] = [];
+      attendanceSnapshot.forEach((doc) => {
+        const data = doc.data();
+        attendanceData.push({
+          id: doc.id,
+          studentId: data.studentId,
+          date: data.date,
+          status: data.status,
+          timestamp: data.timestamp,
+          // Add other fields as needed
+        });
+      });
+      
+      // Fetch all class configs from 'classes' collection
+      const classConfigSnapshot = await getDocs(collection(db, 'classes'));
+      
+      const classConfigsData: AllClassConfigs = {};
+      classConfigSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+
+        if (data.shifts) { // Only add if shifts property exists
+          classConfigsData[doc.id] = data as any;
+        }
+      });
+
+      // Fetch permissions (simplified for now - you can adjust based on your actual data structure)
+      const permissionsData: PermissionRecord[] = []; // Start with empty array for now
+      
+      setAttendanceRecords(attendanceData);
+      setApprovedPermissions(permissionsData);
+      setAllClassConfigs(classConfigsData);
+  
+    } catch (error) {
+      console.error('Error fetching attendance data:', error);
+      setAttendanceRecords([]);
+      setApprovedPermissions([]);
+      setAllClassConfigs({});
+    } finally {
+      setIsLoadingAttendance(false);
+    }
+  };
+
+  // Fetch attendance when student changes
+  useEffect(() => {
+    if (student?.id && isOpen) {
+      fetchAttendanceData(student.id);
+    }
+  }, [student?.id, isOpen]);
+
   // Handle keyboard navigation
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!isOpen) return;
+      
+      // If attendance modal is open, don't handle ESC here - let it close the attendance modal first
+      if (showAttendanceModal && event.key === 'Escape') {
+        event.preventDefault();
+        setShowAttendanceModal(false);
+        return;
+      }
       
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
@@ -136,7 +227,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, canNavigatePrev, canNavigateNext, isTransitioning, currentIndex, students, onNavigate]);
+  }, [isOpen, canNavigatePrev, canNavigateNext, isTransitioning, currentIndex, students, onNavigate, showAttendanceModal]);
 
   if (!isOpen || !student) return null;
 
@@ -187,7 +278,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
       
       {/* Modal */}
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className={`relative transform overflow-hidden rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all duration-200 sm:my-8 sm:w-full sm:max-w-2xl ${
+        <div className={`relative transform rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all duration-200 sm:my-8 sm:w-full sm:max-w-5xl ${
           isTransitioning 
             ? slideDirection === 'left' 
               ? 'translate-x-4 opacity-80' 
@@ -197,7 +288,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
             : 'translate-x-0 scale-100 opacity-100'
         }`} style={{ transform: isTransitioning && slideDirection ? `translateX(${slideDirection === 'left' ? '8px' : '-8px'}) scale(0.98)` : undefined }}>
           {/* Header with Navigation */}
-          <div className="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+          <div className="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4 rounded-t-lg">
             <div className="flex items-center justify-between mb-4">
               {/* Left Arrow */}
               <div className="relative group">
@@ -218,7 +309,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                 
                 {/* Hover preview for previous student */}
                 {canNavigatePrev && students[currentIndex - 1] && (
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
                     <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45"></div>
                     {students[currentIndex - 1].fullName}
                   </div>
@@ -280,7 +371,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                 
                 {/* Hover preview for next student */}
                 {canNavigateNext && students[currentIndex + 1] && (
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
                     <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-100 rotate-45"></div>
                     {students[currentIndex + 1].fullName}
                   </div>
@@ -311,6 +402,70 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
             }`}>
               {/* Student Photo and Academic Info */}
               <div className="flex-shrink-0">
+                {/* Status Badges - Moved above photo */}
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start mb-4">
+                  {/* Warning Badge */}
+                  {student.warning && (
+                    <div className="group relative">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800 cursor-help">
+                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Warning
+                      </span>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
+                        Requires close monitoring
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Scholarship Badge */}
+                  {student.discount > 0 && (
+                    <div className="group relative">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800 cursor-help">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        </svg>
+                        Scholarship
+                      </span>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
+                        Scholarship Amount: ${student.discount.toFixed(2)}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Last Payment Badge */}
+                  {student.lastPaymentMonth && (
+                    <div className="group relative">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 cursor-help">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        {(() => {
+                          const [year, month] = student.lastPaymentMonth.split('-');
+                          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                          return `${monthNames[parseInt(month) - 1]} ${year}`;
+                        })()}
+                      </span>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
+                        Last Payment Month: {(() => {
+                          const [year, month] = student.lastPaymentMonth.split('-');
+                          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'];
+                          return `${monthNames[parseInt(month) - 1]} ${year}`;
+                        })()}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Student Photo */}
                 <div className="w-58 h-58 rounded-lg overflow-hidden bg-gray-200 dark:bg-slate-600 mx-auto sm:mx-0 mb-4">
                   {student.photoUrl ? (
@@ -351,9 +506,43 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   </div>
                 </div>
 
+                {/* Monthly Attendance Table */}
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    This Month's Attendance
+                  </h4>
+                  
+                  {isLoadingAttendance ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading attendance...</span>
+                    </div>
+                  ) : (
+                    <div className="bg-white dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 overflow-hidden">
+                      <div className="px-2 py-2 text-center">
+                        <button
+                          onClick={() => setShowAttendanceModal(true)}
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m6 0v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7h16zM9 11h6m-6 4h6" />
+                          </svg>
+                          View Attendance
+                        </button>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                          Click to view detailed
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Academic Information */}
                 <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Academic Information</h4>
+                  {/* <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Academic Information</h4>
                   {student.ay && (
                     <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Academic Year</label>
@@ -365,26 +554,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">School</label>
                       <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.school}</p>
                     </div>
-                  )}
-                  {student.lastPaymentMonth && (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Last Payment Month</label>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                        {(() => {
-                          const [year, month] = student.lastPaymentMonth.split('-');
-                          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                            'July', 'August', 'September', 'October', 'November', 'December'];
-                          return `${monthNames[parseInt(month) - 1]} ${year}`;
-                        })()}
-                      </p>
-                    </div>
-                  )}
-                  {student.discount > 0 ? ( // Condition now explicitly yields true or false
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Scholarship Amount</label>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">${student.discount.toFixed(2)}</p>
-                    </div>
-                  ) : null} {/* If student.discount is 0 or less, render null (which means nothing) */}
+                  )} */}
                 </div>
               </div>
 
@@ -468,29 +638,12 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                     </div>
                   </div>
                 )}
-
-                {/* Warning Section - Only show if warning is true */}
-                {student.warning && (
-                  <div className="border-t border-gray-200 dark:border-slate-600 pt-4">
-                    <h4 className="text-sm font-medium text-red-700 dark:text-red-400 mb-3 flex items-center">
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                      </svg>
-                      Student Requires Special Attention
-                    </h4>
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                      <p className="text-sm text-red-800 dark:text-red-200 font-medium">
-                        ⚠️ This student has been flagged for special attention or close monitoring
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50 dark:bg-slate-700 px-4 py-3 sm:flex sm:justify-between sm:px-6 gap-3">
+          <div className="bg-gray-50 dark:bg-slate-700 px-4 py-3 sm:flex sm:justify-between sm:px-6 gap-3 rounded-b-lg">
             {/* Delete button on the left */}
             <button
               type="button"
@@ -579,6 +732,18 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Daily Status Details Modal */}
+      {showAttendanceModal && (
+        <DailyStatusDetailsModal
+          student={student}
+          attendanceRecords={attendanceRecords}
+          allClassConfigs={allClassConfigs}
+          approvedPermissions={approvedPermissions}
+          isActive={showAttendanceModal}
+          onClose={() => setShowAttendanceModal(false)}
+        />
       )}
     </div>
   );
