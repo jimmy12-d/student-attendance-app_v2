@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { QRPaymentSVG } from "QRPayment.react";
+import { QRCodeSVG } from "qrcode.react";
 import RodwellLogo from '../../_components/JustboilLogo';
 import Button from '../../_components/Button';
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -93,7 +93,7 @@ const StudentQRPayment: React.FC<Props> = ({
             height: qrSize,
           }}
         >
-          <QRPaymentSVG
+          <QRCodeSVG
             value={QRPaymentData}
             size={qrSize - 16} 
             bgColor={"#ffffff"}

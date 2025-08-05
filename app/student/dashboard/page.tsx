@@ -24,7 +24,7 @@ import { mdiChevronRight } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import CardBoxModal from '../../_components/CardBox/Modal';
 import { PermissionRequestForm } from './../_components/PermissionRequestForm';
-import StudentQRPayment from '../_components/StudentQRPayment';
+import StudentQRPayment from './../_components/StudentQRCode';
 import useCountUp from '../../_hooks/useCountUp';
 
 // Define types for our data

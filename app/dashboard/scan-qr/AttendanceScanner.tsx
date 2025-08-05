@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Html5QRPayment, Html5QRPaymentCameraScanConfig, CameraDevice } from 'html5-QRPayment';
+import { Html5Qrcode, Html5QrcodeCameraScanConfig, CameraDevice } from 'html5-qrcode';
 import CardBox from "../../_components/CardBox";
 
 // Import Firebase SDKs for calling the function
@@ -21,7 +21,7 @@ const AttendanceScanner: React.FC = () => {
   const [selectedCameraId, setSelectedCameraId] = useState<string | undefined>();
 
   // Refs
-  const html5QRPaymentRef = useRef<Html5QRPayment | null>(null);
+  const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
   const cooldownRef = useRef(false);
   const successSoundRef = useRef<HTMLAudioElement | null>(null);
 
@@ -41,7 +41,7 @@ const AttendanceScanner: React.FC = () => {
 
   // --- Camera Discovery ---
   useEffect(() => {
-    Html5QRPayment.getCameras()
+    Html5Qrcode.getCameras()
       .then(devices => {
         if (devices && devices.length) {
           setCameras(devices);
@@ -122,10 +122,10 @@ const AttendanceScanner: React.FC = () => {
         return;
     }
 
-    const newScanner = new Html5QRPayment(VIDEO_ELEMENT_ID);
-    html5QRPaymentRef.current = newScanner;
+    const newScanner = new Html5Qrcode(VIDEO_ELEMENT_ID);
+    html5QrcodeRef.current = newScanner;
 
-    const config: Html5QRPaymentCameraScanConfig = {
+    const config: Html5QrcodeCameraScanConfig = {
       fps: 10,
       qrbox: { width: 400, height: 400 },
     };
@@ -144,8 +144,8 @@ const AttendanceScanner: React.FC = () => {
   }, [isScanning, onScanSuccess, onScanFailure, showFeedback, selectedCameraId]);
 
   const handleStopScan = useCallback(() => {
-    if (html5QRPaymentRef.current?.isScanning) {
-      html5QRPaymentRef.current.stop()
+    if (html5QrcodeRef.current?.isScanning) {
+      html5QrcodeRef.current.stop()
         .then(() => setIsScanning(false))
         .catch(err => console.error("Failed to stop scanner cleanly.", err));
     }
@@ -154,7 +154,7 @@ const AttendanceScanner: React.FC = () => {
   // Cleanup effect to stop the camera when the component is removed
 useEffect(() => {
     return () => {
-      if (html5QRPaymentRef.current?.isScanning) {
+      if (html5QrcodeRef.current?.isScanning) {
         handleStopScan();
       }
     };
