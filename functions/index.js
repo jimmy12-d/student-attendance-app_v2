@@ -618,14 +618,14 @@ exports.redeemAttendancePasscode = onCall({
 
   // 2. Validate the passcode
   if (!passcodeDoc.exists) {
-    throw new HttpsError("not-found", "Invalid QR Code.");
+    throw new HttpsError("not-found", "Invalid QR Payment.");
   }
   const passcodeData = passcodeDoc.data();
   if (passcodeData.used) {
-    throw new HttpsError("already-exists", "This QR Code has already been used.");
+    throw new HttpsError("already-exists", "This QR Payment has already been used.");
   }
   if (new Date() > passcodeData.expires.toDate()) {
-    throw new HttpsError("deadline-exceeded", "This QR Code has expired.");
+    throw new HttpsError("deadline-exceeded", "This QR Payment has expired.");
   }
 
   // 3. Mark passcode as used immediately to prevent race conditions
@@ -642,7 +642,7 @@ exports.redeemAttendancePasscode = onCall({
 
   // 5. Validate lookups
   if (studentQuery.empty) {
-    throw new HttpsError("not-found", "No student record is associated with this QR Code.");
+    throw new HttpsError("not-found", "No student record is associated with this QR Payment.");
   }
   const studentDoc = studentQuery.docs[0];
   const studentData = studentDoc.data();

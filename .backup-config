@@ -1,0 +1,37 @@
+# Firebase Backup Configuration
+# This file contains default settings for the Firebase backup system
+
+# Backup Settings
+DEFAULT_BACKUP_SCHEDULE="0 0 * * *"  # Daily at 12 AM (midnight)
+MAX_BACKUPS_TO_KEEP=15               # Keep last 15 backups
+BACKUP_COMPRESSION=true              # Compress backups by default
+BACKUP_TIMEOUT=300000               # 5 minutes timeout
+
+# Collections to backup (leave empty for all)
+# Example: COLLECTIONS_TO_BACKUP="students,transactions,classes"
+COLLECTIONS_TO_BACKUP=""
+
+# Log Settings
+LOG_LEVEL="INFO"                    # DEBUG, INFO, WARN, ERROR
+LOG_MAX_SIZE="10MB"                 # Maximum log file size
+LOG_MAX_FILES=5                     # Number of log files to keep
+
+# Notification Settings (future enhancement)
+NOTIFICATION_EMAIL=""               # Email for backup notifications
+NOTIFICATION_WEBHOOK=""             # Webhook URL for notifications
+NOTIFY_ON_SUCCESS=false            # Send notification on successful backup
+NOTIFY_ON_FAILURE=true             # Send notification on backup failure
+
+# Storage Settings (future enhancement)
+CLOUD_STORAGE_ENABLED=false       # Enable cloud storage upload
+CLOUD_STORAGE_PROVIDER=""          # aws, gcp, azure
+CLOUD_STORAGE_BUCKET=""            # Bucket name for cloud storage
+CLOUD_STORAGE_RETENTION_DAYS=90    # Days to keep cloud backups
+
+# Security Settings
+ENCRYPT_BACKUPS=false              # Encrypt backup files
+BACKUP_ENCRYPTION_KEY=""           # Encryption key (if enabled)
+
+# Performance Settings
+BATCH_SIZE=500                     # Documents per batch during backup
+CONCURRENT_COLLECTIONS=3           # Number of collections to backup concurrently

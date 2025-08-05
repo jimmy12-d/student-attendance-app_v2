@@ -14,7 +14,7 @@ import AttendanceSummaryCard from '../_components/AttendanceSummaryCard';
 import AttendanceSummaryCardSkeleton from '../_components/AttendanceSummaryCardSkeleton';
 import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
-import QRCodeDisplay from '../_components/QRCodeDisplay';
+import QRPaymentDisplay from '../_components/QRPaymentDisplay';
 import { toast } from 'sonner';
 import OngoingPermissions from '../_components/OngoingPermissions';
 
@@ -195,7 +195,7 @@ const AttendancePage = () => {
 
   return (
     <div className="p-6">
-       <QRCodeDisplay 
+       <QRPaymentDisplay 
         isOpen={isQrDisplayOpen}
         onClose={() => setIsQrDisplayOpen(false)}
         studentName={studentName || ''}

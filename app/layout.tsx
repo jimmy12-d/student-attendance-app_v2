@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Nokora } from "next/font/google";
 import "../css/main.css";
 import StoreProvider from "./_stores/StoreProvider";
 import DarkModeInit from "./_components/DarkModeInit";
@@ -10,6 +11,12 @@ import ClientLayoutWrapper from './_components/ClientLayoutWrapper';
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+});
+
+const nokora = Nokora({
+  subsets: ["khmer", "latin"],
+  weight: ["100", "300", "400", "700", "900"],
+  variable: "--font-nokora",
 });
 
 export const metadata: Metadata = {
@@ -29,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <body id="student-attendance-app" className="h-full bg-gray-800 text-gray-100">
+      <body id="student-attendance-app" className={`h-full bg-gray-800 text-gray-100 ${inter.variable} ${nokora.variable}`}>
         <StoreProvider>
           <ClientLayoutWrapper>
             <div className="flex flex-col min-h-screen">

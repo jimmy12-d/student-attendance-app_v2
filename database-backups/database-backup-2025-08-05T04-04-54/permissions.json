@@ -1,0 +1,23 @@
+{
+  "collection": "permissions",
+  "timestamp": "2025-08-05T04:04:58.370Z",
+  "documentCount": 1,
+  "documents": [
+    {
+      "id": "jZNZcse8TCvNbZLZxvDD",
+      "data": {
+        "studentAuthUid": "tBBfP9AZrRbYCA8UwGxrX5zLjmh2",
+        "reason": "Sickness",
+        "studentId": "Jnj9dTJ9X3u1RapYp7Bk",
+        "details": "More thrills await — claim your Skyline Luge Kuala Lumpur ride voucher and take the fun off the field! A perfect way to wrap up your MUO a… See more\n",
+        "studentName": "John Doe haha",
+        "duration": 1,
+        "permissionEndDate": "2025-06-11",
+        "permissionStartDate": "2025-06-11",
+        "requestDate": "2025-06-11T08:01:15.962Z",
+        "status": "rejected",
+        "reviewedAt": "2025-07-31T18:23:13.173Z"
+      }
+    }
+  ]
+}

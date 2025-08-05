@@ -6,7 +6,8 @@
 @import './_progress.css';
 @import './_scrollbars.css';
 @import './_table.css';
-
+@import url('https://fonts.googleapis.com/css2?family=Nokora:wght@100;300;400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Khmer:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import './styles/_basic.css';
 @import './styles/_white.css';
 
@@ -84,6 +85,16 @@
 
 .animate-fade-in-left {
   animation: fade-in-left 0.3s forwards;
+}
+.nokora-font {
+  font-family: var(--font-nokora), 'Nokora', sans-serif;
+}
+
+.khmer-font {
+  font-family: var(--font-nokora), 'Nokora', sans-serif !important;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
 }
 
 /* Ensure page scrollability */

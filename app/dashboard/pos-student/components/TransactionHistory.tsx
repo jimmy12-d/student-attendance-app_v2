@@ -17,6 +17,7 @@ interface TransactionHistoryProps {
     downloadingTransactionId?: string;
     reprintingTransactionId?: string;
     onRefreshData?: () => void; // Add refresh callback
+    printerStatus?: boolean; // Add printer status prop
 }
 
 export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
@@ -29,7 +30,8 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     onReprintReceipt,
     downloadingTransactionId,
     reprintingTransactionId,
-    onRefreshData
+    onRefreshData,
+    printerStatus
 }) => {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [transactionToRemove, setTransactionToRemove] = useState<Transaction | null>(null);
@@ -143,7 +145,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                                         icon={mdiPrinter}
                                                         small
                                                         className="text-xs"
-                                                        disabled={reprintingTransactionId === transaction.transactionId}
+                                                        disabled={reprintingTransactionId === transaction.transactionId || printerStatus === false}
                                                     />
                                                 )}
                                                 {onDownloadReceipt && (

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Html5Qrcode, Html5QrcodeCameraScanConfig, CameraDevice } from 'html5-qrcode';
+import { Html5QRPayment, Html5QRPaymentCameraScanConfig, CameraDevice } from 'html5-QRPayment';
 import CardBox from "../../_components/CardBox";
 
 // Import Firebase SDKs for calling the function
@@ -21,7 +21,7 @@ const AttendanceScanner: React.FC = () => {
   const [selectedCameraId, setSelectedCameraId] = useState<string | undefined>();
 
   // Refs
-  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
+  const html5QRPaymentRef = useRef<Html5QRPayment | null>(null);
   const cooldownRef = useRef(false);
   const successSoundRef = useRef<HTMLAudioElement | null>(null);
 
@@ -41,7 +41,7 @@ const AttendanceScanner: React.FC = () => {
 
   // --- Camera Discovery ---
   useEffect(() => {
-    Html5Qrcode.getCameras()
+    Html5QRPayment.getCameras()
       .then(devices => {
         if (devices && devices.length) {
           setCameras(devices);
@@ -106,9 +106,9 @@ const AttendanceScanner: React.FC = () => {
   }, [playSuccessSound, showFeedback]);
 
   // --- UPDATED onScanFailure ---
-  // This now ignores the common "No QR code found" messages to keep the console clean.
+  // This now ignores the common "No QR Payment found" messages to keep the console clean.
     const onScanFailure = useCallback((errorMessage: string) => {
-    if (errorMessage.includes("No QR code found") || errorMessage.includes("NotFound")) {
+    if (errorMessage.includes("No QR Payment found") || errorMessage.includes("NotFound")) {
       return; // This is expected, do nothing.
     }
       console.warn(`QR Scan Failure: ${errorMessage}`);
@@ -122,10 +122,10 @@ const AttendanceScanner: React.FC = () => {
         return;
     }
 
-    const newScanner = new Html5Qrcode(VIDEO_ELEMENT_ID);
-    html5QrCodeRef.current = newScanner;
+    const newScanner = new Html5QRPayment(VIDEO_ELEMENT_ID);
+    html5QRPaymentRef.current = newScanner;
 
-    const config: Html5QrcodeCameraScanConfig = {
+    const config: Html5QRPaymentCameraScanConfig = {
       fps: 10,
       qrbox: { width: 400, height: 400 },
     };
@@ -144,8 +144,8 @@ const AttendanceScanner: React.FC = () => {
   }, [isScanning, onScanSuccess, onScanFailure, showFeedback, selectedCameraId]);
 
   const handleStopScan = useCallback(() => {
-    if (html5QrCodeRef.current?.isScanning) {
-      html5QrCodeRef.current.stop()
+    if (html5QRPaymentRef.current?.isScanning) {
+      html5QRPaymentRef.current.stop()
         .then(() => setIsScanning(false))
         .catch(err => console.error("Failed to stop scanner cleanly.", err));
     }
@@ -154,7 +154,7 @@ const AttendanceScanner: React.FC = () => {
   // Cleanup effect to stop the camera when the component is removed
 useEffect(() => {
     return () => {
-      if (html5QrCodeRef.current?.isScanning) {
+      if (html5QRPaymentRef.current?.isScanning) {
         handleStopScan();
       }
     };

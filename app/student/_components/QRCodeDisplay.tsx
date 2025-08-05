@@ -2,18 +2,18 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import StudentQRCode from './StudentQRCode';
+import StudentQRPayment from './StudentQRPayment';
 import Icon from '../../_components/Icon';
 import { mdiClose } from '@mdi/js';
 
-interface QRCodeDisplayProps {
+interface QRPaymentDisplayProps {
   isOpen: boolean;
   onClose: () => void;
   studentName: string;
   studentUid: string;
 }
 
-const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ isOpen, onClose, studentName, studentUid }) => {
+const QRPaymentDisplay: React.FC<QRPaymentDisplayProps> = ({ isOpen, onClose, studentName, studentUid }) => {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -37,8 +37,8 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ isOpen, onClose, studentN
             </button>
             <div className="flex flex-col items-center pt-2">
               <h2 className="text-xl font-bold mb-2">Scan for Attendance</h2>
-              <p className="text-gray-400 mb-4">Present this QR code to the administrator.</p>
-              <StudentQRCode studentName={studentName} studentUid={studentUid} qrSize={256} />
+              <p className="text-gray-400 mb-4">Present this QR Payment to the administrator.</p>
+              <StudentQRPayment studentName={studentName} studentUid={studentUid} qrSize={256} />
             </div>
           </motion.div>
         </motion.div>
@@ -47,4 +47,4 @@ const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ isOpen, onClose, studentN
   );
 };
 
-export default QRCodeDisplay; 
+export default QRPaymentDisplay; 

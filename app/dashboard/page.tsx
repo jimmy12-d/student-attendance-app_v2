@@ -242,7 +242,7 @@ export default function DashboardPage() {
   }, [monthOptions, selectedMonth]);
 
   // Calculate class-wise statistics by class and shift
-  const classStats = useMemo((): ClassStats[] => {
+const classStats = useMemo((): ClassStats[] => {
     if (!allClassConfigs || students.length === 0) return [];
 
     const todayStr = todayStrForWidgets;
@@ -270,7 +270,6 @@ export default function DashboardPage() {
       const stats = classShiftMap.get(classShiftKey)!;
       stats.totalStudents++;
 
-      // Find this student's attendance record for today
       const attendanceRecord = attendance.find(
         att => att.studentId === student.id && att.date === todayStr
       );
@@ -287,7 +286,6 @@ export default function DashboardPage() {
         approvedPermissionsForStudent
       );
 
-      // Update counts based on status
       switch (result.status) {
         case 'Present':
           stats.presentToday++;
@@ -305,18 +303,44 @@ export default function DashboardPage() {
       }
     });
 
-    // Calculate attendance rates and convert to array
+    // Function to get a numerical value for the shift
+    const getShiftOrder = (shift: string): number => {
+      switch (shift) {
+        case 'Morning':
+          return 1;
+        case 'Afternoon':
+          return 2;
+        case 'Evening':
+          return 3;
+        default:
+          return 99; // For 'Unknown Shift' or other shifts
+      }
+    };
+
     return Array.from(classShiftMap.values()).map(stats => ({
       ...stats,
       attendanceRate: stats.totalStudents > 0 
         ? Math.round(((stats.presentToday + stats.lateToday) / stats.totalStudents) * 100)
         : 0
     })).sort((a, b) => {
-      // Sort by class name first, then by shift
-      if (a.className !== b.className) {
-        return a.className.localeCompare(b.className);
+      // 1. Extract and compare the numerical part of the class name
+      const numA = parseInt(a.className.match(/\d+/)?.at(0) || "0");
+      const numB = parseInt(b.className.match(/\d+/)?.at(0) || "0");
+      
+      if (numA !== numB) {
+        return numA - numB;
       }
-      return a.shift.localeCompare(b.shift);
+      
+      // 2. If numbers are the same, compare by the full class name (e.g., 7A before 7E)
+      const classNameCompare = a.className.localeCompare(b.className);
+      if (classNameCompare !== 0) {
+        return classNameCompare;
+      }
+
+      // 3. If class names are identical, sort by shift order
+      const shiftOrderA = getShiftOrder(a.shift);
+      const shiftOrderB = getShiftOrder(b.shift);
+      return shiftOrderA - shiftOrderB;
     });
   }, [students, attendance, permissions, allClassConfigs, todayStrForWidgets]);
 
@@ -517,13 +541,13 @@ export default function DashboardPage() {
                     </div>
                     <span className="font-medium text-green-600 dark:text-green-400">{classData.presentToday}</span>
                   </div>
-                  <div className="flex justify-between items-center">
+                  {/* <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                       <span className="text-sm text-gray-600 dark:text-gray-400">Late</span>
                     </div>
                     <span className="font-medium text-yellow-600 dark:text-yellow-400">{classData.lateToday}</span>
-                  </div>
+                  </div> */}
                   <div className="flex justify-between items-center">
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-red-500 rounded-full"></div>

@@ -3,8 +3,7 @@ import { toast } from 'sonner';
 import {
     mdiCashRegister,
     mdiAccount,
-    mdiInformation,
-    mdiReceipt,
+    mdiReceiptText,
     mdiCalendar,
     mdiChevronDown,
     mdiChevronLeft,
@@ -23,11 +22,11 @@ interface TransactionManagerProps {
     subjects: string[];
     paymentMonth: string;
     displayPaymentMonth: string;
-    paymentMethod: 'Cash' | 'QrCode';
+    paymentMethod: 'Cash' | 'QRPayment';
     showMonthInput: boolean;
     isProcessing: boolean;
     joinDate: string;
-    onPaymentMethodChange: (method: 'Cash' | 'QrCode') => void;
+    onPaymentMethodChange: (method: 'Cash' | 'QRPayment') => void;
     onJoinDateSelect: (date: string) => void;
     classStudyDays?: number[] | null;
     fullAmount: number;
@@ -160,9 +159,9 @@ export const TransactionManager = ({
     return (
         <CardBox className="mb-6">
             <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-6 -mt-2">
                     <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center">
-                        <Icon path={mdiReceipt} size={1} className="mr-2 text-blue-500" />
+                        <Icon path={mdiReceiptText} size={24} className="mr-2 text-blue-500" />
                         Transaction Details
                     </h3>
                     {selectedStudent && (
@@ -400,16 +399,16 @@ export const TransactionManager = ({
                     </label>
                     <div className="flex space-x-3">
                         <button
-                            onClick={() => onPaymentMethodChange('QrCode')}
+                            onClick={() => onPaymentMethodChange('QRPayment')}
                             className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
-                                paymentMethod === 'QrCode'
+                                paymentMethod === 'QRPayment'
                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105'
                                     : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                             }`}
                         >
                             <div className="text-center">
-                                <img src="/scan.png" alt="QR Code" className="h-12 w-auto mx-auto mb-2" />
-                                <div className="font-medium">Qr Code</div>
+                                <img src="/scan.png" alt="QR Payment" className="h-12 w-auto mx-auto mb-2" />
+                                <div className="font-medium">QR Payment</div>
                             </div>
                         </button>
                         <button

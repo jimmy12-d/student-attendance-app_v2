@@ -1,0 +1,90 @@
+{
+  "backupId": "database-backup-2025-08-05T04-04-54",
+  "timestamp": "2025-08-05T04:04:59.313Z",
+  "projectId": "rodwell-attendance",
+  "totalCollections": 20,
+  "totalDocuments": 1071,
+  "collections": [
+    {
+      "collection": "appSettings",
+      "count": 1
+    },
+    {
+      "collection": "attendance",
+      "count": 158
+    },
+    {
+      "collection": "attendancePasscodes",
+      "count": 123
+    },
+    {
+      "collection": "authorizedUsers",
+      "count": 1
+    },
+    {
+      "collection": "classTypes",
+      "count": 9
+    },
+    {
+      "collection": "classes",
+      "count": 24
+    },
+    {
+      "collection": "counters",
+      "count": 1
+    },
+    {
+      "collection": "documents",
+      "count": 10
+    },
+    {
+      "collection": "examControls",
+      "count": 1
+    },
+    {
+      "collection": "examSettings",
+      "count": 116
+    },
+    {
+      "collection": "faceEnrollmentQueue",
+      "count": 4
+    },
+    {
+      "collection": "mockExam3",
+      "count": 139
+    },
+    {
+      "collection": "notifications",
+      "count": 4
+    },
+    {
+      "collection": "permissions",
+      "count": 1
+    },
+    {
+      "collection": "printRequests",
+      "count": 6
+    },
+    {
+      "collection": "processedAbaTransactions",
+      "count": 5
+    },
+    {
+      "collection": "students",
+      "count": 366
+    },
+    {
+      "collection": "teachers",
+      "count": 1
+    },
+    {
+      "collection": "transactions",
+      "count": 101
+    },
+    {
+      "collection": "users",
+      "count": 0
+    }
+  ],
+  "duration": 5.083
+}

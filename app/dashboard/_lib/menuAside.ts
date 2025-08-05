@@ -11,10 +11,10 @@ import {
   mdiCamera,
   mdiFaceRecognition,
   mdiPhone,
-  mdiQrcodeScan,
   mdiCardAccountDetails,
   mdiCreditCard,
-  mdiCashCheck
+  mdiCashCheck,
+  mdiChartLine
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -25,9 +25,14 @@ const menuAside: MenuAsideItem[] = [
     label: "Dashboard",
   },
   {
-    label: 'POS',
+    href: "/dashboard/pos-student",
     icon: mdiCreditCard,
-    href: '/dashboard/pos-student',
+    label: "POS",
+  },
+  {
+    href: "/dashboard/payment-summary",
+    icon: mdiChartLine,
+    label: "Payment Summary",
   },
   // {
   //   label: 'ABA Approvals',

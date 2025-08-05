@@ -5,34 +5,6 @@ import { db } from '../../../../firebase-config';
 import { doc, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 
-// Utility function to convert Google Drive share URL to thumbnail URL
-const getDisplayableImageUrl = (url: string): string | null => {
-  if (!url || typeof url !== 'string') {
-    return null;
-  }
-
-  if (url.includes("drive.google.com")) {
-    // Regex to find the file ID from various Google Drive URL formats
-    // Handles /file/d/FILE_ID/, open?id=FILE_ID, and id=FILE_ID
-    const regex = /(?:drive\.google\.com\/(?:file\/d\/([a-zA-Z0-9_-]+)|.*[?&]id=([a-zA-Z0-9_-]+)))/;
-    const match = url.match(regex);
-    
-    if (match) {
-      // The file ID could be in either capture group
-      const fileId = match[1] || match[2];
-      if (fileId) {
-        // Return the preview URL for iframe embedding (same as AddStudentForm)
-        const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-        console.log('Google Drive URL converted from:', url, 'to:', previewUrl);
-        return previewUrl;
-      }
-    }
-  }
-  
-  // If it's not a Google Drive link or no ID was found, return it as is
-  return url;
-};
-
 // Phone formatting utility
 const formatPhoneNumber = (phone: string | undefined | null): string => {
   if (!phone) return 'N/A';
@@ -156,11 +128,13 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                         {student.fullName}
                       </p>
                       {student.nameKhmer && (
-                        <p className={`text-xs truncate transition-all duration-300 transform-gpu ${
-                          isBatchEditMode && isSelected 
-                            ? 'text-blue-500 dark:text-blue-500' 
-                            : 'text-gray-500 dark:text-gray-400'
-                        }`}>
+                          <p 
+                            className={`khmer-font text-xs truncate transition-all duration-300 transform-gpu ${
+                              isBatchEditMode && isSelected 
+                                ? 'text-blue-500 dark:text-blue-500' 
+                                : 'text-gray-500 dark:text-gray-400'
+                            }`}
+                          >
                           {student.nameKhmer}
                         </p>
                       )}

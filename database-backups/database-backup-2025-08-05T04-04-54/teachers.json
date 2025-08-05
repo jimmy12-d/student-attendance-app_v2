@@ -1,0 +1,14 @@
+{
+  "collection": "teachers",
+  "timestamp": "2025-08-05T04:04:59.003Z",
+  "documentCount": 1,
+  "documents": [
+    {
+      "id": "0CbHkSZ7CtxwgXY0Chco",
+      "data": {
+        "subject": "Math",
+        "fullName": "Kov Rodwell"
+      }
+    }
+  ]
+}

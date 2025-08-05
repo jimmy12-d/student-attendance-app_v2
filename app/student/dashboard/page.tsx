@@ -24,7 +24,7 @@ import { mdiChevronRight } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import CardBoxModal from '../../_components/CardBox/Modal';
 import { PermissionRequestForm } from './../_components/PermissionRequestForm';
-import StudentQRCode from '../_components/StudentQRCode';
+import StudentQRPayment from '../_components/StudentQRPayment';
 import useCountUp from '../../_hooks/useCountUp';
 
 // Define types for our data
@@ -428,8 +428,8 @@ const StudentDashboard = () => {
       
         <>
           {/* --- Modals remain the same --- */}
-          <CardBoxModal title="Your Personal QR Code" isActive={isQrModalActive} onConfirm={() => setIsQrModalActive(false)} onCancel={() => setIsQrModalActive(false)}>
-              <StudentQRCode studentName={studentName || ''} studentUid={studentUid || ''} qrSize={256} />
+          <CardBoxModal title="Your Personal QR Payment" isActive={isQrModalActive} onConfirm={() => setIsQrModalActive(false)} onCancel={() => setIsQrModalActive(false)}>
+              <StudentQRPayment studentName={studentName || ''} studentUid={studentUid || ''} qrSize={256} />
           </CardBoxModal>
           <CardBoxModal title="Request Permission for Absence" isActive={isPermissionModalActive} onCancel={() => setIsPermissionModalActive(false)}>
             <PermissionRequestForm onSuccess={handlePermissionSuccess} />

@@ -1,0 +1,13 @@
+{
+  "collection": "examControls",
+  "timestamp": "2025-08-05T04:04:56.731Z",
+  "documentCount": 1,
+  "documents": [
+    {
+      "id": "mock3",
+      "data": {
+        "isPublished": true
+      }
+    }
+  ]
+}

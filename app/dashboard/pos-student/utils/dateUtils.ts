@@ -52,14 +52,6 @@ export const calculateProratedAmount = (
     // Calculate prorated amount with more precision
     const ratio = remainingWorkingDays / totalWorkingDays;
     const exactAmount = fullAmount * ratio;
-
-    console.log(`[calculateProratedAmount] --- Starting Calculation for ${paymentMonth} ---`);
-    console.log(`[calculateProratedAmount] fullAmount: ${fullAmount}`);
-    console.log(`[calculateProratedAmount] totalWorkingDays: ${totalWorkingDays}`);
-    console.log(`[calculateProratedAmount] remainingWorkingDays: ${remainingWorkingDays}`);
-    console.log(`[calculateProratedAmount] ratio: ${ratio}`);
-    //console stuetn working daysconsole.log(`[calculateProratedAmount] exactAmount: ${exactAmount}`);
-    console.log('student working days:', classStudyDays);
-
+    
     return exactAmount; // Return exact amount without rounding
 };

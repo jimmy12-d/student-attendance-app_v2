@@ -112,7 +112,9 @@ export default function CheckAttendancePage() {
       const permsCol = collection(db, "permissions") as CollectionReference<DocumentData>;
 
       // 1. Fetch Students based on filters
-      let studentQueryConstraints: import("firebase/firestore").QueryConstraint[] = [];
+        let studentQueryConstraints: import("firebase/firestore").QueryConstraint[] = [
+          where("ay", "==", "2026") // This is the added filter for the 'ay' field
+        ];
       if (selectedClasses.length > 0) {
         studentQueryConstraints.push(where("class", "in", selectedClasses));
       } else {

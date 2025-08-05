@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { QRCodeSVG } from "qrcode.react";
+import { QRPaymentSVG } from "QRPayment.react";
 import RodwellLogo from '../../_components/JustboilLogo';
 import Button from '../../_components/Button';
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -13,12 +13,12 @@ interface Props {
   qrSize?: number; 
 }
 
-const StudentQRCode: React.FC<Props> = ({
+const StudentQRPayment: React.FC<Props> = ({
   studentName,
   studentUid,
   qrSize = 200,
 }) => {
-  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
+  const [QRPaymentData, setQRPaymentData] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(60);
@@ -28,17 +28,17 @@ const StudentQRCode: React.FC<Props> = ({
   const generateToken = async () => {
     setIsLoading(true);
     setError(null);
-    setQrCodeData(null);
+    setQRPaymentData(null);
     
     try {
       const functions = getFunctions(firebaseApp, "asia-southeast1");
       const generateAttendancePasscode = httpsCallable(functions, 'generateAttendancePasscode');
       const result: any = await generateAttendancePasscode({ studentUid });
-      setQrCodeData(result.data.passcode);
+      setQRPaymentData(result.data.passcode);
       setCountdown(60);
     } catch (err: any) {
       console.error("Error generating token:", err);
-      setError(err.message || "Could not generate QR Code.");
+      setError(err.message || "Could not generate QR Payment.");
     } finally {
       setIsLoading(false);
     }
@@ -49,25 +49,25 @@ const StudentQRCode: React.FC<Props> = ({
   }, []);
 
   useEffect(() => {
-    if (!qrCodeData || countdown <= 0) {
-      if (qrCodeData) setQrCodeData(null);
+    if (!QRPaymentData || countdown <= 0) {
+      if (QRPaymentData) setQRPaymentData(null);
       return;
     }
     const timerId = setInterval(() => {
       setCountdown((prev) => prev - 1);
     }, 1000);
     return () => clearInterval(timerId);
-  }, [qrCodeData, countdown]);
+  }, [QRPaymentData, countdown]);
 
   if (isLoading) {
-    return <p className="text-center text-gray-400">Generating QR Code...</p>;
+    return <p className="text-center text-gray-400">Generating QR Payment...</p>;
         }
 
   if (error) {
     return <p className="text-center text-red-500">{error}</p>;
   }
 
-  if (!qrCodeData) {
+  if (!QRPaymentData) {
     return (
       <div className="text-center px-4 py-2">
         <p className="mb-4 text-gray-600 dark:text-gray-400">Code expired. Please close and try again.</p>
@@ -93,8 +93,8 @@ const StudentQRCode: React.FC<Props> = ({
             height: qrSize,
           }}
         >
-          <QRCodeSVG
-            value={qrCodeData}
+          <QRPaymentSVG
+            value={QRPaymentData}
             size={qrSize - 16} 
             bgColor={"#ffffff"}
             fgColor={"#000000"}
@@ -132,4 +132,4 @@ const StudentQRCode: React.FC<Props> = ({
   );
 };
 
-export default StudentQRCode; 
+export default StudentQRPayment; 

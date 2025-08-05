@@ -60,7 +60,7 @@ const POSStudentPage = () => {
     const [displayPaymentMonth, setDisplayPaymentMonth] = useState(''); // For display
     const [showMonthInput, setShowMonthInput] = useState(false);
     const [isPostTransactionModalActive, setIsPostTransactionModalActive] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'QrCode'>('QrCode');
+    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'QRPayment'>('QRPayment');
     const [joinDate, setJoinDate] = useState('');
     const [classStudyDays, setClassStudyDays] = useState<number[]>([]);
 
@@ -294,11 +294,6 @@ const POSStudentPage = () => {
     const handleCharge = async () => {
         if (!selectedStudent || paymentAmount === null || !classType || !paymentMonth) {
             toast.error("Please select a student and ensure all payment details are loaded and month is set.");
-            return;
-        }
-        
-        if (!selectedPrinter || !selectedPrinter.online) {
-            toast.error("Please select an online printer before charging.");
             return;
         }
 
@@ -750,13 +745,32 @@ const POSStudentPage = () => {
         }
     };
 
+    const logDisabledConditions = () => {
+  console.log("--- Button Disabled Conditions ---");
+  console.log("isProcessing:", isProcessing);
+  console.log("paymentAmount is null:", paymentAmount === null);
+  console.log("selectedPrinter is online:", selectedPrinter?.online);
+  console.log("!paymentMonth:", !paymentMonth);
+  console.log("!joinDate:", !joinDate);
+  console.log("----------------------------------");
+};
+
     return (
         <SectionMain>
             <SectionTitleLineWithButton icon={mdiCashRegister} title="POS - Monthly Payments" main>
-                <PrinterManager
-                    selectedPrinter={selectedPrinter}
-                    onPrinterSelect={setSelectedPrinter}
-                />
+                <div className="flex items-center gap-3">
+                    <Button
+                        color="info"
+                        label="Payment Summary"
+                        href="/dashboard/pos-student/payment-summary"
+                        icon={mdiHistory}
+                        className="whitespace-nowrap"
+                    />
+                    <PrinterManager
+                        selectedPrinter={selectedPrinter}
+                        onPrinterSelect={setSelectedPrinter}
+                    />
+                </div>
             </SectionTitleLineWithButton>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -883,17 +897,25 @@ const POSStudentPage = () => {
                                         <Button 
                                             label="Clear" 
                                             color="white" 
-                                            onClick={handleClear} 
+                                            onClick={logDisabledConditions} 
                                             icon={mdiClose}
                                             className="min-w-0"
                                         />
                                         <Button 
-                                            label={isProcessing ? "Processing..." : `Charge $${calculateFinalChargeAmount().toFixed(2)}`} 
-                                            color="success" 
-                                            onClick={handleCharge} 
-                                            disabled={isProcessing || paymentAmount === null || !selectedPrinter?.online || !paymentMonth || !joinDate} 
-                                            className="flex-grow"
-                                            icon={mdiCashRegister}
+                                        label={isProcessing ? "Processing..." : `Charge $${calculateFinalChargeAmount().toFixed(2)}`} 
+                                        color="success" 
+                                        onClick={() => {
+                                            // Log the conditions before attempting to charge
+                                            logDisabledConditions();
+                                            if (!isProcessing && paymentAmount !== null && !selectedPrinter?.online && paymentMonth && joinDate) {
+                                            handleCharge();
+                                            } else {
+                                            console.log("Button is disabled, check the logs above for details.");
+                                            }
+                                        }}
+                                        disabled={isProcessing || paymentAmount === null || !paymentMonth || !joinDate} 
+                                        className="flex-grow"
+                                        icon={mdiCashRegister}
                                         />
                                     </div>
                                 )}
@@ -991,7 +1013,7 @@ const POSStudentPage = () => {
                                 label={isPrinting ? "Printing..." : "Print Receipt"} 
                                 color="info" 
                                 onClick={handlePrintReceipt}
-                                disabled={isPrinting || isDownloading}
+                                disabled={isPrinting || isDownloading || !selectedPrinter?.online}
                                 icon={mdiPrinter}
                                 className="flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-all duration-200 hover:shadow-lg"
                             />
@@ -1037,6 +1059,7 @@ const POSStudentPage = () => {
                 downloadingTransactionId={downloadingTransactionId}
                 reprintingTransactionId={reprintingTransactionId}
                 onRefreshData={handleRefreshTransactionData}
+                printerStatus={selectedPrinter?.online}
             />
         </SectionMain>
     );

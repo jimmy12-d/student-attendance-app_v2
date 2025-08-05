@@ -20,7 +20,7 @@ export interface Transaction {
     amount: number; // Final amount after all calculations
     receiptNumber: string;
     paymentMonth: string;
-    paymentMethod: 'Cash' | 'QrCode';
+    paymentMethod: 'Cash' | 'QRPayment';
     transactionId?: string;
     date: string;
     joinDate: string;
