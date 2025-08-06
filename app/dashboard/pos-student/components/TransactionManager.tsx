@@ -397,7 +397,8 @@ export const TransactionManager = ({
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                         Payment Method
                     </label>
-                    <div className="flex space-x-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
                         <button
                             onClick={() => onPaymentMethodChange('QRPayment')}
                             className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${

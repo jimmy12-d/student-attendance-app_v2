@@ -11,6 +11,7 @@ export type ColumnConfig = {
 interface ColumnToggleProps {
   columns: ColumnConfig[];
   onToggleColumn: (columnId: string) => void;
+  onResetColumns?: () => void; // Add optional reset function
   isBatchEditMode?: boolean;
   isTakeAttendanceMode?: boolean;
   allClassesCollapsed?: boolean; // This actually means "all classes zoomed" when true
@@ -20,6 +21,7 @@ interface ColumnToggleProps {
 export const ColumnToggle: React.FC<ColumnToggleProps> = ({ 
   columns, 
   onToggleColumn, 
+  onResetColumns,
   isBatchEditMode = false, 
   isTakeAttendanceMode = false,
   allClassesCollapsed = false, // This actually means "all classes zoomed" when true
@@ -36,9 +38,24 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
           </svg>
           Column Visibility
         </h2>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          {enabledColumns.length} of {columns.length} columns visible
-        </span>
+        <div className="flex items-center space-x-3">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {enabledColumns.length} of {columns.length} columns visible
+          </span>
+          {/* Reset Button */}
+          {onResetColumns && (
+            <button
+              onClick={onResetColumns}
+              className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+              title="Reset columns to default"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {columns.map((column) => {

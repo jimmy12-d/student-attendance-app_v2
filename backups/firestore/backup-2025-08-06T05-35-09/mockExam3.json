@@ -1,0 +1,1812 @@
+{
+  "collection": "mockExam3",
+  "totalDocuments": 139,
+  "backupTimestamp": "2025-08-06T05:35:13.976Z",
+  "documents": [
+    {
+      "id": "0001",
+      "data": {
+        "chemistry": 6,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 16,
+        "studentName": "Nhim Khamarapirath",
+        "khmer": 22,
+        "id": "0001",
+        "math": 6
+      }
+    },
+    {
+      "id": "0013",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Sour Sdey",
+        "khmer": null,
+        "id": "0013",
+        "math": null
+      }
+    },
+    {
+      "id": "0028",
+      "data": {
+        "chemistry": 32,
+        "biology": 53,
+        "grade": "Grade 11E",
+        "studentName": "Sum Kimlay",
+        "khmer": null,
+        "id": "0028",
+        "math": 75,
+        "physics": 58
+      }
+    },
+    {
+      "id": "0029",
+      "data": {
+        "chemistry": 34,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 34,
+        "studentName": "Hak Soprachnhaphorsda",
+        "khmer": null,
+        "id": "0029",
+        "math": 38
+      }
+    },
+    {
+      "id": "0088",
+      "data": {
+        "chemistry": 24,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 20,
+        "studentName": "Phol Sophana",
+        "khmer": 27,
+        "id": "0088",
+        "math": 9
+      }
+    },
+    {
+      "id": "0093",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Chhun Soreaksa",
+        "khmer": null,
+        "id": "0093",
+        "math": null
+      }
+    },
+    {
+      "id": "0098",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": null,
+        "studentName": "Chamnap Puthearitt",
+        "khmer": null,
+        "id": "0098",
+        "math": null
+      }
+    },
+    {
+      "id": "01207",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Tang Uytong",
+        "khmer": null,
+        "id": "01207",
+        "math": null
+      }
+    },
+    {
+      "id": "0218",
+      "data": {
+        "chemistry": 10,
+        "biology": 17,
+        "grade": "Grade 11E",
+        "studentName": "Khy Kachana",
+        "khmer": null,
+        "id": "0218",
+        "math": 45,
+        "physics": 33
+      }
+    },
+    {
+      "id": "0235",
+      "data": {
+        "chemistry": 7,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 33,
+        "studentName": "Deab Monyvattanak",
+        "khmer": null,
+        "id": "0235",
+        "math": 27
+      }
+    },
+    {
+      "id": "0236",
+      "data": {
+        "chemistry": 4,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 15,
+        "studentName": "Deab Dataya",
+        "khmer": null,
+        "id": "0236",
+        "math": 18
+      }
+    },
+    {
+      "id": "0311",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Tin Longsorng",
+        "khmer": null,
+        "id": "0311",
+        "math": null
+      }
+    },
+    {
+      "id": "0389",
+      "data": {
+        "chemistry": 13,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 33,
+        "studentName": "Pich Thida",
+        "khmer": null,
+        "id": "0389",
+        "math": 25
+      }
+    },
+    {
+      "id": "0477",
+      "data": {
+        "chemistry": 0,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 2,
+        "studentName": "Kong Hannlong",
+        "khmer": 5,
+        "id": "0477",
+        "math": 8
+      }
+    },
+    {
+      "id": "0630",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Samnang Sreymeas",
+        "khmer": null,
+        "id": "0630",
+        "math": null
+      }
+    },
+    {
+      "id": "0646",
+      "data": {
+        "chemistry": 10,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 20,
+        "studentName": "Chhunngy Chanvitou",
+        "khmer": 22,
+        "id": "0646",
+        "math": 14
+      }
+    },
+    {
+      "id": "0711",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Seng Nisa",
+        "khmer": null,
+        "id": "0711",
+        "math": null
+      }
+    },
+    {
+      "id": "0801",
+      "data": {
+        "chemistry": 24,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 28,
+        "studentName": "Seng Chanchornai",
+        "khmer": 43,
+        "id": "0801",
+        "math": 30
+      }
+    },
+    {
+      "id": "1004",
+      "data": {
+        "chemistry": 25,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 31,
+        "studentName": "Sum Kimleang",
+        "khmer": null,
+        "id": 1004,
+        "math": 29
+      }
+    },
+    {
+      "id": "1015",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "San Chansopannarith",
+        "khmer": null,
+        "id": 1015,
+        "math": null
+      }
+    },
+    {
+      "id": "1098",
+      "data": {
+        "chemistry": 10,
+        "biology": 20,
+        "grade": "Grade 11E",
+        "studentName": "Horn Outdom",
+        "khmer": null,
+        "id": 1098,
+        "math": 15,
+        "physics": 1
+      }
+    },
+    {
+      "id": "1207",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": null,
+        "studentName": "Tang Uynam",
+        "khmer": null,
+        "id": 1207,
+        "math": null
+      }
+    },
+    {
+      "id": "1208",
+      "data": {
+        "chemistry": 41,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 41,
+        "studentName": "Nilkeaw Phatharakphorn",
+        "khmer": null,
+        "id": 1208,
+        "math": 50
+      }
+    },
+    {
+      "id": "1353",
+      "data": {
+        "chemistry": 25,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 25,
+        "studentName": "Ly Kimhong",
+        "khmer": 30,
+        "id": 1353,
+        "math": 12
+      }
+    },
+    {
+      "id": "1377",
+      "data": {
+        "chemistry": 12,
+        "biology": 11,
+        "grade": "Grade 11E",
+        "studentName": "Dam Somapong",
+        "khmer": null,
+        "id": 1377,
+        "math": 16,
+        "physics": 10
+      }
+    },
+    {
+      "id": "1655",
+      "data": {
+        "chemistry": 38,
+        "biology": 54,
+        "grade": "Grade 11E",
+        "studentName": "Visasak Bonna",
+        "khmer": null,
+        "id": 1655,
+        "math": 15,
+        "physics": 32
+      }
+    },
+    {
+      "id": "1968",
+      "data": {
+        "chemistry": 57,
+        "biology": 75,
+        "grade": "Grade 11E",
+        "physics": 75,
+        "studentName": "Ly Muyim",
+        "khmer": null,
+        "id": 1968,
+        "math": 78
+      }
+    },
+    {
+      "id": "2062",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Eay Dara",
+        "khmer": null,
+        "id": 2062,
+        "math": null
+      }
+    },
+    {
+      "id": "2066",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Sovan Naroth",
+        "khmer": null,
+        "id": 2066,
+        "math": null
+      }
+    },
+    {
+      "id": "2124",
+      "data": {
+        "chemistry": 0,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 9,
+        "studentName": "Try Socheata",
+        "khmer": 7,
+        "id": 2124,
+        "math": 3
+      }
+    },
+    {
+      "id": "2139",
+      "data": {
+        "chemistry": 44,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 45,
+        "studentName": "Ly Kimhav",
+        "khmer": null,
+        "id": 2139,
+        "math": 39
+      }
+    },
+    {
+      "id": "2273",
+      "data": {
+        "chemistry": 1,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 5,
+        "studentName": "Hong Chengkeang",
+        "khmer": 12,
+        "id": 2273,
+        "math": 6
+      }
+    },
+    {
+      "id": "2333",
+      "data": {
+        "chemistry": 17,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 20,
+        "studentName": "Seng Chansocheat",
+        "khmer": 14,
+        "id": 2333,
+        "math": 27
+      }
+    },
+    {
+      "id": "2388",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Huy Sovichar",
+        "khmer": null,
+        "id": 2388,
+        "math": null
+      }
+    },
+    {
+      "id": "2501",
+      "data": {
+        "chemistry": 23,
+        "biology": 60,
+        "grade": "Grade 11E",
+        "studentName": "Run Monykeo",
+        "khmer": null,
+        "id": 2501,
+        "math": 85,
+        "physics": 46
+      }
+    },
+    {
+      "id": "2570",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": null,
+        "studentName": "Ean Buthsengleap",
+        "khmer": null,
+        "id": 2570,
+        "math": null
+      }
+    },
+    {
+      "id": "2636",
+      "data": {
+        "chemistry": 5,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 18,
+        "studentName": "Ham Sunsakda",
+        "khmer": 19,
+        "id": 2636,
+        "math": 0
+      }
+    },
+    {
+      "id": "2707",
+      "data": {
+        "chemistry": 8,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": null,
+        "studentName": "Neth Monyraksmey",
+        "khmer": 8,
+        "id": 2707,
+        "math": null
+      }
+    },
+    {
+      "id": "2738",
+      "data": {
+        "chemistry": 8,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 15,
+        "studentName": "Nhem Pichet",
+        "khmer": 1,
+        "id": 2738,
+        "math": 15
+      }
+    },
+    {
+      "id": "2828",
+      "data": {
+        "chemistry": 26,
+        "biology": 57,
+        "grade": "Grade 11E",
+        "studentName": "Phet Vanreach",
+        "khmer": null,
+        "id": 2828,
+        "math": 66,
+        "physics": 39
+      }
+    },
+    {
+      "id": "2878",
+      "data": {
+        "chemistry": 36,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 40,
+        "studentName": "Lim Sreyleak",
+        "khmer": null,
+        "id": 2878,
+        "math": 33
+      }
+    },
+    {
+      "id": "3030",
+      "data": {
+        "chemistry": 1,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 8,
+        "studentName": "Ly Venhor",
+        "khmer": 5,
+        "id": 3030,
+        "math": 13
+      }
+    },
+    {
+      "id": "3055",
+      "data": {
+        "chemistry": 0,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 7,
+        "studentName": "Oeun Loy",
+        "khmer": 4,
+        "id": 3055,
+        "math": 11
+      }
+    },
+    {
+      "id": "3121",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Kry Sokunrina",
+        "khmer": null,
+        "id": 3121,
+        "math": null
+      }
+    },
+    {
+      "id": "3303",
+      "data": {
+        "chemistry": 25,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 25,
+        "studentName": "Nal Oudom",
+        "khmer": null,
+        "id": 3303,
+        "math": 39
+      }
+    },
+    {
+      "id": "3376",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": null,
+        "studentName": "Meng Sereysirayuth",
+        "khmer": null,
+        "id": 3376,
+        "math": null
+      }
+    },
+    {
+      "id": "3390",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": null,
+        "studentName": "Kheav Munineath",
+        "khmer": null,
+        "id": 3390,
+        "math": null
+      }
+    },
+    {
+      "id": "3398",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Kuoch SeavE",
+        "khmer": null,
+        "id": 3398,
+        "math": null
+      }
+    },
+    {
+      "id": "3482",
+      "data": {
+        "chemistry": 35,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 29,
+        "studentName": "Houth Panhakihato",
+        "khmer": 43,
+        "id": 3482,
+        "math": 26
+      }
+    },
+    {
+      "id": "3636",
+      "data": {
+        "chemistry": 57,
+        "biology": 63,
+        "grade": "Grade 11E",
+        "studentName": "Vey Pichmaliny",
+        "khmer": null,
+        "id": 3636,
+        "math": 89,
+        "physics": 67
+      }
+    },
+    {
+      "id": "3665",
+      "data": {
+        "chemistry": 25,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 34,
+        "studentName": "Eang Virakvitu",
+        "khmer": 49,
+        "id": 3665,
+        "math": 49
+      }
+    },
+    {
+      "id": "3744",
+      "data": {
+        "chemistry": null,
+        "biology": 6,
+        "grade": "Grade 11E",
+        "studentName": "Koemsinh Sochheka",
+        "khmer": null,
+        "id": 3744,
+        "math": null,
+        "physics": 30
+      }
+    },
+    {
+      "id": "3837",
+      "data": {
+        "chemistry": 13,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 25,
+        "studentName": "Lim Kechpor",
+        "khmer": null,
+        "id": 3837,
+        "math": null
+      }
+    },
+    {
+      "id": "3972",
+      "data": {
+        "chemistry": 10,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Prak Sopanha",
+        "khmer": null,
+        "id": 3972,
+        "math": 60
+      }
+    },
+    {
+      "id": "4040",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Vuth Leangmeng",
+        "khmer": null,
+        "id": 4040,
+        "math": null
+      }
+    },
+    {
+      "id": "4377",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Oeng Songheng",
+        "khmer": null,
+        "id": 4377,
+        "math": null
+      }
+    },
+    {
+      "id": "4425",
+      "data": {
+        "chemistry": 21,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 25,
+        "studentName": "Pry Kimrath",
+        "khmer": 9,
+        "id": 4425,
+        "math": 26.5
+      }
+    },
+    {
+      "id": "4577",
+      "data": {
+        "chemistry": 46,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 42,
+        "studentName": "Poul Puthipulak",
+        "khmer": null,
+        "id": 4577,
+        "math": 50
+      }
+    },
+    {
+      "id": "4628",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Van Panharoth",
+        "khmer": null,
+        "id": 4628,
+        "math": null
+      }
+    },
+    {
+      "id": "466",
+      "data": {
+        "chemistry": 13,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 25,
+        "studentName": "Lim Lengtong",
+        "khmer": null,
+        "id": 466,
+        "math": 31
+      }
+    },
+    {
+      "id": "4688",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Ouk Sovanmulyka",
+        "khmer": null,
+        "id": 4688,
+        "math": null
+      }
+    },
+    {
+      "id": "4748",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Chea Sokchay",
+        "khmer": null,
+        "id": 4748,
+        "math": null
+      }
+    },
+    {
+      "id": "4757",
+      "data": {
+        "chemistry": 7,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 42,
+        "studentName": "Neang Monyroth",
+        "khmer": null,
+        "id": 4757,
+        "math": 19
+      }
+    },
+    {
+      "id": "5004",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": null,
+        "studentName": "Hak Soprachnhasareyboth",
+        "khmer": null,
+        "id": 5004,
+        "math": null
+      }
+    },
+    {
+      "id": "5152",
+      "data": {
+        "chemistry": 0,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 18,
+        "studentName": "Vong Sokreaksmy",
+        "khmer": 22,
+        "id": 5152,
+        "math": 18
+      }
+    },
+    {
+      "id": "5252",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 9,
+        "studentName": "Sopheap Anthony",
+        "khmer": null,
+        "id": 5252,
+        "math": 2
+      }
+    },
+    {
+      "id": "5332",
+      "data": {
+        "chemistry": 43,
+        "biology": 49,
+        "grade": "Grade 11E",
+        "studentName": "Po Chanrattanak",
+        "khmer": null,
+        "id": 5332,
+        "math": 79,
+        "physics": 53
+      }
+    },
+    {
+      "id": "5449",
+      "data": {
+        "chemistry": 26,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Nut Tymoeung",
+        "khmer": null,
+        "id": 5449,
+        "math": 97
+      }
+    },
+    {
+      "id": "5504",
+      "data": {
+        "chemistry": null,
+        "biology": 26,
+        "grade": "Grade 11E",
+        "studentName": "Chhea Vortey",
+        "khmer": null,
+        "id": 5504,
+        "math": null,
+        "physics": 10
+      }
+    },
+    {
+      "id": "5509",
+      "data": {
+        "chemistry": 12,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 17,
+        "studentName": "Sopheap Athena",
+        "khmer": null,
+        "id": 5509,
+        "math": 30
+      }
+    },
+    {
+      "id": "5525",
+      "data": {
+        "chemistry": 8,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 8,
+        "studentName": "Po Lyta",
+        "khmer": 10,
+        "id": 5525,
+        "math": 9
+      }
+    },
+    {
+      "id": "5606",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Sorn Sopheakpanha",
+        "khmer": null,
+        "id": 5606,
+        "math": null
+      }
+    },
+    {
+      "id": "5645",
+      "data": {
+        "chemistry": 24,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 32,
+        "studentName": "Kim Monichan",
+        "khmer": null,
+        "id": 5645,
+        "math": 16
+      }
+    },
+    {
+      "id": "5774",
+      "data": {
+        "chemistry": 30,
+        "biology": 47,
+        "grade": "Grade 11E",
+        "studentName": "Suor Puthitheavy",
+        "khmer": null,
+        "id": 5774,
+        "math": 91,
+        "physics": 46
+      }
+    },
+    {
+      "id": "5854",
+      "data": {
+        "chemistry": 13,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 23,
+        "studentName": "Seng Sothearith",
+        "khmer": 14,
+        "id": 5854,
+        "math": 12.5
+      }
+    },
+    {
+      "id": "5891",
+      "data": {
+        "chemistry": 33,
+        "biology": 32,
+        "grade": "Grade 11E",
+        "studentName": "Heng Virakkun",
+        "khmer": null,
+        "id": 5891,
+        "math": 52,
+        "physics": 48
+      }
+    },
+    {
+      "id": "5926",
+      "data": {
+        "chemistry": 33,
+        "biology": 47,
+        "grade": "Grade 11E",
+        "studentName": "Rath Sokleap",
+        "khmer": null,
+        "id": 5926,
+        "math": 57,
+        "physics": 59
+      }
+    },
+    {
+      "id": "5929",
+      "data": {
+        "chemistry": 11,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 5,
+        "studentName": "Tham ChhayXing",
+        "khmer": null,
+        "id": 5929,
+        "math": 18
+      }
+    },
+    {
+      "id": "5966",
+      "data": {
+        "chemistry": 13,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 25,
+        "studentName": "Mov Kokhour",
+        "khmer": 43,
+        "id": 5966,
+        "math": 16
+      }
+    },
+    {
+      "id": "5993",
+      "data": {
+        "chemistry": 0,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 7,
+        "studentName": "Sam Vattanakviseth",
+        "khmer": 9,
+        "id": 5993,
+        "math": 2
+      }
+    },
+    {
+      "id": "6007",
+      "data": {
+        "chemistry": 33,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 34,
+        "studentName": "Sok ChanPheary",
+        "khmer": 32,
+        "id": 6007,
+        "math": 23
+      }
+    },
+    {
+      "id": "6261",
+      "data": {
+        "chemistry": 33,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 41,
+        "studentName": "Tith Sovann",
+        "khmer": 44,
+        "id": 6261,
+        "math": 46
+      }
+    },
+    {
+      "id": "6306",
+      "data": {
+        "chemistry": 29,
+        "biology": 35,
+        "grade": "Grade 11E",
+        "studentName": "Bo Sereivath",
+        "khmer": null,
+        "id": 6306,
+        "math": 27,
+        "physics": 33
+      }
+    },
+    {
+      "id": "6333",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 20,
+        "studentName": "Lim Lengsong",
+        "khmer": null,
+        "id": 6333,
+        "math": 12
+      }
+    },
+    {
+      "id": "6445",
+      "data": {
+        "chemistry": 19,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 29,
+        "studentName": "Srun Chanvotey",
+        "khmer": null,
+        "id": 6445,
+        "math": 39
+      }
+    },
+    {
+      "id": "6539",
+      "data": {
+        "chemistry": 30,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 26,
+        "studentName": "Reth Dahlia",
+        "khmer": 22,
+        "id": 6539,
+        "math": 6
+      }
+    },
+    {
+      "id": "6619",
+      "data": {
+        "chemistry": 16,
+        "biology": 75,
+        "grade": "Grade 11E",
+        "studentName": "Chhay Sonika",
+        "khmer": null,
+        "id": 6619,
+        "math": 71,
+        "physics": 47
+      }
+    },
+    {
+      "id": "6654",
+      "data": {
+        "chemistry": 50,
+        "biology": 15,
+        "grade": "Grade 11E",
+        "studentName": "Kim Keosokunpidor",
+        "khmer": null,
+        "id": 6654,
+        "math": 85,
+        "physics": 68
+      }
+    },
+    {
+      "id": "6723",
+      "data": {
+        "chemistry": 4,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 10,
+        "studentName": "Hay Sokhuyleng",
+        "khmer": 1,
+        "id": 6723,
+        "math": 19
+      }
+    },
+    {
+      "id": "6773",
+      "data": {
+        "chemistry": 9,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 14,
+        "studentName": "Noun Vongvishal",
+        "khmer": 16,
+        "id": 6773,
+        "math": 11
+      }
+    },
+    {
+      "id": "6840",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Sokkung Thidatepy",
+        "khmer": null,
+        "id": 6840,
+        "math": null
+      }
+    },
+    {
+      "id": "6858",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Leng Solika",
+        "khmer": null,
+        "id": 6858,
+        "math": null
+      }
+    },
+    {
+      "id": "6869",
+      "data": {
+        "chemistry": 18,
+        "biology": 28,
+        "grade": "Grade 11E",
+        "studentName": "Oeur Chanpichlyka",
+        "khmer": null,
+        "id": 6869,
+        "math": 40,
+        "physics": 30
+      }
+    },
+    {
+      "id": "6975",
+      "data": {
+        "chemistry": 10,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Chamroeun Chantraboth",
+        "khmer": null,
+        "id": 6975,
+        "math": 53
+      }
+    },
+    {
+      "id": "6989",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Ir Keangguang",
+        "khmer": null,
+        "id": 6989,
+        "math": null
+      }
+    },
+    {
+      "id": "6991",
+      "data": {
+        "chemistry": 11,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 10,
+        "studentName": "Sam Visothirithpanha",
+        "khmer": null,
+        "id": 6991,
+        "math": 14
+      }
+    },
+    {
+      "id": "6997",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": null,
+        "studentName": "Sa Sothearana",
+        "khmer": null,
+        "id": 6997,
+        "math": null
+      }
+    },
+    {
+      "id": "7050",
+      "data": {
+        "chemistry": 31,
+        "biology": 7,
+        "grade": "Grade 11E",
+        "studentName": "Taing Samnang",
+        "khmer": null,
+        "id": 7050,
+        "math": 55,
+        "physics": 29
+      }
+    },
+    {
+      "id": "7082",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Moeun Limsovireak",
+        "khmer": null,
+        "id": 7082,
+        "math": null
+      }
+    },
+    {
+      "id": "7093",
+      "data": {
+        "chemistry": 71,
+        "biology": 64,
+        "grade": "Grade 11E",
+        "studentName": "Chhour Sokkhim",
+        "khmer": null,
+        "id": 7093,
+        "math": 53,
+        "physics": 43
+      }
+    },
+    {
+      "id": "7172",
+      "data": {
+        "chemistry": 35,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 43,
+        "studentName": "Pich Reththy",
+        "khmer": 47,
+        "id": 7172,
+        "math": 45
+      }
+    },
+    {
+      "id": "7211",
+      "data": {
+        "chemistry": 11,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 18,
+        "studentName": "Srun Oudom",
+        "khmer": 15,
+        "id": 7211,
+        "math": 16
+      }
+    },
+    {
+      "id": "7273",
+      "data": {
+        "chemistry": 34,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 25,
+        "studentName": "Mech Penhbormey",
+        "khmer": 38,
+        "id": 7273,
+        "math": 25
+      }
+    },
+    {
+      "id": "7299",
+      "data": {
+        "chemistry": 43,
+        "biology": 64,
+        "grade": "Grade 11E",
+        "studentName": "Taing Sambo",
+        "khmer": null,
+        "id": 7299,
+        "math": 98,
+        "physics": 55
+      }
+    },
+    {
+      "id": "7353",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 11,
+        "studentName": "Horn Chanputhearith",
+        "khmer": null,
+        "id": 7353,
+        "math": 9
+      }
+    },
+    {
+      "id": "7477",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Vuth Dykhynaruth",
+        "khmer": null,
+        "id": 7477,
+        "math": null
+      }
+    },
+    {
+      "id": "7555",
+      "data": {
+        "chemistry": 14,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 37,
+        "studentName": "Tep Sovanmunita",
+        "khmer": null,
+        "id": 7555,
+        "math": 10
+      }
+    },
+    {
+      "id": "7638",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": null,
+        "studentName": "Son Soulalin",
+        "khmer": null,
+        "id": 7638,
+        "math": null
+      }
+    },
+    {
+      "id": "7661",
+      "data": {
+        "chemistry": 60,
+        "biology": 75,
+        "grade": "Grade 11E",
+        "studentName": "Chinda Vouchly",
+        "khmer": null,
+        "id": 7661,
+        "math": 91,
+        "physics": 73
+      }
+    },
+    {
+      "id": "7669",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": null,
+        "studentName": "Lim Kokpheng",
+        "khmer": null,
+        "id": 7669,
+        "math": null
+      }
+    },
+    {
+      "id": "7677",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 11E",
+        "physics": null,
+        "studentName": "Tep Sophireak",
+        "khmer": null,
+        "id": 7677,
+        "math": null
+      }
+    },
+    {
+      "id": "7699",
+      "data": {
+        "chemistry": 9,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 16,
+        "studentName": "Buoy Sofia",
+        "khmer": null,
+        "id": 7699,
+        "math": 35
+      }
+    },
+    {
+      "id": "7773",
+      "data": {
+        "chemistry": 24,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 27,
+        "studentName": "Ly Thydapich",
+        "khmer": 12,
+        "id": 7773,
+        "math": 16
+      }
+    },
+    {
+      "id": "7775",
+      "data": {
+        "chemistry": 11,
+        "biology": 10,
+        "grade": "Grade 11E",
+        "studentName": "Ly ReakSatevi",
+        "khmer": null,
+        "id": 7775,
+        "math": 75,
+        "physics": 46
+      }
+    },
+    {
+      "id": "7798",
+      "data": {
+        "chemistry": 11,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 20,
+        "studentName": "Mong Martin",
+        "khmer": 8,
+        "id": 7798,
+        "math": 19
+      }
+    },
+    {
+      "id": "7939",
+      "data": {
+        "chemistry": 28,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 27,
+        "studentName": "Y Seavhour",
+        "khmer": 28,
+        "id": 7939,
+        "math": 32
+      }
+    },
+    {
+      "id": "7948",
+      "data": {
+        "chemistry": 30,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 37,
+        "studentName": "Ny Chansokthyrath",
+        "khmer": null,
+        "id": 7948,
+        "math": 46
+      }
+    },
+    {
+      "id": "8112",
+      "data": {
+        "chemistry": 75,
+        "biology": 69,
+        "grade": "Grade 11E",
+        "studentName": "Khat Sovanpanha",
+        "khmer": null,
+        "id": 8112,
+        "math": 97,
+        "physics": 64
+      }
+    },
+    {
+      "id": "8150",
+      "data": {
+        "chemistry": 10,
+        "biology": 10,
+        "grade": "Grade 11E",
+        "physics": 10,
+        "studentName": "Chung Chengphengann",
+        "khmer": null,
+        "id": 8150,
+        "math": 5
+      }
+    },
+    {
+      "id": "8193",
+      "data": {
+        "chemistry": 50,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": 49,
+        "studentName": "Hoeun Keochanpisey",
+        "khmer": null,
+        "id": 8193,
+        "math": 50
+      }
+    },
+    {
+      "id": "8340",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 8",
+        "physics": null,
+        "studentName": "Chhorn Somavattey",
+        "khmer": null,
+        "id": 8340,
+        "math": null
+      }
+    },
+    {
+      "id": "8351",
+      "data": {
+        "chemistry": 0,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 4,
+        "studentName": "Tou Achakrayu",
+        "khmer": 10,
+        "id": 8351,
+        "math": 1
+      }
+    },
+    {
+      "id": "8383",
+      "data": {
+        "chemistry": 22,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 23,
+        "studentName": "Lak Bunhour",
+        "khmer": 39,
+        "id": 8383,
+        "math": 26
+      }
+    },
+    {
+      "id": "8826",
+      "data": {
+        "chemistry": 13,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 20,
+        "studentName": "Khorn Pisethcolin",
+        "khmer": 18,
+        "id": 8826,
+        "math": 15.5
+      }
+    },
+    {
+      "id": "8968",
+      "data": {
+        "chemistry": 29,
+        "biology": null,
+        "grade": "Grade 7",
+        "physics": 30,
+        "studentName": "Sam Sopheakneary",
+        "khmer": null,
+        "id": 8968,
+        "math": 37
+      }
+    },
+    {
+      "id": "8995",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Say Amroth",
+        "khmer": null,
+        "id": 8995,
+        "math": null
+      }
+    },
+    {
+      "id": "9044",
+      "data": {
+        "chemistry": 12,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": 11,
+        "studentName": "Chea Tykheang",
+        "khmer": 8,
+        "id": 9044,
+        "math": 3
+      }
+    },
+    {
+      "id": "9094",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": null,
+        "studentName": "Vuth Kiriroth",
+        "khmer": null,
+        "id": 9094,
+        "math": null
+      }
+    },
+    {
+      "id": "9098",
+      "data": {
+        "chemistry": 17,
+        "biology": 40,
+        "grade": "Grade 11E",
+        "studentName": "Kea Sreyheng",
+        "khmer": null,
+        "id": 9098,
+        "math": 81,
+        "physics": 61
+      }
+    },
+    {
+      "id": "9332",
+      "data": {
+        "chemistry": 23,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 29,
+        "studentName": "Vann Chanlyhong",
+        "khmer": 26,
+        "id": 9332,
+        "math": 36
+      }
+    },
+    {
+      "id": "9349",
+      "data": {
+        "chemistry": 17,
+        "biology": 7,
+        "grade": "Grade 11E",
+        "studentName": "Nhem Sokmongkol",
+        "khmer": null,
+        "id": 9349,
+        "math": 35,
+        "physics": 38
+      }
+    },
+    {
+      "id": "9488",
+      "data": {
+        "chemistry": 35,
+        "biology": 33,
+        "grade": "Grade 11E",
+        "studentName": "Pho Lysoukim",
+        "khmer": null,
+        "id": 9488,
+        "math": 83,
+        "physics": 63
+      }
+    },
+    {
+      "id": "9567",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 11,
+        "studentName": "Kimheanh Ratanakreach",
+        "khmer": null,
+        "id": 9567,
+        "math": 15
+      }
+    },
+    {
+      "id": "9669",
+      "data": {
+        "chemistry": 20,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 23,
+        "studentName": "Reth Nypheareach",
+        "khmer": 40,
+        "id": 9669,
+        "math": 39
+      }
+    },
+    {
+      "id": "9677",
+      "data": {
+        "chemistry": 56,
+        "biology": 27,
+        "grade": "Grade 11E",
+        "studentName": "Mech Rothana",
+        "khmer": null,
+        "id": 9677,
+        "math": 89,
+        "physics": 54
+      }
+    },
+    {
+      "id": "9696",
+      "data": {
+        "chemistry": 18,
+        "biology": null,
+        "grade": "Grade 8",
+        "studentName": "Seng Sumethy",
+        "khmer": null,
+        "id": 9696,
+        "math": 32,
+        "physics": 31
+      }
+    },
+    {
+      "id": "9889",
+      "data": {
+        "chemistry": 1,
+        "biology": null,
+        "grade": "Grade 9",
+        "physics": 10,
+        "studentName": "Srun Socheata",
+        "khmer": 10,
+        "id": 9889,
+        "math": 12
+      }
+    },
+    {
+      "id": "9936",
+      "data": {
+        "chemistry": null,
+        "biology": null,
+        "grade": "Grade 10",
+        "physics": null,
+        "studentName": "Mam Ratanaksombath",
+        "khmer": null,
+        "id": 9936,
+        "math": null
+      }
+    },
+    {
+      "id": "9999",
+      "data": {
+        "khmer": 50,
+        "studentName": "Lem Kemhout",
+        "math": 50,
+        "physics": 34,
+        "grade": "Grade 10",
+        "chemistry": 37
+      }
+    }
+  ]
+}

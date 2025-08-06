@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Student } from '../../../_interfaces';
 import DailyStatusDetailsModal from '../../_components/DailyStatusDetailsModal';
-import { Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { Timestamp, collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../../firebase-config';
 import { RawAttendanceRecord } from '../../_lib/attendanceLogic';
 import { PermissionRecord } from '../../../_interfaces';
 import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
-import { PermissionRequestForm } from '../../../student/_components/PermissionRequestForm';
-import { AdminPermissionForm } from './AdminPermissionForm';
+import { toast } from 'sonner';
 
 // Utility function to convert Google Drive share URL to thumbnail URL
 const getDisplayableImageUrl = (url: string): string | null => {
@@ -46,6 +45,7 @@ interface StudentDetailsModalProps {
   students?: Student[]; // List of students in the same class/context
   currentIndex?: number; // Current student index in the list
   onNavigate?: (student: Student, index: number) => void; // Navigation callback
+  onBreak?: () => void; // Callback for when a student is put on break
 }
 
 export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
@@ -57,8 +57,12 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   students = [],
   currentIndex = -1,
   onNavigate,
+  onBreak,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showBreakConfirm, setShowBreakConfirm] = useState(false);
+  const [expectedReturnMonth, setExpectedReturnMonth] = useState('');
+  const [breakReason, setBreakReason] = useState('');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   
@@ -68,7 +72,6 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs>({});
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
-  const [showPermissionForm, setShowPermissionForm] = useState(false);
 
   // Navigation logic
   const canNavigatePrev = students.length > 1 && currentIndex > 0;
@@ -270,6 +273,55 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     setShowDeleteConfirm(false);
   };
 
+  // Break functionality handlers
+  const handleBreakClick = () => {
+    // Set default expected return month to next month
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const defaultReturnMonth = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`;
+    setExpectedReturnMonth(defaultReturnMonth);
+    setBreakReason('');
+    setShowBreakConfirm(true);
+  };
+
+  const confirmBreak = async () => {
+    if (!expectedReturnMonth.trim()) {
+      toast.error('Please select expected return month');
+      return;
+    }
+
+    try {
+      const studentRef = doc(db, 'students', student.id);
+      await updateDoc(studentRef, {
+        onBreak: true,
+        breakStartDate: Timestamp.now(),
+        expectedReturnMonth: expectedReturnMonth.trim(),
+        breakReason: breakReason.trim() || 'Not specified'
+      });
+
+      toast.success(`${student.fullName} has been marked as on break`);
+      setShowBreakConfirm(false);
+      setExpectedReturnMonth('');
+      setBreakReason('');
+      
+      // Call the onBreak callback to refresh data
+      if (onBreak) {
+        onBreak();
+      }
+      
+      onClose(); // Close modal after successful break
+    } catch (error) {
+      toast.error('Failed to mark student as on break. Please try again.');
+      console.error('Break error:', error);
+    }
+  };
+
+  const cancelBreak = () => {
+    setShowBreakConfirm(false);
+    setExpectedReturnMonth('');
+    setBreakReason('');
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
@@ -407,6 +459,27 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
               <div className="flex-shrink-0">
                 {/* Status Badges - Moved above photo */}
                 <div className="flex flex-wrap gap-2 justify-center sm:justify-start mb-4">
+                  {/* On Break Badge */}
+                  {student.onBreak && (
+                    <div className="group relative">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800 cursor-help">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        On Break
+                      </span>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
+                        Expected return: {student.expectedReturnMonth ? (() => {
+                          const [year, month] = student.expectedReturnMonth.split('-');
+                          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                          return `${monthNames[parseInt(month) - 1]} ${year}`;
+                        })() : 'Not specified'}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Warning Badge */}
                   {student.warning && (
                     <div className="group relative">
@@ -526,7 +599,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   ) : (
                     <div className="bg-white dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 overflow-hidden">
                       <div className="px-2 py-2 text-start">
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-2">
                           <button
                             onClick={() => setShowAttendanceModal(true)}
                             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
@@ -538,32 +611,24 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                           </button>
                           
                           <button
-                            onClick={() => setShowPermissionForm(!showPermissionForm)}
+                            onClick={() => {
+                              const baseUrl = window.location.origin;
+                              const permissionUrl = `${baseUrl}/permission-request?studentId=${encodeURIComponent(student.id)}&studentName=${encodeURIComponent(student.fullName)}`;
+                              navigator.clipboard.writeText(permissionUrl).then(() => {
+                                toast.success('Permission link copied to clipboard!');
+                              }).catch(() => {
+                                // Fallback: show the URL in a modal or alert
+                                alert(`Permission URL: ${permissionUrl}`);
+                              });
+                            }}
                             className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors duration-200"
                           >
                             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
-                            {showPermissionForm ? 'Hide Permission' : 'Add Permission'}
+                            Copy Permission Link
                           </button>
                         </div>
-                        
-                        {showPermissionForm && (
-                          <div className="mt-4 p-4 bg-gray-50 dark:bg-slate-600 rounded-lg">
-                            <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-                              <svg className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                              Create Permission for {student.fullName}
-                            </h5>
-                            <AdminPermissionForm 
-                              student={student} 
-                              onSuccess={() => {
-                                setShowPermissionForm(false);
-                              }}
-                            />
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
@@ -667,23 +732,85 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* Break Information Section - Only show if student is on break */}
+                {student.onBreak && (
+                  <div className="border-t border-gray-200 dark:border-slate-600 pt-4">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Break Information
+                    </h4>
+                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
+                      <div className="grid grid-cols-1 gap-2">
+                        {student.expectedReturnMonth && (
+                          <div>
+                            <span className="text-xs font-medium text-orange-700 dark:text-orange-300">Expected Return:</span>
+                            <span className="ml-2 text-sm text-orange-900 dark:text-orange-100">
+                              {(() => {
+                                const [year, month] = student.expectedReturnMonth.split('-');
+                                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                                  'July', 'August', 'September', 'October', 'November', 'December'];
+                                return `${monthNames[parseInt(month) - 1]} ${year}`;
+                              })()}
+                            </span>
+                          </div>
+                        )}
+                        {student.breakReason && (
+                          <div>
+                            <span className="text-xs font-medium text-orange-700 dark:text-orange-300">Reason:</span>
+                            <span className="ml-2 text-sm text-orange-900 dark:text-orange-100">{student.breakReason}</span>
+                          </div>
+                        )}
+                        {student.breakStartDate && (
+                          <div>
+                            <span className="text-xs font-medium text-orange-700 dark:text-orange-300">Break Started:</span>
+                            <span className="ml-2 text-sm text-orange-900 dark:text-orange-100">
+                              {(() => {
+                                const date = student.breakStartDate;
+                                if (date && typeof date === 'object' && 'toDate' in date) {
+                                  return new Date(date.toDate()).toLocaleDateString();
+                                }
+                                return new Date(date as Date).toLocaleDateString();
+                              })()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Footer */}
           <div className="bg-gray-50 dark:bg-slate-700 px-4 py-3 sm:flex sm:justify-between sm:px-6 gap-3 rounded-b-lg">
-            {/* Delete button on the left */}
-            <button
-              type="button"
-              className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto"
-              onClick={handleDeleteClick}
-            >
-              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Delete
-            </button>
+            {/* Delete and Break buttons on the left */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto"
+                onClick={handleDeleteClick}
+              >
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Drop
+              </button>
+              
+              <button
+                type="button"
+                className="inline-flex w-full justify-center rounded-md bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 sm:w-auto"
+                onClick={handleBreakClick}
+              >
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Break
+              </button>
+            </div>
 
             {/* Edit and Close buttons on the right */}
             <div className="flex gap-3 sm:flex-row-reverse">
@@ -735,7 +862,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                     </h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Are you sure you want to delete <span className="font-semibold text-gray-900 dark:text-gray-100">{student.fullName}</span>? 
+                        Are you sure you want to drop <span className="font-semibold text-gray-900 dark:text-gray-100">{student.fullName}</span>? 
                         This action cannot be undone and will permanently remove all student data.
                       </p>
                     </div>
@@ -748,12 +875,97 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:ml-3 sm:w-auto"
                   onClick={confirmDelete}
                 >
-                  Delete
+                  Drop
                 </button>
                 <button
                   type="button"
                   className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-600 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-500 hover:bg-gray-50 dark:hover:bg-slate-500 sm:mt-0 sm:w-auto"
                   onClick={cancelDelete}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Break Confirmation Modal */}
+      {showBreakConfirm && (
+        <div className="fixed inset-0 z-60 overflow-y-auto">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 transition-opacity"
+            style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)' }}
+            onClick={cancelBreak}
+          ></div>
+          
+          {/* Confirmation Modal */}
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+            <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+              <div className="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30 sm:mx-0 sm:h-10 sm:w-10">
+                    <svg className="h-6 w-6 text-orange-600 dark:text-orange-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
+                    <h3 className="text-base font-semibold leading-6 text-gray-900 dark:text-gray-100">
+                      Put Student on Break
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">{student.fullName}</span> will be marked as on break. 
+                        They can rejoin when ready.
+                      </p>
+                      
+                      {/* Expected Return Month Input */}
+                      <div className="mb-4">
+                        <label htmlFor="expectedReturnMonth" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Expected Return Month <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="month"
+                          id="expectedReturnMonth"
+                          value={expectedReturnMonth}
+                          onChange={(e) => setExpectedReturnMonth(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-slate-700 dark:text-gray-100"
+                          min={new Date().toISOString().slice(0, 7)} // Current month as minimum
+                        />
+                      </div>
+                      
+                      {/* Break Reason Input */}
+                      <div className="mb-4">
+                        <label htmlFor="breakReason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Reason (Optional)
+                        </label>
+                        <textarea
+                          id="breakReason"
+                          value={breakReason}
+                          onChange={(e) => setBreakReason(e.target.value)}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-slate-700 dark:text-gray-100 resize-none"
+                          placeholder="Enter reason for break (optional)..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 dark:bg-slate-700 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-3">
+                <button
+                  type="button"
+                  className="inline-flex w-full justify-center rounded-md bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 sm:ml-3 sm:w-auto disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  onClick={confirmBreak}
+                  disabled={!expectedReturnMonth.trim()}
+                >
+                  Put on Break
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-600 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-500 hover:bg-gray-50 dark:hover:bg-slate-500 sm:mt-0 sm:w-auto"
+                  onClick={cancelBreak}
                 >
                   Cancel
                 </button>

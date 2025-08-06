@@ -102,6 +102,13 @@ export interface Student {
   discount?: number; // Discount amount in dollars
   note?: string; // Admin note for the student
   warning?: boolean; // Warning flag for problematic students
+  dropped?: boolean; // Soft delete flag - true if student is dropped
+  droppedAt?: Date | Timestamp; // When the student was dropped
+  restoredAt?: Date | Timestamp; // When the student was restored (if applicable)
+  onBreak?: boolean; // Flag to indicate if student is on break
+  breakStartDate?: Date | Timestamp; // When the student went on break
+  expectedReturnMonth?: string; // Expected return month in "YYYY-MM" format
+  breakReason?: string; // Reason for taking the break
   createdAt?: Timestamp | Date; // Firestore timestamp or Date object
   gracePeriodMinutes?: number; // Optional, as it wasn't in the display list
 }
@@ -110,12 +117,16 @@ export interface PermissionRecord {
   id: string; // Firestore document ID
   studentId: string;
   studentName: string;
+  studentClass?: string; // Added from actual data
+  studentShift?: string; // Added from actual data
   permissionStartDate: string; // "YYYY-MM-DD"
   permissionEndDate: string;   // "YYYY-MM-DD"
+  duration?: number; // Added from actual data
   reason: string;
   details?: string;
   status: 'pending' | 'approved' | 'rejected';
-  requestDate: Timestamp;
+  requestedAt: Timestamp; // Changed from requestDate to match actual data
+  requestedBy?: string; // Added from actual data
   reviewedBy?: string;
   reviewedAt?: Timestamp;
 }

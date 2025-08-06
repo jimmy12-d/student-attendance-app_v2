@@ -93,8 +93,8 @@ const TablePermissions: React.FC<Props> = ({ permissions, onUpdateRequest }) => 
                 >
                   {permission.details || <span className="text-gray-400 dark:text-slate-500">No details</span>}
                 </span>
-                <small className="text-gray-500 dark:text-slate-400 whitespace-nowrap" title={`Requested on ${permission.requestDate.toDate().toLocaleString()}`}>
-                  Req: {formatTimestampToDayMonth(permission.requestDate)}
+                <small className="text-gray-500 dark:text-slate-400 whitespace-nowrap" title={`Requested on ${permission.reviewedAt}`}>
+                  Req: {formatTimestampToDayMonth(permission.reviewedAt)}
                 </small>
               </div>
             </td>
@@ -106,7 +106,7 @@ const TablePermissions: React.FC<Props> = ({ permissions, onUpdateRequest }) => 
               </span>
             </td>
             <td className="before:hidden lg:w-1 whitespace-nowrap">
-                <Buttons type="justify-start lg:justify-end" noWrap>
+                <Buttons type="justify-start lg:justify-end pr-2" noWrap>
                   <Button
                     color="success"
                     icon={mdiCheck}

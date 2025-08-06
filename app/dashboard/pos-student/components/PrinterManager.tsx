@@ -53,10 +53,10 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
                 
                 setPrinters(printNodePrinters);
                 
-                const targetPrinter = printNodePrinters.find(p => p.name.includes('BP003'));
-                if (targetPrinter) {
+                const targetPrinter = printNodePrinters.find(p => p.name.includes('RONGTA 80mm Printer'));
+                if (targetPrinter) {    
                     onPrinterSelect(targetPrinter);
-                    toast.info(`Printer BP003 auto-selected.`);
+                    toast.info(`Printer RONGTA 80mm Printer auto-selected.`);
                 }
             } else {
                 toast.error(data.error || 'Failed to load printers from PrintNode');
@@ -91,7 +91,7 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
                                     {selectedPrinter.displayName}
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {selectedPrinter.location}
+                                  {selectedPrinter.location === 'DESKTOP-A3RVKTM' ? 'Admin Desktop' : selectedPrinter.location}
                                 </div>
                             </div>
                         ) : (
@@ -132,7 +132,7 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
                                             {printer.displayName}
                                         </div>
                                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                                            {printer.location}
+                                            {printer.location === 'DESKTOP-A3RVKTM' ? 'Admin Desktop' : printer.location}
                                         </div>
                                     </div>
                                     <div className={`w-2 h-2 rounded-full ${printer.online ? 'bg-green-500' : 'bg-red-500'}`} />

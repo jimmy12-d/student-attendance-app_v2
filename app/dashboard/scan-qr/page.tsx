@@ -1,6 +1,6 @@
 "use client";
 
-import {mdiQRPayment} from "@mdi/js";
+import {mdiQrcode} from "@mdi/js";
 import Head from "next/head";
 import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
@@ -16,7 +16,7 @@ export default function FormsPage() {
 
       <SectionMain>
         <SectionTitleLineWithButton
-          icon={mdiQRPayment}
+          icon={mdiQrcode}
           title="Scan QR Payment"
           main
         >

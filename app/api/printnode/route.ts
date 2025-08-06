@@ -249,11 +249,9 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
-    console.log('🔑 [PrintNode API] API Key is present for GET.');
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
-    console.log(`🔍 [PrintNode API] Action: ${action}`);
 
     // Debug PDF generation
     if (action === 'debug-pdf') {
@@ -299,7 +297,6 @@ export async function GET(request: NextRequest) {
 
       case 'computers':
         const computers = await client.getComputers();
-        console.log(`💻 [PrintNode API] Found ${computers.length} computers.`);
         return NextResponse.json({
           success: true,
           computers,
@@ -347,10 +344,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const isProduction = process.env.NODE_ENV === 'production';
   const requestUrl = request.url;
-  console.log(`\n✅ [PrintNode API] Received POST request at: ${new Date().toISOString()}`);
-  console.log(`[PrintNode API] Environment: ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'}`);
-  console.log(`[PrintNode API] Request URL: ${requestUrl}`);
-  
+
   try {
     if (!PRINTNODE_API_KEY || PRINTNODE_API_KEY === 'your_printnode_api_key_here') {
       console.error('❌ [PrintNode API] FATAL: PRINTNODE_API_KEY is not configured in environment variables.');
@@ -386,17 +380,12 @@ export async function POST(request: NextRequest) {
     let contentBase64;
 
     if (transactionData) {
-        console.log(`📄 [PrintNode API] Generating PDF receipt with height: ${pageHeight}, action: ${action}`);
         const isForPrinting = action === 'print';
         contentBase64 = await generateReceiptPdf(transactionData, pageHeight, isForPrinting);
     } else if (pdfUrl) {
-      console.log('📄 [PrintNode API] Downloading PDF from:', pdfUrl);
       contentBase64 = await downloadPdfAsBase64(pdfUrl);
-      console.log(`[PrintNode API] PDF downloaded, size: ${Math.round(contentBase64.length / 1024)} KB`);
     } else if (rawContent) {
-      console.log('📄 [PrintNode API] Using raw content for printing.');
       contentBase64 = Buffer.from(rawContent).toString('base64');
-      console.log(`[PrintNode API] Raw content encoded, size: ${Math.round(contentBase64.length / 1024)} KB`);
     } else {
         return NextResponse.json({ error: 'No content provided.' }, { status: 400 });
     }
@@ -416,7 +405,7 @@ export async function POST(request: NextRequest) {
     let printer;
     try {
       printer = await client.getPrinter(printerId);
-      console.log('[PrintNode API] Raw printer data from API:', JSON.stringify(printer, null, 2));
+      
     } catch (printerError) {
       console.error(`[PrintNode API] Error fetching printer ${printerId}:`, printerError);
       
@@ -482,18 +471,6 @@ export async function POST(request: NextRequest) {
         position: 'topleft' // Force content to top-left corner
       }
     };
-
-    console.log('📤 [PrintNode API] Submitting print job to PrintNode with options:', {
-      copies: printJob.options.copies,
-      paper: printJob.options.paper,
-      media: printJob.options.media,
-      bin: printJob.options.bin,
-      fit_to_page: printJob.options.fit_to_page,
-      pages: printJob.options.pages,
-      margins: printJob.options.margins,
-      scale: printJob.options.scale,
-      position: printJob.options.position
-    });
 
     // Submit print job
     let result;

@@ -31,8 +31,8 @@ type Props = {
 };
 
 const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance }: Props) => {
-  // Column configuration state
-  const [columns, setColumns] = useState<ColumnConfig[]>([
+  // Default column configuration
+  const defaultColumns: ColumnConfig[] = [
     { id: 'number', label: '#N', enabled: true },
     { id: 'name', label: 'Name', enabled: true },
     { id: 'phone', label: 'Phone', enabled: true },
@@ -40,7 +40,10 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
     { id: 'scheduleType', label: 'Type', enabled: false },
     { id: 'warning', label: 'Warning', enabled: false },
     { id: 'todayAttendance', label: 'Attendance', enabled: false },
-  ]);
+  ];
+
+  // Column configuration state - will be loaded from localStorage
+  const [columns, setColumns] = useState<ColumnConfig[]>(defaultColumns);
 
   // Attendance data state
   const [attendance, setAttendance] = useState<any[]>([]);
@@ -64,6 +67,58 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   
   // Zoom state management
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+
+  // Load column configuration from localStorage on component mount
+  useEffect(() => {
+    const loadColumnConfiguration = () => {
+      try {
+        const savedColumns = localStorage.getItem('studentTableColumns');
+        if (savedColumns) {
+          const parsedColumns = JSON.parse(savedColumns) as ColumnConfig[];
+          
+          // Validate that the saved columns match our expected structure
+          const mergedColumns = defaultColumns.map(defaultCol => {
+            const savedCol = parsedColumns.find(col => col.id === defaultCol.id);
+            return savedCol ? { ...defaultCol, enabled: savedCol.enabled } : defaultCol;
+          });
+          
+          setColumns(mergedColumns);
+        } else {
+          // No saved configuration, use defaults
+          setColumns(defaultColumns);
+        }
+      } catch (error) {
+        console.warn('Failed to load column configuration from localStorage:', error);
+        // Keep default configuration if loading fails
+        setColumns(defaultColumns);
+      }
+    };
+
+    loadColumnConfiguration();
+  }, []); // Only run once on mount
+
+  // Save column configuration to localStorage whenever columns change
+  useEffect(() => {
+    const saveColumnConfiguration = () => {
+      try {
+        // Only save if the columns are different from defaults (indicating user has made changes)
+        const hasChanges = columns.some((col, index) => 
+          col.enabled !== defaultColumns[index]?.enabled
+        );
+        
+        if (hasChanges) {
+          localStorage.setItem('studentTableColumns', JSON.stringify(columns));
+        }
+      } catch (error) {
+        console.warn('Failed to save column configuration to localStorage:', error);
+      }
+    };
+
+    // Only save if we have columns and they're not the initial default state
+    if (columns.length > 0 && columns !== defaultColumns) {
+      saveColumnConfiguration();
+    }
+  }, [columns]);
 
   // Fetch attendance data for today's status
   useEffect(() => {
@@ -274,7 +329,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   const handleDeleteWithToast = async (student: Student) => {
     try {
       await onDelete(student);
-      toast.success(`${student.fullName} has been deleted successfully`);
+      toast.success(`${student.fullName} has been dropped successfully`);
       handleCloseModal(); // Close modal after successful delete
     } catch (error) {
       toast.error('Failed to delete student. Please try again.');
@@ -327,18 +382,33 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
     }
   });
 
-  // Toggle column visibility
+  // Toggle column visibility with automatic saving
   const toggleColumn = (columnId: string) => {
     // Prevent disabling #N column when in batch edit mode or take attendance mode
     if ((isBatchEditMode || isTakeAttendanceMode) && columnId === 'number') {
       return;
     }
     
-    setColumns(prev => 
-      prev.map(col => 
+    setColumns(prev => {
+      const newColumns = prev.map(col => 
         col.id === columnId ? { ...col, enabled: !col.enabled } : col
-      )
-    );
+      );
+      
+      // The useEffect will automatically save this change to localStorage
+      return newColumns;
+    });
+  };
+
+  // Reset columns to default configuration
+  const resetColumnsToDefault = () => {
+    setColumns(defaultColumns);
+    
+    // Clear localStorage
+    try {
+      localStorage.removeItem('studentTableColumns');
+    } catch (error) {
+      console.warn('Failed to clear column configuration from localStorage:', error);
+    }
   };
 
   // Get enabled columns
@@ -854,7 +924,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       {/* Column Selection Panel */}
       <ColumnToggle 
         columns={columns} 
-        onToggleColumn={toggleColumn} 
+        onToggleColumn={toggleColumn}
+        onResetColumns={resetColumnsToDefault}
         isBatchEditMode={isBatchEditMode}
         isTakeAttendanceMode={isTakeAttendanceMode}
         allClassesCollapsed={allClassesCollapsed}

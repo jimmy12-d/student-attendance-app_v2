@@ -101,6 +101,7 @@ export const useStudentForm = (initialData) => {
       fatherName,
       fatherPhone,
       photoUrl,
+      dropped: false, // Default to false for new students
     };
 
     // Only add fields if they have values (avoid undefined)

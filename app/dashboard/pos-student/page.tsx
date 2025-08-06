@@ -405,7 +405,8 @@ const POSStudentPage = () => {
                     printerId: selectedPrinter.printNodeId,
                     title: `Receipt for ${lastTransaction.studentName}`,
                     transactionData: lastTransaction,
-                    pageHeight: 540, // Height for printing
+                   // pageHeight: 540, // Height for printing
+                    pageHeight: 340, // Height for printing
                     action: 'print'
                 }),
             });
@@ -759,13 +760,6 @@ const POSStudentPage = () => {
         <SectionMain>
             <SectionTitleLineWithButton icon={mdiCashRegister} title="POS - Monthly Payments" main>
                 <div className="flex items-center gap-3">
-                    <Button
-                        color="info"
-                        label="Payment Summary"
-                        href="/dashboard/pos-student/payment-summary"
-                        icon={mdiHistory}
-                        className="whitespace-nowrap"
-                    />
                     <PrinterManager
                         selectedPrinter={selectedPrinter}
                         onPrinterSelect={setSelectedPrinter}
@@ -907,7 +901,7 @@ const POSStudentPage = () => {
                                         onClick={() => {
                                             // Log the conditions before attempting to charge
                                             logDisabledConditions();
-                                            if (!isProcessing && paymentAmount !== null && !selectedPrinter?.online && paymentMonth && joinDate) {
+                                            if (!isProcessing && paymentAmount !== null && paymentMonth && joinDate) {
                                             handleCharge();
                                             } else {
                                             console.log("Button is disabled, check the logs above for details.");

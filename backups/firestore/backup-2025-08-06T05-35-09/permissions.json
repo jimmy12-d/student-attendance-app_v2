@@ -1,0 +1,27 @@
+{
+  "collection": "permissions",
+  "totalDocuments": 1,
+  "backupTimestamp": "2025-08-06T05:35:14.189Z",
+  "documents": [
+    {
+      "id": "NYb85CAjJLlO2othS9xc",
+      "data": {
+        "studentId": "yPc1thygsKXMnIpV0NPm",
+        "studentName": "Savy SereyVaddtey",
+        "studentClass": "Class 12C",
+        "studentShift": "Morning",
+        "permissionStartDate": "2025-08-06",
+        "permissionEndDate": "2025-08-06",
+        "duration": 1,
+        "reason": "Religious Observance",
+        "status": "pending",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T03:47:30.391Z"
+        },
+        "details": "I really really sick, can even go out or walk anymore, sorry"
+      }
+    }
+  ]
+}
