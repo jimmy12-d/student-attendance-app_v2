@@ -26,7 +26,7 @@ import CardBoxModal from "../../_components/CardBox/Modal";
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, where, deleteDoc, orderBy } from "firebase/firestore";
+import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, where, deleteDoc, orderBy, onSnapshot } from "firebase/firestore";
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // Components
@@ -66,6 +66,129 @@ const POSStudentPage = () => {
 
     const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
     
+    // Real-time listener for students
+    useEffect(() => {
+        setLoading(true);
+        setError(null);
+        
+        const studentsRef = collection(db, "students");
+        const q = query(
+            studentsRef,
+            where("ay", "==", "2026"),
+            orderBy("createdAt", "desc") // Sort by createdAt in descending order
+        );
+        
+        const unsubscribe = onSnapshot(q, 
+            (querySnapshot) => {
+                const studentsData = querySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt,
+                    } as Student;
+                });
+                setStudents(studentsData);
+                setLoading(false);
+                console.log("📡 Real-time update: Students data refreshed", studentsData.length, "students");
+            },
+            (err) => {
+                console.error("Error in real-time students listener: ", err);
+                setError("Failed to fetch students. Please try again.");
+                toast.error("Failed to fetch students.");
+                setLoading(false);
+            }
+        );
+
+        // Cleanup function to unsubscribe from the listener
+        return () => {
+            console.log("🔌 Unsubscribing from students real-time listener");
+            unsubscribe();
+        };
+    }, []);
+    
+    // Real-time listener for selected student
+    useEffect(() => {
+        if (!selectedStudent?.id) return;
+
+        console.log("🔍 Setting up real-time listener for selected student:", selectedStudent.id);
+        
+        const studentDocRef = doc(db, "students", selectedStudent.id);
+        const unsubscribe = onSnapshot(studentDocRef,
+            (docSnapshot) => {
+                if (docSnapshot.exists()) {
+                    const updatedStudentData = {
+                        id: docSnapshot.id,
+                        ...docSnapshot.data(),
+                        createdAt: docSnapshot.data().createdAt instanceof Timestamp 
+                            ? docSnapshot.data().createdAt.toDate() 
+                            : docSnapshot.data().createdAt,
+                    } as Student;
+
+                    // Update selected student with real-time data
+                    setSelectedStudent(updatedStudentData);
+                    
+                    // Also update the student in the students list
+                    setStudents(prevStudents =>
+                        prevStudents.map(student =>
+                            student.id === updatedStudentData.id ? updatedStudentData : student
+                        )
+                    );
+
+                    console.log("📡 Real-time update: Selected student data refreshed", updatedStudentData.fullName, "lastPaymentMonth:", updatedStudentData.lastPaymentMonth);
+
+                    // Update payment month calculations if lastPaymentMonth changed
+                    if (updatedStudentData.lastPaymentMonth) {
+                        // For existing students, calculate next month from lastPaymentMonth
+                        const [year, month] = updatedStudentData.lastPaymentMonth.split("-").map(Number);
+                        let nextMonth = month + 1;
+                        let nextYear = year;
+                        if (nextMonth > 12) {
+                            nextMonth = 1;
+                            nextYear++;
+                        }
+                        const nextPaymentMonth = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+                        setPaymentMonth(nextPaymentMonth);
+                        const nextPaymentDate = new Date(nextYear, nextMonth - 1);
+                        setDisplayPaymentMonth(nextPaymentDate.toLocaleString('default', { month: 'long', year: 'numeric' }));
+                        setShowMonthInput(false);
+                        if (!joinDate) {
+                            setJoinDate(new Date().toISOString().split('T')[0]);
+                        }
+                    } else {
+                        // For new students, allow setting join date and payment month
+                        setPaymentMonth('');
+                        setDisplayPaymentMonth('');
+                        setShowMonthInput(true);
+                        setJoinDate('');
+                    }
+                } else {
+                    console.warn("⚠️ Selected student document no longer exists");
+                    // Student was deleted, clear selection
+                    setSelectedStudent(null);
+                    setPaymentAmount(null);
+                    setClassType(null);
+                    setSubjects([]);
+                    setPaymentMonth('');
+                    setDisplayPaymentMonth('');
+                    setShowMonthInput(false);
+                    setJoinDate('');
+                }
+            },
+            (err) => {
+                console.error("❌ Error in real-time selected student listener:", err);
+                toast.error("Failed to sync selected student data");
+            }
+        );
+
+        // Cleanup function
+        return () => {
+            console.log("🔌 Unsubscribing from selected student real-time listener");
+            unsubscribe();
+        };
+    }, [selectedStudent?.id, joinDate]); // Include joinDate in dependencies
+    
+    // Backup function for manual refresh (keeping for compatibility)
     const fetchStudents = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -93,10 +216,6 @@ const POSStudentPage = () => {
         }
         setLoading(false);
     }, []);
-
-    useEffect(() => {
-        fetchStudents();
-    }, [fetchStudents]);
     
     const fetchPaymentAmount = async (student: Student) => {
         if (!student || !student.class) return;
@@ -203,30 +322,8 @@ const POSStudentPage = () => {
         setClassType(null);
         setSubjects([]);
         
-        if (student.lastPaymentMonth) {
-            // For existing students, calculate next month from lastPaymentMonth
-            const [year, month] = student.lastPaymentMonth.split("-").map(Number);
-            let nextMonth = month + 1;
-            let nextYear = year;
-            if (nextMonth > 12) {
-                nextMonth = 1;
-                nextYear++;
-            }
-            const nextPaymentMonth = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
-            setPaymentMonth(nextPaymentMonth);
-            const nextPaymentDate = new Date(nextYear, nextMonth - 1);
-            setDisplayPaymentMonth(nextPaymentDate.toLocaleString('default', { month: 'long', year: 'numeric' }));
-            setShowMonthInput(false);
-            // Set a current date as join date for existing students to enable the charge button
-            setJoinDate(new Date().toISOString().split('T')[0]);
-        } else {
-            // For new students, allow setting join date and payment month
-            setPaymentMonth('');
-            setDisplayPaymentMonth('');
-            setShowMonthInput(true);
-            setJoinDate('');
-        }
-
+        // Payment calculations will be handled by the real-time listener
+        // This prevents duplication and ensures consistency
         fetchPaymentAmount(student);
     };
 
@@ -347,14 +444,8 @@ const POSStudentPage = () => {
                 lastPaymentMonth: paymentMonth 
             });
 
-            // Update the local student state to reflect the change immediately
-            setStudents(prevStudents =>
-                prevStudents.map(student =>
-                    student.id === selectedStudent.id
-                        ? { ...student, lastPaymentMonth: paymentMonth }
-                        : student
-                )
-            );
+            // The student data will be updated automatically via real-time listener
+            console.log("📡 Student lastPaymentMonth updated in Firestore - real-time listener will handle UI updates");
 
             const finalTransaction = { ...transactionData, transactionId: docRef.id };
             
@@ -645,53 +736,12 @@ const POSStudentPage = () => {
     };
 
     const handleRefreshTransactionData = async () => {
-        // Refresh both transaction history and student list
+        // Refresh transaction history - the students data will be updated automatically via real-time listeners
         if (selectedStudent) {
             fetchTransactionHistory(selectedStudent.id);
         }
         
-        // Refresh students list
-        await fetchStudents(); 
-        
-        // If a student is currently selected, update their information
-        if (selectedStudent) {
-            // Find the updated student from the refreshed list and update selected student
-            const studentsRef = collection(db, "students");
-            const studentDoc = await getDoc(doc(db, "students", selectedStudent.id));
-            if (studentDoc.exists()) {
-                const updatedStudentData = {
-                    id: studentDoc.id,
-                    ...studentDoc.data(),
-                    createdAt: studentDoc.data().createdAt instanceof Timestamp ? studentDoc.data().createdAt.toDate() : studentDoc.data().createdAt,
-                } as Student;
-                
-                // Update the selected student with fresh data
-                setSelectedStudent(updatedStudentData);
-                
-                // Recalculate payment details based on updated lastPaymentMonth
-                if (updatedStudentData.lastPaymentMonth) {
-                    const [year, month] = updatedStudentData.lastPaymentMonth.split("-").map(Number);
-                    let nextMonth = month + 1;
-                    let nextYear = year;
-                    if (nextMonth > 12) {
-                        nextMonth = 1;
-                        nextYear++;
-                    }
-                    const nextPaymentMonth = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
-                    setPaymentMonth(nextPaymentMonth);
-                    const nextPaymentDate = new Date(nextYear, nextMonth - 1);
-                    setDisplayPaymentMonth(nextPaymentDate.toLocaleString('default', { month: 'long', year: 'numeric' }));
-                    setShowMonthInput(false);
-                    setJoinDate(new Date().toISOString().split('T')[0]);
-                } else {
-                    // If no payment history, show month input
-                    setPaymentMonth('');
-                    setDisplayPaymentMonth('');
-                    setShowMonthInput(true);
-                    setJoinDate('');
-                }
-            }
-        }
+        console.log("📡 Transaction data refreshed - student data updates automatically via real-time listeners");
     };
 
     const decrementMonth = (dateStr: string) => {
@@ -720,10 +770,10 @@ const POSStudentPage = () => {
                 }
             }
 
-            // Refresh transaction list and student data
+            // Refresh transaction list - student data will update automatically via real-time listener
             fetchTransactionHistory(transaction.studentId);
-            fetchStudents(); // Refresh student list to update lastPaymentMonth
             toast.success("Transaction removed successfully");
+            console.log("📡 Student data will update automatically via real-time listener");
         } catch (error) {
             console.error("Error removing transaction:", error);
             toast.error("Failed to remove transaction");
@@ -745,16 +795,6 @@ const POSStudentPage = () => {
             return calculateProratedAmount(discountedPrice, new Date(joinDate), paymentMonth, classStudyDays);
         }
     };
-
-    const logDisabledConditions = () => {
-  console.log("--- Button Disabled Conditions ---");
-  console.log("isProcessing:", isProcessing);
-  console.log("paymentAmount is null:", paymentAmount === null);
-  console.log("selectedPrinter is online:", selectedPrinter?.online);
-  console.log("!paymentMonth:", !paymentMonth);
-  console.log("!joinDate:", !joinDate);
-  console.log("----------------------------------");
-};
 
     return (
         <SectionMain>
@@ -891,7 +931,7 @@ const POSStudentPage = () => {
                                         <Button 
                                             label="Clear" 
                                             color="white" 
-                                            onClick={logDisabledConditions} 
+                                            onClick={handleClear} 
                                             icon={mdiClose}
                                             className="min-w-0"
                                         />
@@ -899,8 +939,7 @@ const POSStudentPage = () => {
                                         label={isProcessing ? "Processing..." : `Charge $${calculateFinalChargeAmount().toFixed(2)}`} 
                                         color="success" 
                                         onClick={() => {
-                                            // Log the conditions before attempting to charge
-                                            logDisabledConditions();
+
                                             if (!isProcessing && paymentAmount !== null && paymentMonth && joinDate) {
                                             handleCharge();
                                             } else {

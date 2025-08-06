@@ -1,32 +1,21 @@
-[debug] [2025-08-06T08:42:04.941Z] ----------------------------------------------------------------------
-[debug] [2025-08-06T08:42:04.944Z] Command:       /usr/local/bin/node /usr/local/bin/firebase deploy --only hosting
-[debug] [2025-08-06T08:42:04.944Z] CLI Version:   14.8.0
-[debug] [2025-08-06T08:42:04.944Z] Platform:      darwin
-[debug] [2025-08-06T08:42:04.945Z] Node Version:  v20.9.0
-[debug] [2025-08-06T08:42:04.945Z] Time:          Wed Aug 06 2025 15:42:04 GMT+0700 (Indochina Time)
-[debug] [2025-08-06T08:42:04.945Z] ----------------------------------------------------------------------
+[debug] [2025-08-06T08:57:43.916Z] ----------------------------------------------------------------------
+[debug] [2025-08-06T08:57:43.918Z] Command:       /usr/local/bin/node /usr/local/bin/firebase deploy --only hosting
+[debug] [2025-08-06T08:57:43.918Z] CLI Version:   14.8.0
+[debug] [2025-08-06T08:57:43.918Z] Platform:      darwin
+[debug] [2025-08-06T08:57:43.918Z] Node Version:  v20.9.0
+[debug] [2025-08-06T08:57:43.918Z] Time:          Wed Aug 06 2025 15:57:43 GMT+0700 (Indochina Time)
+[debug] [2025-08-06T08:57:43.918Z] ----------------------------------------------------------------------
 [debug] 
-[debug] [2025-08-06T08:42:05.056Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2025-08-06T08:42:05.056Z] > authorizing via signed-in user (kemhoutlem@gmail.com)
-[debug] [2025-08-06T08:42:05.056Z] [iam] checking project rodwell-attendance for permissions ["firebase.projects.get","firebasehosting.sites.update"]
-[debug] [2025-08-06T08:42:05.056Z] Checked if tokens are valid: false, expires at: 1754455720947
-[debug] [2025-08-06T08:42:05.056Z] Checked if tokens are valid: false, expires at: 1754455720947
-[debug] [2025-08-06T08:42:05.057Z] > refreshing access token with scopes: []
-[debug] [2025-08-06T08:42:05.057Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
-[debug] [2025-08-06T08:42:05.057Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
-[debug] [2025-08-06T08:42:05.497Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
-[debug] [2025-08-06T08:42:05.498Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
-[debug] [2025-08-06T08:42:05.510Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions [none]
-[debug] [2025-08-06T08:42:05.510Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions x-goog-quota-user=projects/rodwell-attendance
-[debug] [2025-08-06T08:42:05.510Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
-[debug] [2025-08-06T08:42:06.000Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions 200
-[debug] [2025-08-06T08:42:06.000Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
-[debug] [2025-08-06T08:42:06.002Z] Checked if tokens are valid: true, expires at: 1754473324498
-[debug] [2025-08-06T08:42:06.002Z] Checked if tokens are valid: true, expires at: 1754473324498
-[debug] [2025-08-06T08:42:06.003Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance [none]
-[debug] [2025-08-06T08:42:06.815Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance 200
-[debug] [2025-08-06T08:42:06.815Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance {"projectId":"rodwell-attendance","projectNumber":"50079853705","displayName":"rodwell-attendance","name":"projects/rodwell-attendance","resources":{"hostingSite":"rodwell-attendance"},"state":"ACTIVE","etag":"1_4b5e5a04-6213-4fa6-b7af-cba7fac698fa"}
-[debug] [2025-08-06T08:42:08.145Z] defaultcredentials: writing to file /Users/jimmy/.config/firebase/kemhoutlem_gmail_com_application_default_credentials.json
-[debug] [2025-08-06T08:42:08.145Z] Checked if tokens are valid: true, expires at: 1754473324498
-[debug] [2025-08-06T08:42:08.146Z] Checked if tokens are valid: true, expires at: 1754473324498
-[debug] [2025-08-06T08:42:08.146Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/rodwell-attendance/sites pageToken=&pageSize=10
+[debug] [2025-08-06T08:57:44.027Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-08-06T08:57:44.028Z] > authorizing via signed-in user (kemhoutlem@gmail.com)
+[debug] [2025-08-06T08:57:44.028Z] [iam] checking project rodwell-attendance for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-08-06T08:57:44.028Z] Checked if tokens are valid: true, expires at: 1754473324498
+[debug] [2025-08-06T08:57:44.028Z] Checked if tokens are valid: true, expires at: 1754473324498
+[debug] [2025-08-06T08:57:44.029Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions [none]
+[debug] [2025-08-06T08:57:44.029Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions x-goog-quota-user=projects/rodwell-attendance
+[debug] [2025-08-06T08:57:44.029Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-08-06T08:57:45.636Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions 200
+[debug] [2025-08-06T08:57:45.636Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/rodwell-attendance:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-08-06T08:57:45.637Z] Checked if tokens are valid: true, expires at: 1754473324498
+[debug] [2025-08-06T08:57:45.637Z] Checked if tokens are valid: true, expires at: 1754473324498
+[debug] [2025-08-06T08:57:45.637Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/rodwell-attendance [none]
