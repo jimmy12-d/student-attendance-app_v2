@@ -31,6 +31,7 @@ interface TransactionManagerProps {
     classStudyDays?: number[] | null;
     fullAmount: number;
     isNewStudent?: boolean;
+    onUserInteractionChange?: (isInteracting: boolean) => void;
 }
 
 export const TransactionManager = ({
@@ -49,6 +50,7 @@ export const TransactionManager = ({
     classStudyDays,
     fullAmount,
     isNewStudent,
+    onUserInteractionChange,
 }: TransactionManagerProps) => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -59,6 +61,10 @@ export const TransactionManager = ({
         const handleClickOutside = (event: MouseEvent) => {
             if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
                 setShowDatePicker(false);
+                // Notify parent that interaction has ended
+                if (onUserInteractionChange) {
+                    onUserInteractionChange(false);
+                }
             }
         };
 
@@ -69,7 +75,7 @@ export const TransactionManager = ({
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [showDatePicker]);
+    }, [showDatePicker, onUserInteractionChange]);
 
     const months = [
         'January', 'February', 'March', 'April', 'May', 'June',
@@ -92,6 +98,10 @@ export const TransactionManager = ({
         const dateString = `${year}-${month}-${dayStr}`;
         onJoinDateSelect(dateString);
         setShowDatePicker(false);
+        // Notify parent that interaction has ended
+        if (onUserInteractionChange) {
+            onUserInteractionChange(false);
+        }
     };
 
     const navigateMonth = (direction: 'prev' | 'next') => {
@@ -294,7 +304,14 @@ export const TransactionManager = ({
                                 <div className="relative" ref={datePickerRef}>
                                     <button
                                         type="button"
-                                        onClick={() => setShowDatePicker(!showDatePicker)}
+                                        onClick={() => {
+                                            const newShowDatePicker = !showDatePicker;
+                                            setShowDatePicker(newShowDatePicker);
+                                            // Notify parent about user interaction
+                                            if (onUserInteractionChange) {
+                                                onUserInteractionChange(newShowDatePicker);
+                                            }
+                                        }}
                                         className="w-full px-4 py-3 border border-orange-300 dark:border-orange-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-gray-800 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                                     >
                                         <div className="flex items-center">
@@ -343,7 +360,12 @@ export const TransactionManager = ({
                                             {/* Footer */}
                                             <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600 flex justify-between">
                                                 <button
-                                                    onClick={() => setShowDatePicker(false)}
+                                                    onClick={() => {
+                                                        setShowDatePicker(false);
+                                                        if (onUserInteractionChange) {
+                                                            onUserInteractionChange(false);
+                                                        }
+                                                    }}
                                                     className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                                                 >
                                                     Cancel
@@ -398,7 +420,6 @@ export const TransactionManager = ({
                         Payment Method
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
                         <button
                             onClick={() => onPaymentMethodChange('QRPayment')}
                             className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${

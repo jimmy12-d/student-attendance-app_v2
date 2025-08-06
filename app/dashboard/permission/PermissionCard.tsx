@@ -164,22 +164,24 @@ const PermissionCard: React.FC<Props> = ({ permission, onUpdateRequest }) => {
 
         {/* Action buttons for pending requests */}
         {isPending && (
-          <Buttons type="justify-end" noWrap>
-            <Button
-              color="success"
-              icon={mdiCheck}
-              label="Approve"
-              onClick={() => onUpdateRequest(permission.id, 'approved')}
-              small
-            />
-            <Button
-              color="danger"
-              icon={mdiClose}
-              label="Reject"
-              onClick={() => onUpdateRequest(permission.id, 'rejected')}
-              small
-            />
-          </Buttons>
+          <div className="flex items-center gap-2">
+            <div className="flex gap-2 justify-end noWrap">
+              <Button
+                color="success"
+                icon={mdiCheck}
+                label="Approve"
+                onClick={() => onUpdateRequest(permission.id, 'approved')}
+                small
+              />
+              <Button
+                color="danger"
+                icon={mdiClose}
+                label="Reject"
+                onClick={() => onUpdateRequest(permission.id, 'rejected')}
+                small
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -63,6 +63,7 @@ const POSStudentPage = () => {
     const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'QRPayment'>('QRPayment');
     const [joinDate, setJoinDate] = useState('');
     const [classStudyDays, setClassStudyDays] = useState<number[]>([]);
+    const [isUserInteractingWithDetails, setIsUserInteractingWithDetails] = useState(false); // Track user interaction
 
     const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
     
@@ -107,60 +108,71 @@ const POSStudentPage = () => {
         };
     }, []);
     
-    // Real-time listener for selected student
+    // Real-time listener for selected student's lastPaymentMonth only
     useEffect(() => {
         if (!selectedStudent?.id) return;
 
-        console.log("🔍 Setting up real-time listener for selected student:", selectedStudent.id);
+        console.log("🔍 Setting up real-time listener for lastPaymentMonth:", selectedStudent.id);
         
         const studentDocRef = doc(db, "students", selectedStudent.id);
         const unsubscribe = onSnapshot(studentDocRef,
             (docSnapshot) => {
                 if (docSnapshot.exists()) {
-                    const updatedStudentData = {
-                        id: docSnapshot.id,
-                        ...docSnapshot.data(),
-                        createdAt: docSnapshot.data().createdAt instanceof Timestamp 
-                            ? docSnapshot.data().createdAt.toDate() 
-                            : docSnapshot.data().createdAt,
-                    } as Student;
+                    const docData = docSnapshot.data();
+                    const newLastPaymentMonth = docData.lastPaymentMonth;
 
-                    // Update selected student with real-time data
-                    setSelectedStudent(updatedStudentData);
+                    // Store previous state to compare what actually changed
+                    const previousLastPaymentMonth = selectedStudent?.lastPaymentMonth;
                     
-                    // Also update the student in the students list
-                    setStudents(prevStudents =>
-                        prevStudents.map(student =>
-                            student.id === updatedStudentData.id ? updatedStudentData : student
-                        )
-                    );
+                    // Only update if lastPaymentMonth actually changed
+                    const lastPaymentMonthChanged = newLastPaymentMonth !== previousLastPaymentMonth;
+                    
+                    if (lastPaymentMonthChanged) {
+                        console.log("📡 Real-time update: lastPaymentMonth changed", previousLastPaymentMonth, "→", newLastPaymentMonth);
+                        
+                        // Update selected student's lastPaymentMonth
+                        setSelectedStudent(prev => prev ? { ...prev, lastPaymentMonth: newLastPaymentMonth } : null);
+                        
+                        // Also update the student in the students list
+                        setStudents(prevStudents =>
+                            prevStudents.map(student =>
+                                student.id === selectedStudent.id 
+                                    ? { ...student, lastPaymentMonth: newLastPaymentMonth }
+                                    : student
+                            )
+                        );
 
-                    console.log("📡 Real-time update: Selected student data refreshed", updatedStudentData.fullName, "lastPaymentMonth:", updatedStudentData.lastPaymentMonth);
-
-                    // Update payment month calculations if lastPaymentMonth changed
-                    if (updatedStudentData.lastPaymentMonth) {
-                        // For existing students, calculate next month from lastPaymentMonth
-                        const [year, month] = updatedStudentData.lastPaymentMonth.split("-").map(Number);
-                        let nextMonth = month + 1;
-                        let nextYear = year;
-                        if (nextMonth > 12) {
-                            nextMonth = 1;
-                            nextYear++;
+                        // Only update payment calculations if user is not interacting with details
+                        if (!isUserInteractingWithDetails) {
+                            console.log("📡 Updating payment calculations for lastPaymentMonth change");
+                            
+                            if (newLastPaymentMonth) {
+                                // For existing students, calculate next month from lastPaymentMonth
+                                const [year, month] = newLastPaymentMonth.split("-").map(Number);
+                                let nextMonth = month + 1;
+                                let nextYear = year;
+                                if (nextMonth > 12) {
+                                    nextMonth = 1;
+                                    nextYear++;
+                                }
+                                const nextPaymentMonth = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+                                setPaymentMonth(nextPaymentMonth);
+                                const nextPaymentDate = new Date(nextYear, nextMonth - 1);
+                                setDisplayPaymentMonth(nextPaymentDate.toLocaleString('default', { month: 'long', year: 'numeric' }));
+                                setShowMonthInput(false);
+                                if (!joinDate) {
+                                    setJoinDate(new Date().toISOString().split('T')[0]);
+                                }
+                            } else {
+                                // Student became new (lastPaymentMonth was cleared)
+                                setPaymentMonth('');
+                                setDisplayPaymentMonth('');
+                                setShowMonthInput(true);
+                                setJoinDate('');
+                            }
+                        } else {
+                            console.log("📡 Skipping payment calculations update: User is interacting with details");
                         }
-                        const nextPaymentMonth = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
-                        setPaymentMonth(nextPaymentMonth);
-                        const nextPaymentDate = new Date(nextYear, nextMonth - 1);
-                        setDisplayPaymentMonth(nextPaymentDate.toLocaleString('default', { month: 'long', year: 'numeric' }));
-                        setShowMonthInput(false);
-                        if (!joinDate) {
-                            setJoinDate(new Date().toISOString().split('T')[0]);
-                        }
-                    } else {
-                        // For new students, allow setting join date and payment month
-                        setPaymentMonth('');
-                        setDisplayPaymentMonth('');
-                        setShowMonthInput(true);
-                        setJoinDate('');
                     }
                 } else {
                     console.warn("⚠️ Selected student document no longer exists");
@@ -176,17 +188,17 @@ const POSStudentPage = () => {
                 }
             },
             (err) => {
-                console.error("❌ Error in real-time selected student listener:", err);
-                toast.error("Failed to sync selected student data");
+                console.error("❌ Error in real-time lastPaymentMonth listener:", err);
+                toast.error("Failed to sync payment data");
             }
         );
 
         // Cleanup function
         return () => {
-            console.log("🔌 Unsubscribing from selected student real-time listener");
+            console.log("🔌 Unsubscribing from lastPaymentMonth real-time listener");
             unsubscribe();
         };
-    }, [selectedStudent?.id, joinDate]); // Include joinDate in dependencies
+    }, [selectedStudent?.id, isUserInteractingWithDetails]); // Removed joinDate from dependencies as it's not needed
     
     // Backup function for manual refresh (keeping for compatibility)
     const fetchStudents = useCallback(async () => {
@@ -315,15 +327,62 @@ const POSStudentPage = () => {
     return phone; // Return original if it doesn't match formats
     };
     
-    const handleSelectStudent = (student: Student) => {
+    const handleSelectStudent = async (student: Student) => {
         setSelectedStudent(student);
         setLastTransaction(null);
         setPaymentAmount(null);
         setClassType(null);
         setSubjects([]);
         
-        // Payment calculations will be handled by the real-time listener
-        // This prevents duplication and ensures consistency
+        // Fetch current student data to get the most up-to-date info
+        try {
+            const studentDocRef = doc(db, "students", student.id);
+            const studentDoc = await getDoc(studentDocRef);
+            
+            if (studentDoc.exists()) {
+                const currentStudentData = {
+                    id: studentDoc.id,
+                    ...studentDoc.data(),
+                    createdAt: studentDoc.data().createdAt instanceof Timestamp 
+                        ? studentDoc.data().createdAt.toDate() 
+                        : studentDoc.data().createdAt,
+                } as Student;
+                
+                // Update selected student with current data
+                setSelectedStudent(currentStudentData);
+                
+                // Set up payment calculations based on current lastPaymentMonth
+                if (currentStudentData.lastPaymentMonth) {
+                    // Existing student: calculate next month from lastPaymentMonth
+                    const [year, month] = currentStudentData.lastPaymentMonth.split("-").map(Number);
+                    let nextMonth = month + 1;
+                    let nextYear = year;
+                    if (nextMonth > 12) {
+                        nextMonth = 1;
+                        nextYear++;
+                    }
+                    const nextPaymentMonth = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+                    setPaymentMonth(nextPaymentMonth);
+                    const nextPaymentDate = new Date(nextYear, nextMonth - 1);
+                    setDisplayPaymentMonth(nextPaymentDate.toLocaleString('default', { month: 'long', year: 'numeric' }));
+                    setShowMonthInput(false);
+                    setJoinDate(new Date().toISOString().split('T')[0]);
+                } else {
+                    // New student: set up "Set Student Details" mode
+                    setPaymentMonth('');
+                    setDisplayPaymentMonth('');
+                    setShowMonthInput(true);
+                    setJoinDate('');
+                }
+                
+                console.log("✅ Student selected and payment setup completed", currentStudentData.fullName, "lastPaymentMonth:", currentStudentData.lastPaymentMonth);
+            }
+        } catch (error) {
+            console.error("❌ Error fetching current student data:", error);
+            toast.error("Failed to load current student data");
+        }
+        
+        // Fetch payment amount (class and pricing info)
         fetchPaymentAmount(student);
     };
 
@@ -497,7 +556,7 @@ const POSStudentPage = () => {
                     title: `Receipt for ${lastTransaction.studentName}`,
                     transactionData: lastTransaction,
                    // pageHeight: 540, // Height for printing
-                    pageHeight: 340, // Height for printing
+                    pageHeight: 540, // Height for printing
                     action: 'print'
                 }),
             });
@@ -904,6 +963,7 @@ const POSStudentPage = () => {
                         fullAmount={paymentAmount || 0}
                         classStudyDays={classStudyDays}
                         isNewStudent={!selectedStudent?.lastPaymentMonth}
+                        onUserInteractionChange={setIsUserInteractingWithDetails}
                     />
 
                     {/* Action Buttons Section */}

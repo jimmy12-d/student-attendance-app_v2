@@ -91,7 +91,7 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
                                     {selectedPrinter.displayName}
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  {selectedPrinter.location === 'DESKTOP-A3RVKTM' ? 'Admin Desktop' : selectedPrinter.location}
+                                  {selectedPrinter.location === 'DESKTOP-A3RVKTM_@' ? 'Admin Desktop' : selectedPrinter.location}
                                 </div>
                             </div>
                         ) : (
@@ -132,7 +132,7 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
                                             {printer.displayName}
                                         </div>
                                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                                            {printer.location === 'DESKTOP-A3RVKTM' ? 'Admin Desktop' : printer.location}
+                                            {printer.location === 'DESKTOP-A3RVKTM_2' ? 'Admin Desktop' : printer.location}
                                         </div>
                                     </div>
                                     <div className={`w-2 h-2 rounded-full ${printer.online ? 'bg-green-500' : 'bg-red-500'}`} />

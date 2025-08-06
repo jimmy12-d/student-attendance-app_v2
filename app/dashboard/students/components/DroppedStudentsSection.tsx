@@ -72,8 +72,6 @@ const formatDroppedDate = (date: Date | string | Timestamp | undefined): string 
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
   });
 };
 
@@ -356,7 +354,7 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
                                   Dropped {timeAgo}
                                 </p>
                                 <p className="text-xs text-red-600 dark:text-red-400">
-                                  {formattedDate}
+                                  Since: {formattedDate}
                                 </p>
                               </div>
                             </div>

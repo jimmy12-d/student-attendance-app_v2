@@ -456,7 +456,7 @@ export async function POST(request: NextRequest) {
       source: 'Student Attendance App',
       options: {
         copies: copies,
-        paper: '80 x 210mm', // Set appropriate thermal paper size
+        paper: '80 x 160mm', // Set appropriate thermal paper size
         media: 'No Cash Drawer', // Disable cash drawer
         bin: 'Document[PartialCut]', // Use partial cut for receipts
         fit_to_page: false, // CRITICAL: Disable scaling to prevent centering
