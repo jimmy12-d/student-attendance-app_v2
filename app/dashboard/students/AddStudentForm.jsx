@@ -152,9 +152,16 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
               where("ay", "==", "2026") // Filter by current academic year
             );
             const querySnapshot = await getDocs(q);
-            
-            const count = querySnapshot.size;
-            
+
+            const activeStudents = querySnapshot.docs.filter(doc => {
+            const data = doc.data();
+            // Return the student if `dropped` is not true.
+            // This will include students where `dropped` is false or the field is missing.
+            return data.dropped !== true;
+          });
+
+            const count = activeStudents.length;
+
             return {
               ...option,
               label: `${className} (${count})`
@@ -206,14 +213,6 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
 
   const handleSheetDataFetched = (data) => {
     populateFromSheetData(data);
-  };
-
-  const handleDiscountChange = (e) => {
-    const value = e.target.value;
-    // Allow empty string or valid decimal numbers
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setDiscount(value);
-    }
   };
 
   const handleSubmit = async (e) => {

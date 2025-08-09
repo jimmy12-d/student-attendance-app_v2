@@ -138,9 +138,16 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
               where("ay", "==", "2026") // Filter by current academic year
             );
             const querySnapshot = await getDocs(q);
-            
-            let count = querySnapshot.size;
-            
+
+            const activeStudents = querySnapshot.docs.filter(doc => {
+              const data = doc.data();
+              // Return the student if `dropped` is not true.
+              // This will include students where `dropped` is false or the field is missing.
+              return data.dropped !== true;
+            });
+
+            let count = activeStudents.length;
+
             // If we need to exclude a specific student (for edit mode)
             if (studentData?.id) {
               const hasExcludedStudent = querySnapshot.docs.some(doc => doc.id === studentData.id);

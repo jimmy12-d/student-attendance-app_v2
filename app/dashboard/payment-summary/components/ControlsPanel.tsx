@@ -184,7 +184,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 disabled={isLoading}
                 className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
               >
-                <Icon path={mdiRefresh} size={1} className={isLoading ? "animate-spin" : ""} />
+                <Icon path={mdiRefresh} size={24} className={isLoading ? "animate-spin" : ""} />
                 <span className="hidden sm:inline">Refresh</span>
               </button>
               
@@ -193,7 +193,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 disabled={isLoading || !summaryData}
                 className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
               >
-                <Icon path={mdiDownload} size={1} />
+                <Icon path={mdiDownload} size={24} />
                 <span className="hidden sm:inline">Export</span>
               </button>
             </div>

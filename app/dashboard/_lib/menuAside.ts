@@ -25,25 +25,20 @@ const menuAside: MenuAsideItem[] = [
     label: "Dashboard",
   },
   {
+    href: "/dashboard/students",
+    icon: mdiAccountCircle,
+    label: "Student",
+  },
+  {
     href: "/dashboard/pos-student",
     icon: mdiCreditCard,
     label: "POS",
-  },
-  {
-    href: "/dashboard/payment-summary",
-    icon: mdiChartLine,
-    label: "Payment Summary",
   },
   // {
   //   label: 'ABA Approvals',
   //   icon: mdiCashCheck,
   //   href: '/dashboard/aba-approvals',
   // },
-  {
-    href: "/dashboard/students",
-    icon: mdiAccountCircle,
-    label: "Student",
-  },
   {
     label: "Attendance",
     icon: mdiCalendarClock,
@@ -74,6 +69,11 @@ const menuAside: MenuAsideItem[] = [
         icon: mdiAccountClockOutline,
       },
     ]
+  },
+  {
+    href: "/dashboard/payment-summary",
+    icon: mdiChartLine,
+    label: "Payment Summary",
   },
   // {
   //   href: "/dashboard/mock-exams",

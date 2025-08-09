@@ -1,0 +1,127 @@
+{
+  "collection": "permissions",
+  "totalDocuments": 5,
+  "backupTimestamp": "2025-08-07T07:48:52.140Z",
+  "documents": [
+    {
+      "id": "LZlY14SWvlTZeo6PYU8j",
+      "data": {
+        "studentId": "n9pLtUPGtwPwMABEzjy8",
+        "studentName": "Tang PichLyka",
+        "studentClass": "Class 12I",
+        "studentShift": "Morning",
+        "permissionStartDate": "2025-08-06",
+        "permissionEndDate": "2025-08-10",
+        "duration": 5,
+        "reason": "English Class",
+        "details": "She still haven't finish here ACE class yet, will join next month.",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T06:09:16.113Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T07:39:32.553Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "R6DoOsS1E7Bp1DswLk7g",
+      "data": {
+        "studentId": "yPc1thygsKXMnIpV0NPm",
+        "studentName": "Savy SereyVaddtey",
+        "studentClass": "12C",
+        "studentShift": "Morning ",
+        "permissionStartDate": "2025-08-06",
+        "permissionEndDate": "2025-08-06",
+        "duration": 1,
+        "reason": "Family Emergency",
+        "details": "We have to attend grand aunt’s funeral in Battambang province",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T09:19:33.639Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T10:34:07.825Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "fvEZh6iUpYXA0aSc9ZaD",
+      "data": {
+        "studentId": "bf0wTuwEk7nhHg7oEGHy",
+        "studentName": "Sum Kimlay",
+        "studentClass": "Class 12C",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-06",
+        "permissionEndDate": "2025-08-10",
+        "duration": 5,
+        "reason": "Not Yet join",
+        "details": "Stiil can't join class yet. Wait until 11th August to start",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T07:38:20.078Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T07:39:30.788Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "juJXtfQPCWO8o0sevWGv",
+      "data": {
+        "studentId": "oybTXQ1muBcMBvp0xAlJ",
+        "studentName": "Chamroeun Chantraboth",
+        "studentClass": "Class 12E",
+        "studentShift": "Evening",
+        "permissionStartDate": "2025-08-07",
+        "permissionEndDate": "2025-08-09",
+        "duration": 3,
+        "reason": "will start later",
+        "details": "wait for NGS class to finish first to start his class",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-07T05:11:43.615Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-07T05:12:37.941Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "ty0FkXjC7EezxkC0dAi2",
+      "data": {
+        "studentId": "hvPHY9nLSmfMhRMw4oQw",
+        "studentName": "Nut Tymoeung",
+        "studentClass": "Class 12E",
+        "studentShift": "Evening",
+        "permissionStartDate": "2025-08-07",
+        "permissionEndDate": "2025-08-09",
+        "duration": 3,
+        "reason": "will start later",
+        "details": "My dad want me to start at next week, will start later.",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-07T05:11:06.270Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-07T05:12:39.442Z"
+        },
+        "status": "approved"
+      }
+    }
+  ]
+}

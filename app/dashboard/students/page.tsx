@@ -7,6 +7,7 @@ import {
   mdiTableBorder,
   mdiPencilBox,
   mdiClipboardCheck,
+  mdiDownload,
 } from "@mdi/js";
 import Button from "../../_components/Button";
 import CardBox from "../../_components/CardBox";
@@ -21,6 +22,7 @@ import TableStudents from "./TableStudents";
 import CardBoxModal from "../../_components/CardBox/Modal";
 import DroppedStudentsSection from "./components/DroppedStudentsSection";
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
+import { ExportStudentsModal } from "./components/ExportStudentsModal";
 import { toast } from 'sonner';
 
 // Firebase
@@ -55,6 +57,9 @@ export default function StudentsPage() {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [currentStudentList, setCurrentStudentList] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Export modal state
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -256,6 +261,14 @@ export default function StudentsPage() {
           <>
           <div className="flex items-center space-x-4"> {/* New flex container for the buttons */}
             <Button
+              onClick={() => setIsExportModalOpen(true)}
+              icon={mdiDownload}
+              label="Export"
+              color="success"
+              roundedFull
+              small
+            />
+            <Button
               onClick={handleToggleTakeAttendance}
               icon={mdiClipboardCheck}
               label={isTakeAttendanceMode ? "Exit Take Attendance" : "Take Attendance"}
@@ -376,6 +389,14 @@ export default function StudentsPage() {
         currentIndex={selectedIndex}
         onNavigate={handleNavigate}
         onBreak={fetchStudents} // Refresh data after break operation
+      />
+
+      {/* Export Students Modal */}
+      <ExportStudentsModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        students={students}
+        title="Export Students to Excel"
       />
     </SectionMain>
   );

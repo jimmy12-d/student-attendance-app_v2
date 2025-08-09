@@ -667,13 +667,13 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
               <div className="flex-1 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</label>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Latin Name</label>
                     <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.fullName}</p>
                   </div>
                   {student.nameKhmer && (
                     <div>
                       <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Khmer Name</label>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.nameKhmer}</p>
+                      <p className="khmer-font mt-1 text-sm text-gray-900 dark:text-gray-100">{student.nameKhmer}</p>
                     </div>
                   )}
                   <div>

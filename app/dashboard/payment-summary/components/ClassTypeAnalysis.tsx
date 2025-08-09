@@ -53,7 +53,7 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
         <div className="p-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-600 shadow-lg">
-              <Icon path={mdiChartPie} size={1.5} className="text-white" />
+              <Icon path={mdiChartPie} size={24} className="text-white" />
             </div>
             <div>
               <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
@@ -82,7 +82,7 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
       <CardBox className="bg-gradient-to-br from-white to-gray-50/50 dark:from-gray-900 dark:to-gray-800/50 border-0 shadow-xl">
         <div className="p-8 text-center">
           <div className="p-4 rounded-2xl bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 inline-block mb-4">
-            <Icon path={mdiChartPie} size={2} className="text-gray-400" />
+            <Icon path={mdiChartPie} size={24} className="text-gray-400" />
           </div>
           <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">
             No Class Data Available
@@ -100,7 +100,7 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
       <div className="p-8">
         <div className="flex items-center gap-3 mb-8">
           <div className="p-3 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-600 shadow-lg">
-            <Icon path={mdiChartPie} size={1.5} className="text-white" />
+            <Icon path={mdiChartPie} size={24} className="text-white" />
           </div>
           <div>
             <h3 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">

@@ -28,7 +28,7 @@ const AuthenticationCard: React.FC<AuthenticationCardProps> = ({
         <div className="text-center py-12 px-8">
           <div className="relative mb-6">
             <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Icon path={mdiLock} className="text-white" size={1.5} />
+              <Icon path={mdiLock} className="text-white" size={24} />
             </div>
             <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-pulse"></div>
           </div>

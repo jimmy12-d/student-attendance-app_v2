@@ -1,0 +1,13 @@
+{
+  "collection": "counters",
+  "totalDocuments": 1,
+  "backupTimestamp": "2025-08-09T03:48:18.205Z",
+  "documents": [
+    {
+      "id": "receiptNumber",
+      "data": {
+        "currentNumber": 203
+      }
+    }
+  ]
+}

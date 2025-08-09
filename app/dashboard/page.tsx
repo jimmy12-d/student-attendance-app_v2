@@ -110,6 +110,8 @@ export default function DashboardPage() {
     setError(null);
     try {
       const studentSnapshotPromise = getDocs(query(collection(db, "students"), where("ay", "==", "2026"), orderBy("fullName")));
+      const querySnapshot = await studentSnapshotPromise;
+
 
       const sixtyDaysAgo = new Date();
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
@@ -128,7 +130,12 @@ export default function DashboardPage() {
         permissionsSnapshotPromise
       ]);
 
-      const studentList = studentSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), createdAt: docSnap.data().createdAt } as Student));
+      const studentList = studentSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), createdAt: docSnap.data().createdAt } as Student))
+        .filter(student => {
+          // Exclude students who are dropped or on break
+          // Include students where these fields are undefined/null/false
+          return !student.dropped && !student.onBreak;
+        });
       setStudents(studentList);
 
       const attendanceList = attendanceSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));

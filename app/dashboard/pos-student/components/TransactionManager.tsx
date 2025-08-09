@@ -22,11 +22,11 @@ interface TransactionManagerProps {
     subjects: string[];
     paymentMonth: string;
     displayPaymentMonth: string;
-    paymentMethod: 'Cash' | 'QRPayment';
+    paymentMethod: 'Cash' | 'QR Payment';
     showMonthInput: boolean;
     isProcessing: boolean;
     joinDate: string;
-    onPaymentMethodChange: (method: 'Cash' | 'QRPayment') => void;
+    onPaymentMethodChange: (method: 'Cash' | 'QR Payment') => void;
     onJoinDateSelect: (date: string) => void;
     classStudyDays?: number[] | null;
     fullAmount: number;
@@ -421,9 +421,9 @@ export const TransactionManager = ({
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <button
-                            onClick={() => onPaymentMethodChange('QRPayment')}
+                            onClick={() => onPaymentMethodChange('QR Payment')}
                             className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
-                                paymentMethod === 'QRPayment'
+                                paymentMethod === 'QR Payment'
                                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105'
                                     : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                             }`}

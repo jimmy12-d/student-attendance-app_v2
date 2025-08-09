@@ -12,6 +12,8 @@ import {
   mdiDownload,
   mdiHistory,
   mdiPrinter,
+  mdiCashMultiple,
+  mdiLoading,
 } from "@mdi/js";
 
 import SectionMain from "../../_components/Section/Main";
@@ -31,6 +33,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // Components
 import { PrinterManager } from "./components/PrinterManager";
+import { CashDrawerManager, openCashDrawerWithBP003 } from "./components/CashDrawerManager";
 import { TransactionManager } from "./components/TransactionManager";
 import { TransactionHistory } from "./components/TransactionHistory";
 import { calculateProratedAmount } from "./utils/dateUtils";
@@ -60,7 +63,7 @@ const POSStudentPage = () => {
     const [displayPaymentMonth, setDisplayPaymentMonth] = useState(''); // For display
     const [showMonthInput, setShowMonthInput] = useState(false);
     const [isPostTransactionModalActive, setIsPostTransactionModalActive] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'QRPayment'>('QRPayment');
+    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'QR Payment'>('QR Payment');
     const [joinDate, setJoinDate] = useState('');
     const [classStudyDays, setClassStudyDays] = useState<number[]>([]);
     const [isUserInteractingWithDetails, setIsUserInteractingWithDetails] = useState(false); // Track user interaction
@@ -855,10 +858,33 @@ const POSStudentPage = () => {
         }
     };
 
+    // Custom handler for payment method changes that auto-opens cash drawer for cash payments
+    const handlePaymentMethodChange = async (method: 'Cash' | 'QR Payment') => {
+        setPaymentMethod(method);
+        
+        // Auto-open cash drawer when cash payment is selected
+        if (method === 'Cash') {
+            console.log('💰 Cash payment selected - attempting to open cash drawer automatically');
+            try {
+                const success = await openCashDrawerWithBP003();
+                if (success) {
+                    toast.success('Cash drawer opened for cash payment');
+                } else {
+                    console.warn('⚠️ Could not auto-open cash drawer - BP003 may not be available');
+                }
+            } catch (error) {
+                console.error('❌ Error auto-opening cash drawer:', error);
+            }
+        }
+    };
+
     return (
         <SectionMain>
             <SectionTitleLineWithButton icon={mdiCashRegister} title="POS - Monthly Payments" main>
                 <div className="flex items-center gap-3">
+                    <CashDrawerManager
+                        selectedPrinter={selectedPrinter}
+                    />
                     <PrinterManager
                         selectedPrinter={selectedPrinter}
                         onPrinterSelect={setSelectedPrinter}
@@ -957,7 +983,7 @@ const POSStudentPage = () => {
                         showMonthInput={showMonthInput}
                         isProcessing={isProcessing}
                         paymentMethod={paymentMethod}
-                        onPaymentMethodChange={setPaymentMethod}
+                        onPaymentMethodChange={handlePaymentMethodChange}
                         joinDate={joinDate}
                         onJoinDateSelect={handleJoinDateSelect}
                         fullAmount={paymentAmount || 0}

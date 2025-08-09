@@ -116,15 +116,35 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                 </td>
               );
             case 'name':
+              const handleCopyName = async () => {
+                try {
+                  await navigator.clipboard.writeText(student.fullName);
+                  toast.success(`Copied "${student.fullName}" to clipboard`);
+                } catch (err) {
+                  // Fallback for older browsers
+                  const textArea = document.createElement('textarea');
+                  textArea.value = student.fullName;
+                  document.body.appendChild(textArea);
+                  textArea.select();
+                  document.execCommand('copy');
+                  document.body.removeChild(textArea);
+                  toast.success(`Copied "${student.fullName}" to clipboard`);
+                }
+              };
+
               return (
                 <td key="name" className="p-3">
                   <div className="flex items-center space-x-3">
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold truncate transition-all duration-300 transform-gpu ${
-                        isBatchEditMode && isSelected 
-                          ? 'text-purple-600 dark:text-purple-400' 
-                          : 'text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400'
-                      }`}>
+                      <p 
+                        className={`text-sm font-semibold truncate transition-all duration-300 transform-gpu cursor-pointer hover:underline ${
+                          isBatchEditMode && isSelected 
+                            ? 'text-purple-600 dark:text-purple-400' 
+                            : 'text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400'
+                        }`}
+                        onClick={handleCopyName}
+                        title={`Click to copy "${student.fullName}"`}
+                      >
                         {student.fullName}
                       </p>
                       {student.nameKhmer && (
@@ -145,9 +165,27 @@ export const StudentRow: React.FC<StudentRowProps> = ({
           case 'phone':
             return (
               <td key="phone" className="p-3">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600 transition-colors duration-200">
-                  {formatPhoneNumber(student.phone)}
-                </span>
+                {student.phone ? (
+                  // <a 
+                  //   href={`https://t.me/+${student.phone.replace(/\D/g, '')}`}
+                  //   target="_blank"
+                  //   rel="noopener noreferrer"
+                  //   className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-blue-200 dark:group-hover:bg-blue-600 hover:text-blue-800 dark:hover:text-blue-200 transition-colors duration-200 cursor-pointer"
+                  //   title={`Contact ${student.fullName} on Telegram`}
+                  // >
+                  //   <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                  //     <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                  //   </svg>
+                    
+                  // </a>
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600 transition-colors duration-200">
+                    {formatPhoneNumber(student.phone)}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 transition-colors duration-200">
+                    N/A
+                  </span>
+                )}
               </td>
             );
           case 'scheduleType':

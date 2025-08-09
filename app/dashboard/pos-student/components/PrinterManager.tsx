@@ -74,7 +74,7 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
     }, [loadPrintersFromPrintNode]);
 
     return (
-        <div className="relative w-72 printer-dropdown">
+        <div className="relative w-64 printer-dropdown">
             <button
                 onClick={() => setIsPrinterDropdownOpen(!isPrinterDropdownOpen)}
                 className="flex items-center justify-between w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
@@ -91,7 +91,7 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
                                     {selectedPrinter.displayName}
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  {selectedPrinter.location === 'DESKTOP-A3RVKTM_@' ? 'Admin Desktop' : selectedPrinter.location}
+                                  {selectedPrinter.location === 'DESKTOP-A3RVKTM' ? 'Admin Desktop' : selectedPrinter.location}
                                 </div>
                             </div>
                         ) : (
@@ -115,7 +115,7 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
                     {printers.length === 0 ? (
                         <div className="px-3 py-2 text-sm text-gray-500">No printers found</div>
                     ) : (
-                        printers.map((printer) => (
+                        printers.filter(printer => !printer.displayName.includes('BP003')).map((printer) => (
                             <button
                                 key={printer.id}
                                 onClick={() => { 
@@ -132,7 +132,7 @@ export const PrinterManager = ({ selectedPrinter, onPrinterSelect }: PrinterMana
                                             {printer.displayName}
                                         </div>
                                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                                            {printer.location === 'DESKTOP-A3RVKTM_2' ? 'Admin Desktop' : printer.location}
+                                            {printer.location === 'DESKTOP-A3RVKTM' ? 'Admin Desktop' : printer.location}
                                         </div>
                                     </div>
                                     <div className={`w-2 h-2 rounded-full ${printer.online ? 'bg-green-500' : 'bg-red-500'}`} />

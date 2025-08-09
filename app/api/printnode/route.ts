@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
       rawContent,
       transactionData,
       pageHeight, // New parameter for height
-      action = 'print', // 'print' or 'generate'
+      action = 'print', // 'print', 'generate', or 'openCashDrawer'
       contentType = 'pdf_base64',
       title, 
       copies = 1, 
@@ -372,6 +372,63 @@ export async function POST(request: NextRequest) {
       customPageRange,
       requestId 
     } = body;
+
+    // Handle cash drawer action
+    if (action === 'openCashDrawer') {
+      if (!printerId) {
+        return NextResponse.json({ error: 'Printer ID is required to open cash drawer.' }, { status: 400 });
+      }
+
+      const client = new PrintNodeClient(PRINTNODE_API_KEY);
+      
+      try {
+        // Check if printer is available
+        console.log(`[PrintNode API] Checking printer for cash drawer: ${printerId}`);
+        const printer = await client.getPrinter(printerId);
+        
+        if (!printer) {
+          console.error(`[PrintNode API] Printer with ID ${printerId} not found for cash drawer.`);
+          return NextResponse.json(
+            { error: 'Printer not found. Please check if the PrintNode client is running and the printer is configured.' },
+            { status: 404 }
+          );
+        }
+
+        console.log(`[PrintNode API] Opening cash drawer on printer: ${printer.name}`);
+
+        // Create a simple cash drawer command
+        // ESC/POS command to open cash drawer: ESC p m t1 t2 (decimal: 27 112 0 25 250)
+        const cashDrawerCommand = Buffer.from([27, 112, 0, 25, 250]).toString('base64');
+        
+        const printJob = {
+          printerId: printerId,
+          title: 'Open Cash Drawer',
+          contentType: 'raw_base64',
+          content: cashDrawerCommand,
+          source: 'Student Attendance App - Cash Drawer',
+          options: {}
+        };
+
+        const result = await client.submitPrintJob(printJob);
+        console.log('✅ [PrintNode API] Cash drawer command sent successfully:', result);
+
+        return NextResponse.json({
+          success: true,
+          message: `Cash drawer opened on ${printer.name}`,
+          jobId: result.id
+        });
+
+      } catch (error) {
+        console.error('❌ [PrintNode API] Failed to open cash drawer:', error);
+        return NextResponse.json(
+          { 
+            error: 'Failed to open cash drawer',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          },
+          { status: 500 }
+        );
+      }
+    }
 
     if (!printerId && action === 'print') {
         return NextResponse.json({ error: 'Printer ID is required for printing.' }, { status: 400 });

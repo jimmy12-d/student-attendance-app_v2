@@ -18,7 +18,7 @@ const PaymentTrends: React.FC<PaymentTrendsProps> = ({ summaryData, isLoading })
         <div className="p-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-600 shadow-lg">
-              <Icon path={mdiChartLine} size={1.5} className="text-white" />
+              <Icon path={mdiChartLine} size={24} className="text-white" />
             </div>
             <div>
               <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
@@ -61,7 +61,7 @@ const PaymentTrends: React.FC<PaymentTrendsProps> = ({ summaryData, isLoading })
       <div className="p-8">
         <div className="flex items-center gap-3 mb-8">
           <div className="p-3 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-600 shadow-lg">
-            <Icon path={mdiChartLine} size={1.5} className="text-white" />
+            <Icon path={mdiChartLine} size={24} className="text-white" />
           </div>
           <div>
             <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
