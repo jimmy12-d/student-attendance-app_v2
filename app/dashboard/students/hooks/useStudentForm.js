@@ -18,6 +18,8 @@ export const useStudentForm = (initialData) => {
   const [discount, setDiscount] = useState('');
   const [note, setNote] = useState('');
   const [warning, setWarning] = useState(false);
+  const [hasTelegramUsername, setHasTelegramUsername] = useState(true);
+  const [telegramUsername, setTelegramUsername] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   
   // Collapse states for edit mode
@@ -43,6 +45,8 @@ export const useStudentForm = (initialData) => {
       setDiscount(initialData.discount ? initialData.discount.toString() : '');
       setNote(initialData.note || '');
       setWarning(initialData.warning || false);
+      setHasTelegramUsername(initialData.hasTelegramUsername !== undefined ? initialData.hasTelegramUsername : true);
+      setTelegramUsername(initialData.telegramUsername || '');
       // Default to collapsed in edit mode
       setIsStudentInfoCollapsed(true);
       setIsParentInfoCollapsed(true);
@@ -64,6 +68,8 @@ export const useStudentForm = (initialData) => {
       setDiscount('');
       setNote('');
       setWarning(false);
+      setHasTelegramUsername(true);
+      setTelegramUsername('');
       setGradeTypeFilter('');
       // Not collapsed in create mode
       setIsStudentInfoCollapsed(false);
@@ -102,6 +108,8 @@ export const useStudentForm = (initialData) => {
       fatherPhone,
       photoUrl,
       dropped: false, // Default to false for new students
+      hasTelegramUsername: true, // Default to true for new students
+      telegramUsername: '', // Default to empty string - needs to be filled later
     };
 
     // Only add fields if they have values (avoid undefined)
@@ -115,6 +123,18 @@ export const useStudentForm = (initialData) => {
     
     // Warning is a boolean, so we always include it
     data.warning = warning;
+
+    // Telegram fields
+    data.hasTelegramUsername = hasTelegramUsername;
+    if (hasTelegramUsername && telegramUsername.trim() !== '') {
+      data.telegramUsername = telegramUsername.trim();
+    } else if (!hasTelegramUsername) {
+      // If hasTelegramUsername is false, remove telegramUsername field
+      data.telegramUsername = null;
+    } else {
+      // If hasTelegramUsername is true but no username provided, set empty string
+      data.telegramUsername = '';
+    }
 
     return data;
   };
@@ -137,6 +157,8 @@ export const useStudentForm = (initialData) => {
     discount, setDiscount,
     note, setNote,
     warning, setWarning,
+    hasTelegramUsername, setHasTelegramUsername,
+    telegramUsername, setTelegramUsername,
     isEditMode,
     
     // Collapse states

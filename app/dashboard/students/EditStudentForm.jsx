@@ -67,6 +67,8 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     discount, setDiscount,
     note, setNote,
     warning, setWarning,
+    hasTelegramUsername, setHasTelegramUsername,
+    telegramUsername, setTelegramUsername,
     isStudentInfoCollapsed, setIsStudentInfoCollapsed,
     isParentInfoCollapsed, setIsParentInfoCollapsed,
     getFormData
@@ -362,6 +364,73 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
             options={scheduleTypeOptions}
             placeholder="Select Type"
           />
+        </div>
+
+        {/* Row 2.5: Telegram Settings */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-6">
+          <div className="flex items-start space-x-4">
+            <div className="flex items-center">
+              <div className="relative inline-flex items-center">
+                <input
+                  type="checkbox"
+                  id="hasTelegramUsername"
+                  checked={hasTelegramUsername}
+                  onChange={(e) => {
+                    setHasTelegramUsername(e.target.checked);
+                    if (!e.target.checked) {
+                      setTelegramUsername('');
+                    }
+                  }}
+                  className="sr-only"
+                />
+                <label
+                  htmlFor="hasTelegramUsername"
+                  className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    hasTelegramUsername ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                      hasTelegramUsername ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="flex-1">
+              <label htmlFor="hasTelegramUsername" className="text-sm font-medium text-blue-800 dark:text-blue-200 cursor-pointer">
+                Student has Telegram account
+              </label>
+              <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                Enable this to allow Telegram communication with the student
+              </p>
+              
+              {hasTelegramUsername && (
+                <div className="mt-4">
+                  <label htmlFor="telegramUsername" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Telegram Username
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500 sm:text-sm">@</span>
+                    </div>
+                    <input
+                      type="text"
+                      id="telegramUsername"
+                      name="telegramUsername"
+                      value={telegramUsername}
+                      onChange={(e) => setTelegramUsername(e.target.value)}
+                      placeholder="username"
+                      className="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Enter the username without @ symbol (e.g., john_doe)
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Row 3: Class and Shift */}

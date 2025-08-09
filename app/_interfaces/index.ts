@@ -111,6 +111,8 @@ export interface Student {
   breakReason?: string; // Reason for taking the break
   createdAt?: Timestamp | Date; // Firestore timestamp or Date object
   gracePeriodMinutes?: number; // Optional, as it wasn't in the display list
+  hasTelegramUsername?: boolean; // Whether the student has a Telegram username
+  telegramUsername?: string; // The student's Telegram username
 }
 
 export interface PermissionRecord {
