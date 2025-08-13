@@ -8,10 +8,15 @@ import {
     mdiChevronDown,
     mdiChevronLeft,
     mdiChevronRight,
+    mdiPercent,
+    mdiCurrencyUsd,
+    mdiClose,
+    mdiClockAlert,
 } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import Button from "../../../_components/Button";
 import CardBox from "../../../_components/CardBox";
+import FormField from "../../../_components/FormField";
 import { Student, Transaction } from '../types';
 import { calculateProratedAmount } from '../utils/dateUtils';
 
@@ -32,6 +37,19 @@ interface TransactionManagerProps {
     fullAmount: number;
     isNewStudent?: boolean;
     onUserInteractionChange?: (isInteracting: boolean) => void;
+    manualDiscountAmount: number;
+    manualDiscountReason: string;
+    showDiscountInput: boolean;
+    onDiscountAmountChange: (amount: number) => void;
+    onDiscountReasonChange: (reason: string) => void;
+    onShowDiscountInputChange: (show: boolean) => void;
+    lateFeeOverride: boolean;
+    showLateFeeInput: boolean;
+    onLateFeeOverrideChange: (override: boolean) => void;
+    onShowLateFeeInputChange: (show: boolean) => void;
+    calculateLateFeeAmount: () => number;
+    isLatePayment: boolean;
+    calculateFinalChargeAmount: () => number;
 }
 
 export const TransactionManager = ({
@@ -51,6 +69,19 @@ export const TransactionManager = ({
     fullAmount,
     isNewStudent,
     onUserInteractionChange,
+    manualDiscountAmount,
+    manualDiscountReason,
+    showDiscountInput,
+    onDiscountAmountChange,
+    onDiscountReasonChange,
+    onShowDiscountInputChange,
+    lateFeeOverride,
+    showLateFeeInput,
+    onLateFeeOverrideChange,
+    onShowLateFeeInputChange,
+    calculateLateFeeAmount,
+    isLatePayment,
+    calculateFinalChargeAmount
 }: TransactionManagerProps) => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
@@ -225,17 +256,7 @@ export const TransactionManager = ({
                                 </span>
                             </div>
                             
-                            {/* Show prorated amount if applicable for new students */}
-                            {isNewStudent && joinDate && paymentMonth && selectedStudent?.discount && selectedStudent.discount > 0 && (
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">After Discount:</span>
-                                    <span className="font-medium text-gray-700 dark:text-gray-300">
-                                        ${Math.max(0, fullAmount - selectedStudent.discount).toFixed(2)}
-                                    </span>
-                                </div>
-                            )}
-                            
-                            {/* Show discount if applicable */}
+                            {/* Show scholarship discount if applicable */}
                             {selectedStudent?.discount && selectedStudent.discount > 0 && (
                                 <div className="flex justify-between items-center">
                                     <span className="text-sm text-emerald-600 dark:text-emerald-400">Scholarship Discount:</span>
@@ -245,26 +266,51 @@ export const TransactionManager = ({
                                 </div>
                             )}
                             
-                            {/* Show final charge amount */}
+                            {/* Show prorated amount for new students after scholarship discount */}
+                            {isNewStudent && joinDate && paymentMonth && selectedStudent?.discount && selectedStudent.discount > 0 && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">After Scholarship & Prorating:</span>
+                                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                                        ${(() => {
+                                            const discountedPrice = Math.max(0, fullAmount - selectedStudent.discount);
+                                            return calculateProratedAmount(discountedPrice, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2);
+                                        })()}
+                                    </span>
+                                </div>
+                            )}
+                            
+                            {/* Show manual discount if applicable */}
+            {/* Show manual discount if applicable */}
+            {manualDiscountAmount > 0 && (
+                <div className="flex justify-between items-center">
+                    <span className="text-sm text-blue-600 dark:text-blue-400">Manual Discount:</span>
+                    <span className="font-medium text-blue-600 dark:text-blue-400">
+                        -${manualDiscountAmount.toFixed(2)}
+                    </span>
+                </div>
+            )}
+            
+            {/* Show late fee if applicable */}
+            {calculateLateFeeAmount() > 0 && (
+                <div className="flex justify-between items-center">
+                    <span className="text-sm text-orange-600 dark:text-orange-400">
+                        Late Payment Fee:
+                        {lateFeeOverride && <span className="text-xs ml-1">(Waived)</span>}
+                    </span>
+                    <span className={`font-medium ${lateFeeOverride ? 'line-through text-gray-500' : 'text-orange-600 dark:text-orange-400'}`}>
+                        +$5.00
+                    </span>
+                </div>
+            )}
+            
+            {/* Show final charge amount */}                            {/* Show final charge amount */}
                             <div className="flex justify-between items-center pt-2 border-t border-emerald-200 dark:border-emerald-700">
                                 <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
                                     Final Charge:
                                 </span>
                                 <span className="font-bold text-2xl text-emerald-600 dark:text-emerald-400">
                                     {joinDate && paymentMonth 
-                                        ? (() => {
-                                            const discountAmount = selectedStudent?.discount || 0;
-                                            if (isNewStudent) {
-                                                // New student: apply discount first, then prorate
-                                                const discountedPrice = Math.max(0, fullAmount - discountAmount);
-                                                const finalAmount = calculateProratedAmount(discountedPrice, new Date(joinDate), paymentMonth, classStudyDays);
-                                                return `$${finalAmount.toFixed(2)}`;
-                                            } else {
-                                                // Existing student: full amount minus discount
-                                                const finalAmount = Math.max(0, fullAmount - discountAmount);
-                                                return `$${finalAmount.toFixed(2)}`;
-                                            }
-                                        })()
+                                        ? `$${calculateFinalChargeAmount().toFixed(2)}`
                                         : '$0.00'
                                     }
                                 </span>
@@ -394,18 +440,33 @@ export const TransactionManager = ({
                                         <p className="text-sm text-gray-600 dark:text-gray-400">
                                             Full Price: ${fullAmount.toFixed(2)}
                                         </p>
-                                        {/* Show discount if applicable */}
+                                        {/* Show scholarship discount if applicable */}
                                         {selectedStudent?.discount && selectedStudent.discount > 0 && (
                                             <p className="text-sm text-emerald-600 dark:text-emerald-400">
                                                 Scholarship Discount: -${selectedStudent.discount.toFixed(2)}
                                             </p>
                                         )}
-                                        <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                                            Final Charge: ${(() => {
-                                                // Apply discount first, then prorate
+                                        {/* Show prorated amount after scholarship discount */}
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                                            After Prorating: ${(() => {
                                                 const discountedPrice = Math.max(0, fullAmount - (selectedStudent?.discount || 0));
                                                 return calculateProratedAmount(discountedPrice, new Date(joinDate), paymentMonth, classStudyDays).toFixed(2);
                                             })()}
+                                        </p>
+                                        {/* Show manual discount if applicable */}
+                                        {manualDiscountAmount > 0 && (
+                                            <p className="text-sm text-blue-600 dark:text-blue-400">
+                                                Manual Discount: -${manualDiscountAmount.toFixed(2)}
+                                            </p>
+                                        )}
+                                        {/* Show late fee if applicable */}
+                                        {calculateLateFeeAmount() > 0 && (
+                                            <p className={`text-sm ${lateFeeOverride ? 'line-through text-gray-500' : 'text-orange-600 dark:text-orange-400'}`}>
+                                                Late Payment Fee: +$5.00 {lateFeeOverride && '(Waived)'}
+                                            </p>
+                                        )}
+                                        <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                                            Final Charge: ${calculateFinalChargeAmount().toFixed(2)}
                                         </p>
                                     </div>
                                 </div>
@@ -416,9 +477,7 @@ export const TransactionManager = ({
 
                 {/* Payment Method Selection */}
                 <div className="mt-6">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                        Payment Method
-                    </label>
+                    <h3 className="pb-2">Payment Method</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <button
                             onClick={() => onPaymentMethodChange('QR Payment')}
@@ -448,6 +507,166 @@ export const TransactionManager = ({
                         </button>
                     </div>
                 </div>
+
+                {/* Manual Discount Section */}
+                <div className="mt-6">
+                    <div className="flex flex-col gap-4 mb-4">
+                        <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200 flex items-center">
+                            Manual Discount
+                        </h3>
+                        <Button
+                            color={showDiscountInput ? "danger" : "info"}
+                            label={showDiscountInput ? "Cancel" : "Apply Discount"}
+                            onClick={() => {
+                                if (showDiscountInput) {
+                                    onDiscountAmountChange(0);
+                                    onDiscountReasonChange('');
+                                }
+                                onShowDiscountInputChange(!showDiscountInput);
+                            }}
+                            icon={showDiscountInput ? mdiClose : mdiCurrencyUsd}
+                            small
+                        />
+                    </div>
+                    
+                    {showDiscountInput && (
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <FormField label="Discount Amount ($)">
+                                    {() => (
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max={paymentAmount || 0}
+                                            step="0.01"
+                                            value={manualDiscountAmount === 0 ? '' : manualDiscountAmount}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                if (value === '' || value === null) {
+                                                    onDiscountAmountChange(0);
+                                                } else {
+                                                    const numValue = parseFloat(value);
+                                                    onDiscountAmountChange(isNaN(numValue) ? 0 : numValue);
+                                                }
+                                            }}
+                                            className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
+                                            placeholder="0.00"
+                                        />
+                                    )}
+                                </FormField>
+                                
+                                <FormField label="Reason (Optional)">
+                                    {() => (
+                                        <input
+                                            type="text"
+                                            value={manualDiscountReason}
+                                            onChange={(e) => onDiscountReasonChange(e.target.value)}
+                                            className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
+                                            placeholder="E.g., Early payment, Special promotion..."
+                                            maxLength={100}
+                                        />
+                                    )}
+                                </FormField>
+                            </div>
+                            
+                            {manualDiscountAmount > 0 && (
+                                <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-700">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-blue-700 dark:text-blue-300">
+                                            Discount Applied: <strong>${manualDiscountAmount.toFixed(2)}</strong>
+                                        </span>
+                                        <span className="text-blue-700 dark:text-blue-300">
+                                            New Total: <strong>${calculateFinalChargeAmount().toFixed(2)}</strong>
+                                        </span>
+                                    </div>
+                                    {manualDiscountReason && (
+                                        <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                                            Reason: {manualDiscountReason}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Late Fee Override Section */}
+                {isLatePayment && !isNewStudent && (
+                    <div className="mt-4">
+                        {/* Late Fee Information */}
+                        <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-700/50 mb-3">
+                            <div className="flex items-start space-x-3">
+                                <Icon path={mdiClockAlert} className="text-orange-500 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                    <h4 className="font-medium text-orange-800 dark:text-orange-200 mb-1">
+                                        Late Payment Detected
+                                    </h4>
+                                    <p className="text-sm text-orange-700 dark:text-orange-300 mb-2">
+                                        This payment is being made after the 5th of the month. A $5.00 late fee applies.
+                                    </p>
+                                    
+                                    {selectedStudent?.lateFeePermission === true ? (
+                                        <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded border border-green-200 dark:border-green-700">
+                                            <p className="text-sm text-green-700 dark:text-green-300">
+                                                ✓ This student has late fee permission - no late fee will be charged.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-orange-700 dark:text-orange-300">
+                                                    Late Fee Amount:
+                                                </span>
+                                                <span className="font-semibold text-orange-800 dark:text-orange-200">
+                                                    +$5.00
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="flex items-center space-x-2">
+                                                <input
+                                                    id="lateFeeOverride"
+                                                    type="checkbox"
+                                                    checked={lateFeeOverride}
+                                                    onChange={(e) => onLateFeeOverrideChange(e.target.checked)}
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="lateFeeOverride" className="text-sm text-orange-700 dark:text-orange-300">
+                                                    Waive late fee
+                                                </label>
+                                            </div>
+                                            
+                                            {lateFeeOverride && (
+                                                <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded border border-blue-200 dark:border-blue-700 mt-2">
+                                                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                                                        ✓ Late fee waived by admin.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Current calculation showing late fee effect */}
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Current Fee:</span>
+                                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                                        {calculateLateFeeAmount() > 0 ? `+$${calculateLateFeeAmount().toFixed(2)}` : 'Waived'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Final Total:</span>
+                                    <p className="font-medium text-green-600 dark:text-green-400">
+                                        ${calculateFinalChargeAmount().toFixed(2)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </CardBox>
     );

@@ -151,42 +151,47 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
                         <div className="flex items-start justify-between">
                           {/* Student Info */}
                           <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-3">
-                              <div className="relative group/avatar">
-                                <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center transition-all duration-200 hover:shadow-lg">
-                                  <span className="text-white font-semibold text-sm group-hover/avatar:opacity-0 transition-opacity duration-200">
-                                    {student.fullName.charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                                
-                                {/* Hover overlay with eye icon */}
-                                {onViewDetails && (
-                                  <div 
-                                    className="absolute inset-0 bg-orange-600 bg-opacity-90 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 cursor-pointer"
-                                    onClick={() => onViewDetails(student)}
-                                    title="View student details"
-                                  >
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-lg">
-                                  {student.fullName}
-                                </h3>
-                                {student.nameKhmer && (
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                                    {student.nameKhmer}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            
                             {/* Student Details */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+                            <div className="grid grid-cols-2 md:grid-cols-[35%_1fr_1fr_1fr] gap-3 mb-3">
+                              <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3 flex items-center gap-3">
+                                {/* Avatar */}
+                                <div className="relative group/avatar flex-shrink-0">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center transition-all duration-200 hover:shadow-lg">
+                                    <span className="text-white font-semibold text-sm group-hover/avatar:opacity-0 transition-opacity duration-200">
+                                      {student.fullName.charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  {onViewDetails && (
+                                    <div
+                                      className="absolute inset-0 bg-orange-600 bg-opacity-90 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 cursor-pointer"
+                                      onClick={() => onViewDetails(student)}
+                                      title="View student details"
+                                    >
+                                      <svg
+                                        className="w-5 h-5 text-white"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Names stacked vertically */}
+                                <div className="flex flex-col">
+                                  <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-lg">
+                                    {student.fullName}
+                                  </h3>
+                                  {student.nameKhmer && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                                      {student.nameKhmer}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
                               <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">
                                 <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                   Class
@@ -287,7 +292,10 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
                       >
                         <div className="flex items-start justify-between">
                           {/* Student Info */}
-                          <div className="flex-1">
+                          <div className="flex-1">                           
+                            {/* Student Details */}
+                            <div className="grid grid-cols-2 md:grid-cols-[35%_1fr_1fr_1fr] gap-3 mb-3">
+                              <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">
                             <div className="flex items-center space-x-3 mb-3">
                               <div className="relative group/avatar">
                                 <div className="w-10 h-10 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center transition-all duration-200 hover:shadow-lg">
@@ -320,10 +328,8 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
                                   </p>
                                 )}
                               </div>
-                            </div>
-                            
-                            {/* Student Details */}
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+                            </div>          
+                              </div>
                               <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">
                                 <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                                   Class

@@ -156,8 +156,19 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
         }
       });
 
-      // Fetch permissions (simplified for now - you can adjust based on your actual data structure)
-      const permissionsData: PermissionRecord[] = []; // Start with empty array for now
+      // Fetch permissions from the 'permissions' collection
+      const permissionsSnapshot = await getDocs(collection(db, 'permissions'));
+      
+      const permissionsData = permissionsSnapshot.docs
+        .map(doc => {
+          return { id: doc.id, ...doc.data() };
+        })
+        .filter((record: any) => {
+          // Filter for permissions that belong to this student and are approved
+          return record.status === 'approved' && record.studentId === studentId;
+        }) as PermissionRecord[];
+      
+      console.log(`Fetched ${permissionsData.length} approved permissions for student ${studentId}:`, permissionsData);
       
       setAttendanceRecords(attendanceData);
       setApprovedPermissions(permissionsData);

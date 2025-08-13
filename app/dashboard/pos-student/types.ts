@@ -5,6 +5,10 @@ export interface Student {
     phone?: string;
     lastPaymentMonth?: string;
     discount?: number;
+    lateFeePermission?: boolean;
+    dropped?: boolean;
+    onBreak?: boolean;
+    onWaitlist?: boolean;
     createdAt: Date;
 }
 
@@ -17,6 +21,10 @@ export interface Transaction {
     fullAmount: number;
     proratedAmount?: number; // Amount after prorating but before discount
     discountAmount?: number; // Discount amount applied
+    manualDiscountAmount?: number; // Manual discount amount applied
+    manualDiscountReason?: string; // Reason for manual discount
+    lateFeeAmount?: number; // Late payment fee amount
+    lateFeeWaived?: boolean; // Whether late fee was waived by admin
     amount: number; // Final amount after all calculations
     receiptNumber: string;
     paymentMonth: string;

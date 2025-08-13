@@ -194,9 +194,27 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
         y -= 13;
     }
     
-    // Show discount if applicable
-    if (transaction.discountAmount && transaction.discountAmount > 0) {
+    // Show scholarship discount if applicable
+    if (transaction.discountAmount && transaction.discountAmount > 0 && !transaction.manualDiscountAmount) {
         page.drawText(`Scholarship Discount: -$${transaction.discountAmount.toFixed(2)}`, { x: margin + 4, y, font, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
+        y -= 13;
+    }
+    
+    // Show manual discount if applicable
+    if (transaction.manualDiscountAmount && transaction.manualDiscountAmount > 0) {
+        const discountText = transaction.manualDiscountReason 
+            ? `Manual Discount (${transaction.manualDiscountReason}): -$${transaction.manualDiscountAmount.toFixed(2)}`
+            : `Manual Discount: -$${transaction.manualDiscountAmount.toFixed(2)}`;
+        page.drawText(discountText, { x: margin + 4, y, font, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
+        y -= 13;
+    }
+    
+    // Show late fee if applicable
+    if (transaction.lateFeeAmount && transaction.lateFeeAmount > 0) {
+        const lateFeeText = transaction.lateFeeWaived 
+            ? `Late Fee (Waived by Admin): $${transaction.lateFeeAmount.toFixed(2)}`
+            : `Late Fee: +$${transaction.lateFeeAmount.toFixed(2)}`;
+        page.drawText(lateFeeText, { x: margin + 4, y, font, size: detailFontSize, maxWidth: width - margin * 2 - 4 });
         y -= 13;
     }
     

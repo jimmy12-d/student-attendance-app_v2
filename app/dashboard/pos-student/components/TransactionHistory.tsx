@@ -92,7 +92,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                             <div className="flex-1">
                                                 <div className="flex items-center space-x-2 mb-2">
                                                     <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-lg">
-                                                        <Icon path={mdiCash} size={0.8} className="text-blue-600 dark:text-blue-400" />
+                                                        <Icon path={mdiCash} size={24} className="text-blue-600 dark:text-blue-400" />
                                                     </div>
                                                     <div>
                                                         <h4 className="font-bold text-gray-900 dark:text-gray-100">Receipt #{transaction.receiptNumber}</h4>
@@ -111,7 +111,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-100 dark:border-gray-600">
                                                 <div className="flex items-center space-x-2 mb-1">
-                                                    <Icon path={mdiCalendarMonth} size={0.7} className="text-green-600 dark:text-green-400" />
+                                                    <Icon path={mdiCalendarMonth} size={20} className="text-green-600 dark:text-green-400" />
                                                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Payment Month</span>
                                                 </div>
                                                 <p className="text-lg font-bold text-green-700 dark:text-green-300">{transaction.paymentMonth}</p>
@@ -119,7 +119,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                             
                                             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-100 dark:border-gray-600">
                                                 <div className="flex items-center space-x-2 mb-1">
-                                                    <Icon path={mdiCash} size={0.7} className="text-blue-600 dark:text-blue-400" />
+                                                    <Icon path={mdiCash} size={22} className="text-blue-600 dark:text-blue-400" />
                                                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Amount Paid</span>
                                                 </div>
                                                 <div className="space-y-1">

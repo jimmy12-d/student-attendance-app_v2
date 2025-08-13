@@ -27,11 +27,17 @@ export const useStudentCount = () => {
       );
       const querySnapshot = await getDocs(q);
       
-      let count = querySnapshot.size;
+      // Count only active students (exclude dropped, on-break, and waitlisted)
+      const activeStudents = querySnapshot.docs.filter(doc => {
+        const data = doc.data();
+        return !data.dropped && !data.onBreak && !data.onWaitlist;
+      });
+      
+      let count = activeStudents.length;
       
       // If we need to exclude a specific student (for edit mode)
       if (excludeStudentId) {
-        const hasExcludedStudent = querySnapshot.docs.some(doc => doc.id === excludeStudentId);
+        const hasExcludedStudent = activeStudents.some(doc => doc.id === excludeStudentId);
         if (hasExcludedStudent) {
           count -= 1;
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   mdiAccountPlus,
   mdiMonitorCellphone,
@@ -21,13 +21,14 @@ import EditStudentForm from "./EditStudentForm";
 import TableStudents from "./TableStudents";
 import CardBoxModal from "../../_components/CardBox/Modal";
 import DroppedStudentsSection from "./components/DroppedStudentsSection";
+import WaitlistStudentsSection from "./components/WaitlistStudentsSection";
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
 import { ExportStudentsModal } from "./components/ExportStudentsModal";
 import { toast } from 'sonner';
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { collection, getDocs, deleteDoc, doc, Timestamp, query, where, updateDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, Timestamp, query, where, updateDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 
 // Interface
 import { Student } from "../../_interfaces"; // Ensure this path is correct
@@ -36,7 +37,9 @@ export default function StudentsPage() {
   const [isFormActive, setIsFormActive] = useState(false); // Renamed from isAddingStudent
   const [students, setStudents] = useState<Student[]>([]);
   const [droppedStudents, setDroppedStudents] = useState<Student[]>([]);
+  const [waitlistStudents, setWaitlistStudents] = useState<Student[]>([]);
   const [showDroppedStudents, setShowDroppedStudents] = useState(false);
+  const [showWaitlistStudents, setShowWaitlistStudents] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,35 +64,52 @@ export default function StudentsPage() {
   // Export modal state
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
-  const fetchStudents = useCallback(async () => {
+  // Set up real-time listener for students
+  useEffect(() => {
     setLoading(true);
     setError(null);
-    try {
-      const studentsRef = collection(db, "students");
-      const q = query(studentsRef, where("ay", "==", "2026"));
-      const querySnapshot = await getDocs(q);
-      const studentsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : doc.data().createdAt,
-      })) as Student[];
-      
-      // Separate active, dropped, and break students
-      const activeStudents = studentsData.filter(student => !student.dropped && !student.onBreak);
-      const droppedStudentsData = studentsData.filter(student => student.dropped || student.onBreak);
-      
-      setStudents(activeStudents);
-      setDroppedStudents(droppedStudentsData);
-    } catch (err) {
-      console.error("Error fetching students: ", err);
-      setError("Failed to fetch students. Please try again.");
-    }
-    setLoading(false);
-  }, []);
+    
+    const studentsRef = collection(db, "students");
+    const q = query(studentsRef, where("ay", "==", "2026"));
+    
+    const unsubscribe = onSnapshot(q, 
+      (querySnapshot) => {
+        try {
+          const studentsData = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : doc.data().createdAt,
+          })) as Student[];
+          
+          // Separate active, waitlist, dropped, and break students
+          const activeStudents = studentsData.filter(student => !student.dropped && !student.onBreak && !student.onWaitlist);
+          const waitlistStudentsData = studentsData.filter(student => student.onWaitlist && !student.dropped && !student.onBreak);
+          const droppedStudentsData = studentsData.filter(student => student.dropped || student.onBreak);
+          
+          setStudents(activeStudents);
+          setWaitlistStudents(waitlistStudentsData);
+          setDroppedStudents(droppedStudentsData);
+          setLoading(false);
+          setError(null);
+        } catch (err) {
+          console.error("Error processing students data: ", err);
+          setError("Failed to process students data. Please try again.");
+          setStudents([]);
+          setWaitlistStudents([]);
+          setDroppedStudents([]);
+          setLoading(false);
+        }
+      },
+      (err) => {
+        console.error("Error listening to students: ", err);
+        setError("Failed to fetch students. Please try again.");
+        setLoading(false);
+      }
+    );
 
-  useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    // Cleanup listener on component unmount
+    return () => unsubscribe();
+  }, []);
 
   const handleShowCreateForm = () => {
     setStudentToEdit(null); // Ensure no student is being edited
@@ -104,8 +124,8 @@ export default function StudentsPage() {
   const handleStudentFormSubmit = (studentId: string) => { // Renamed from handleStudentAdded
     setIsFormActive(false);
     setStudentToEdit(null); // Clear studentToEdit after submission
-    console.log(`Student ${studentToEdit ? 'updated' : 'added'}: ${studentId}. Refreshing list.`);
-    fetchStudents(); // Refresh the list
+    console.log(`Student ${studentToEdit ? 'updated' : 'added'}: ${studentId}. Data will update automatically via real-time listener.`);
+    // No need to manually refresh - real-time listener will handle updates
   };
 
   // --- Delete Logic ---
@@ -123,10 +143,7 @@ export default function StudentsPage() {
           droppedAt: serverTimestamp() // Use server timestamp for consistency
         });
         
-        // Move student from active to dropped list
-        setStudents(prevStudents => prevStudents.filter(s => s.id !== studentToDelete.id));
-        setDroppedStudents(prevDropped => [...prevDropped, { ...studentToDelete, dropped: true }]);
-        
+        // Real-time listener will automatically update the state
         toast.success(`${studentToDelete.fullName} has been moved to dropped students`);
         console.log("Student marked as dropped:", studentToDelete.id);
       } catch (err) {
@@ -148,10 +165,7 @@ export default function StudentsPage() {
         droppedAt: serverTimestamp() // Use server timestamp for consistency
       });
       
-      // Move student from active to dropped list
-      setStudents(prevStudents => prevStudents.filter(s => s.id !== student.id));
-      setDroppedStudents(prevDropped => [...prevDropped, { ...student, dropped: true }]);
-      
+      // Real-time listener will automatically update the state
       console.log("Student marked as dropped:", student.id);
     } catch (err) {
       console.error("Error dropping student:", err);
@@ -206,23 +220,36 @@ export default function StudentsPage() {
 
       await updateDoc(doc(db, "students", student.id), updateData);
       
-      // Move student from dropped to active list
-      setDroppedStudents(prevDropped => prevDropped.filter(s => s.id !== student.id));
-      setStudents(prevStudents => [...prevStudents, { 
-        ...student, 
-        dropped: false, 
-        onBreak: false,
-        breakStartDate: undefined,
-        expectedReturnMonth: undefined,
-        breakReason: undefined
-      }]);
-      
+      // Real-time listener will automatically update the state
       const statusText = student.onBreak ? 'returned from break' : 'restored to active students';
       toast.success(`${student.fullName} has been ${statusText}`);
       console.log("Student restored:", student.id);
     } catch (err) {
       console.error("Error restoring student:", err);
       toast.error("Failed to restore student. Please try again.");
+    }
+  };
+
+  // Function to activate waitlist student (move from waitlist to active)
+  const handleActivateWaitlistStudent = async (student: Student) => {
+    try {
+      const updateData: any = {
+        onWaitlist: false,
+        restoredAt: serverTimestamp() // Use server timestamp for consistency
+      };
+
+      // Optionally clear waitlist-related fields
+      updateData.waitlistDate = null;
+      updateData.waitlistReason = null;
+
+      await updateDoc(doc(db, "students", student.id), updateData);
+      
+      // Real-time listener will automatically update the state
+      toast.success(`${student.fullName} has been activated and moved to active students`);
+      console.log("Student activated from waitlist:", student.id);
+    } catch (err) {
+      console.error("Error activating waitlist student:", err);
+      toast.error("Failed to activate student. Please try again.");
     }
   };
 
@@ -325,6 +352,21 @@ export default function StudentsPage() {
         </CardBox>
       )}
 
+      {/* Waitlist Students Section - Show above active students when not in specific modes */}
+      {!isFormActive && 
+       !isDeleteModalActive && 
+       !isTakeAttendanceMode && 
+       !isBatchEditMode && 
+       !studentToEdit && (
+        <WaitlistStudentsSection
+          waitlistStudents={waitlistStudents}
+          showWaitlistStudents={showWaitlistStudents}
+          onToggleShow={() => setShowWaitlistStudents(!showWaitlistStudents)}
+          onActivateStudent={handleActivateWaitlistStudent}
+          onViewDetails={handleViewDetails}
+        />
+      )}
+
       {!isFormActive && ( // Use isFormActive here
         <>
           {loading ? (
@@ -341,7 +383,7 @@ export default function StudentsPage() {
                 onDelete={handleDeleteStudent}
                 isBatchEditMode={isBatchEditMode}
                 isTakeAttendanceMode={isTakeAttendanceMode}
-                onBatchUpdate={fetchStudents}
+                onBatchUpdate={() => {}} // No need to manually refresh - real-time listener handles updates
                 onExitBatchEdit={() => setIsBatchEditMode(false)}
                 onExitTakeAttendance={() => setIsTakeAttendanceMode(false)}
               />
@@ -388,7 +430,7 @@ export default function StudentsPage() {
         students={currentStudentList}
         currentIndex={selectedIndex}
         onNavigate={handleNavigate}
-        onBreak={fetchStudents} // Refresh data after break operation
+        onBreak={() => {}} // No need to manually refresh - real-time listener handles updates
       />
 
       {/* Export Students Modal */}

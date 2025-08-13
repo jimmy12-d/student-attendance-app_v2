@@ -102,6 +102,9 @@ export interface Student {
   discount?: number; // Discount amount in dollars
   note?: string; // Admin note for the student
   warning?: boolean; // Warning flag for problematic students
+  onWaitlist?: boolean; // Waitlist flag - true if student is on waitlist
+  waitlistDate?: Date | Timestamp; // When the student was added to waitlist
+  waitlistReason?: string; // Reason for being on waitlist
   dropped?: boolean; // Soft delete flag - true if student is dropped
   droppedAt?: Date | Timestamp; // When the student was dropped
   restoredAt?: Date | Timestamp; // When the student was restored (if applicable)

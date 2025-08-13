@@ -145,7 +145,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
               const data = doc.data();
               // Return the student if `dropped` is not true.
               // This will include students where `dropped` is false or the field is missing.
-              return data.dropped !== true;
+              return data.dropped !== true && data.onBreak !== true && data.onWaitlist !== true;
             });
 
             let count = activeStudents.length;

@@ -68,6 +68,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     discount, setDiscount,
     note, setNote,
     warning, setWarning,
+    onWaitlist, setOnWaitlist, // Add waitlist variables
     hasTelegramUsername, setHasTelegramUsername,
     telegramUsername, setTelegramUsername,
     isStudentInfoCollapsed, setIsStudentInfoCollapsed,
@@ -159,7 +160,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
             const data = doc.data();
             // Return the student if `dropped` is not true.
             // This will include students where `dropped` is false or the field is missing.
-            return data.dropped !== true;
+            return data.dropped !== true && data.onBreak !== true && data.onWaitlist !== true;
           });
 
             const count = activeStudents.length;
@@ -417,6 +418,26 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Waitlist Option */}
+        <div className="mt-6">
+          <div className="flex items-center">
+            <input
+              id="onWaitlist"
+              name="onWaitlist"
+              type="checkbox"
+              checked={onWaitlist}
+              onChange={(e) => setOnWaitlist(e.target.checked)}
+              className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+            />
+            <label htmlFor="onWaitlist" className="ml-2 block text-sm text-gray-900 dark:text-gray-100">
+              Add to Waitlist
+            </label>
+          </div>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Check this box to add the student to the waitlist instead of enrolling them immediately
+          </p>
         </div>
 
         {/* Row 3: Class and Shift */}

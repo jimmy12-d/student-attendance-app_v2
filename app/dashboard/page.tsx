@@ -109,9 +109,25 @@ export default function DashboardPage() {
     setLoadingConfigs(true); // Also set this loading true
     setError(null);
     try {
-      const studentSnapshotPromise = getDocs(query(collection(db, "students"), where("ay", "==", "2026"), orderBy("fullName")));
+      // Fetch all students from current academic year (same query as students page)
+      const studentSnapshotPromise = getDocs(
+        query(
+          collection(db, "students"),
+          where("ay", "==", "2026"),
+          orderBy("fullName")
+        )
+      );
+
       const querySnapshot = await studentSnapshotPromise;
 
+      // Filter to get only active students (same logic as students page)
+      const activeStudents = querySnapshot.docs.filter(doc => {
+        const data = doc.data();
+        const isDropped = data.dropped === true;
+        const isOnBreak = data.onBreak === true;
+        const isOnWaitlist = data.onWaitlist === true;
+        return !isDropped && !isOnBreak && !isOnWaitlist;
+      });
 
       const sixtyDaysAgo = new Date();
       sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
@@ -130,12 +146,13 @@ export default function DashboardPage() {
         permissionsSnapshotPromise
       ]);
 
-      const studentList = studentSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), createdAt: docSnap.data().createdAt } as Student))
-        .filter(student => {
-          // Exclude students who are dropped or on break
-          // Include students where these fields are undefined/null/false
-          return !student.dropped && !student.onBreak;
-        });
+      // Use the filtered active students
+      const studentList = activeStudents.map(docSnap => ({ 
+        id: docSnap.id, 
+        ...docSnap.data(), 
+        createdAt: docSnap.data().createdAt 
+      } as Student));
+      
       setStudents(studentList);
 
       const attendanceList = attendanceSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
@@ -360,7 +377,7 @@ const classStats = useMemo((): ClassStats[] => {
       <SectionTitleLineWithButton icon={mdiChartTimelineVariant} title="Dashboard Overview" main>        
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-            <Icon path={mdiAccount} size={0.8} />
+            <Icon path={mdiAccount} size={24} />
             <span>{students.length} Total Students</span>
           </div>
           <Button onClick={fetchData} icon={mdiReload} label="Refresh" color="info" small />
@@ -377,13 +394,13 @@ const classStats = useMemo((): ClassStats[] => {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiAccountMultiple} size={1.2} className="text-blue-600 dark:text-blue-400" />
+                <Icon path={mdiAccountMultiple} size={24} className="text-blue-600 dark:text-blue-400" />
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Students</span>
               </div>
               <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{students.length}</div>
             </div>
             <div className="bg-blue-100 dark:bg-blue-800/50 p-3 rounded-full">
-              <Icon path={mdiTrendingUp} size={1} className="text-blue-600 dark:text-blue-400" />
+              <Icon path={mdiTrendingUp} size={24} className="text-blue-600 dark:text-blue-400" />
             </div>
           </div>
           {selectedStatCard === 'total' && (
@@ -403,13 +420,13 @@ const classStats = useMemo((): ClassStats[] => {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiAccountMultiple} size={1.2} className="text-green-600 dark:text-green-400" />
+                <Icon path={mdiAccountMultiple} size={24} className="text-green-600 dark:text-green-400" />
                 <span className="text-sm font-medium text-green-700 dark:text-green-300">Present Today</span>
               </div>
               <div className="text-3xl font-bold text-green-900 dark:text-green-100">{presentTodayCount}</div>
             </div>
             <div className="bg-green-100 dark:bg-green-800/50 p-3 rounded-full">
-              <Icon path={mdiTrendingUp} size={1} className="text-green-600 dark:text-green-400" />
+              <Icon path={mdiTrendingUp} size={24} className="text-green-600 dark:text-green-400" />
             </div>
           </div>
           {selectedStatCard === 'present' && (
@@ -429,13 +446,13 @@ const classStats = useMemo((): ClassStats[] => {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiClockAlertOutline} size={1.2} className="text-yellow-600 dark:text-yellow-400" />
+                <Icon path={mdiClockAlertOutline} size={24} className="text-yellow-600 dark:text-yellow-400" />
                 <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Late Today</span>
               </div>
               <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{lateTodayCount}</div>
             </div>
             <div className="bg-yellow-100 dark:bg-yellow-800/50 p-3 rounded-full">
-              <Icon path={mdiClockAlertOutline} size={1} className="text-yellow-600 dark:text-yellow-400" />
+              <Icon path={mdiClockAlertOutline} size={24} className="text-yellow-600 dark:text-yellow-400" />
             </div>
           </div>
           {selectedStatCard === 'late' && (
@@ -455,13 +472,13 @@ const classStats = useMemo((): ClassStats[] => {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiAccountOff} size={1.2} className="text-red-600 dark:text-red-400" />
+                <Icon path={mdiAccountOff} size={24} className="text-red-600 dark:text-red-400" />
                 <span className="text-sm font-medium text-red-700 dark:text-red-300">Absent Today</span>
               </div>
               <div className="text-3xl font-bold text-red-900 dark:text-red-100">{absentTodayCount}</div>
             </div>
             <div className="bg-red-100 dark:bg-red-800/50 p-3 rounded-full">
-              <Icon path={mdiAccountOff} size={1} className="text-red-600 dark:text-red-400" />
+              <Icon path={mdiAccountOff} size={24} className="text-red-600 dark:text-red-400" />
             </div>
           </div>
           {selectedStatCard === 'absent' && (
@@ -481,13 +498,13 @@ const classStats = useMemo((): ClassStats[] => {
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiTimerSand} size={1.2} className="text-purple-600 dark:text-purple-400" />
+                <Icon path={mdiTimerSand} size={24} className="text-purple-600 dark:text-purple-400" />
                 <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Pending Today</span>
               </div>
               <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">{pendingTodayCount}</div>
             </div>
             <div className="bg-purple-100 dark:bg-purple-800/50 p-3 rounded-full">
-              <Icon path={mdiTimerSand} size={1} className="text-purple-600 dark:text-purple-400" />
+              <Icon path={mdiTimerSand} size={24} className="text-purple-600 dark:text-purple-400" />
             </div>
           </div>
           {selectedStatCard === 'pending' && (
@@ -504,7 +521,7 @@ const classStats = useMemo((): ClassStats[] => {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <Icon path={mdiSchool} size={1.2} className="text-gray-700 dark:text-gray-300" />
+            <Icon path={mdiSchool} size={24} className="text-gray-700 dark:text-gray-300" />
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Class & Shift Overview</h2>
             <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs font-medium px-2.5 py-0.5 rounded-full">
               {classStats.length} Class-Shift Combinations
@@ -527,7 +544,7 @@ const classStats = useMemo((): ClassStats[] => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <div className="bg-indigo-100 dark:bg-indigo-900 p-2 rounded-lg">
-                      <Icon path={mdiAccountGroup} size={1} className="text-indigo-600 dark:text-indigo-400" />
+                      <Icon path={mdiAccountGroup} size={24} className="text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900 dark:text-gray-100">{classData.className}</h3>

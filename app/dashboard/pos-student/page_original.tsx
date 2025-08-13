@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { toast } from 'sonner';
 import {
-  mdiMagnify,
   mdiCashRegister,
   mdiAccount,
   mdiClose,
@@ -12,16 +11,11 @@ import {
   mdiDownload,
   mdiHistory,
   mdiPrinter,
-  mdiCashMultiple,
-  mdiLoading,
-  mdiPercent,
-  mdiCurrencyUsd,
   mdiClockCheck,
 } from "@mdi/js";
 
 import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
-import FormField from "../../_components/FormField";
 import Button from "../../_components/Button";
 import Icon from "../../_components/Icon";
 import LoadingSpinner from "../../_components/LoadingSpinner";
@@ -31,56 +25,84 @@ import CardBoxModal from "../../_components/CardBox/Modal";
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, where, deleteDoc, orderBy, onSnapshot } from "firebase/firestore";
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { collection, getDocs, Timestamp, doc, getDoc, query, where, orderBy, onSnapshot } from "firebase/firestore";
 
 // Components
 import { PrinterManager } from "./components/PrinterManager";
 import { CashDrawerManager, openCashDrawerWithBP003 } from "./components/CashDrawerManager";
 import { TransactionManager } from "./components/TransactionManager";
 import { TransactionHistory } from "./components/TransactionHistory";
-import { calculateProratedAmount } from "./utils/dateUtils";
+import StudentList from "./components/StudentList";
+
+// Hooks and Utils
+import { usePOSState } from "./hooks/usePOSState";
+import { useTransactionHandler } from "./hooks/useTransactionHandler";
+import { isLatePayment } from "./utils/paymentUtils";
 
 // Types
-import { Student, Transaction, Printer } from "./types";
+import { Student, Transaction } from "./types";
 
 const POSStudentPage = () => {
-    const [students, setStudents] = useState<Student[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [showTransactionHistory, setShowTransactionHistory] = useState(false);
-    const [studentTransactions, setStudentTransactions] = useState<Transaction[]>([]);
-    const [loadingTransactions, setLoadingTransactions] = useState(false);
-    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-    const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
-    const [classType, setClassType] = useState<string | null>(null);
-    const [subjects, setSubjects] = useState<string[]>([]);
-    const [lastTransaction, setLastTransaction] = useState<Transaction | null>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [isPrinting, setIsPrinting] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
-    const [downloadingTransactionId, setDownloadingTransactionId] = useState<string | undefined>();
-    const [reprintingTransactionId, setReprintingTransactionId] = useState<string | undefined>();
-    const [paymentMonth, setPaymentMonth] = useState(''); // For storing YYYY-MM
-    const [displayPaymentMonth, setDisplayPaymentMonth] = useState(''); // For display
-    const [showMonthInput, setShowMonthInput] = useState(false);
-    const [isPostTransactionModalActive, setIsPostTransactionModalActive] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'QR Payment'>('QR Payment');
-    const [joinDate, setJoinDate] = useState('');
-    const [classStudyDays, setClassStudyDays] = useState<number[]>([]);
-    const [isUserInteractingWithDetails, setIsUserInteractingWithDetails] = useState(false); // Track user interaction
-    
-    // Manual discount state
-    const [manualDiscountAmount, setManualDiscountAmount] = useState<number>(0);
-    const [manualDiscountReason, setManualDiscountReason] = useState<string>('');
-    const [showDiscountInput, setShowDiscountInput] = useState(false);
+    const {
+        // State
+        students, setStudents,
+        loading, setLoading,
+        error, setError,
+        searchQuery, setSearchQuery,
+        showTransactionHistory, setShowTransactionHistory,
+        studentTransactions, setStudentTransactions,
+        loadingTransactions, setLoadingTransactions,
+        selectedStudent, setSelectedStudent,
+        paymentAmount, setPaymentAmount,
+        classType, setClassType,
+        subjects, setSubjects,
+        lastTransaction, setLastTransaction,
+        isProcessing, setIsProcessing,
+        isPrinting, setIsPrinting,
+        isDownloading, setIsDownloading,
+        downloadingTransactionId, setDownloadingTransactionId,
+        reprintingTransactionId, setReprintingTransactionId,
+        paymentMonth, setPaymentMonth,
+        displayPaymentMonth, setDisplayPaymentMonth,
+        showMonthInput, setShowMonthInput,
+        isPostTransactionModalActive, setIsPostTransactionModalActive,
+        paymentMethod, setPaymentMethod,
+        joinDate, setJoinDate,
+        classStudyDays, setClassStudyDays,
+        isUserInteractingWithDetails, setIsUserInteractingWithDetails,
+        manualDiscountAmount, setManualDiscountAmount,
+        manualDiscountReason, setManualDiscountReason,
+        showDiscountInput, setShowDiscountInput,
+        lateFeeOverride, setLateFeeOverride,
+        showLateFeeInput, setShowLateFeeInput,
+        selectedPrinter, setSelectedPrinter,
+        
+        // Computed values
+        calculateLateFeeAmount,
+        calculateFinalChargeAmount,
+        
+        // Actions
+        handleClear,
+    } = usePOSState();
 
-    // Late fee state
-    const [lateFeeOverride, setLateFeeOverride] = useState<boolean>(false);
-    const [showLateFeeInput, setShowLateFeeInput] = useState(false);
-
-    const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
+    const { handleCharge, fetchTransactionHistory, handleRemoveTransaction } = useTransactionHandler({
+        selectedStudent,
+        paymentAmount,
+        classType,
+        paymentMonth,
+        displayPaymentMonth,
+        paymentMethod,
+        joinDate,
+        classStudyDays,
+        manualDiscountAmount,
+        manualDiscountReason,
+        lateFeeOverride,
+        calculateLateFeeAmount,
+        setIsProcessing,
+        setLastTransaction,
+        setIsPostTransactionModalActive,
+        setPaymentMonth,
+    });
     
     // Real-time listener for students
     useEffect(() => {
@@ -103,12 +125,10 @@ const POSStudentPage = () => {
                         ...data,
                         createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt,
                     } as Student;
-                }).filter(student => {
-                    // Filter out dropped, on-break, and waitlisted students
-                    return !student.dropped && !student.onBreak && !student.onWaitlist;
-                }); // Filter out non-active students
+                });
                 setStudents(studentsData);
                 setLoading(false);
+                console.log("📡 Real-time update: Students data refreshed", studentsData.length, "students");
             },
             (err) => {
                 console.error("Error in real-time students listener: ", err);
@@ -236,12 +256,7 @@ const POSStudentPage = () => {
                     ...data,
                     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt,
                 } as Student;
-            }).filter(student => {
-                // Filter out dropped, on-break, and waitlisted students
-                console.log(`🔍 Backup fetch - Student: ${student.fullName}, dropped: ${student.dropped}, onBreak: ${student.onBreak}, onWaitlist: ${student.onWaitlist}`);
-                return !student.dropped && !student.onBreak && !student.onWaitlist;
-            }); // Filter out non-active students
-            console.log("📡 Backup fetch: Students data refreshed", studentsData.length, "active students");
+            });
             setStudents(studentsData);
         } catch (err) {
             console.error("Error fetching students: ", err);
@@ -497,17 +512,7 @@ const POSStudentPage = () => {
 
             // Apply discounts with new logic
             const scholarshipDiscount = selectedStudent.discount || 0;
-            
-            // Calculate the raw late fee amount (before admin override)
-            const rawLateFeeAmount = (!selectedStudent.lastPaymentMonth || selectedStudent.lateFeePermission === true) 
-                ? 0 
-                : (isLatePayment(paymentMonth) ? 5.00 : 0);
-            
-            // Calculate actual late fee amount (considering admin override)
-            const lateFeeAmount = lateFeeOverride ? 0 : rawLateFeeAmount;
-            
-            console.log(`💰 Transaction Late Fee Logic: Raw: $${rawLateFeeAmount}, Applied: $${lateFeeAmount}, Waived: ${lateFeeOverride && rawLateFeeAmount > 0}`);
-            
+            const lateFeeAmount = calculateLateFeeAmount();
             
             let proratedAmount: number;
             let finalAmount: number;
@@ -544,8 +549,8 @@ const POSStudentPage = () => {
                 discountAmount: Number(scholarshipDiscount.toFixed(4)), // Store scholarship discount amount
                 manualDiscountAmount: manualDiscountAmount > 0 ? Number(manualDiscountAmount.toFixed(4)) : null, // Store manual discount separately
                 manualDiscountReason: manualDiscountReason.trim() || null, // Store reason if provided
-                lateFeeAmount: rawLateFeeAmount > 0 ? Number(rawLateFeeAmount.toFixed(4)) : null, // Store original late fee amount
-                lateFeeWaived: lateFeeOverride && rawLateFeeAmount > 0, // Store if late fee was waived by admin
+                lateFeeAmount: lateFeeAmount > 0 ? Number(lateFeeAmount.toFixed(4)) : null, // Store late fee amount
+                lateFeeWaived: lateFeeOverride && isLatePayment(paymentMonth), // Store if late fee was waived by admin
                 amount: roundedAmount, // Final amount
                 receiptNumber: receiptNumber,
                 paymentMonth: displayPaymentMonth, // Use the display month for receipt
@@ -573,16 +578,16 @@ const POSStudentPage = () => {
             let successMessage = `Charged ${selectedStudent.fullName} $${roundedAmount.toFixed(2)}`;
             const totalDiscounts = scholarshipDiscount + (manualDiscountAmount > 0 ? manualDiscountAmount : 0);
             
-            if (totalDiscounts > 0 || rawLateFeeAmount > 0) {
+            if (totalDiscounts > 0 || lateFeeAmount > 0) {
                 if (selectedStudent.lastPaymentMonth) {
                     // Existing student: Full price +/- adjustments
                     successMessage += ` (Full: $${paymentAmount.toFixed(2)}`;
                     if (scholarshipDiscount > 0) successMessage += `, Scholarship: -$${scholarshipDiscount.toFixed(2)}`;
-                    if (rawLateFeeAmount > 0) {
+                    if (lateFeeAmount > 0) {
                         if (lateFeeOverride) {
-                            successMessage += `, Late Fee: $${rawLateFeeAmount.toFixed(2)} (Waived)`;
+                            successMessage += `, Late Fee: $${lateFeeAmount.toFixed(2)} (Waived)`;
                         } else {
-                            successMessage += `, Late Fee: +$${rawLateFeeAmount.toFixed(2)}`;
+                            successMessage += `, Late Fee: +$${lateFeeAmount.toFixed(2)}`;
                         }
                     }
                     if (manualDiscountAmount > 0) successMessage += `, Manual: -$${manualDiscountAmount.toFixed(2)}`;
@@ -592,13 +597,7 @@ const POSStudentPage = () => {
                     successMessage += ` (Full: $${paymentAmount.toFixed(2)}`;
                     if (scholarshipDiscount > 0) successMessage += `, After Scholarship: $${(paymentAmount - scholarshipDiscount).toFixed(2)}`;
                     successMessage += `, Prorated: $${proratedAmount.toFixed(2)}`;
-                    if (rawLateFeeAmount > 0) {
-                        if (lateFeeOverride) {
-                            successMessage += `, Late Fee: $${rawLateFeeAmount.toFixed(2)} (Waived)`;
-                        } else {
-                            successMessage += `, Late Fee: +$${rawLateFeeAmount.toFixed(2)}`;
-                        }
-                    }
+                    if (lateFeeAmount > 0) successMessage += `, Late Fee: +$${lateFeeAmount.toFixed(2)}`;
                     if (manualDiscountAmount > 0) successMessage += `, Manual Discount: -$${manualDiscountAmount.toFixed(2)}`;
                     successMessage += `)`;
                 }

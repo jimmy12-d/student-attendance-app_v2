@@ -18,6 +18,7 @@ export const useStudentForm = (initialData) => {
   const [discount, setDiscount] = useState('');
   const [note, setNote] = useState('');
   const [warning, setWarning] = useState(false);
+  const [onWaitlist, setOnWaitlist] = useState(false); // Add waitlist state
   const [hasTelegramUsername, setHasTelegramUsername] = useState(true);
   const [telegramUsername, setTelegramUsername] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -45,6 +46,7 @@ export const useStudentForm = (initialData) => {
       setDiscount(initialData.discount ? initialData.discount.toString() : '');
       setNote(initialData.note || '');
       setWarning(initialData.warning || false);
+      setOnWaitlist(initialData.onWaitlist || false); // Initialize waitlist from data
       setHasTelegramUsername(initialData.hasTelegramUsername !== undefined ? initialData.hasTelegramUsername : true);
       setTelegramUsername(initialData.telegramUsername || '');
       // Default to collapsed in edit mode
@@ -123,6 +125,14 @@ export const useStudentForm = (initialData) => {
     
     // Warning is a boolean, so we always include it
     data.warning = warning;
+    
+    // Waitlist is a boolean, so we always include it
+    data.onWaitlist = onWaitlist;
+    
+    // If adding to waitlist, set waitlistDate to current timestamp
+    if (onWaitlist) {
+      data.waitlistDate = new Date();
+    }
 
     // Telegram fields
     data.hasTelegramUsername = hasTelegramUsername;
@@ -157,6 +167,7 @@ export const useStudentForm = (initialData) => {
     discount, setDiscount,
     note, setNote,
     warning, setWarning,
+    onWaitlist, setOnWaitlist, // Add waitlist to exports
     hasTelegramUsername, setHasTelegramUsername,
     telegramUsername, setTelegramUsername,
     isEditMode,

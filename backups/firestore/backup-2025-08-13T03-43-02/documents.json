@@ -1,0 +1,172 @@
+{
+  "collection": "documents",
+  "totalDocuments": 10,
+  "backupTimestamp": "2025-08-13T03:43:04.959Z",
+  "documents": [
+    {
+      "id": "3HJGvwFK5HsIzDxV9nxy",
+      "data": {
+        "fileName": "Math_Chapter 2_Lesson 2_1752745092393.pdf",
+        "pdfUrl": "https://firebasestorage.googleapis.com/v0/b/rodwell-attendance.firebasestorage.app/o/documents%2FMath_Chapter%202_Lesson%202_1752745092393.pdf?alt=media&token=839da93e-a6c5-4819-aeba-cc94572dc33c",
+        "subject": "Math",
+        "chapter": "Chapter 2",
+        "lessonNumber": "Lesson 2",
+        "description": "",
+        "teacherName": "Kov Rodwell",
+        "teacherId": "0CbHkSZ7CtxwgXY0Chco",
+        "pageCount": 8,
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-17T09:38:17.120Z"
+        }
+      }
+    },
+    {
+      "id": "AO0rjPFoiI7IRpA7Z861",
+      "data": {
+        "fileName": "Math_Chapter 2_Lesson 1_1752725679650.pdf",
+        "pdfUrl": "https://firebasestorage.googleapis.com/v0/b/rodwell-attendance.firebasestorage.app/o/documents%2FMath_Chapter%202_Lesson%201_1752725679650.pdf?alt=media&token=84d9d812-adae-43d6-b946-482e2084935b",
+        "subject": "Math",
+        "chapter": "Chapter 2",
+        "lessonNumber": "Lesson 1",
+        "description": "",
+        "teacherName": "Kov Rodwell",
+        "teacherId": "0CbHkSZ7CtxwgXY0Chco",
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-17T04:14:42.453Z"
+        }
+      }
+    },
+    {
+      "id": "N9DP18YfS0Y2Dvmu4xis",
+      "data": {
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-21T03:00:29.483Z"
+        }
+      }
+    },
+    {
+      "id": "NaxmhfF3cPlBzd2qgmSn",
+      "data": {
+        "fileName": "Math_Chapter 10_Lesson 1_1752743288207.pdf",
+        "pdfUrl": "https://firebasestorage.googleapis.com/v0/b/rodwell-attendance.firebasestorage.app/o/documents%2FMath_Chapter%2010_Lesson%201_1752743288207.pdf?alt=media&token=a486e2bb-153d-4227-8e11-be15d7ce998d",
+        "subject": "Math",
+        "chapter": "Chapter 10",
+        "lessonNumber": "Lesson 1",
+        "description": "",
+        "teacherName": "Kov Rodwell",
+        "teacherId": "0CbHkSZ7CtxwgXY0Chco",
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-17T09:08:12.739Z"
+        }
+      }
+    },
+    {
+      "id": "SGM4ZQykmlqZ56jCEuSQ",
+      "data": {
+        "fileName": "Math_Chapter 2_Lesson 1_1753095508048.pdf",
+        "pdfUrl": "https://firebasestorage.googleapis.com/v0/b/rodwell-attendance.firebasestorage.app/o/documents%2FMath_Chapter%202_Lesson%201_1753095508048.pdf?alt=media&token=1f045ef0-3837-4725-ad25-499d206d77ca",
+        "subject": "Math",
+        "chapter": "Chapter 2",
+        "lessonNumber": "Lesson 1",
+        "description": "",
+        "teacherName": "Kov Rodwell",
+        "teacherId": "0CbHkSZ7CtxwgXY0Chco",
+        "pageCount": 8,
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-21T10:58:32.251Z"
+        }
+      }
+    },
+    {
+      "id": "YJkZs5mW41Ma11ngj5pI",
+      "data": {
+        "fileName": "Math_Chapter 10_Lesson 1_1752742124953.pdf",
+        "pdfUrl": "https://firebasestorage.googleapis.com/v0/b/rodwell-attendance.firebasestorage.app/o/documents%2FMath_Chapter%2010_Lesson%201_1752742124953.pdf?alt=media&token=f7073401-201c-47ec-9970-9a16914c94cc",
+        "subject": "Math",
+        "chapter": "Chapter 10",
+        "lessonNumber": "Lesson 1",
+        "description": "",
+        "teacherName": "Kov Rodwell",
+        "teacherId": "0CbHkSZ7CtxwgXY0Chco",
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-17T08:48:50.509Z"
+        }
+      }
+    },
+    {
+      "id": "aD5mUbLMtgpskrrGwfFx",
+      "data": {
+        "fileName": "Math_Chapter 2_Lesson 1_1752725651831.pdf",
+        "pdfUrl": "https://firebasestorage.googleapis.com/v0/b/rodwell-attendance.firebasestorage.app/o/documents%2FMath_Chapter%202_Lesson%201_1752725651831.pdf?alt=media&token=03b3ef7d-c0ab-4369-b0f1-0af49f4b88c3",
+        "subject": "Math",
+        "chapter": "Chapter 2",
+        "lessonNumber": "Lesson 1",
+        "description": "",
+        "teacherName": "Kov Rodwell",
+        "teacherId": "0CbHkSZ7CtxwgXY0Chco",
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-17T04:14:15.450Z"
+        }
+      }
+    },
+    {
+      "id": "od5OeWbtkg5Btg9T7qnz",
+      "data": {
+        "fileName": "Math_Chapter 5_Lesson 1_1752744008125.pdf",
+        "pdfUrl": "https://firebasestorage.googleapis.com/v0/b/rodwell-attendance.firebasestorage.app/o/documents%2FMath_Chapter%205_Lesson%201_1752744008125.pdf?alt=media&token=49cd3bb4-aa08-4782-a5f0-ec978d9d1917",
+        "subject": "Math",
+        "chapter": "Chapter 5",
+        "lessonNumber": "Lesson 1",
+        "description": "",
+        "teacherName": "Kov Rodwell",
+        "teacherId": "0CbHkSZ7CtxwgXY0Chco",
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-17T09:20:11.899Z"
+        }
+      }
+    },
+    {
+      "id": "s011wYGs7HJODtDFTtq2",
+      "data": {
+        "fileName": "Math_Chapter 2_Lesson 1_1752724866626.pdf",
+        "pdfUrl": "https://firebasestorage.googleapis.com/v0/b/rodwell-attendance.firebasestorage.app/o/documents%2FMath_Chapter%202_Lesson%201_1752724866626.pdf?alt=media&token=8df23f69-80db-46ab-bebd-39e8eaf8c7bf",
+        "subject": "Math",
+        "chapter": "Chapter 2",
+        "lessonNumber": "Lesson 1",
+        "description": "",
+        "teacherName": "Kov Rodwell",
+        "teacherId": "0CbHkSZ7CtxwgXY0Chco",
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-17T04:01:10.693Z"
+        }
+      }
+    },
+    {
+      "id": "s9zJizvIwqetQaGgOIk6",
+      "data": {
+        "fileName": "Math_Chapter 2_Lesson 1_1753095969948.pdf",
+        "pdfUrl": "https://firebasestorage.googleapis.com/v0/b/rodwell-attendance.firebasestorage.app/o/documents%2FMath_Chapter%202_Lesson%201_1753095969948.pdf?alt=media&token=d0a07561-19f5-4ce0-a4d7-5f7c893207a1",
+        "subject": "Math",
+        "chapter": "Chapter 2",
+        "lessonNumber": "Lesson 1",
+        "description": "",
+        "teacherName": "Kov Rodwell",
+        "teacherId": "0CbHkSZ7CtxwgXY0Chco",
+        "pageCount": 8,
+        "uploadedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-21T11:06:13.597Z"
+        }
+      }
+    }
+  ]
+}
