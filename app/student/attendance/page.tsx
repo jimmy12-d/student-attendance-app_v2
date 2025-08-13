@@ -7,7 +7,7 @@ import { collection, query, where, onSnapshot, getDocs, orderBy, limit, Timestam
 import { Student, PermissionRecord } from '../../_interfaces';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay } from '../../dashboard/_lib/attendanceLogic';
-import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline } from '@mdi/js';
+import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
 import SlideInPanel from '../../_components/SlideInPanel';
@@ -392,40 +392,123 @@ const AttendancePage = () => {
            )}
 
            {/* Quick Actions */}
-           <div className="space-y-4">
-             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-               <button 
-                 onClick={() => setIsRequestConfirmOpen(true)}
-                 disabled={['present', 'late', 'permission', 'pending'].includes(todayRecord?.status)}
-                 className="group bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-slate-700 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-               >
-                 <div className="flex items-center space-x-4">
-                   <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                     <Image src="/face_scanning.png" alt="Request Attendance" width={28} height={28} />
-                   </div>
-                   <div className="text-left">
-                     <h3 className="font-semibold text-gray-900 dark:text-white">Request Attendance</h3>
-                     <p className="text-sm text-gray-500 dark:text-gray-400">If face scan fails</p>
-                   </div>
-                 </div>
-               </button>
-
-               <button 
-                 onClick={() => setIsPermissionPanelOpen(true)}
-                 className="group bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-slate-700 hover:scale-105"
-               >
-                 <div className="flex items-center space-x-4">
-                   <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
-                     <Image src="/add-document.png" alt="Permission" width={24} height={24} />
-                   </div>
-                   <div className="text-left">
-                     <h3 className="font-semibold text-gray-900 dark:text-white">Request Permission</h3>
-                     <p className="text-sm text-gray-500 dark:text-gray-400">For planned absence</p>
-                   </div>
-                 </div>
-               </button>
+           <div className="space-y-5 px-1">
+             <div className="flex items-center space-x-3 px-2">
+               <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+               </div>
+               <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                 Quick Actions
+               </h2>
              </div>
+             
+             {/* Mobile-optimized Action Cards */}
+             <div className="space-y-4">
+               {/* Request Attendance Card - Mobile First */}
+               <div className="group relative overflow-hidden touch-manipulation">
+                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-all duration-200"></div>
+                 <button 
+                   onClick={() => setIsRequestConfirmOpen(true)}
+                   disabled={['present', 'late', 'permission', 'pending'].includes(todayRecord?.status)}
+                   className="relative w-full bg-white dark:bg-slate-800/90 backdrop-blur-sm p-6 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-700/80 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
+                   style={{ WebkitTapHighlightColor: 'transparent' }}
+                 >
+                   <div className="flex items-center w-full space-x-4">
+                     {/* Icon Section */}
+                     <div className="relative flex-shrink-0">
+                       <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg">
+                         <div className="absolute inset-0 bg-white/15 rounded-2xl backdrop-blur-sm"></div>
+                         <Icon path={mdiFaceRecognition} size={40} className="text-white relative z-10" />
+                       </div>
+                       {/* Status Dot */}
+                       <div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-r from-orange-400 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
+                         <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                       </div>
+                     </div>
+                     
+                     {/* Content Section */}
+                     <div className="text-left flex-1 min-w-0">
+                       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
+                         Request Attendance
+                       </h3>
+                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 leading-relaxed">
+                         Use when face scanning is unavailable
+                       </p>
+                       <div className="flex items-center space-x-2">
+                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                         <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                           Instant processing
+                         </span>
+                       </div>
+                     </div>
+                     
+                     {/* Arrow */}
+                     <div className="text-gray-400 dark:text-gray-500 flex-shrink-0">
+                       <Icon path={mdiChevronRight} size={28} />
+                     </div>
+                   </div>
+                 </button>
+               </div>
+
+               {/* Request Permission Card - Mobile First */}
+               <div className="group relative overflow-hidden touch-manipulation">
+                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-all duration-200"></div>
+                 <button 
+                   onClick={() => setIsPermissionPanelOpen(true)}
+                   className="relative w-full bg-white dark:bg-slate-800/90 backdrop-blur-sm p-6 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-700/80 active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
+                   style={{ WebkitTapHighlightColor: 'transparent' }}
+                 >
+                   <div className="flex items-center w-full space-x-4">
+                     {/* Icon Section */}
+                     <div className="relative flex-shrink-0">
+                       <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
+                         <div className="absolute inset-0 bg-white/15 rounded-2xl backdrop-blur-sm"></div>
+                         <Icon path={mdiFileDocumentEditOutline} size={38} className="text-white relative z-10" />
+                       </div>
+                       {/* Status Dot */}
+                       <div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-sm">
+                         <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+                       </div>
+                     </div>
+                     
+                     {/* Content Section */}
+                     <div className="text-left flex-1 min-w-0">
+                       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
+                         Request Permission
+                       </h3>
+                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 leading-relaxed">
+                         For planned absences or emergencies
+                       </p>
+                       <div className="flex items-center space-x-2">
+                         <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                         <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                           Requires approval
+                         </span>
+                       </div>
+                     </div>
+                     
+                     {/* Arrow */}
+                     <div className="text-gray-400 dark:text-gray-500 flex-shrink-0">
+                       <Icon path={mdiChevronRight} size={28} />
+                     </div>
+                   </div>
+                 </button>
+               </div>
+             </div>
+
+             {/* Mobile-optimized Status Indicator */}
+             {todayRecord && ['present', 'late', 'permission', 'pending'].includes(todayRecord.status) && (
+               <div className="mx-2 mt-4">
+                 <div className="flex items-center justify-center bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 px-4 py-3.5 rounded-2xl border border-green-200/50 dark:border-green-700/30">
+                   <div className="flex items-center space-x-3">
+                     <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                     <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                       ✓ Attendance recorded for today
+                     </span>
+                   </div>
+                 </div>
+               </div>
+             )}
            </div>
 
            {/* Summary Stats */}

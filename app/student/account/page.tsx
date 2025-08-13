@@ -14,70 +14,94 @@ import { useRouter } from 'next/navigation';
 // --- Import components for settings ---
 import NotificationSettings from '../_components/NotificationSettings';
 import { EnrollmentView } from '../_components/FacialEnrollment'; // Import the modal view directly
-import { usePWAInstall } from '@/app/_hooks/usePWAInstall';
 import { RootState } from '@/app/_stores/store';
+import { mdiChevronRight, mdiBell, mdiPalette, mdiFaceRecognition, mdiLogout } from '@mdi/js';
+import Icon from '@/app/_components/Icon';
 
 // --- Reusable UI Components for the new design ---
 
 const SettingsListItem = ({
   icon,
-  iconSrc,
+  iconPath,
   iconBgColor,
   title,
+  subtitle,
   children,
   onClick,
   href,
+  isDestructive = false,
 }: {
   icon?: string;
-  iconSrc?: string;
+  iconPath?: string;
   iconBgColor: string;
   title: string;
+  subtitle?: string;
   children?: React.ReactNode;
   onClick?: () => void;
   href?: string;
+  isDestructive?: boolean;
 }) => {
   const content = (
     <>
-      <div className="flex items-center">
-        <div
-          className={`w-10 h-10 rounded-lg flex items-center justify-center mr-4 ${iconBgColor}`}
-        >
-          {iconSrc ? <img src={iconSrc} alt={title} className="w-6 h-6" /> : <span className="text-2xl">{icon}</span>}
+      <div className="flex items-center flex-1 min-w-0">
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mr-4 shadow-sm ${iconBgColor}`}>
+          {iconPath ? (
+            <Icon path={iconPath} size={24} className="text-white" />
+          ) : (
+            <span className="text-xl">{icon}</span>
+          )}
         </div>
-        <span className="font-semibold text-slate-700 dark:text-white">{title}</span>
+        <div className="flex-1 min-w-0">
+          <h3 className={`font-semibold text-lg ${isDestructive ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+            {title}
+          </h3>
+          {subtitle && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
-      <div className="flex items-center space-x-2 text-slate-500 dark:text-slate-400">
+      <div className="flex items-center space-x-3">
         {children}
         {(href || onClick) && (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-          </svg>
+          <div className="text-gray-400 dark:text-gray-500">
+            <Icon path={mdiChevronRight} size={20} />
+          </div>
         )}
       </div>
     </>
   );
 
-  const itemClassName = "flex items-center justify-between p-3 transition-colors duration-150";
+  const itemClassName = "flex items-center justify-between p-5 transition-all duration-200 touch-manipulation";
 
   if (href) {
     return (
-      <Link href={href} className={`${itemClassName} hover:bg-slate-50 dark:hover:bg-slate-700/50`}>
+      <Link 
+        href={href} 
+        className={`${itemClassName} hover:bg-gray-50 dark:hover:bg-slate-700/50 active:scale-[0.99]`}
+        style={{ WebkitTapHighlightColor: 'transparent' }}
+      >
         {content}
       </Link>
     );
   }
 
   return (
-    <div onClick={onClick} className={`${itemClassName} ${onClick ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50' : ''}`}>
+    <div 
+      onClick={onClick} 
+      className={`${itemClassName} ${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 active:scale-[0.99]' : ''}`}
+      style={{ WebkitTapHighlightColor: 'transparent' }}
+    >
       {content}
     </div>
   );
 };
 
-const ListDivider = () => <hr className="border-t border-slate-200 dark:border-slate-700/50 ml-16" />;
+const ListDivider = () => <hr className="border-t border-gray-100 dark:border-slate-700/30 ml-20" />;
 
 const SettingsGroup = ({ children }: { children: React.ReactNode }) => (
-  <div className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm">
+  <div className="bg-white dark:bg-slate-800/90 backdrop-blur-sm rounded-3xl overflow-hidden shadow-lg border border-gray-100/80 dark:border-slate-700/50">
     {children}
   </div>
 );
@@ -91,8 +115,6 @@ const AccountPage = () => {
 
   const [isLogoutModalActive, setIsLogoutModalActive] = useState(false);
   const [isFacialEnrollmentModalOpen, setIsFacialEnrollmentModalOpen] = useState(false);
-
-  const { canInstallPWA: canInstall, triggerInstall: installPWA } = usePWAInstall();
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -122,56 +144,81 @@ const AccountPage = () => {
         />
       )}
 
-      <div className="pb-24">
-        <h1 className="text-3xl font-bold text-center pb-8 text-slate-800 dark:text-white">Account</h1>
+      <div className="pb-24 px-1">
+        {/* Modern Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center space-x-3 mb-2">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+            </div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+              Account Settings
+            </h1>
+          </div>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Manage your preferences and account details
+          </p>
+        </div>
 
-        <div className="space-y-5">
-          <SettingsGroup>
-            <SettingsListItem
-              icon="🔔"
-              iconBgColor="bg-red-500 text-white"
-              title="Notifications"
-            >
-              <NotificationSettings />
-            </SettingsListItem>
-            <ListDivider />
-            <SettingsListItem
-              icon="🖌️"
-              iconBgColor="bg-blue-500 text-white"
-              title="Appearance"
-            >
-              <DarkModeToggle />
-            </SettingsListItem>
-          </SettingsGroup>
+        <div className="space-y-6">
+          {/* Preferences Group */}
+          <div>
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4">
+              Preferences
+            </h2>
+            <SettingsGroup>
+              <SettingsListItem
+                iconPath={mdiBell}
+                iconBgColor="bg-gradient-to-br from-red-500 to-pink-600"
+                title="Notifications"
+                subtitle="Manage your alert preferences"
+              >
+                <NotificationSettings />
+              </SettingsListItem>
+              <ListDivider />
+              <SettingsListItem
+                iconPath={mdiPalette}
+                iconBgColor="bg-gradient-to-br from-indigo-500 to-purple-600"
+                title="Appearance"
+                subtitle="Toggle dark mode theme"
+              >
+                <DarkModeToggle />
+              </SettingsListItem>
+            </SettingsGroup>
+          </div>
 
-          <SettingsGroup>
-            <SettingsListItem
-              iconSrc="/face_scanning.png"
-              iconBgColor="bg-green-500"
-              title="Face Recognition"
-              onClick={() => setIsFacialEnrollmentModalOpen(true)}
-            />
-            {canInstall && (
-              <>
-                <ListDivider />
-                <SettingsListItem
-                  icon="📲"
-                  iconBgColor="bg-yellow-500 text-white"
-                  title="Install App"
-                  onClick={installPWA}
-                />
-              </>
-            )}
-          </SettingsGroup>
+          {/* Security & Features Group */}
+          <div>
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4">
+              Security & Features
+            </h2>
+            <SettingsGroup>
+              <SettingsListItem
+                iconPath={mdiFaceRecognition}
+                iconBgColor="bg-gradient-to-br from-emerald-500 to-teal-600"
+                title="Face Recognition"
+                subtitle="Set up biometric authentication"
+                onClick={() => setIsFacialEnrollmentModalOpen(true)}
+              />
+            </SettingsGroup>
+          </div>
           
-          <SettingsGroup>
-            <SettingsListItem
-                icon="➡️"
-                iconBgColor="bg-red-500/80 text-white"
-                title="Logout"
+          {/* Account Actions Group */}
+          <div>
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4">
+              Account
+            </h2>
+            <SettingsGroup>
+              <SettingsListItem
+                iconPath={mdiLogout}
+                iconBgColor="bg-gradient-to-br from-red-500 to-rose-600"
+                title="Sign Out"
+                subtitle="Log out of your account"
                 onClick={() => setIsLogoutModalActive(true)}
-            />
-          </SettingsGroup>
+                isDestructive={true}
+              />
+            </SettingsGroup>
+          </div>
         </div>
       </div>
     </>

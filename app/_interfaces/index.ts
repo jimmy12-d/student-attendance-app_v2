@@ -116,6 +116,17 @@ export interface Student {
   gracePeriodMinutes?: number; // Optional, as it wasn't in the display list
   hasTelegramUsername?: boolean; // Whether the student has a Telegram username
   telegramUsername?: string; // The student's Telegram username
+  // Telegram bot registration fields
+  registrationToken?: string; // One-time registration token for QR code
+  tokenGeneratedAt?: Timestamp | Date; // When the token was generated
+  tokenExpiresAt?: Timestamp | Date; // When the token expires (7 days from generation)
+  chatId?: string; // Telegram chat ID (filled when student registers)
+  passwordHash?: string; // bcrypt hashed password (filled when student registers)
+  telegramAuthEnabled?: boolean; // Flag indicating Telegram auth is set up
+  registeredAt?: Timestamp | Date; // When student registered via Telegram
+  lastLoginAt?: Timestamp | Date; // Last login timestamp
+  passwordUpdatedAt?: Timestamp | Date; // When password was last changed
+  migratedToPhoneAuth?: Timestamp | Date; // When migrated from username to phone auth
 }
 
 export interface PermissionRecord {

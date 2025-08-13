@@ -10,6 +10,12 @@ export interface Student {
     onBreak?: boolean;
     onWaitlist?: boolean;
     createdAt: Date;
+    // Telegram auth fields
+    chatId?: string;
+    passwordHash?: string;
+    registrationToken?: string;
+    tokenExpiresAt?: Date;
+    telegramAuthEnabled?: boolean;
 }
 
 export interface Transaction {
@@ -33,6 +39,7 @@ export interface Transaction {
     date: string;
     joinDate: string;
     cashier?: string;
+    isStudentRegistered?: boolean; // Whether student is registered with Telegram
 }
 
 export interface Printer {

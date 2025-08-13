@@ -552,7 +552,8 @@ const POSStudentPage = () => {
                 paymentMethod: paymentMethod,
                 date: new Date().toISOString(),
                 joinDate: joinDate, // Add join date for reference
-                cashier: "Admin" // Replace with actual user later
+                cashier: "Admin", // Replace with actual user later
+                isStudentRegistered: !!(selectedStudent.chatId && selectedStudent.passwordHash) // Check if student is registered for QR code generation
             };
 
             const docRef = await addDoc(collection(db, "transactions"), transactionData);
@@ -635,7 +636,10 @@ const POSStudentPage = () => {
                 body: JSON.stringify({
                     printerId: selectedPrinter.printNodeId,
                     title: `Receipt for ${lastTransaction.studentName}`,
-                    transactionData: lastTransaction,
+                    transactionData: {
+                        ...lastTransaction,
+                        isStudentRegistered: !!(selectedStudent?.chatId && selectedStudent?.passwordHash)
+                    },
                    // pageHeight: 540, // Height for printing
                     pageHeight: 540, // Height for printing
                     action: 'print'
@@ -687,12 +691,18 @@ const POSStudentPage = () => {
         setIsDownloading(true);
 
         try {
+            const isStudentRegistered = !!(selectedStudent?.chatId && selectedStudent?.passwordHash);
+            const pageHeight = isStudentRegistered ? 350 : 470; // 350 if no QR, 470 if QR needed
+
             const response = await fetch('/api/printnode', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    transactionData: lastTransaction,
-                    pageHeight: 350, // Height for downloading
+                    transactionData: {
+                        ...lastTransaction,
+                        isStudentRegistered: isStudentRegistered
+                    },
+                    pageHeight: pageHeight, // Dynamic height based on QR presence
                     action: 'generate'
                 })
             });
@@ -751,13 +761,28 @@ const POSStudentPage = () => {
 
         setReprintingTransactionId(transaction.transactionId);
         try {
+            // Try to get current student registration status if possible
+            let isStudentRegistered = transaction.isStudentRegistered; // Use stored value as fallback
+            try {
+                const studentDoc = await getDoc(doc(db, "students", transaction.studentId));
+                if (studentDoc.exists()) {
+                    const studentData = studentDoc.data() as Student;
+                    isStudentRegistered = !!(studentData.chatId && studentData.passwordHash);
+                }
+            } catch (error) {
+                console.warn("Could not fetch current student data, using stored registration status");
+            }
+
             const response = await fetch('/api/printnode', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     printerId: selectedPrinter.printNodeId,
                     title: `Reprint Receipt for ${transaction.studentName}`,
-                    transactionData: transaction,
+                    transactionData: {
+                        ...transaction,
+                        isStudentRegistered: isStudentRegistered
+                    },
                     pageHeight: 540,
                     action: 'print'
                 }),
@@ -800,12 +825,29 @@ const POSStudentPage = () => {
     const handleDownloadTransaction = async (transaction: Transaction) => {
         setDownloadingTransactionId(transaction.transactionId);
         try {
+            // Try to get current student registration status if possible
+            let isStudentRegistered = transaction.isStudentRegistered; // Use stored value as fallback
+            try {
+                const studentDoc = await getDoc(doc(db, "students", transaction.studentId));
+                if (studentDoc.exists()) {
+                    const studentData = studentDoc.data() as Student;
+                    isStudentRegistered = !!(studentData.chatId && studentData.passwordHash);
+                }
+            } catch (error) {
+                console.warn("Could not fetch current student data, using stored registration status");
+            }
+
+            const pageHeight = isStudentRegistered ? 350 : 470; // 350 if no QR, 470 if QR needed
+
             const response = await fetch('/api/printnode', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    transactionData: transaction,
-                    pageHeight: 350,
+                    transactionData: {
+                        ...transaction,
+                        isStudentRegistered: isStudentRegistered
+                    },
+                    pageHeight: pageHeight, // Dynamic height based on QR presence
                     action: 'generate'
                 })
             });

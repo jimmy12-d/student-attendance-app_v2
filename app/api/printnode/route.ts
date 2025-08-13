@@ -2,10 +2,70 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import fs from 'fs/promises';
 import path from 'path';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getFunctions } from 'firebase-admin/functions';
+
+// Initialize Firebase Admin (only if not already initialized)
+let db: any = null;
+
+try {
+  if (!getApps().length) {
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      }),
+    });
+  }
+  db = getFirestore();
+} catch (error) {
+  console.warn('Firebase Admin initialization failed (PDF generation will work without QR codes):', error);
+}
 
 // PrintNode API configuration
 const PRINTNODE_API_KEY = process.env.PRINTNODE_API_KEY;
 const PRINTNODE_BASE_URL = 'https://api.printnode.com';
+
+// Helper function to generate QR token for student
+function generateStudentToken(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let token = '';
+  for (let i = 0; i < 16; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+// Helper function to generate QR code URL
+function generateQRCodeURL(token: string): string {
+  const botUsername = 'rodwell_portal_password_bot'; // Your actual bot username
+  const startPayload = `https://t.me/${botUsername}?start=${token}`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(startPayload)}`;
+}
+
+// Helper function to store temporary registration token in Firebase
+async function storeTempRegistrationToken(studentId: string, token: string): Promise<void> {
+  if (!db) {
+    console.warn('Firebase not initialized, skipping token storage');
+    return;
+  }
+  
+  try {
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
+    await db.collection('tempRegistrationTokens').doc(token).set({
+      studentId: studentId,
+      token: token,
+      createdAt: new Date(),
+      expiresAt: expiresAt
+    });
+    console.log(`Stored temporary token ${token} for student ${studentId}`);
+  } catch (error) {
+    console.error('Error storing temporary token:', error);
+    throw error;
+  }
+}
 
 // PrintNode API client
 class PrintNodeClient {
@@ -108,7 +168,7 @@ async function downloadPdfAsBase64(pdfUrl: string): Promise<string> {
   }
 }
 
-async function generateReceiptPdf(transaction: any, pageHeight: number, isForPrinting: boolean = false): Promise<string> {
+async function generateReceiptPdf(transaction: any, pageHeight: number, isForPrinting: boolean = false, studentId?: string, isStudentRegistered?: boolean): Promise<string> {
     const pdfDoc = await PDFDocument.create();
     
     // Force content to start at the very top by using a minimal page height
@@ -122,6 +182,32 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
     // Add extra padding at the top for downloads but not for printing
     // Printer already has empty space available, but downloads need visual padding
     const topPadding = isForPrinting ? 0 : 10;
+    
+    // Generate QR token and QR code only if student is not registered and Firebase is available
+    let qrCodeImage = null;
+    let studentToken = null;
+    if (studentId && db && !isStudentRegistered) {
+      try {
+        studentToken = generateStudentToken();
+        const qrCodeURL = generateQRCodeURL(studentToken);
+        
+        // Store the temporary token in Firebase
+        await storeTempRegistrationToken(studentId, studentToken);
+        
+        // Download QR code image
+        const qrResponse = await fetch(qrCodeURL);
+        if (qrResponse.ok) {
+          const qrImageBytes = await qrResponse.arrayBuffer();
+          qrCodeImage = await pdfDoc.embedPng(new Uint8Array(qrImageBytes));
+        }
+      } catch (error) {
+        console.warn('Failed to generate or store QR code:', error);
+      }
+    } else if (studentId && !db) {
+      console.warn('Firebase not available, skipping QR code generation for receipt');
+    } else if (studentId && isStudentRegistered) {
+      console.log('Student already registered, skipping QR code generation');
+    }
     
     // --- Logo ---
     const logoPath = path.resolve('./public', 'icon-192x192.png');
@@ -252,6 +338,36 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
     y -= 22;
 
     page.drawText('Thank you!', { x: centerTextX('Thank you!', boldFont, 9), y, font: boldFont, size: 9 });
+    y -= 15;
+
+    // Add QR code for student registration
+    if (qrCodeImage) {
+      const qrSize = 90; // Small QR code size
+      page.drawImage(qrCodeImage, {
+        x: (width - qrSize) / 2, // Center the QR code horizontally
+        y: y - qrSize,
+        width: qrSize,
+        height: qrSize,
+      });
+      y -= qrSize + 5;
+      
+      // Add text below QR code
+      page.drawText('Scan to create your Portal account', { 
+        x: centerTextX('Scan to create your Portal account', font, 7), 
+        y: y - 5, 
+        font, 
+        size: 7 
+      });
+      y -= 10;
+      
+      // Add token text
+      page.drawText(`Token: ${studentToken}`, { 
+        x: centerTextX(`Token: ${studentToken}`, font, 6), 
+        y: y - 5, 
+        font, 
+        size: 6 
+      });
+    }
 
     return pdfDoc.saveAsBase64();
 }
@@ -456,7 +572,9 @@ export async function POST(request: NextRequest) {
 
     if (transactionData) {
         const isForPrinting = action === 'print';
-        contentBase64 = await generateReceiptPdf(transactionData, pageHeight, isForPrinting);
+        const studentId = transactionData.studentId || null; // Get studentId from transaction data
+        const isStudentRegistered = transactionData.isStudentRegistered || false; // Check if student is already registered
+        contentBase64 = await generateReceiptPdf(transactionData, pageHeight, isForPrinting, studentId, isStudentRegistered);
     } else if (pdfUrl) {
       contentBase64 = await downloadPdfAsBase64(pdfUrl);
     } else if (rawContent) {

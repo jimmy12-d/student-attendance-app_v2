@@ -13,10 +13,23 @@ const cors = require("cors")({ origin: true });
 const vision = require("@google-cloud/vision");
 const cosineSimilarity = require("cosine-similarity");
 const axios = require("axios");
+const bcrypt = require("bcrypt");
+const TelegramBot = require("node-telegram-bot-api");
 
 // --- START: Configuration for Telegram Gateway ---
 const TELEGRAM_GATEWAY_API_URL = "https://gatewayapi.telegram.org";
 // --- END: Configuration for Telegram Gateway ---
+
+// --- START: Telegram Bot Configuration ---
+// The bot will be initialized when needed using the secret token
+let telegramBot = null;
+const initializeTelegramBot = () => {
+    if (!telegramBot && process.env.TELEGRAM_BOT_TOKEN) {
+        telegramBot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
+    }
+    return telegramBot;
+};
+// --- END: Telegram Bot Configuration ---
 
 
 // Initialize the Firebase Admin SDK
@@ -50,12 +63,953 @@ const normalizePhone = (phoneNumber) => {
     return phoneNumber;
 };
 
+// --- Helper functions for password management ---
+const generateRandomPassword = () => {
+    // 12 characters with uppercase, lowercase, numbers, and special characters
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowercase = 'abcdefghkmnpqrstuvwxyz';
+    const numbers = '23456789';
+    const specials = '!@#$%&*';
+    
+    let password = '';
+    
+    // Ensure at least one character from each category
+    password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+    password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+    password += specials.charAt(Math.floor(Math.random() * specials.length));
+    
+    // Fill remaining 8 characters randomly from all categories
+    const allChars = uppercase + lowercase + numbers + specials;
+    for (let i = 4; i < 12; i++) {
+        password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+    }
+    
+    // Shuffle the password to avoid predictable patterns
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+};
+
+const validatePasswordStrength = (password) => {
+    if (password.length < 8) {
+        return { valid: false, message: "Password must be at least 8 characters long." };
+    }
+    
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumbers = /[0-9]/.test(password);
+    const hasSpecialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    
+    if (!hasUppercase) {
+        return { valid: false, message: "Password must contain at least one uppercase letter." };
+    }
+    if (!hasLowercase) {
+        return { valid: false, message: "Password must contain at least one lowercase letter." };
+    }
+    if (!hasNumbers) {
+        return { valid: false, message: "Password must contain at least one number." };
+    }
+    if (!hasSpecialChars) {
+        return { valid: false, message: "Password must contain at least one special character (!@#$%^&*...)." };
+    }
+    
+    return { valid: true, message: "Password is strong." };
+};
+
+// --- Helper functions for QR code registration ---
+const generateOneTimeToken = () => {
+    // Generate a secure 16-character token
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let token = '';
+    for (let i = 0; i < 16; i++) {
+        token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return token;
+};
+
+// Helper function to store temporary token for registration
+const storeTempRegistrationToken = async (studentId, token) => {
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
+    await db.collection('tempRegistrationTokens').doc(token).set({
+        studentId: studentId,
+        token: token,
+        createdAt: new Date(),
+        expiresAt: expiresAt
+    });
+    return expiresAt;
+};
+
+const generateQRCodeURL = (token) => {
+    // Use a QR code generator service or create a URL that contains the token
+    const botUsername = 'rodwell_portal_password_bot'; // Your actual bot username
+    const message = encodeURIComponent(token);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://t.me/${botUsername}?start=${token}`;
+};
+
+const hashPassword = async (password) => {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
+};
+
+const verifyPassword = async (password, hash) => {
+    return await bcrypt.compare(password, hash);
+};
+
 /**
- * [Callable Function]
- * Called by the frontend when a user submits their 4 enrollment photos.
- * Its only job is to create a task in the `faceEnrollmentQueue` collection.
- * It returns immediately, allowing for a fast UI response.
+ * [HTTP Function]
+ * Webhook handler for Telegram bot
+ * Handles student authentication via username/password system
  */
+exports.telegramWebhook = onRequest({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_BOT_TOKEN"]
+}, async (req, res) => {
+    if (req.method !== 'POST') {
+        return res.status(405).send('Method Not Allowed');
+    }
+
+    const bot = initializeTelegramBot();
+    if (!bot) {
+        console.error("Telegram bot not initialized - missing token");
+        return res.status(500).send('Bot configuration error');
+    }
+
+    try {
+        const { message } = req.body;
+        if (!message) {
+            return res.status(200).send('OK');
+        }
+
+        const chatId = message.chat.id;
+        const text = message.text;
+        const userId = message.from.id;
+
+        console.log(`Received message from chatId ${chatId}: ${text}`);
+
+        if (text.startsWith('/start')) {
+            // Handle /start command with optional token parameter
+            const parts = text.split(' ');
+            if (parts.length > 1) {
+                // /start TOKEN - from QR code
+                const token = parts.slice(1).join(' ').trim();
+                await handleStartWithToken(bot, chatId, userId, token);
+            } else {
+                // Regular /start command
+                await handleStartCommand(bot, chatId, userId);
+            }
+        } else if (text === '/changepassword') {
+            await handleChangePasswordCommand(bot, chatId, userId);
+        } else if (text === '/setpassword') {
+            await handleSetCustomPasswordCommand(bot, chatId, userId);
+        } else {
+            // Check if user is in registration or password change flow
+            await handleTextMessage(bot, chatId, userId, text);
+        }
+
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error('Error processing webhook:', error);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+/**
+ * Handle /start command
+ */
+const handleStartCommand = async (bot, chatId, userId) => {
+    try {
+        // Check if user is already registered
+        const existingUser = await db.collection("students")
+            .where("chatId", "==", chatId.toString())
+            .limit(1)
+            .get();
+
+        if (!existingUser.empty) {
+            await bot.sendMessage(chatId, "✅ Your account is already registered. Use /changepassword to update your password.");
+            return;
+        }
+
+        await bot.sendMessage(chatId, 
+            "Welcome to the Student Portal! 🎓\n\n" +
+            "🔒 **Secure Registration Process**\n\n" +
+            "To register securely, please:\n" +
+            "1. Get your personal QR code from your teacher\n" +
+            "2. Scan the QR code to get your registration token\n" +
+            "3. Send the token here to complete registration\n\n" +
+            "🔑 **Or if you have a token, send it now:**"
+        );
+
+        // Store user state for registration flow
+        await db.collection("telegramUserStates").doc(chatId.toString()).set({
+            userId: userId,
+            chatId: chatId,
+            state: "waiting_token",
+            timestamp: FieldValue.serverTimestamp()
+        });
+
+    } catch (error) {
+        console.error('Error handling start command:', error);
+        await bot.sendMessage(chatId, "❌ An error occurred. Please try again later.");
+    }
+};
+
+/**
+ * Handle /start command with token parameter (from QR code)
+ */
+const handleStartWithToken = async (bot, chatId, userId, token) => {
+    try {
+        // Check if user is already registered
+        const existingUser = await db.collection("students")
+            .where("chatId", "==", chatId.toString())
+            .limit(1)
+            .get();
+
+        if (!existingUser.empty) {
+            await bot.sendMessage(chatId, "✅ Your account is already registered. Use /changepassword to update your password.");
+            return;
+        }
+
+        await bot.sendMessage(chatId, 
+            "Welcome to the Student Portal! 🎓\n\n" +
+            "🔍 **Processing your registration token...**"
+        );
+
+        // Directly process the token from QR code
+        await handleTokenInput(bot, chatId, userId, token);
+
+    } catch (error) {
+        console.error('Error handling start with token:', error);
+        await bot.sendMessage(chatId, "❌ An error occurred. Please try again later.");
+    }
+};
+
+/**
+ * Handle /changepassword command (generates random password)
+ */
+const handleChangePasswordCommand = async (bot, chatId, userId) => {
+    try {
+        // Check if user is registered
+        const userDoc = await db.collection("students")
+            .where("chatId", "==", chatId.toString())
+            .limit(1)
+            .get();
+
+        if (userDoc.empty) {
+            await bot.sendMessage(chatId, "❌ You need to register first. Use /start to begin registration.");
+            return;
+        }
+
+        await bot.sendMessage(chatId, "🔐 Password Change Options:\n\n" +
+            "Choose how you want to change your password:\n" +
+            "• Type `/generate` - I'll create a secure 12-character password for you\n" +
+            "• Type `/setpassword` - Set your own custom password\n" +
+            "• Type `/cancel` - Cancel password change");
+
+        // Store user state for password change flow
+        await db.collection("telegramUserStates").doc(chatId.toString()).set({
+            userId: userId,
+            chatId: chatId,
+            state: "password_change_menu",
+            timestamp: FieldValue.serverTimestamp()
+        });
+
+    } catch (error) {
+        console.error('Error handling change password command:', error);
+        await bot.sendMessage(chatId, "❌ Failed to change password. Please try again later.");
+    }
+};
+
+/**
+ * Handle /setpassword command (custom password input)
+ */
+const handleSetCustomPasswordCommand = async (bot, chatId, userId) => {
+    try {
+        // Check if user is registered
+        const userDoc = await db.collection("students")
+            .where("chatId", "==", chatId.toString())
+            .limit(1)
+            .get();
+
+        if (userDoc.empty) {
+            await bot.sendMessage(chatId, "❌ You need to register first. Use /start to begin registration.");
+            return;
+        }
+
+        await bot.sendMessage(chatId, "� Set Custom Password\n\n" +
+            "Please enter your new password. It must meet these requirements:\n" +
+            "• At least 8 characters long\n" +
+            "• Contains uppercase letters (A-Z)\n" +
+            "• Contains lowercase letters (a-z)\n" +
+            "• Contains numbers (0-9)\n" +
+            "• Contains special characters (!@#$%^&*...)\n\n" +
+            "Type `/cancel` to cancel this operation.");
+
+        // Store user state for custom password input
+        await db.collection("telegramUserStates").doc(chatId.toString()).set({
+            userId: userId,
+            chatId: chatId,
+            state: "waiting_custom_password",
+            timestamp: FieldValue.serverTimestamp()
+        });
+
+    } catch (error) {
+        console.error('Error handling set custom password command:', error);
+        await bot.sendMessage(chatId, "❌ Failed to set custom password. Please try again later.");
+    }
+};
+
+/**
+ * Handle regular text messages (username input, password input, etc.)
+ */
+const handleTextMessage = async (bot, chatId, userId, text) => {
+    try {
+        // Handle cancel command
+        if (text.toLowerCase() === '/cancel') {
+            await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+            await bot.sendMessage(chatId, "❌ Operation cancelled. Use /start to register or /changepassword to change password.");
+            return;
+        }
+
+        // Get user state
+        const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
+
+        if (!stateDoc.exists) {
+            await bot.sendMessage(chatId, "Please use /start to begin registration or /changepassword to change your password.");
+            return;
+        }
+
+        const state = stateDoc.data();
+
+        if (state.state === "waiting_token") {
+            await handleTokenInput(bot, chatId, userId, text.trim());
+        } else if (state.state === "password_change_menu") {
+            await handlePasswordChangeMenuChoice(bot, chatId, userId, text.trim());
+        } else if (state.state === "waiting_custom_password") {
+            await handleCustomPasswordInput(bot, chatId, userId, text);
+        } else {
+            await bot.sendMessage(chatId, "Please use /start to begin registration or /changepassword to update your password.");
+        }
+
+    } catch (error) {
+        console.error('Error handling text message:', error);
+        await bot.sendMessage(chatId, "❌ An error occurred. Please try again.");
+    }
+};
+
+/**
+ * Handle token input during registration
+ */
+const handleTokenInput = async (bot, chatId, userId, token) => {
+    try {
+        if (!token || token.length < 10) {
+            await bot.sendMessage(chatId, "❌ Invalid token format. Please scan the QR code again and send the complete token:");
+            return;
+        }
+
+        // Find token in temporary tokens collection
+        const tempTokenDoc = await db.collection("tempRegistrationTokens")
+            .doc(token.toUpperCase())
+            .get();
+
+        if (!tempTokenDoc.exists) {
+            await bot.sendMessage(chatId, 
+                `❌ Invalid or expired token.\n\n` +
+                `Please:\n` +
+                `• Check that you scanned the correct QR code\n` +
+                `• Make sure the token hasn't been used already\n` +
+                `• Get a new receipt with QR code if needed\n\n` +
+                `Try sending the token again:`
+            );
+            return;
+        }
+
+        const tempTokenData = tempTokenDoc.data();
+        
+        // Check if token has expired
+        if (new Date() > tempTokenData.expiresAt.toDate()) {
+            // Clean up expired token
+            await tempTokenDoc.ref.delete();
+            await bot.sendMessage(chatId, 
+                `❌ This token has expired.\n\n` +
+                `Please get a new receipt with QR code from your teacher.`
+            );
+            return;
+        }
+
+        // Get the student document
+        const studentDoc = await db.collection("students").doc(tempTokenData.studentId).get();
+        
+        if (!studentDoc.exists) {
+            await bot.sendMessage(chatId, 
+                `❌ Student account not found. Please contact your teacher.`
+            );
+            return;
+        }
+
+        const studentData = studentDoc.data();
+
+        // Check if this student is already registered with a different chat
+        if (studentData.chatId && studentData.chatId !== chatId.toString()) {
+            await bot.sendMessage(chatId, 
+                `❌ This account is already registered to another Telegram account.\n\n` +
+                `If this is your account, please contact your teacher for assistance.`
+            );
+            return;
+        }
+
+        // Generate and hash password
+        const newPassword = generateRandomPassword();
+        const hashedPassword = await hashPassword(newPassword);
+
+        // Link the student account
+        await studentDoc.ref.update({
+            chatId: chatId.toString(),
+            userId: userId,
+            passwordHash: hashedPassword,
+            registeredAt: FieldValue.serverTimestamp(),
+        });
+
+        // Clean up the temporary token and registration state
+        await tempTokenDoc.ref.delete();
+        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+
+        await bot.sendMessage(chatId, 
+            `✅ Registration successful!\n\n` +
+            `👋 Welcome ${studentData.fullName || 'Student'}!\n\n` +
+            `🔐 Your login credentials:\n` +
+            `**Phone:** ${studentData.phone}\n` +
+            `**Password:** ${newPassword}\n\n` +
+            `📱 Save these credentials to log into the Student Portal at:\n` +
+            `🌐 **portal.rodwell.center/login**\n\n` +
+            `🔄 Use /changepassword anytime to generate a new password or set a custom one.`
+        );
+
+        console.log(`Successfully registered student ${studentDoc.id} with temp token ${token}`);
+
+    } catch (error) {
+        console.error('Error handling token input:', error);
+        await bot.sendMessage(chatId, "❌ Registration failed. Please try again.");
+    }
+};
+
+/**
+ * Handle username input during registration (legacy - kept for backward compatibility)
+ */
+const handleUsernameInput = async (bot, chatId, userId, username) => {
+    try {
+        if (!username || username.length < 2) {
+            await bot.sendMessage(chatId, "Please enter a valid username (at least 2 characters):");
+            return;
+        }
+
+        // Find student by username (assuming username is stored in a field like 'username' or 'studentId')
+        const studentQuery = await db.collection("students")
+            .where("username", "==", username)
+            .limit(1)
+            .get();
+
+        if (studentQuery.empty) {
+            await bot.sendMessage(chatId, `❌ Username "${username}" not found in our records. Please check your username and try again:`);
+            return;
+        }
+
+        const studentDoc = studentQuery.docs[0];
+        const studentData = studentDoc.data();
+
+        // Check if this student is already linked to another chat
+        if (studentData.chatId && studentData.chatId !== chatId.toString()) {
+            await bot.sendMessage(chatId, "❌ This student account is already registered with another user.");
+            await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+            return;
+        }
+
+        // Generate and hash password
+        const newPassword = generateRandomPassword();
+        const hashedPassword = await hashPassword(newPassword);
+
+        // Link the student account
+        await studentDoc.ref.update({
+            chatId: chatId.toString(),
+            userId: userId,
+            passwordHash: hashedPassword,
+            registeredAt: FieldValue.serverTimestamp()
+        });
+
+        // Clean up registration state
+        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+
+        await bot.sendMessage(chatId, 
+            `✅ Registration successful!\n\n` +
+            `👋 Welcome ${studentData.fullName || username}!\n\n` +
+            `Your login credentials:\n` +
+            `🔑 **Password: ${newPassword}**\n\n` +
+            `Please save this password securely. You can log into the Student Portal at:\n` +
+            `🌐 **portal.rodwell.center/login**\n\n` +
+            `Use /changepassword anytime to generate a new password.`
+        );
+
+        console.log(`Successfully registered student ${studentDoc.id} with chatId ${chatId}`);
+
+    } catch (error) {
+        console.error('Error handling username input:', error);
+        await bot.sendMessage(chatId, "❌ Registration failed. Please try again.");
+    }
+};
+
+/**
+ * Handle password change menu choice
+ */
+const handlePasswordChangeMenuChoice = async (bot, chatId, userId, text) => {
+    try {
+        const choice = text.toLowerCase();
+        
+        if (choice === '/generate') {
+            // Generate random password
+            const userDoc = await db.collection("students")
+                .where("chatId", "==", chatId.toString())
+                .limit(1)
+                .get();
+
+            if (userDoc.empty) {
+                await bot.sendMessage(chatId, "❌ Account not found. Please register first with /start.");
+                return;
+            }
+
+            await bot.sendMessage(chatId, "🔐 Generating a new secure 12-character password...");
+
+            const studentDoc = userDoc.docs[0];
+            const newPassword = generateRandomPassword();
+            const hashedPassword = await hashPassword(newPassword);
+
+            // Update password in database
+            await studentDoc.ref.update({
+                passwordHash: hashedPassword,
+                passwordUpdatedAt: FieldValue.serverTimestamp()
+            });
+
+            // Clean up state
+            await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+
+            await bot.sendMessage(chatId, 
+                `✅ Your new password has been generated:\n\n` +
+                `🔑 **${newPassword}**\n\n` +
+                `This 12-character password includes:\n` +
+                `• Uppercase and lowercase letters\n` +
+                `• Numbers and special characters\n\n` +
+                `Use this password to log into the Student Portal at:\n` +
+                `🌐 **portal.rodwell.center/login**\n\n` +
+                `Please save this password securely!`
+            );
+
+            console.log(`Random password generated for student ${studentDoc.id} via Telegram`);
+
+        } else if (choice === '/setpassword') {
+            // Switch to custom password input
+            await handleSetCustomPasswordCommand(bot, chatId, userId);
+        } else if (choice === '/cancel') {
+            await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+            await bot.sendMessage(chatId, "❌ Password change cancelled.");
+        } else {
+            await bot.sendMessage(chatId, "Please choose an option:\n• `/generate` - Generate random password\n• `/setpassword` - Set custom password\n• `/cancel` - Cancel");
+        }
+
+    } catch (error) {
+        console.error('Error handling password change menu:', error);
+        await bot.sendMessage(chatId, "❌ Failed to process choice. Please try again.");
+    }
+};
+
+/**
+ * Handle custom password input
+ */
+const handleCustomPasswordInput = async (bot, chatId, userId, password) => {
+    try {
+        // Validate password strength
+        const validation = validatePasswordStrength(password);
+        
+        if (!validation.valid) {
+            await bot.sendMessage(chatId, `❌ ${validation.message}\n\nPlease enter a stronger password, or type /cancel to cancel:`);
+            return;
+        }
+
+        // Find the user's document
+        const userDoc = await db.collection("students")
+            .where("chatId", "==", chatId.toString())
+            .limit(1)
+            .get();
+
+        if (userDoc.empty) {
+            await bot.sendMessage(chatId, "❌ Account not found. Please register first with /start.");
+            return;
+        }
+
+        await bot.sendMessage(chatId, "🔐 Setting your custom password...");
+
+        const studentDoc = userDoc.docs[0];
+        const hashedPassword = await hashPassword(password);
+
+        // Update password in database
+        await studentDoc.ref.update({
+            passwordHash: hashedPassword,
+            passwordUpdatedAt: FieldValue.serverTimestamp()
+        });
+
+        // Clean up state
+        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+
+        await bot.sendMessage(chatId, 
+            `✅ Your custom password has been set successfully!\n\n` +
+            `You can now use your phone and this password to log into the Student Portal at:\n` +
+            `🌐 **portal.rodwell.center/login**\n\n` +
+            `🔒 For security, your password has been encrypted and stored safely.`
+        );
+
+        console.log(`Custom password set for student ${studentDoc.id} via Telegram`);
+
+    } catch (error) {
+        console.error('Error handling custom password input:', error);
+        await bot.sendMessage(chatId, "❌ Failed to set password. Please try again.");
+    }
+};
+
+/**
+ * [Callable Function] 
+ * DEPRECATED: Generate registration QR codes for students (Admin/Teacher only)
+ * NOTE: Now using on-demand tokens at payment time instead of persistent tokens
+ */
+exports.generateStudentQRCodes = onCall({
+    region: "asia-southeast1"
+}, async (request) => {
+    const { studentIds, adminUid } = request.data;
+
+    if (!adminUid) {
+        throw new HttpsError("unauthenticated", "Admin authentication required.");
+    }
+
+    // Verify admin permissions (you might want to add admin role checking here)
+    try {
+        const adminUser = await admin.auth().getUser(adminUid);
+        if (!adminUser) {
+            throw new HttpsError("permission-denied", "Invalid admin credentials.");
+        }
+    } catch (error) {
+        throw new HttpsError("permission-denied", "Admin verification failed.");
+    }
+
+    if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+        throw new HttpsError("invalid-argument", "Student IDs array is required.");
+    }
+
+    try {
+        const qrCodes = [];
+        const batch = db.batch();
+
+        for (const studentId of studentIds) {
+            // Get student document
+            const studentRef = db.collection("students").doc(studentId);
+            const studentDoc = await studentRef.get();
+
+            if (!studentDoc.exists) {
+                console.warn(`Student ${studentId} not found, skipping...`);
+                continue;
+            }
+
+            const studentData = studentDoc.data();
+
+            // Generate one-time registration token
+            const token = generateOneTimeToken();
+            
+            // Update student with registration token
+            batch.update(studentRef, {
+                registrationToken: token,
+                tokenGeneratedAt: FieldValue.serverTimestamp(),
+                tokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+            });
+
+            // Generate QR code URL
+            const qrCodeURL = generateQRCodeURL(token);
+
+            qrCodes.push({
+                studentId: studentId,
+                studentName: studentData.fullName || 'Unknown',
+                username: studentData.username || 'N/A',
+                class: studentData.class || 'N/A',
+                token: token,
+                qrCodeURL: qrCodeURL,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+            });
+        }
+
+        // Commit all token updates
+        await batch.commit();
+
+        return {
+            success: true,
+            qrCodes: qrCodes,
+            totalGenerated: qrCodes.length
+        };
+
+    } catch (error) {
+        console.error("Error generating QR codes:", error);
+        throw new HttpsError("internal", "Failed to generate QR codes.");
+    }
+});
+
+/**
+ * [Callable Function] 
+ * Authenticates a student using phone and password
+ * Returns a custom token for Firebase Auth sign-in
+ */
+exports.authenticateStudentWithPhone = onCall({
+    region: "asia-southeast1"
+}, async (request) => {
+    const { phone, password } = request.data;
+
+    if (!phone || !password) {
+        throw new HttpsError("invalid-argument", "Phone and password are required.");
+    }
+
+    try {
+        // Normalize phone number
+        const normalizedPhone = normalizePhone(phone);
+        
+        // Find student by phone
+        const studentQuery = await db.collection("students")
+            .where("phone", "==", normalizedPhone)
+            .limit(1)
+            .get();
+
+        if (studentQuery.empty) {
+            throw new HttpsError("not-found", "Invalid phone or password.");
+        }
+
+        const studentDoc = studentQuery.docs[0];
+        const studentData = studentDoc.data();
+
+        // Check if student has a password hash (i.e., has registered via Telegram)
+        if (!studentData.passwordHash) {
+            throw new HttpsError("failed-precondition", "Account not activated. Please register via Telegram bot first.");
+        }
+
+        // Verify password
+        const isPasswordValid = await verifyPassword(password, studentData.passwordHash);
+        if (!isPasswordValid) {
+            throw new HttpsError("unauthenticated", "Invalid phone or password.");
+        }
+
+        // Create or get Firebase Auth user
+        let authUid = studentData.authUid;
+        
+        if (!authUid) {
+            try {
+                // Create new Firebase Auth user with valid email format using phone
+                const email = `${normalizedPhone}@rodwell.student.local`;
+                const authUser = await admin.auth().createUser({
+                    displayName: studentData.fullName || normalizedPhone,
+                    email: email,
+                    emailVerified: false, // This is a placeholder email
+                });
+                authUid = authUser.uid;
+
+                // Update student record with auth UID
+                await studentDoc.ref.update({ 
+                    authUid: authUid,
+                    lastLoginAt: FieldValue.serverTimestamp()
+                });
+            } catch (authError) {
+                console.error("Error creating Firebase Auth user:", authError);
+                // If user already exists with this email, try to find them
+                try {
+                    const existingUser = await admin.auth().getUserByEmail(`${normalizedPhone}@rodwell.student.local`);
+                    authUid = existingUser.uid;
+                    
+                    // Update student record with found auth UID
+                    await studentDoc.ref.update({ 
+                        authUid: authUid,
+                        lastLoginAt: FieldValue.serverTimestamp()
+                    });
+                } catch (findError) {
+                    console.error("Error finding existing Firebase Auth user:", findError);
+                    throw new HttpsError("internal", "Authentication service error. Please try again.");
+                }
+            }
+        } else {
+            // Update last login time
+            await studentDoc.ref.update({ lastLoginAt: FieldValue.serverTimestamp() });
+        }
+
+        // Generate custom token for Firebase Auth
+        const customToken = await admin.auth().createCustomToken(authUid, {
+            studentId: studentDoc.id,
+            phone: normalizedPhone,
+            fullName: studentData.fullName,
+            class: studentData.class,
+        });
+
+        return {
+            customToken: customToken,
+            student: {
+                id: studentDoc.id,
+                fullName: studentData.fullName,
+                phone: normalizedPhone,
+                class: studentData.class,
+            }
+        };
+
+    } catch (error) {
+        if (error instanceof HttpsError) {
+            throw error; // Re-throw HttpsError as-is
+        }
+        console.error("Error in authenticateStudentWithPhone:", error);
+        throw new HttpsError("internal", "Authentication failed. Please try again.");
+    }
+});
+
+/**
+ * [Callable Function] 
+ * Authenticates a student using username and password (LEGACY - for backward compatibility)
+ * Returns a custom token for Firebase Auth sign-in
+ */
+exports.authenticateStudentWithUsername = onCall({
+    region: "asia-southeast1"
+}, async (request) => {
+    const { username, password } = request.data;
+
+    if (!username || !password) {
+        throw new HttpsError("invalid-argument", "Username and password are required.");
+    }
+
+    try {
+        // Find student by username
+        const studentQuery = await db.collection("students")
+            .where("username", "==", username)
+            .limit(1)
+            .get();
+
+        if (studentQuery.empty) {
+            throw new HttpsError("not-found", "Invalid username or password.");
+        }
+
+        const studentDoc = studentQuery.docs[0];
+        const studentData = studentDoc.data();
+
+        // Check if student has a password hash (i.e., has registered via Telegram)
+        if (!studentData.passwordHash) {
+            throw new HttpsError("failed-precondition", "Account not activated. Please register via Telegram bot first.");
+        }
+
+        // Verify password
+        const isPasswordValid = await verifyPassword(password, studentData.passwordHash);
+        if (!isPasswordValid) {
+            throw new HttpsError("unauthenticated", "Invalid username or password.");
+        }
+
+        // Create or get Firebase Auth user
+        let authUid = studentData.authUid;
+        
+        if (!authUid) {
+            try {
+                // Create new Firebase Auth user with valid email format
+                const email = `${username}@rodwell.student.local`;
+                const authUser = await admin.auth().createUser({
+                    displayName: studentData.fullName || username,
+                    email: email,
+                    emailVerified: false, // This is a placeholder email
+                });
+                authUid = authUser.uid;
+
+                // Update student record with auth UID
+                await studentDoc.ref.update({ 
+                    authUid: authUid,
+                    lastLoginAt: FieldValue.serverTimestamp()
+                });
+            } catch (authError) {
+                console.error("Error creating Firebase Auth user:", authError);
+                // If user already exists with this email, try to find them
+                try {
+                    const existingUser = await admin.auth().getUserByEmail(`${username}@rodwell.student.local`);
+                    authUid = existingUser.uid;
+                    
+                    // Update student record with existing auth UID
+                    await studentDoc.ref.update({ 
+                        authUid: authUid,
+                        lastLoginAt: FieldValue.serverTimestamp()
+                    });
+                } catch (findError) {
+                    console.error("Error finding existing user:", findError);
+                    throw new HttpsError("internal", "Failed to create or find user account.");
+                }
+            }
+        } else {
+            // Update last login time
+            await studentDoc.ref.update({ 
+                lastLoginAt: FieldValue.serverTimestamp()
+            });
+        }
+
+        // Generate custom token for client-side sign-in
+        const customToken = await admin.auth().createCustomToken(authUid);
+
+        return {
+            success: true,
+            token: customToken,
+            studentData: {
+                id: studentDoc.id,
+                fullName: studentData.fullName,
+                username: studentData.username,
+                class: studentData.class,
+                shift: studentData.shift,
+                authUid: authUid
+            }
+        };
+
+    } catch (error) {
+        if (error instanceof HttpsError) {
+            throw error;
+        }
+        console.error("Error in authenticateStudentWithUsername:", error);
+        throw new HttpsError("internal", "Authentication failed due to internal error.");
+    }
+});
+
+/**
+ * [Scheduled Function]
+ * Cleanup old Telegram user states (runs daily)
+ * Removes registration states older than 24 hours
+ */
+exports.cleanupTelegramStates = onSchedule({
+    schedule: "0 2 * * *", // Run daily at 2 AM
+    region: "asia-southeast1"
+}, async (context) => {
+    try {
+        const oneDayAgo = new Date();
+        oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+
+        const statesRef = db.collection("telegramUserStates");
+        const oldStatesQuery = await statesRef
+            .where("timestamp", "<", oneDayAgo)
+            .get();
+
+        if (oldStatesQuery.empty) {
+            console.log("No old Telegram states to clean up");
+            return;
+        }
+
+        const batch = db.batch();
+        let deleteCount = 0;
+
+        oldStatesQuery.docs.forEach(doc => {
+            batch.delete(doc.ref);
+            deleteCount++;
+        });
+
+        await batch.commit();
+        console.log(`Cleaned up ${deleteCount} old Telegram user states`);
+
+    } catch (error) {
+        console.error("Error cleaning up Telegram states:", error);
+    }
+});
+
 exports.processFaceEnrollmentImages = onCall({
     region: "us-central1"
 }, async (request) => {
@@ -1110,5 +2064,100 @@ exports.getNextReceiptNumber = onCall({
     } catch (error) {
         console.error("Error getting next receipt number:", error);
         throw new HttpsError("internal", "Could not generate a receipt number.");
+    }
+});
+
+/**
+ * [Firestore Trigger]
+ * DEPRECATED: Auto-generate QR code when a new student is created (now using on-demand tokens)
+ */
+// exports.autoGenerateQROnStudentCreate = onDocumentCreated({
+//     document: "students/{studentId}",
+//     region: "asia-southeast1"
+// }, async (event) => {
+//     const studentData = event.data?.data();
+//     const studentId = event.params?.studentId;
+// 
+//     if (!studentData || !studentId) {
+//         console.log("No student data or ID provided");
+//         return;
+//     }
+// 
+//     try {
+//         console.log(`Auto-generating QR code for new student: ${studentData.fullName} (${studentId})`);
+//         
+//         // Generate one-time registration token
+//         const token = generateOneTimeToken();
+//         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+//         
+//         // Update the student document with registration token
+//         await db.collection("students").doc(studentId).update({
+//             registrationToken: token,
+//             tokenGeneratedAt: FieldValue.serverTimestamp(),
+//             tokenExpiresAt: expiresAt,
+//             telegramAuthEnabled: true
+//         });
+// 
+//         console.log(`QR code auto-generated for student ${studentId} with token: ${token}`);
+//         
+//     } catch (error) {
+//         console.error(`Error auto-generating QR code for student ${studentId}:`, error);
+//     }
+// });
+
+// NEW: Callable function to store temporary registration token (used by PrintNode API)
+exports.storeTempRegistrationToken = onCall({
+    region: 'us-central1'
+}, async (request) => {
+    try {
+        const { studentId, token } = request.data;
+        
+        if (!studentId || !token) {
+            throw new HttpsError('invalid-argument', 'Student ID and token are required.');
+        }
+
+        const expiresAt = await storeTempRegistrationToken(studentId, token);
+        
+        return {
+            success: true,
+            token: token,
+            studentId: studentId,
+            expiresAt: expiresAt.toISOString()
+        };
+        
+    } catch (error) {
+        console.error('Error storing temp registration token:', error);
+        throw new HttpsError('internal', 'Failed to store temporary registration token.');
+    }
+});
+
+// NEW: Scheduled function to cleanup expired temporary tokens
+exports.cleanupExpiredTempTokens = onSchedule('0 0 * * *', async (event) => {
+    console.log('🧹 Starting cleanup of expired temporary registration tokens...');
+    
+    try {
+        const now = new Date();
+        const expiredTokens = await db.collection('tempRegistrationTokens')
+            .where('expiresAt', '<', now)
+            .get();
+        
+        if (expiredTokens.empty) {
+            console.log('✅ No expired temporary tokens to clean up');
+            return;
+        }
+        
+        const batch = db.batch();
+        let deleteCount = 0;
+        
+        expiredTokens.forEach((doc) => {
+            batch.delete(doc.ref);
+            deleteCount++;
+        });
+        
+        await batch.commit();
+        console.log(`✅ Cleaned up ${deleteCount} expired temporary registration tokens`);
+        
+    } catch (error) {
+        console.error('❌ Error cleaning up expired temporary tokens:', error);
     }
 });

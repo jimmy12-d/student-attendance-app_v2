@@ -114,10 +114,11 @@ export const InstallPWA = ({ as_banner = false, as_button = false, as_link = fal
       <>
         <button
           onClick={handleInstallClick}
-          className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-all transform hover:scale-105"
+          className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+          style={{ WebkitTapHighlightColor: 'transparent' }}
         >
           <DownloadCloud />
-          Install App on Your Device
+          Install App
         </button>
         <AnimatePresence>
             {iosSheetOpen && <IOSInstallSheet onClose={() => setIosSheetOpen(false)} />}

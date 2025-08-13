@@ -75,11 +75,11 @@ const menuAside: MenuAsideItem[] = [
     icon: mdiChartLine,
     label: "Payment Summary",
   },
-  // {
-  //   href: "/dashboard/mock-exams",
-  //   label: "Mock Control",
-  //   icon: mdiNotebookEditOutline,
-  // },
+  {
+    href: "/dashboard/mock-exams",
+    label: "Mock Control",
+    icon: mdiNotebookEditOutline,
+  },
   // {
   //   href: "/dashboard/approvals",
   //   label: "Print Approvals",

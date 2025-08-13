@@ -37,8 +37,8 @@ const StudentSignIn = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Phone/password login state
-  const [phone, setPhone] = useState("");
+  // Username/password login state
+  const [username, setUsername] = useState("");
   const [userPassword, setUserPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -126,27 +126,27 @@ const StudentSignIn = () => {
     }
   };
 
-  const handlePhoneSignIn = async (e: React.FormEvent) => {
+  const handleUsernameSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
     setSuccess(null);
 
     try {
-        console.log("Attempting phone authentication...");
+        console.log("Attempting username authentication...");
         const functions = getFunctions(auth.app, "asia-southeast1");
-        const authenticateStudent = httpsCallable(functions, 'authenticateStudentWithPhone');
+        const authenticateStudent = httpsCallable(functions, 'authenticateStudentWithUsername');
         
-        console.log("Calling backend function with phone:", phone);
-        const result = await authenticateStudent({ phone, password: userPassword });
-        const resultData = result.data as { customToken?: string; student?: any; error?: string };
+        console.log("Calling backend function with username:", username);
+        const result = await authenticateStudent({ username, password: userPassword });
+        const resultData = result.data as { success: boolean; token?: string; studentData?: any; error?: string };
 
-        console.log("Backend response:", { hasToken: !!resultData.customToken, hasStudent: !!resultData.student });
+        console.log("Backend response:", { success: resultData.success, hasToken: !!resultData.token, hasStudentData: !!resultData.studentData });
 
-        if (resultData.customToken && resultData.student) {
+        if (resultData.success && resultData.token && resultData.studentData) {
             console.log("Attempting to sign in with custom token...");
             // Sign in with the custom token
-            const userCredential = await signInWithCustomToken(auth, resultData.customToken);
+            const userCredential = await signInWithCustomToken(auth, resultData.token);
             const firebaseUser = userCredential.user;
             
             console.log("Successfully signed in with custom token, user:", firebaseUser.uid);
@@ -154,11 +154,11 @@ const StudentSignIn = () => {
             // Dispatch user data to Redux
             dispatch(
               setUser({
-                name: resultData.student.fullName,
+                name: resultData.studentData.fullName,
                 email: firebaseUser.email,
                 avatar: firebaseUser.photoURL,
                 uid: firebaseUser.uid,
-                studentDocId: resultData.student.id,
+                studentDocId: resultData.studentData.id,
                 role: "student",
               })
             );
@@ -166,11 +166,11 @@ const StudentSignIn = () => {
             // Redirect to student dashboard
             router.push(navItems[0].href);
         } else {
-            throw new Error("Authentication failed. Please check your phone and password.");
+            throw new Error(resultData.error || "Authentication failed.");
         }
 
     } catch (error: any) {
-        console.error("Phone sign-in error:", error);
+        console.error("Username sign-in error:", error);
         
         // More specific error messages
         if (error.code === 'auth/invalid-email') {
@@ -208,9 +208,9 @@ const StudentSignIn = () => {
         </div>
       )}
 
-      <form onSubmit={handlePhoneSignIn} className="space-y-4">
-          <FormField label="Phone Number" labelFor="phone">
-              {(fd) => <input type="tel" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter your phone (e.g., 0967639355)" required className={fd.className}/>}
+      <form onSubmit={handleUsernameSignIn} className="space-y-4">
+          <FormField label="Username" labelFor="username">
+              {(fd) => <input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter your username" required className={fd.className}/>}
           </FormField>
           <FormField label="Password" labelFor="userPassword">
               {(fd) => (
@@ -267,21 +267,8 @@ const StudentSignIn = () => {
         </div>
       </Button>
       
-      <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-blue-100 dark:border-slate-600">
-        <div className="text-center mb-3">
-          <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
-              <polyline points="8 17 12 21 16 17"></polyline>
-              <line x1="12" y1="12" x2="12" y2="21"></line>
-              <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path>
-            </svg>
-          </div>
-          <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Install App for Better Experience</h3>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
-            Get faster access, offline features, and stay logged in after installation
-          </p>
-        </div>
-        <InstallPWA as_button={true} />
+      <div className="mt-8">
+        <InstallPWA as_link={true} />
       </div>
 
     </div>

@@ -7,7 +7,7 @@ export default function StudentPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/student/mock-exam');
+    router.replace('/student/attendance');
   }, [router]);
 
   return null;

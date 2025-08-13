@@ -7,17 +7,20 @@ import { ColumnToggle, ColumnConfig } from "./components/ColumnToggle";
 import { ShiftSection } from "./components/ShiftSection";
 import { ClassTable } from "./components/ClassTable";
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
+import { QRCodeModal } from "./components/QRCodeModal";
 import CustomDropdown from "./components/CustomDropdown";
 import { toast } from 'sonner';
 
 // Firebase
 import { db } from "../../../firebase-config";
 import { doc, writeBatch, collection, getDocs, addDoc } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 // Attendance logic imports
 import { getStudentDailyStatus, isSchoolDay } from '../_lib/attendanceLogic';
 import { AllClassConfigs } from '../_lib/configForAttendanceLogic';
 import { PermissionRecord } from '../../_interfaces';
+import { useAuth } from '../../_hooks/use-auth';
 
 type Props = {
   students: Student[];
@@ -31,11 +34,14 @@ type Props = {
 };
 
 const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance }: Props) => {
+  // Auth hook
+  const { user } = useAuth();
   // Default column configuration
   const defaultColumns: ColumnConfig[] = [
     { id: 'number', label: '#N', enabled: true },
     { id: 'name', label: 'Name', enabled: true },
     { id: 'phone', label: 'Phone', enabled: true },
+    { id: 'registerQR', label: 'Register QR', enabled: false },
     { id: 'paymentStatus', label: 'Payment', enabled: false },
     { id: 'scheduleType', label: 'Type', enabled: false },
     { id: 'warning', label: 'Warning', enabled: false },
@@ -305,6 +311,11 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [currentStudentList, setCurrentStudentList] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // QR Code Modal state for admin use (in case student lost receipt)
+  const [selectedQRStudent, setSelectedQRStudent] = useState<Student | null>(null);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [generatingQR, setGeneratingQR] = useState(false);
 
   const handleViewDetails = (student: Student, studentList: Student[]) => {
     const index = studentList.findIndex(s => s.id === student.id);
@@ -638,6 +649,70 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       setAttendanceChanges(new Map());
     }
   }, [isTakeAttendanceMode]);
+
+  // Add event listeners for QR functionality (admin use only)
+  React.useEffect(() => {
+    const handleOpenQRModal = (event: CustomEvent) => {
+      const student = event.detail as Student;
+      setSelectedQRStudent(student);
+      setIsQRModalOpen(true);
+    };
+
+    const handleGenerateQR = async (event: CustomEvent) => {
+      const student = event.detail as Student;
+      await generateQRCode(student);
+    };
+
+    window.addEventListener('openQRModal', handleOpenQRModal as EventListener);
+    window.addEventListener('generateQR', handleGenerateQR as EventListener);
+
+    return () => {
+      window.removeEventListener('openQRModal', handleOpenQRModal as EventListener);
+      window.removeEventListener('generateQR', handleGenerateQR as EventListener);
+    };
+  }, []);
+
+  // Generate QR code for a student (admin function for lost receipts)
+  const generateQRCode = async (student: Student) => {
+    if (generatingQR) return; // Prevent multiple simultaneous requests
+
+    setGeneratingQR(true);
+    try {
+      const functions = getFunctions();
+      const generateQRCodes = httpsCallable(functions, 'generateStudentQRCodes');
+      
+      const result = await generateQRCodes({
+        studentIds: [student.id],
+        adminUid: user?.uid || 'anonymous'
+      });
+
+      const data = result.data as any; // Type assertion for Firebase function result
+      
+      if (data.success) {
+        toast.success(`QR code generated for ${student.fullName}`);
+        
+        // Auto-open the QR modal
+        setTimeout(() => {
+          setSelectedQRStudent({
+            ...student,
+            registrationToken: data.qrCodes[0]?.token,
+            tokenExpiresAt: new Date(data.qrCodes[0]?.expiresAt)
+          });
+          setIsQRModalOpen(true);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      toast.error(`Failed to generate QR code for ${student.fullName}`);
+    } finally {
+      setGeneratingQR(false);
+    }
+  };
+
+  const handleCloseQRModal = () => {
+    setIsQRModalOpen(false);
+    setSelectedQRStudent(null);
+  };
 
   return (
     <div className="space-y-8 p-6 pb-24 bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
@@ -1102,6 +1177,13 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         students={currentStudentList}
         currentIndex={selectedIndex}
         onNavigate={handleNavigate}
+      />
+
+      {/* QR Code Modal for admin (lost receipt cases) */}
+      <QRCodeModal
+        student={selectedQRStudent}
+        isOpen={isQRModalOpen}
+        onClose={handleCloseQRModal}
       />
 
       {/* Batch Edit Confirmation Modal */}

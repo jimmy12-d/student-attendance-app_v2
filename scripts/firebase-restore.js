@@ -35,17 +35,34 @@ class FirebaseRestore {
         try {
             // Initialize Firebase Admin SDK
             if (!getApps().length) {
-                if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+                // Try to use service account key file first
+                const serviceAccountPath = path.join(process.cwd(), 'firestore-upload', 'serviceAccountKey.json');
+                try {
+                    await fs.access(serviceAccountPath);
+                    const serviceAccount = JSON.parse(await fs.readFile(serviceAccountPath, 'utf8'));
+                    
                     initializeApp({
-                        credential: cert({
-                            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-                            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-                        }),
-                        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+                        credential: cert(serviceAccount),
+                        projectId: serviceAccount.project_id,
                     });
-                } else {
-                    throw new Error('Firebase credentials not found in environment variables');
+                    
+                    console.log('✅ Using service account key file for authentication');
+                } catch (serviceAccountError) {
+                    // Fallback to environment variables
+                    if (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+                        initializeApp({
+                            credential: cert({
+                                projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+                                clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                                privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+                            }),
+                            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+                        });
+                        
+                        console.log('✅ Using environment variables for authentication');
+                    } else {
+                        throw new Error('Neither service account key file nor Firebase credentials found in environment variables');
+                    }
                 }
             }
 
@@ -106,7 +123,9 @@ class FirebaseRestore {
         if (typeof data === 'object' && data._type) {
             switch (data._type) {
                 case 'timestamp':
-                    return this.adminDb._delegate._delegate.Timestamp.fromDate(new Date(data._value));
+                    // Use the Timestamp from firebase-admin/firestore
+                    const { Timestamp } = require('firebase-admin/firestore');
+                    return Timestamp.fromDate(new Date(data._value));
                 case 'reference':
                     return this.adminDb.doc(data._value);
                 default:

@@ -124,6 +124,41 @@ export const ClassTable: React.FC<ClassTableProps> = ({
       });
     }
 
+    // Register QR statistics (if registerQR column is enabled)
+    const registerQRColumnEnabled = enabledColumns.some(col => col.id === 'registerQR');
+    if (registerQRColumnEnabled) {
+      const registeredCount = studentList.filter(student => 
+        student.chatId && student.passwordHash
+      ).length;
+      const qrReadyCount = studentList.filter(student => {
+        const getDateFromTimestamp = (timestamp: any): Date | null => {
+          if (!timestamp) return null;
+          if (timestamp instanceof Date) return timestamp;
+          if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate();
+          }
+          return null;
+        };
+        const tokenExpiryDate = getDateFromTimestamp(student.tokenExpiresAt);
+        return student.registrationToken && tokenExpiryDate && tokenExpiryDate > new Date() && !(student.chatId && student.passwordHash);
+      }).length;
+
+      if (registeredCount > 0) {
+        stats.push({
+          label: 'Registered',
+          count: registeredCount,
+          color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-700'
+        });
+      }
+      if (qrReadyCount > 0) {
+        stats.push({
+          label: 'QR Ready',
+          count: qrReadyCount,
+          color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+        });
+      }
+    }
+
     // Attendance statistics (if attendance column is enabled)
     const attendanceColumnEnabled = enabledColumns.some(col => col.id === 'todayAttendance');
     if (attendanceColumnEnabled && getTodayAttendanceStatus) {

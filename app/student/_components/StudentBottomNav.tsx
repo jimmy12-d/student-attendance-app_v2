@@ -4,15 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '@/app/_components/Icon';
-import { mdiHome, mdiCalendarCheck, mdiFileDocumentEdit, mdiAccountCircle } from '@mdi/js';
+import { mdiHome, mdiFileDocumentEdit, mdiAccountCircle } from '@mdi/js';
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
 import { useAppSelector } from '@/app/_stores/hooks';
 
 export const navItems = [
-  { name: 'Home', href: '/student/home', icon: mdiHome },
-  { name: 'Attendance', href: '/student/attendance', icon: mdiCalendarCheck },
+  { name: 'Home', href: '/student', icon: mdiHome },
   { name: 'Mock Exam', href: '/student/mock-exam', icon: mdiFileDocumentEdit },
   { name: 'Account', href: '/student/account', icon: mdiAccountCircle },
 ];
@@ -58,7 +57,10 @@ export default function StudentBottomNav() {
     >
       <div className="relative flex items-center justify-around bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg rounded-full shadow-lg border border-white/20">
         {currentNavItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          // Special handling for Home button since it redirects to attendance
+          const isActive = item.href === '/student' 
+            ? (pathname === '/student' || pathname === '/student/attendance')
+            : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

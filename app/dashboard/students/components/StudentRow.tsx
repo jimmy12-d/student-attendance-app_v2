@@ -369,6 +369,106 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                 </div>
               </td>
             );
+
+          case 'registerQR':
+            // Show different states based on registration and payment status
+            const getDateFromTimestamp = (timestamp: any): Date | null => {
+              if (!timestamp) return null;
+              if (timestamp instanceof Date) return timestamp;
+              if (timestamp?.toDate && typeof timestamp.toDate === 'function') {
+                return timestamp.toDate();
+              }
+              return null;
+            };
+
+            const tokenExpiryDate = getDateFromTimestamp(student.tokenExpiresAt);
+            const hasActiveToken = student.registrationToken && tokenExpiryDate && tokenExpiryDate > new Date();
+            const isLoggedIn = student.chatId && student.passwordHash; // Fully registered
+            const hasExpiredToken = student.registrationToken && tokenExpiryDate && tokenExpiryDate <= new Date();
+            const hasNeverPaid = !student.lastPaymentMonth; // Never made a payment
+            const hasRecentPayment = student.lastPaymentMonth && student.lastPaymentMonth >= "2025-09"; // QR available from September 2025 onwards
+            
+            return (
+              <td key="registerQR" className="p-3 whitespace-nowrap">
+                <div className="flex items-center justify-center">
+                  {isLoggedIn ? (
+                    // 1. Logged In - Student is fully registered
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Logged In
+                    </span>
+                  ) : hasActiveToken ? (
+                    // 2. Unused QR - Has active token but not registered yet (PRIORITY over payment status)
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent('openQRModal', { detail: student }))}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 animate-pulse hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors cursor-pointer"
+                      title="Click to view unused QR code"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11a9 9 0 11-18 0 9 9 0 0118 0zm-9 8a1 1 0 100-2 1 1 0 000 2z" />
+                      </svg>
+                      Unused QR
+                    </button>
+                  ) : hasExpiredToken ? (
+                    // 3. Expired - Had token but it expired, admin can generate new one
+                    <button
+                      onClick={() => window.dispatchEvent(new CustomEvent('generateQR', { detail: student }))}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800 hover:bg-orange-200 dark:hover:bg-orange-800/50 transition-colors cursor-pointer"
+                      title="Token expired - Generate new QR code"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Expired
+                    </button>
+                  ) : hasNeverPaid ? (
+                    // 4. Unpaid - Never made a sale, no QR available
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2 0 1.105 1.343 2 3 2s3-.895 3-2c0-1.105-1.343-2-3-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14c1.657 0 3 .895 3 2s-1.343 2-3 2-3-.895-3-2 1.343-2 3-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V2m0 16v4" />
+                      </svg>
+                      Unpaid
+                    </span>
+                  ) : hasRecentPayment ? (
+                    // 5. QR on Receipt - Student has paid from September 2025 onwards and has no active/expired tokens
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L6.171 6.171m3.707 3.707l4.243 4.243m0 0L17.828 17.828" />
+                        </svg>
+                        QR on Receipt
+                      </span>
+                      <button
+                        onClick={() => window.dispatchEvent(new CustomEvent('generateQR', { detail: student }))}
+                        className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors cursor-pointer"
+                        title="Generate QR code for lost receipt"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11a9 9 0 11-18 0 9 9 0 0118 0zm-9 8a1 1 0 100-2 1 1 0 000 2z" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    // 6. Unpaid - Student has old payment (before September 2025), treated as unpaid for QR purposes
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2 0 1.105 1.343 2 3 2s3-.895 3-2c0-1.105-1.343-2-3-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14c1.657 0 3 .895 3 2s-1.343 2-3 2-3-.895-3-2 1.343-2 3-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V2m0 16v4" />
+                      </svg>
+                      Unpaid
+                    </span>
+                  )}
+                </div>
+              </td>
+            );
+
+          default:
+            return null;
         }
       })}
     </tr>

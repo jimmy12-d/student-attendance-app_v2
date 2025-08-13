@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { collection, doc, Timestamp, query, where, updateDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { collection, doc, Timestamp, query, where, updateDoc, serverTimestamp, onSnapshot, getDocs } from "firebase/firestore";
 
 // Interface
 import { Student } from "../../_interfaces"; // Ensure this path is correct
@@ -74,31 +74,56 @@ export default function StudentsPage() {
     
     const unsubscribe = onSnapshot(q, 
       (querySnapshot) => {
-        try {
-          const studentsData = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : doc.data().createdAt,
-          })) as Student[];
+        const fetchTokensAndMerge = async () => {
+          try {
+            const studentsData = querySnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data(),
+              createdAt: doc.data().createdAt instanceof Timestamp ? doc.data().createdAt.toDate() : doc.data().createdAt,
+            })) as Student[];
+
+            // Fetch tokens from tempRegistrationTokens collection
+            const tokensRef = collection(db, "tempRegistrationTokens");
+            const tokensSnapshot = await getDocs(tokensRef);
+            
+            // Create a map of studentId -> token data
+            const tokensMap = new Map();
+            tokensSnapshot.docs.forEach(doc => {
+              const tokenData = doc.data();
+              tokensMap.set(tokenData.studentId, {
+                registrationToken: tokenData.token,
+                tokenExpiresAt: tokenData.expiresAt,
+                tokenCreatedAt: tokenData.createdAt
+              });
+            });
+
+            // Merge token data with student data
+            const studentsWithTokens = studentsData.map(student => {
+              const tokenData = tokensMap.get(student.id);
+              return tokenData ? { ...student, ...tokenData } : student;
+            });
           
-          // Separate active, waitlist, dropped, and break students
-          const activeStudents = studentsData.filter(student => !student.dropped && !student.onBreak && !student.onWaitlist);
-          const waitlistStudentsData = studentsData.filter(student => student.onWaitlist && !student.dropped && !student.onBreak);
-          const droppedStudentsData = studentsData.filter(student => student.dropped || student.onBreak);
-          
-          setStudents(activeStudents);
-          setWaitlistStudents(waitlistStudentsData);
-          setDroppedStudents(droppedStudentsData);
-          setLoading(false);
-          setError(null);
-        } catch (err) {
-          console.error("Error processing students data: ", err);
-          setError("Failed to process students data. Please try again.");
-          setStudents([]);
-          setWaitlistStudents([]);
-          setDroppedStudents([]);
-          setLoading(false);
-        }
+            // Separate active, waitlist, dropped, and break students
+            const activeStudents = studentsWithTokens.filter(student => !student.dropped && !student.onBreak && !student.onWaitlist);
+            const waitlistStudentsData = studentsWithTokens.filter(student => student.onWaitlist && !student.dropped && !student.onBreak);
+            const droppedStudentsData = studentsWithTokens.filter(student => student.dropped || student.onBreak);
+            
+            setStudents(activeStudents);
+            setWaitlistStudents(waitlistStudentsData);
+            setDroppedStudents(droppedStudentsData);
+            setLoading(false);
+            setError(null);
+          } catch (err) {
+            console.error("Error processing students data: ", err);
+            setError("Failed to process students data. Please try again.");
+            setStudents([]);
+            setWaitlistStudents([]);
+            setDroppedStudents([]);
+            setLoading(false);
+          }
+        };
+        
+        fetchTokensAndMerge();
       },
       (err) => {
         console.error("Error listening to students: ", err);
