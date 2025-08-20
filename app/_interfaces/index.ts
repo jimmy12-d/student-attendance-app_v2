@@ -147,6 +147,20 @@ export interface PermissionRecord {
   reviewedAt?: Timestamp;
 }
 
+// Absent Follow-up System Interface
+export type AbsentStatus = 'Absent' | 'Contacted' | 'Waiting for Response' | 'Resolved';
+
+export interface AbsentFollowUp {
+  id?: string; // Firestore document ID
+  studentId: string;
+  studentName: string;
+  date: string; // YYYY-MM-DD
+  status: AbsentStatus;
+  notes?: string;
+  updatedAt: Date | Timestamp;
+  updatedBy: string; // Admin identifier
+}
+
 // Print Request System Interfaces
 export interface Teacher {
   id: string; // Firestore document ID

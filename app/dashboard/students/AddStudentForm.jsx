@@ -233,16 +233,18 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
       // Check for duplicates
       const studentsRef = collection(db, "students");
       const nameQuery = query(studentsRef, where("fullName", "==", fullName));
-      const phoneQuery = query(studentsRef, where("phone", "==", phone));
+      // Remove spaces from phone for duplicate check
+      const cleanPhone = phone.replace(/\s+/g, '');
+      const phoneQuery = query(studentsRef, where("phone", "==", cleanPhone));
       
       const [nameSnapshot, phoneSnapshot] = await Promise.all([
         getDocs(nameQuery),
-        getDocs(phoneQuery)
+        phoneQuery ? getDocs(phoneQuery) : Promise.resolve({ docs: [] })
       ]);
 
       // Check for duplicates
       const hasDuplicateName = nameSnapshot.docs.length > 0;
-      const hasDuplicatePhone = phone && phoneSnapshot.docs.length > 0;
+      const hasDuplicatePhone = cleanPhone && phoneSnapshot.docs.length > 0;
 
       if (hasDuplicateName) {
         toast.error(`A student with the name "${fullName}" already exists.`);
@@ -251,7 +253,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
       }
 
       if (hasDuplicatePhone) {
-        toast.error(`A student with the phone number "${phone}" already exists.`);
+        toast.error(`A student with the phone number "${cleanPhone}" already exists.`);
         setLoading(false);
         return;
       }

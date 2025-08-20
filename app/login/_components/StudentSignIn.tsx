@@ -3,12 +3,10 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  signInWithRedirect, 
   getRedirectResult, 
   User,
-  signInWithCustomToken
+  signInWithCustomToken,
+  signInWithEmailAndPassword
 } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { 
@@ -82,7 +80,7 @@ const StudentSignIn = () => {
         role: "student",
       })
     );
-    router.push("/link-account");
+    router.push("/login");
 
   }, [dispatch, router]);
 
@@ -104,69 +102,89 @@ const StudentSignIn = () => {
       });
   }, [checkUserAndRedirect]);
 
-  const handleGoogleSignIn = async () => {
-    setIsSubmitting(true);
-    setError(null);
-    const provider = new GoogleAuthProvider();
-
-    if (isMobileDevice()) {
-      await signInWithRedirect(auth, provider);
-    } else {
-      try {
-        const result = await signInWithPopup(auth, provider);
-        const firebaseUser = result.user;
-        await checkUserAndRedirect(firebaseUser);
-      } catch (error: any) {
-        if (error.code !== 'auth/popup-closed-by-user') {
-          setError(error.message || "Failed to sign in with Google.");
-        }
-        console.error("Google sign-in error:", error);
-        setIsSubmitting(false);
-      }
-    }
-  };
-
   const handlePhoneSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
     setSuccess(null);
 
-    try {
-        console.log("Attempting phone authentication...");
+    try {        
+        // First try teacher authentication using Cloud Function
         const functions = getFunctions(auth.app, "asia-southeast1");
-        const authenticateStudent = httpsCallable(functions, 'authenticateStudentWithPhone');
+        const authenticateTeacher = httpsCallable(functions, 'authenticateTeacherWithPhone');
         
-        console.log("Calling backend function with phone:", phone);
-        const result = await authenticateStudent({ phone, password: userPassword });
-        const resultData = result.data as { customToken?: string; student?: any; error?: string };
+        try {
+            const teacherResult = await authenticateTeacher({ phone, password: userPassword });
+            const teacherData = teacherResult.data as { customToken?: string; teacher?: any; error?: string };
 
-        console.log("Backend response:", { hasToken: !!resultData.customToken, hasStudent: !!resultData.student });
+            if (teacherData.customToken && teacherData.teacher) {                
+                // Sign in with the custom token
+                const userCredential = await signInWithCustomToken(auth, teacherData.customToken);
+                const firebaseUser = userCredential.user;
+                
+                // Dispatch teacher data to Redux
+                dispatch(
+                  setUser({
+                    name: teacherData.teacher.fullName,
+                    email: firebaseUser.email,
+                    avatar: firebaseUser.photoURL,
+                    uid: firebaseUser.uid,
+                    studentDocId: null,
+                    role: "teacher",
+                    subject: teacherData.teacher.subject,
+                    phone: teacherData.teacher.phone
+                  })
+                );
 
-        if (resultData.customToken && resultData.student) {
-            console.log("Attempting to sign in with custom token...");
-            // Sign in with the custom token
-            const userCredential = await signInWithCustomToken(auth, resultData.customToken);
-            const firebaseUser = userCredential.user;
+                // Cache teacher session locally for fast restore on refresh
+                try {
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('teacherSession', JSON.stringify({
+                      name: teacherData.teacher.fullName,
+                      uid: firebaseUser.uid,
+                      subject: teacherData.teacher.subject,
+                      phone: teacherData.teacher.phone,
+                      ts: Date.now()
+                    }));
+                  }
+                } catch (e) {
+                  console.warn('Unable to cache teacher session', e);
+                }
+
+                // Redirect to teacher dashboard
+                router.push("/teacher");
+                setIsSubmitting(false);
+                return;
+            }
             
-            console.log("Successfully signed in with custom token, user:", firebaseUser.uid);
+        } catch (teacherAuthError: any) {            
+            // If teacher auth fails, proceed with student authentication
+            const authenticateStudent = httpsCallable(functions, 'authenticateStudentWithPhone');
+                        const result = await authenticateStudent({ phone, password: userPassword });
+            const resultData = result.data as { customToken?: string; student?: any; error?: string };
 
-            // Dispatch user data to Redux
-            dispatch(
-              setUser({
-                name: resultData.student.fullName,
-                email: firebaseUser.email,
-                avatar: firebaseUser.photoURL,
-                uid: firebaseUser.uid,
-                studentDocId: resultData.student.id,
-                role: "student",
-              })
-            );
+            if (resultData.customToken && resultData.student) {
+                // Sign in with the custom token
+                const userCredential = await signInWithCustomToken(auth, resultData.customToken);
+                const firebaseUser = userCredential.user;
+                
+                // Dispatch user data to Redux
+                dispatch(
+                  setUser({
+                    name: resultData.student.fullName,
+                    email: firebaseUser.email,
+                    avatar: firebaseUser.photoURL,
+                    uid: firebaseUser.uid,
+                    studentDocId: resultData.student.id,
+                    role: "student",
+                  })
+                );
 
-            // Redirect to student dashboard
-            router.push(navItems[0].href);
-        } else {
-            throw new Error("Authentication failed. Please check your phone and password.");
+                // Redirect to student dashboard
+                router.push(navItems[0].href);
+            } else {
+                throw new Error("Authentication failed. Please check your phone and password.");
+            }
         }
 
     } catch (error: any) {
@@ -177,6 +195,14 @@ const StudentSignIn = () => {
             setError("Account setup error. Please contact support or try registering via Telegram bot again.");
         } else if (error.code === 'auth/invalid-custom-token') {
             setError("Authentication token error. Please try again or contact support.");
+        } else if (error.code === 'auth/wrong-password') {
+            setError("Invalid password. For teachers, use 'RodwellTeacher'. For students, use your registered password.");
+        } else if (error.code === 'auth/user-not-found') {
+            setError("No account found with this phone number. Students should register via Telegram bot first.");
+        } else if (error.code === 'functions/not-found') {
+            setError("Invalid Account");
+        } else if (error.code === 'functions/unauthenticated') {
+            setError("Invalid phone or password. Please check your credentials.");
         } else {
             setError(error.message || "Invalid credentials. Please try again.");
         }
@@ -194,7 +220,7 @@ const StudentSignIn = () => {
         <Image src="/favicon.png" alt="Logo" width={80} height={80} />
       </div>
       <h1 className="text-2xl font-bold text-center pb-4 text-gray-900 dark:text-white">
-        Student Portal
+        Student & Teacher Portal
       </h1>
 
       {error && (
@@ -235,7 +261,7 @@ const StudentSignIn = () => {
               )}
           </FormField>
           <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-            Need to register or change password? Use the Telegram bot.
+            <p className="mb-1">Students: Need to register or change password? Use the Telegram bot.</p>
           </div>
           <Button
             type="submit"
@@ -247,26 +273,6 @@ const StudentSignIn = () => {
           </Button>
       </form>
 
-      <div className="relative flex items-center justify-center w-full my-6 border-t border-gray-200 dark:border-slate-700">
-        <div className="absolute px-4 text-sm -translate-y-1/2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-          Or
-        </div>
-      </div>
-      
-      <Button
-        onClick={handleGoogleSignIn}
-        disabled={isSubmitting}
-        color="info"
-        className="w-full"
-      >
-        <div className="flex items-center justify-center">
-            <svg className="w-6 h-6 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C42.022,35.319,44,30.021,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
-            </svg>
-            Sign in with Google
-        </div>
-      </Button>
-      
       <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-blue-100 dark:border-slate-600">
         <div className="text-center mb-3">
           <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-2">

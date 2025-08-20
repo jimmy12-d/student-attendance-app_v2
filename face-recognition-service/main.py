@@ -39,22 +39,15 @@ except Exception as e:
 storage_client = storage.Client()
 
 app = Flask(__name__)
-# Enable CORS with explicit configuration
-CORS(app,
-     origins=['http://localhost:3000', 'https://localhost:3000', 'https://rodwell-attendance.firebaseapp.com', 'https://portal.rodwell.center'],
+# Enable CORS with simplified configuration to avoid duplicate headers
+CORS(app, 
+     origins=['*'],
      methods=['GET', 'POST', 'OPTIONS'],
-     allow_headers=['Content-Type', 'Authorization'],
-     supports_credentials=True)
+     allow_headers=['*'],
+     supports_credentials=False)
 
-# Add explicit OPTIONS handler for preflight requests
-@app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        response = jsonify()
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add('Access-Control-Allow-Headers', "*")
-        response.headers.add('Access-Control-Allow-Methods', "*")
-        return response
+# Remove the manual CORS handlers since Flask-CORS handles everything
+# No need for @app.before_request and @app.after_request CORS handlers
 
 # --- In-memory Cache for Enrolled Faces ---
 # This will be a list of dicts: {'uid': student_uid, 'embedding': embedding_vector}
@@ -70,10 +63,12 @@ def refresh_enrolled_faces_cache():
     field in each student's Firestore document.
     """
     global enrolled_embeddings_list, last_cache_refresh
-    print("Starting cache refresh from Firestore embeddings...")
+    print("\n" + "="*50)
+    print("🔄 REFRESHING FACE EMBEDDINGS CACHE")
+    print("="*50)
 
     if not db:
-        print("Firestore client not available. Skipping cache refresh.")
+        print("❌ Firestore client not available. Skipping cache refresh.")
         return
 
     try:
@@ -108,10 +103,13 @@ def refresh_enrolled_faces_cache():
         # It expects a list of lists, where each inner list is [identity_path, embedding_vector].
         enrolled_embeddings_list = temp_embeddings_list
         last_cache_refresh = time.time()
-        print(f"Cache refresh completed. Total students cached: {len(enrolled_embeddings_list)}")
+        
+        print(f"✅ Cache refresh completed!")
+        print(f"📊 Total students cached: {len(enrolled_embeddings_list)}")
+        print("="*50 + "\n")
 
     except Exception as e:
-        print(f"Error during cache refresh: {e}")
+        print(f"❌ Error during cache refresh: {e}")
         traceback.print_exc()
 
 # --- Utility Functions ---
@@ -161,54 +159,152 @@ def recognize_face():
         image_data = base64.b64decode(data['image'])
         img_array = np.array(Image.open(io.BytesIO(image_data)))
 
-        # 4. Generate embedding for the incoming face using SFace
-        live_embedding_obj = DeepFace.represent(
-            img_path=img_array,
-            model_name='SFace',
-            enforce_detection=False
-        )
+        # 4. Generate embedding for the incoming face using SFace with more efficient detection
+        live_embedding_obj = None
+        # Prioritize faster detectors first, then fall back to more robust ones
+        detection_backends = ['opencv', 'ssd', 'mtcnn', 'retinaface']
+        
+        for backend in detection_backends:
+            try:
+                print(f"DEBUG: Trying face detection with {backend}...")
+                live_embedding_obj = DeepFace.represent(
+                    img_path=img_array,
+                    model_name='SFace',
+                    enforce_detection=True,
+                    detector_backend=backend
+                )
+                print(f"DEBUG: ✅ Face detection succeeded with {backend}")
+                break
+            except Exception as detection_error:
+                print(f"DEBUG: ❌ Face detection failed with {backend}: {detection_error}")
+                continue
+        
+        # If all detectors with enforcement failed, try without enforcement using fastest detector
+        if not live_embedding_obj:
+            try:
+                print("DEBUG: Trying face detection without enforcement using opencv...")
+                live_embedding_obj = DeepFace.represent(
+                    img_path=img_array,
+                    model_name='SFace',
+                    enforce_detection=False,
+                    detector_backend='opencv'
+                )
+                print("DEBUG: ✅ Face detection succeeded without enforcement")
+            except Exception as fallback_error:
+                print(f"DEBUG: ❌ All face detection methods failed: {fallback_error}")
+                return jsonify({'status': 'no_face_detected', 'message': 'No clear face detected. Please face the camera directly with good lighting.'}), 200
 
         if not live_embedding_obj or 'embedding' not in live_embedding_obj[0]:
             return jsonify({'status': 'no_face_detected', 'message': 'Could not create an embedding for the detected face.'}), 200
 
         live_embedding = live_embedding_obj[0]['embedding']
+        
+        # 4.5. Enhanced quality check - if ALL distances are very high, suggest retry
+        quick_distances = []
+        # Sample more faces for better quality assessment, but limit to 5 for speed
+        sample_size = min(5, len(enrolled_embeddings_list))
+        for enrolled_face in enrolled_embeddings_list[:sample_size]:
+            enrolled_embedding = enrolled_face['embedding']
+            distance = find_cosine_distance(live_embedding, enrolled_embedding)
+            quick_distances.append(distance)
+        
+        avg_distance = sum(quick_distances) / len(quick_distances) if quick_distances else 1.0
+        print(f"DEBUG: Enhanced quality check - Average distance from {sample_size} samples: {avg_distance:.4f}")
+        
+        # More lenient quality check - only reject very poor quality images
+        if avg_distance > 0.90:
+            return jsonify({
+                'status': 'poor_quality', 
+                'message': f'Image quality too poor (avg: {avg_distance:.2f}). Please ensure good lighting and face camera directly.'
+            }), 200
 
         # 5. Manually find the best match from our cached embeddings
         best_match_uid = None
-        # The threshold for SFace is different. Based on the paper, a distance
-        # below 0.55 is a good starting point for a confident match.
-        smallest_distance = 0.55 
+        # The threshold for SFace - slightly more lenient for better recognition
+        # while still maintaining security. Updated to 0.68 for better matching.
+        # Updated: 2025-08-18 - Changed from 0.65 to 0.68 for better recognition accuracy
+        smallest_distance = 0.68
+        print("DEBUG: ===== FACE RECOGNITION v2.2 - 2025-08-18 OPTIMIZED =====")
         print("DEBUG: Starting face comparison against cache...")
+        print(f"DEBUG: Using threshold: {smallest_distance:.4f}")
+        print(f"DEBUG: Total enrolled faces in cache: {len(enrolled_embeddings_list)}")
+        
+        # Store all comparisons for detailed logging
+        all_comparisons = []
 
         for enrolled_face in enrolled_embeddings_list:
             enrolled_embedding = enrolled_face['embedding']
             distance = find_cosine_distance(live_embedding, enrolled_embedding)
+            
+            # Store comparison details
+            comparison_info = {
+                'uid': enrolled_face['uid'],
+                'distance': distance,
+                'is_best_so_far': distance < smallest_distance
+            }
+            all_comparisons.append(comparison_info)
+            
             print(f"DEBUG: Comparing with UID {enrolled_face['uid']}. Distance: {distance:.4f}")
 
-
             if distance < smallest_distance:
-                print(f"DEBUG: New best match! UID: {enrolled_face['uid']}, New Smallest Distance: {distance:.4f}")
+                print(f"DEBUG: ⭐ NEW BEST MATCH! UID: {enrolled_face['uid']}, Distance: {distance:.4f} (Previous best: {smallest_distance:.4f})")
                 smallest_distance = distance
                 best_match_uid = enrolled_face['uid']
         
-        print(f"DEBUG: Comparison finished. Best match UID: {best_match_uid}, Smallest distance: {smallest_distance:.4f}")
+        # Enhanced debugging output
+        print("\n" + "="*60)
+        print("🔍 FACE RECOGNITION COMPARISON SUMMARY - v2.2 OPTIMIZED")
+        print("="*60)
+        print(f"📊 Total students compared: {len(all_comparisons)}")
+        print(f"🎯 Recognition threshold: {0.68:.4f}")
+        print(f"🏆 Best match distance: {smallest_distance:.4f}")
+        print(f"✅ Match found: {'YES' if best_match_uid else 'NO'}")
+        print(f"🕐 Timestamp: {datetime.now().isoformat()}")
+        print("🚀 OPTIMIZED VERSION - Improved Quality & Reduced API Calls")
+        
+        if best_match_uid:
+            print(f"👤 Best match UID: {best_match_uid}")
+        
+        # Show top 3 closest matches for debugging
+        all_comparisons.sort(key=lambda x: x['distance'])
+        print(f"\n🥇 TOP 3 CLOSEST MATCHES:")
+        for i, comp in enumerate(all_comparisons[:3]):
+            status = "✅ RECOGNIZED" if comp['distance'] < 0.68 else "❌ TOO FAR"
+            print(f"   {i+1}. UID: {comp['uid'][:8]}... | Distance: {comp['distance']:.4f} | {status}")
+        
+        print("="*60 + "\n")
+        
         if not best_match_uid:
-            return jsonify({'status': 'unknown', 'message': f'No confident match found. Closest distance: {smallest_distance:.4f}'}), 200
+            # Show why no match was found
+            closest_distance = all_comparisons[0]['distance'] if all_comparisons else 'N/A'
+            closest_uid = all_comparisons[0]['uid'][:8] + '...' if all_comparisons else 'N/A'
+            return jsonify({
+                'status': 'unknown', 
+                'message': f'No confident match found. Closest: {closest_distance:.4f} (UID: {closest_uid}), Threshold: 0.68'
+            }), 200
 
         # 6. Fetch student data from Firestore using the authUid
-        print(f"DEBUG: Found best match. Fetching student document for authUid: {best_match_uid}")
+        print(f"🔍 DEBUG: Found best match! Fetching student data for authUid: {best_match_uid}")
         student_query = db.collection('students').where("authUid", "==", best_match_uid).limit(1)
         student_snapshot = student_query.get()
 
-
         if not student_snapshot:
-             print(f"DEBUG: Firestore lookup FAILED. No document found for authUid: {best_match_uid}")
+             print(f"❌ DEBUG: Firestore lookup FAILED. No document found for authUid: {best_match_uid}")
              return jsonify({'status': 'unknown', 'message': f'Matching face found but no student record for authUid {best_match_uid}.'}), 200
         
         student_doc = student_snapshot[0]
-        print(f"DEBUG: Firestore lookup SUCCEEDED for authUid: {best_match_uid}. Document ID: {student_doc.id}")
         student_data = student_doc.to_dict()
-        student_name = student_data.get('fullName', 'Unknown Student') # Use 'fullName'
+        student_name = student_data.get('fullName', 'Unknown Student')
+        student_class = student_data.get('class', 'Unknown Class')
+        student_phone = student_data.get('phone', 'No Phone')
+        
+        print(f"✅ DEBUG: Firestore lookup SUCCEEDED!______@s")
+        print(f"   📋 Document ID: {student_doc.id}")
+        print(f"   👤 Student Name: {student_name}")
+        print(f"   📚 Class: {student_class}")
+        print(f"   📱 Phone: {student_phone}")
+        print(f"   🎯 Recognition Distance: {smallest_distance:.4f}")
+        print(f"   🆔 Auth UID: {best_match_uid}")
         student_doc_id = student_doc.id # Get the actual document ID for the response
 
         # --- New Attendance Logic with Firestore Read/Write ---

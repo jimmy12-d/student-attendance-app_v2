@@ -1,0 +1,9 @@
+Flask==2.3.2
+Flask-Cors==4.0.0
+Pillow==9.5.0
+numpy==1.24.3
+google-cloud-storage==2.9.0
+firebase-admin==6.1.0
+deepface==0.0.87
+tensorflow==2.13.0
+gunicorn==20.1.0

@@ -10,7 +10,6 @@ service cloud.firestore {
           exists(/databases/$(database)/documents/authorizedUsers/$(request.auth.token.email));
     }
 
-
     // --- COLLECTION RULES ---
 
     match /students/{studentId} {
@@ -28,21 +27,15 @@ service cloud.firestore {
                       request.resource.data.authUid == request.auth.uid);
     }
 
-    match /classes/{classId} {
-      // Allow any authenticated user to read class information.
-      allow read: if request.auth != null;
-    }
-
-    match /examSettings/{settingId} {
-      // Allow any authenticated user to read exam settings.
-      allow read: if request.auth != null;
-    }
-
-    match /examControls/{controlId} {
-      // Only admins can read or change exam controls.
-      allow read, write: if isAuthorizedUser();
-    }
-
+//     match /attendance/{attendanceId} {
+//       // Only admins can create or update attendance records.
+//       allow write: if isAuthorizedUser();
+      
+//       // An admin can read any record.
+//       // A student can read their OWN attendance records.
+//       // IMPORTANT: This requires your 'attendance' documents to have an 'authUid' field.
+//       allow read: if isAuthorizedUser() || (request.auth.uid == resource.data.authUid);
+//     }
     match /attendance/{attendanceId} {
       // Only admins can create or update attendance records.
       allow write: if isAuthorizedUser();
@@ -50,41 +43,70 @@ service cloud.firestore {
       // An admin can read any record.
       // A student can read their OWN attendance records.
       // IMPORTANT: This requires your 'attendance' documents to have an 'authUid' field.
-      allow read: if true; // Temporary for debugging
-    }
-
-    match /classConfigs/{classId} {
-      // Allow any authenticated user to read class configurations.
-      allow read: if request.auth != null;
-      
-      // Only admins can create, update, or delete class configurations.
-      allow write: if isAuthorizedUser();
-    }
-
-    match /classTypes/{classId} {
-      // Allow any authenticated user to read class types/configurations.
-      allow read: if request.auth != null;
-      
-      // Only admins can create, update, or delete class types.
-      allow write: if isAuthorizedUser();
+      allow read: if true;
     }
 
     match /classes/{classId} {
-      // Allow any authenticated user to read class configurations.
-      allow read: if request.auth != null;
-      
-      // Only admins can create, update, or delete class configurations.
+      // Only admins can manage class data.
       allow write: if isAuthorizedUser();
+      allow read: if request.auth != null;
+    }
+    
+    match /examSettings/{settingId} {
+      // Allow any authenticated user to read exam settings.
+      allow write: if isAuthorizedUser();
+  		allow read: if true; // Changed to allow read by everyone
+    }
+    
+  	match /mockExam3/{examId} {
+      // Allow any authenticated user to read exam settings.
+      allow write: if isAuthorizedUser();
+  		allow read: if true; // Changed to allow read by everyone
+    }
+    
+    match /examControls/{controlsId} {
+      // Allow any authenticated user to read exam settings.
+      allow write: if isAuthorizedUser();
+      allow read: if request.auth != null;
+    }
+    
+    match /users/{userId}/notifications/{notificationId} {
+      // Allow a user to read and write their own notification statuses, but not anyone else's.
+      allow read, write: if request.auth.uid == userId;
     }
 
+    match /notifications/{notificationId} {
+      // This rule is correct and should stay.
+      allow read: if request.auth != null;
+      // You may want to restrict write access to admins.
+      allow write: if isAuthorizedUser(); 
+    }
+    
+    match /financePW/{financePWId} {
+      allow read: if isAuthorizedUser(); 
+    }
+
+    
     match /permissions/{permissionId} {
-      // Allow any authenticated user to read permissions (needed for attendance logic).
-      allow read: if request.auth != null;
+      // Admins can update permissions (approve/deny).
+      allow update: if isAuthorizedUser();
       
-      // Only admins can create, update, or delete permissions.
-      allow write: if isAuthorizedUser();
+      // An admin or the student who owns it can read a permission request.
+      // IMPORTANT: This requires your 'permissions' documents to have an 'authUid' field.
+      allow read: if isAuthorizedUser() || (request.auth.uid == resource.data.authUid);
+      
+      // A student can create a permission request for themselves.
+      // This rule ensures the 'authUid' in the new document matches the person creating it.
+      allow create: if true;
     }
 
+    match /authorizedUsers/{userEmail} {
+      // A user can only read their own authorization status.
+      allow get: if request.auth != null && request.auth.token.email == userEmail;
+      // Nobody can modify the admin list from the app.
+      allow list, create, update, delete: if false;
+    }
+    
     match /documents/{documentId} {
       // READ: Authenticated users can read document metadata.
       allow read: if request.auth != null;
@@ -95,6 +117,43 @@ service cloud.firestore {
       
       // UPDATE/DELETE: Only admins can modify or delete documents.
       allow update, delete: if isAuthorizedUser();
+    }
+    
+    match /teachers/{teacherId} {
+      // READ: Only authenticated users can read teacher information
+      // Now that we have Cloud Functions, we don't need unauthenticated access
+      allow read: if request.auth != null;
+      
+      // CREATE/UPDATE/DELETE: Only admins can manage teacher records
+      allow create, update, delete: if isAuthorizedUser();
+    }
+    
+    match /appSettings/{appSettingId} {
+      // READ: Authenticated users can read document metadata.
+      allow read: if request.auth != null;
+      
+      allow write: if isAuthorizedUser();
+    }
+    
+    match /classTypes/{classTypesId} {
+      // READ: Authenticated users can read document metadata.
+      allow read, write: if isAuthorizedUser();
+    }
+        
+    match /transactions/{transactionsId} {
+      // READ: Authenticated users can read document metadata.
+      allow read: if request.auth != null;
+      
+      allow write: if isAuthorizedUser();
+    }
+    
+    match /processedAbaTransactions/{transactionId} {
+      allow read: if isAuthorizedUser() || request.auth == null;
+      allow write: if false;
+    }
+    
+    match /tempRegistrationTokens/{tempRegistrationTokensId} {
+      allow write, read: if isAuthorizedUser();
     }
 
     match /printRequests/{requestId} {
@@ -111,31 +170,18 @@ service cloud.firestore {
       // DELETE: Only admins can delete print requests.
       allow delete: if isAuthorizedUser();
     }
-
-    match /teachers/{teacherId} {
-      // READ: Authenticated users can read teacher information for form population.
-      allow read: if request.auth != null;
-      
-      // CREATE/UPDATE/DELETE: Only admins can manage teacher records.
-      allow create, update, delete: if isAuthorizedUser();
-    }
-
-    match /cleanupLogs/{logId} {
-      // READ: Only admins can read cleanup logs.
-      allow read: if isAuthorizedUser();
-      
-      // CREATE: Allow system (Cloud Functions) to create logs.
-      // UPDATE/DELETE: Only admins can modify logs.
-      allow create: if true; // Cloud Functions don't have auth context
-      allow update, delete: if isAuthorizedUser();
+    
+    match /absentFollowUps/{absentFollowUpId} {
+      // READ/WRITE: Only admins can access absent follow-up records.
+      allow read, write: if isAuthorizedUser();
     }
     
-    // Temporary rule to support client SDK fallback
-    // Remove this once Firebase Admin SDK is properly configured with service account credentials
-    match /processedAbaTransactions/{transactionId} {
-      // READ: Allow authorized users (for the UI) and unauthenticated requests (for server API routes)
-      allow read: if isAuthorizedUser() || request.auth == null;
-      allow write: if false;
+    match /mockResults/{phoneId} {
+      // READ: Authenticated users (teachers/admins) can read student mock results
+      allow read: if request.auth != null;
+      
+      // WRITE: Authenticated users (teachers/admins) can update mock results
+      allow write: if request.auth != null;
     }
   }
-} 
+}

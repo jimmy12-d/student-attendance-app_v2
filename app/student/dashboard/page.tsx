@@ -13,7 +13,7 @@ import ScoreCard from '../_components/ScoreCard';
 import { db } from '../../../firebase-config';
 import { collection, query, where, onSnapshot, getDocs, orderBy, limit, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
-import { isSchoolDay } from '../../dashboard/_lib/attendanceLogic';
+import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord } from '../../dashboard/_lib/attendanceLogic';
 import { Student, PermissionRecord } from '../../_interfaces';
 
 // Redux
@@ -174,10 +174,6 @@ const StudentDashboard = () => {
         const permsSnap = await getDocs(permsQuery);
         const approvedPermissions = permsSnap.docs.map(doc => doc.data() as PermissionRecord);
 
-        const isDateInPermissionRange = (dateStr: string, perms: PermissionRecord[]) => {
-          return perms.some(p => dateStr >= p.permissionStartDate && dateStr <= p.permissionEndDate);
-        };
-
         // 5. Set up a real-time listener for attendance on those days
         if (schoolDays.length > 0) {
             const recordsQuery = query(
@@ -193,13 +189,47 @@ const StudentDashboard = () => {
               });
 
               const displayRecords = schoolDays.map(dateStr => {
+                // Convert the AttendanceRecord to RawAttendanceRecord format for getStudentDailyStatus
+                const rawAttendanceRecord: RawAttendanceRecord | undefined = fetchedRecords[dateStr] ? {
+                  studentId: studentData.studentId,
+                  date: dateStr,
+                  status: fetchedRecords[dateStr].status as 'present' | 'late' | 'pending',
+                  timestamp: fetchedRecords[dateStr].timestamp instanceof Date ? 
+                            Timestamp.fromDate(fetchedRecords[dateStr].timestamp as Date) : 
+                            fetchedRecords[dateStr].timestamp as Timestamp,
+                  class: studentData.class,
+                  shift: studentData.shift,
+                  id: fetchedRecords[dateStr].id
+                } : undefined;
+
+                // Use the centralized status calculation function
+                const calculatedStatus = getStudentDailyStatus(
+                  studentData,
+                  dateStr,
+                  rawAttendanceRecord,
+                  classConfigs,
+                  approvedPermissions
+                );
+
+                // Convert back to AttendanceRecord format for display
                 if (fetchedRecords[dateStr]) {
                   return fetchedRecords[dateStr];
                 }
-                if (isDateInPermissionRange(dateStr, approvedPermissions)) {
-                  return { id: dateStr, date: dateStr, status: 'permission' };
-                }
-                return { id: dateStr, date: dateStr, status: 'absent' };
+                
+                // Create a display record based on the calculated status
+                const displayStatus = calculatedStatus.status === "Permission" ? 'permission' :
+                                    calculatedStatus.status === "Not Yet Enrolled" ? 'not-enrolled' :
+                                    calculatedStatus.status === "No School" ? 'no-school' :
+                                    calculatedStatus.status === "Present" ? 'present' :
+                                    calculatedStatus.status === "Late" ? 'late' :
+                                    calculatedStatus.status === "Pending" ? 'pending' : 'absent';
+                
+                return { 
+                  id: dateStr, 
+                  date: dateStr, 
+                  status: displayStatus,
+                  calculatedTime: calculatedStatus.time 
+                };
               });
               
               setRecentRecords(displayRecords);

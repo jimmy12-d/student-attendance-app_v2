@@ -1,0 +1,82 @@
+{
+  "collection": "tempRegistrationTokens",
+  "totalDocuments": 5,
+  "backupTimestamp": "2025-08-16T04:44:22.193Z",
+  "documents": [
+    {
+      "id": "2RMSQ7ZTBSBQEYWU",
+      "data": {
+        "studentId": "uKFeT722eKpYFpGVsesr",
+        "token": "2RMSQ7ZTBSBQEYWU",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-13T12:39:45.581Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T12:39:45.581Z"
+        }
+      }
+    },
+    {
+      "id": "7H4HSDNPQTE6EZJ7",
+      "data": {
+        "studentId": "XNZbBOFMuMFSmn19kyK3",
+        "token": "7H4HSDNPQTE6EZJ7",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T04:43:38.348Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-19T04:43:38.348Z"
+        }
+      }
+    },
+    {
+      "id": "8TXGBYHL6YJCJDZ7",
+      "data": {
+        "studentId": "XNZbBOFMuMFSmn19kyK3",
+        "token": "8TXGBYHL6YJCJDZ7",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T04:36:51.983Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-19T04:36:51.983Z"
+        }
+      }
+    },
+    {
+      "id": "LPKMC377R3W59TAB",
+      "data": {
+        "studentId": "xrRHW5kArclIikVGbbhY",
+        "token": "LPKMC377R3W59TAB",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T04:42:45.540Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-19T04:42:45.540Z"
+        }
+      }
+    },
+    {
+      "id": "V76S2PGKUZ2JNLCC",
+      "data": {
+        "studentId": "9iYWen6pKreFJJr3c1K1",
+        "token": "V76S2PGKUZ2JNLCC",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-14T13:09:00.075Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-17T13:09:00.074Z"
+        }
+      }
+    }
+  ]
+}

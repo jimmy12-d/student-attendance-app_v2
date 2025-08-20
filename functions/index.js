@@ -174,7 +174,14 @@ exports.telegramWebhook = onRequest({
     }
 
     try {
-        const { message } = req.body;
+        const { message, callback_query } = req.body;
+        
+        // Handle callback queries (inline button presses)
+        if (callback_query) {
+            await handleCallbackQuery(bot, callback_query);
+            return res.status(200).send('OK');
+        }
+        
         if (!message) {
             return res.status(200).send('OK');
         }
@@ -202,7 +209,7 @@ exports.telegramWebhook = onRequest({
             await handleSetCustomPasswordCommand(bot, chatId, userId);
         } else {
             // Check if user is in registration or password change flow
-            await handleTextMessage(bot, chatId, userId, text);
+            await handleTextMessage(bot, chatId, userId, text, message.message_id);
         }
 
         res.status(200).send('OK');
@@ -224,6 +231,47 @@ const handleStartCommand = async (bot, chatId, userId) => {
             .get();
 
         if (!existingUser.empty) {
+            const studentData = existingUser.docs[0].data();
+            const hasPassword = !!studentData.passwordHash;
+            console.log(`User ${chatId} tried to register but is already registered - from handleStartCommand. Has password: ${hasPassword}`);
+            
+            if (!hasPassword) {
+                console.log(`User ${chatId} is registered but has no password - allowing setup`);
+                // User is registered but doesn't have a password set yet
+                // Update user state for password setup
+                await db.collection("telegramUserStates").doc(chatId.toString()).set({
+                    userId: userId,
+                    chatId: chatId,
+                    state: "password_setup_menu",
+                    studentId: existingUser.docs[0].id,
+                    timestamp: FieldValue.serverTimestamp()
+                });
+
+                const options = {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: "🔐 Generate Password", callback_data: "generate_password" },
+                                { text: "✏️ Custom Password", callback_data: "custom_password" }
+                            ]
+                        ]
+                    }
+                };
+
+                await bot.sendMessage(chatId, 
+                    `✅ Account found!\n\n` +
+                    `👋 Welcome back ${studentData.fullName || 'Student'}!\n\n` +
+                    `🔐 **Complete Your Setup: Set Your Password**\n\n` +
+                    `Choose how you want to create your password for the Student Portal:\n\n` +
+                    `🔐 **Generate Secure Password** - I'll create a strong 12-character password\n` +
+                    `✏️ **Create Custom Password** - Set your own password\n\n` +
+                    `📱 You'll use your phone (${studentData.phone}) and password to login at:\n` +
+                    `🌐 **portal.rodwell.center/login**`,
+                    options
+                );
+                return;
+            }
+            
             await bot.sendMessage(chatId, "✅ Your account is already registered. Use /changepassword to update your password.");
             return;
         }
@@ -264,6 +312,7 @@ const handleStartWithToken = async (bot, chatId, userId, token) => {
             .get();
 
         if (!existingUser.empty) {
+            console.log(`User ${chatId} tried to register with token but is already registered - from handleStartWithToken`);
             await bot.sendMessage(chatId, "✅ Your account is already registered. Use /changepassword to update your password.");
             return;
         }
@@ -298,17 +347,34 @@ const handleChangePasswordCommand = async (bot, chatId, userId) => {
             return;
         }
 
-        await bot.sendMessage(chatId, "🔐 Password Change Options:\n\n" +
-            "Choose how you want to change your password:\n" +
-            "• Type `/generate` - I'll create a secure 12-character password for you\n" +
-            "• Type `/setpassword` - Set your own custom password\n" +
-            "• Type `/cancel` - Cancel password change");
+        const options = {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: "🔐 Generate Secure Password", callback_data: "change_generate_password" },
+                        { text: "✏️ Create Custom Password", callback_data: "change_custom_password" }
+                    ],
+                    [
+                        { text: "❌ Cancel", callback_data: "cancel_password_change" }
+                    ]
+                ]
+            }
+        };
+
+        await bot.sendMessage(chatId, 
+            "🔐 **Password Change Options**\n\n" +
+            "Choose how you want to change your password:\n\n" +
+            "🔐 **Generate Secure Password** - I'll create a strong 12-character password for you\n" +
+            "✏️ **Create Custom Password** - Set your own custom password\n\n" +
+            "What would you like to do?",
+            options
+        );
 
         // Store user state for password change flow
         await db.collection("telegramUserStates").doc(chatId.toString()).set({
             userId: userId,
             chatId: chatId,
-            state: "password_change_menu",
+            state: "password_change_menu_buttons",
             timestamp: FieldValue.serverTimestamp()
         });
 
@@ -358,9 +424,216 @@ const handleSetCustomPasswordCommand = async (bot, chatId, userId) => {
 };
 
 /**
- * Handle regular text messages (username input, password input, etc.)
+ * Handle callback queries from inline keyboards
  */
-const handleTextMessage = async (bot, chatId, userId, text) => {
+const handleCallbackQuery = async (bot, callbackQuery) => {
+    try {
+        const chatId = callbackQuery.message.chat.id;
+        const userId = callbackQuery.from.id;
+        const data = callbackQuery.data;
+        const messageId = callbackQuery.message.message_id;
+
+        console.log(`Callback query from chatId ${chatId}: ${data}`);
+
+        // Answer the callback query to remove loading state
+        await bot.answerCallbackQuery(callbackQuery.id);
+
+        if (data === "generate_password") {
+            await handleGeneratePassword(bot, chatId, userId, messageId);
+        } else if (data === "custom_password") {
+            await handleRequestCustomPassword(bot, chatId, userId, messageId);
+        } else if (data === "delete_password_message") {
+            await handleDeletePasswordMessage(bot, chatId, messageId);
+        } else if (data === "change_generate_password") {
+            await handleChangeGeneratePassword(bot, chatId, userId, messageId);
+        } else if (data === "change_custom_password") {
+            await handleChangeCustomPassword(bot, chatId, userId, messageId);
+        } else if (data === "cancel_password_change") {
+            await handleCancelPasswordChange(bot, chatId, messageId);
+        }
+
+    } catch (error) {
+        console.error('Error handling callback query:', error);
+        await bot.answerCallbackQuery(callbackQuery.id, { 
+            text: "❌ An error occurred. Please try again.", 
+            show_alert: true 
+        });
+    }
+};
+
+/**
+ * Handle delete password message button
+ */
+const handleDeletePasswordMessage = async (bot, chatId, messageId) => {
+    try {
+        await bot.deleteMessage(chatId, messageId);
+        console.log(`Deleted password message ${messageId} in chat ${chatId}`);
+    } catch (error) {
+        console.error('Error deleting password message:', error);
+        // If deletion fails, try to edit the message to remove sensitive content
+        try {
+            await bot.editMessageText(
+                `🗑️ **Message Deleted**\n\n` +
+                `This message contained sensitive information and has been cleared.\n\n` +
+                `🔄 Use /changepassword if you need to change your password again.`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown'
+                }
+            );
+        } catch (editError) {
+            console.error('Could not edit message either:', editError);
+        }
+    }
+};
+
+/**
+ * Handle generate password button
+ */
+const handleGeneratePassword = async (bot, chatId, userId, messageId) => {
+    try {
+        // Get user state
+        const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
+        
+        if (!stateDoc.exists || stateDoc.data().state !== "password_setup_menu") {
+            await bot.editMessageText("❌ Session expired. Please start registration again.", {
+                chat_id: chatId,
+                message_id: messageId
+            });
+            return;
+        }
+
+        const state = stateDoc.data();
+        const studentId = state.studentId;
+
+        // Generate and hash password
+        const newPassword = generateRandomPassword();
+        const hashedPassword = await hashPassword(newPassword);
+
+        // Update student with password
+        await db.collection("students").doc(studentId).update({
+            passwordHash: hashedPassword,
+            passwordUpdatedAt: FieldValue.serverTimestamp()
+        });
+
+        // Clean up state
+        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+
+        // Create inline keyboard with delete button
+        const options = {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "🗑️ Delete This Message", callback_data: "delete_password_message" }]
+                ]
+            }
+        };
+
+        // Edit the original message to show password
+        await bot.editMessageText(
+            `✅ **Password Generated Successfully!**\n\n` +
+            `🔐 **Your secure password is:**\n` +
+            `\`${newPassword}\`\n` +
+            `👆 *Long press the password above to copy it*\n\n` +
+            `📱 **Login Information:**\n` +
+            `• Website: **portal.rodwell.center/login**\n` +
+            `• Phone: Use your registered phone number\n` +
+            `• Password: Use the password above\n\n` +
+            `⚠️ **Important:** Save this password securely, then delete this message!\n\n` +
+            `🔄 Use /changepassword anytime to change your password.`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                ...options
+            }
+        );
+
+        console.log(`Generated password for student ${studentId} via Telegram`);
+
+    } catch (error) {
+        console.error('Error generating password:', error);
+        await bot.editMessageText("❌ Failed to generate password. Please try again later.", {
+            chat_id: chatId,
+            message_id: messageId
+        });
+    }
+};
+
+/**
+ * Handle custom password button
+ */
+const handleRequestCustomPassword = async (bot, chatId, userId, messageId) => {
+    try {
+        console.log(`handleRequestCustomPassword called for chatId ${chatId}`);
+        
+        // Get current user state to ensure it exists and is in the correct state
+        const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
+        
+        if (!stateDoc.exists) {
+            console.error(`User state not found for chatId ${chatId}`);
+            await bot.editMessageText("❌ Session expired. Please start registration again with /start.", {
+                chat_id: chatId,
+                message_id: messageId
+            });
+            return;
+        }
+
+        const currentState = stateDoc.data();
+        
+        if (currentState.state !== "password_setup_menu") {
+            console.error(`Invalid state for custom password: ${currentState.state} for chatId ${chatId}`);
+            await bot.editMessageText("❌ Invalid session state. Please start registration again with /start.", {
+                chat_id: chatId,
+                message_id: messageId
+            });
+            return;
+        }
+        
+        // Update user state for custom password input
+        await db.collection("telegramUserStates").doc(chatId.toString()).set({
+            ...currentState, // Preserve existing fields like studentId
+            state: "waiting_custom_password_initial",
+            messageIdToEdit: messageId,
+            timestamp: FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        await bot.editMessageText(
+            `✏️ **Create Your Custom Password**\n\n` +
+            `Please enter your new password. It must meet these requirements:\n` +
+            `• At least 8 characters long\n` +
+            `• Contains uppercase letters (A-Z)\n` +
+            `• Contains lowercase letters (a-z)\n` +
+            `• Contains numbers (0-9)\n` +
+            `• Contains special characters (!@#$%^&*...)\n\n` +
+            `Type your password in the next message. The message will be automatically deleted after processing for security.\n\n` +
+            `Type \`/cancel\` to cancel this operation.`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown'
+            }
+        );
+
+    } catch (error) {
+        console.error(`Error requesting custom password for chatId ${chatId}:`, error);
+        try {
+            await bot.editMessageText("❌ An error occurred. Please try /start to begin registration again.", {
+                chat_id: chatId,
+                message_id: messageId
+            });
+        } catch (editError) {
+            console.error('Error editing message:', editError);
+            // If we can't edit the message, send a new one
+            await bot.sendMessage(chatId, "❌ An error occurred. Please try /start to begin registration again.");
+        }
+    }
+};
+
+/**
+ * Handle text message during registration or password change flow
+ */
+const handleTextMessage = async (bot, chatId, userId, text, messageId) => {
     try {
         // Handle cancel command
         if (text.toLowerCase() === '/cancel') {
@@ -385,6 +658,10 @@ const handleTextMessage = async (bot, chatId, userId, text) => {
             await handlePasswordChangeMenuChoice(bot, chatId, userId, text.trim());
         } else if (state.state === "waiting_custom_password") {
             await handleCustomPasswordInput(bot, chatId, userId, text);
+        } else if (state.state === "waiting_custom_password_initial") {
+            await handleCustomPasswordInputInitial(bot, chatId, userId, text, messageId);
+        } else if (state.state === "waiting_custom_password_change") {
+            await handleCustomPasswordInputChange(bot, chatId, userId, text, messageId);
         } else {
             await bot.sendMessage(chatId, "Please use /start to begin registration or /changepassword to update your password.");
         }
@@ -392,6 +669,295 @@ const handleTextMessage = async (bot, chatId, userId, text) => {
     } catch (error) {
         console.error('Error handling text message:', error);
         await bot.sendMessage(chatId, "❌ An error occurred. Please try again.");
+    }
+};
+
+/**
+ * Handle generate password for password change
+ */
+const handleChangeGeneratePassword = async (bot, chatId, userId, messageId) => {
+    try {
+        // Find the user's document
+        const userDoc = await db.collection("students")
+            .where("chatId", "==", chatId.toString())
+            .limit(1)
+            .get();
+
+        if (userDoc.empty) {
+            await bot.editMessageText("❌ Account not found. Please register first with /start.", {
+                chat_id: chatId,
+                message_id: messageId
+            });
+            return;
+        }
+
+        const studentDoc = userDoc.docs[0];
+        const newPassword = generateRandomPassword();
+        const hashedPassword = await hashPassword(newPassword);
+
+        // Update password in database
+        await studentDoc.ref.update({
+            passwordHash: hashedPassword,
+            passwordUpdatedAt: FieldValue.serverTimestamp()
+        });
+
+        // Clean up state
+        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+
+        // Create inline keyboard with delete button
+        const options = {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "🗑️ Delete This Message", callback_data: "delete_password_message" }]
+                ]
+            }
+        };
+
+        // Edit message to show new password
+        await bot.editMessageText(
+            `✅ **New Password Generated!**\n\n` +
+            `🔐 **Your new secure password is:**\n` +
+            `\`${newPassword}\`\n\n` +
+            `📱 **Login Information:**\n` +
+            `• Website: **portal.rodwell.center/login**\n` +
+            `• Phone: Use your registered phone number\n` +
+            `• Password: Use the password above\n\n` +
+            `⚠️ **Important:** Save this password securely, then delete this message!`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                ...options
+            }
+        );
+
+        console.log(`Generated new password for student ${studentDoc.id} via Telegram`);
+
+    } catch (error) {
+        console.error('Error generating password for change:', error);
+        await bot.editMessageText("❌ Failed to generate password. Please try again later.", {
+            chat_id: chatId,
+            message_id: messageId
+        });
+    }
+};
+
+/**
+ * Handle custom password for password change
+ */
+const handleChangeCustomPassword = async (bot, chatId, userId, messageId) => {
+    try {
+        // Update user state for custom password input
+        await db.collection("telegramUserStates").doc(chatId.toString()).set({
+            userId: userId,
+            chatId: chatId,
+            state: "waiting_custom_password_change",
+            messageIdToEdit: messageId,
+            timestamp: FieldValue.serverTimestamp()
+        });
+
+        await bot.editMessageText(
+            `✏️ **Change to Custom Password**\n\n` +
+            `Please enter your new password. It must meet these requirements:\n` +
+            `• At least 8 characters long\n` +
+            `• Contains uppercase letters (A-Z)\n` +
+            `• Contains lowercase letters (a-z)\n` +
+            `• Contains numbers (0-9)\n` +
+            `• Contains special characters (!@#$%^&*...)\n\n` +
+            `Type your password in the next message. The message will be automatically deleted after processing for security.\n\n` +
+            `Type \`/cancel\` to cancel this operation.`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown'
+            }
+        );
+
+    } catch (error) {
+        console.error('Error requesting custom password change:', error);
+        await bot.editMessageText("❌ Failed to set up custom password. Please try again later.", {
+            chat_id: chatId,
+            message_id: messageId
+        });
+    }
+};
+
+/**
+ * Handle cancel password change
+ */
+const handleCancelPasswordChange = async (bot, chatId, messageId) => {
+    try {
+        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+        
+        await bot.editMessageText(
+            `❌ **Password Change Cancelled**\n\n` +
+            `Your password remains unchanged.\n\n` +
+            `Use /changepassword anytime to change your password.`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown'
+            }
+        );
+
+    } catch (error) {
+        console.error('Error cancelling password change:', error);
+        await bot.editMessageText("❌ Error cancelling operation.", {
+            chat_id: chatId,
+            message_id: messageId
+        });
+    }
+};
+
+/**
+ * Handle custom password input during initial registration
+ */
+const handleCustomPasswordInputInitial = async (bot, chatId, userId, password, messageId) => {
+    try {
+        console.log(`handleCustomPasswordInputInitial called for chatId ${chatId}`);
+        
+        // Delete the message containing the password immediately for security
+        try {
+            await bot.deleteMessage(chatId, messageId);
+        } catch (deleteError) {
+            console.warn('Could not delete password message:', deleteError.message);
+        }
+
+        // Validate password strength
+        const validation = validatePasswordStrength(password);
+        
+        if (!validation.valid) {
+            await bot.sendMessage(chatId, 
+                `❌ ${validation.message}\n\nPlease enter a stronger password, or type /cancel to cancel:`
+            );
+            return;
+        }
+
+        // Get user state
+        const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
+        
+        if (!stateDoc.exists) {
+            await bot.sendMessage(chatId, "❌ Session expired. Please start registration again.");
+            return;
+        }
+
+        const state = stateDoc.data();
+        const studentId = state.studentId;
+        const originalMessageId = state.messageIdToEdit;
+
+        const hashedPassword = await hashPassword(password);
+
+        // Update student with password
+        await db.collection("students").doc(studentId).update({
+            passwordHash: hashedPassword,
+            passwordUpdatedAt: FieldValue.serverTimestamp()
+        });
+
+        // Clean up state
+        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+
+        // Edit the original message to confirm success
+        await bot.editMessageText(
+            `✅ **Custom Password Set Successfully!**\n\n` +
+            `🔐 Your password has been securely saved.\n\n` +
+            `📱 **Login Information:**\n` +
+            `• Website: **portal.rodwell.center/login**\n` +
+            `• Phone: Use your registered phone number\n` +
+            `• Password: Use your custom password\n\n` +
+            `🔒 For security, your password message was automatically deleted.\n\n` +
+            `🔄 Use /changepassword anytime to change your password.`,
+            {
+                chat_id: chatId,
+                message_id: originalMessageId,
+                parse_mode: 'Markdown'
+            }
+        );
+
+        console.log(`Custom password set for student ${studentId} via Telegram`);
+
+    } catch (error) {
+        console.error('Error handling custom password input:', error);
+        await bot.sendMessage(chatId, "❌ Failed to set password. Please try again.");
+    }
+};
+
+/**
+ * Handle custom password input during password change
+ */
+const handleCustomPasswordInputChange = async (bot, chatId, userId, password, messageId) => {
+    try {
+        // Delete the message containing the password immediately for security
+        try {
+            await bot.deleteMessage(chatId, messageId);
+        } catch (deleteError) {
+            console.warn('Could not delete password message:', deleteError.message);
+        }
+
+        // Validate password strength
+        const validation = validatePasswordStrength(password);
+        
+        if (!validation.valid) {
+            await bot.sendMessage(chatId, 
+                `❌ ${validation.message}\n\nPlease enter a stronger password, or type /cancel to cancel:`
+            );
+            return;
+        }
+
+        // Get user state
+        const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
+        
+        if (!stateDoc.exists) {
+            await bot.sendMessage(chatId, "❌ Session expired. Please try /changepassword again.");
+            return;
+        }
+
+        const state = stateDoc.data();
+        const originalMessageId = state.messageIdToEdit;
+
+        // Find the user's document
+        const userDoc = await db.collection("students")
+            .where("chatId", "==", chatId.toString())
+            .limit(1)
+            .get();
+
+        if (userDoc.empty) {
+            await bot.sendMessage(chatId, "❌ Account not found. Please register first with /start.");
+            return;
+        }
+
+        const studentDoc = userDoc.docs[0];
+        const hashedPassword = await hashPassword(password);
+
+        // Update password in database
+        await studentDoc.ref.update({
+            passwordHash: hashedPassword,
+            passwordUpdatedAt: FieldValue.serverTimestamp()
+        });
+
+        // Clean up state
+        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+
+        // Edit the original message to confirm success
+        await bot.editMessageText(
+            `✅ **Password Changed Successfully!**\n\n` +
+            `🔐 Your new custom password has been securely saved.\n\n` +
+            `📱 **Login Information:**\n` +
+            `• Website: **portal.rodwell.center/login**\n` +
+            `• Phone: Use your registered phone number\n` +
+            `• Password: Use your new custom password\n\n` +
+            `🔒 For security, your password message was automatically deleted.`,
+            {
+                chat_id: chatId,
+                message_id: originalMessageId,
+                parse_mode: 'Markdown'
+            }
+        );
+
+        console.log(`Custom password changed for student ${studentDoc.id} via Telegram`);
+
+    } catch (error) {
+        console.error('Error handling custom password change:', error);
+        await bot.sendMessage(chatId, "❌ Failed to change password. Please try again.");
     }
 };
 
@@ -456,31 +1022,46 @@ const handleTokenInput = async (bot, chatId, userId, token) => {
             return;
         }
 
-        // Generate and hash password
-        const newPassword = generateRandomPassword();
-        const hashedPassword = await hashPassword(newPassword);
-
-        // Link the student account
+        // Link the student account without password (password will be set in next step)
         await studentDoc.ref.update({
             chatId: chatId.toString(),
             userId: userId,
-            passwordHash: hashedPassword,
             registeredAt: FieldValue.serverTimestamp(),
         });
 
-        // Clean up the temporary token and registration state
+        // Clean up the temporary token
         await tempTokenDoc.ref.delete();
-        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+
+        // Update user state for password setup
+        await db.collection("telegramUserStates").doc(chatId.toString()).set({
+            userId: userId,
+            chatId: chatId,
+            state: "password_setup_menu",
+            studentId: tempTokenData.studentId,
+            timestamp: FieldValue.serverTimestamp()
+        });
+
+        const options = {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: "🔐 Generate Password", callback_data: "generate_password" },
+                        { text: "✏️ Custom Password", callback_data: "custom_password" }
+                    ]
+                ]
+            }
+        };
 
         await bot.sendMessage(chatId, 
             `✅ Registration successful!\n\n` +
             `👋 Welcome ${studentData.fullName || 'Student'}!\n\n` +
-            `🔐 Your login credentials:\n` +
-            `**Phone:** ${studentData.phone}\n` +
-            `**Password:** ${newPassword}\n\n` +
-            `📱 Save these credentials to log into the Student Portal at:\n` +
-            `🌐 **portal.rodwell.center/login**\n\n` +
-            `🔄 Use /changepassword anytime to generate a new password or set a custom one.`
+            `� **Next Step: Set Your Password**\n\n` +
+            `Choose how you want to create your password for the Student Portal:\n\n` +
+            `🔐 **Generate Secure Password** - I'll create a strong 12-character password\n` +
+            `✏️ **Create Custom Password** - Set your own password\n\n` +
+            `📱 You'll use your phone (${studentData.phone}) and password to login at:\n` +
+            `🌐 **portal.rodwell.center/login**`,
+            options
         );
 
         console.log(`Successfully registered student ${studentDoc.id} with temp token ${token}`);
@@ -563,7 +1144,7 @@ const handlePasswordChangeMenuChoice = async (bot, chatId, userId, text) => {
         const choice = text.toLowerCase();
         
         if (choice === '/generate') {
-            // Generate random password
+            // Generate random password with delete button
             const userDoc = await db.collection("students")
                 .where("chatId", "==", chatId.toString())
                 .limit(1)
@@ -573,8 +1154,6 @@ const handlePasswordChangeMenuChoice = async (bot, chatId, userId, text) => {
                 await bot.sendMessage(chatId, "❌ Account not found. Please register first with /start.");
                 return;
             }
-
-            await bot.sendMessage(chatId, "🔐 Generating a new secure 12-character password...");
 
             const studentDoc = userDoc.docs[0];
             const newPassword = generateRandomPassword();
@@ -589,18 +1168,31 @@ const handlePasswordChangeMenuChoice = async (bot, chatId, userId, text) => {
             // Clean up state
             await db.collection("telegramUserStates").doc(chatId.toString()).delete();
 
+            // Create inline keyboard with delete button
+            const options = {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "🗑️ Delete This Message", callback_data: "delete_password_message" }]
+                    ]
+                }
+            };
+
             await bot.sendMessage(chatId, 
-                `✅ Your new password has been generated:\n\n` +
-                `🔑 **${newPassword}**\n\n` +
-                `This 12-character password includes:\n` +
-                `• Uppercase and lowercase letters\n` +
-                `• Numbers and special characters\n\n` +
-                `Use this password to log into the Student Portal at:\n` +
-                `🌐 **portal.rodwell.center/login**\n\n` +
-                `Please save this password securely!`
+                `✅ **New Password Generated!**\n\n` +
+                `� **Your new secure password is:**\n` +
+                `\`${newPassword}\`\n\n` +
+                `📱 **Login Information:**\n` +
+                `• Website: **portal.rodwell.center/login**\n` +
+                `• Phone: Use your registered phone number\n` +
+                `• Password: Use the password above\n\n` +
+                `⚠️ **Important:** Save this password securely, then delete this message!`,
+                {
+                    parse_mode: 'Markdown',
+                    ...options
+                }
             );
 
-            console.log(`Random password generated for student ${studentDoc.id} via Telegram`);
+            console.log(`Random password generated for student ${studentDoc.id} via Telegram text command`);
 
         } else if (choice === '/setpassword') {
             // Switch to custom password input
@@ -778,21 +1370,30 @@ exports.authenticateStudentWithPhone = onCall({
             .limit(1)
             .get();
 
+        console.log(`Login attempt for phone: ${normalizedPhone} (original: ${phone})`);
+
         if (studentQuery.empty) {
+            console.log(`No student found for phone: ${normalizedPhone}`);
             throw new HttpsError("not-found", "Invalid phone or password.");
         }
 
         const studentDoc = studentQuery.docs[0];
         const studentData = studentDoc.data();
 
+        console.log(`Student found: ${studentData.fullName} (${studentDoc.id}), has passwordHash: ${!!studentData.passwordHash}`);
+
         // Check if student has a password hash (i.e., has registered via Telegram)
         if (!studentData.passwordHash) {
+            console.log(`Student ${studentDoc.id} has no passwordHash`);
             throw new HttpsError("failed-precondition", "Account not activated. Please register via Telegram bot first.");
         }
 
         // Verify password
         const isPasswordValid = await verifyPassword(password, studentData.passwordHash);
+        console.log(`Password verification result: ${isPasswordValid}`);
+        
         if (!isPasswordValid) {
+            console.log(`Password verification failed for student ${studentDoc.id}`);
             throw new HttpsError("unauthenticated", "Invalid phone or password.");
         }
 
@@ -968,6 +1569,115 @@ exports.authenticateStudentWithUsername = onCall({
         }
         console.error("Error in authenticateStudentWithUsername:", error);
         throw new HttpsError("internal", "Authentication failed due to internal error.");
+    }
+});
+
+/**
+ * [Callable Function] 
+ * Authenticates a teacher using phone and password
+ * Returns a custom token for Firebase Auth sign-in
+ */
+exports.authenticateTeacherWithPhone = onCall({
+    region: "asia-southeast1"
+}, async (request) => {
+    const { phone, password } = request.data;
+
+    if (!phone || !password) {
+        throw new HttpsError("invalid-argument", "Phone and password are required.");
+    }
+
+    try {
+        // Find teacher by phone
+        const teacherQuery = await db.collection("teachers")
+            .where("phone", "==", phone)
+            .limit(1)
+            .get();
+
+        console.log(`Teacher login attempt for phone: ${phone}`);
+
+        if (teacherQuery.empty) {
+            console.log(`No teacher found for phone: ${phone}`);
+            throw new HttpsError("not-found", "Invalid phone or password.");
+        }
+
+        const teacherDoc = teacherQuery.docs[0];
+        const teacherData = teacherDoc.data();
+
+        console.log(`Teacher found: ${teacherData.fullName} (${teacherDoc.id})`);
+
+        // Check password (for teachers, we're using plain text "RodwellTeacher")
+        if (teacherData.hashPw !== password) {
+            console.log(`Password verification failed for teacher ${teacherDoc.id}`);
+            throw new HttpsError("unauthenticated", "Invalid phone or password.");
+        }
+
+        // Get Firebase Auth UID (should already exist from our setup script)
+        let authUid = teacherData.authUid;
+        
+        if (!authUid) {
+            // Fallback: create Firebase Auth user if doesn't exist
+            try {
+                const email = `${phone}@teacher.local`;
+                const authUser = await admin.auth().createUser({
+                    displayName: teacherData.fullName,
+                    email: email,
+                    emailVerified: false,
+                });
+                authUid = authUser.uid;
+
+                // Update teacher record with auth UID
+                await teacherDoc.ref.update({ 
+                    authUid: authUid,
+                    lastLoginAt: FieldValue.serverTimestamp()
+                });
+            } catch (authError) {
+                console.error("Error creating Firebase Auth user for teacher:", authError);
+                // If user already exists, try to find them
+                try {
+                    const existingUser = await admin.auth().getUserByEmail(`${phone}@teacher.local`);
+                    authUid = existingUser.uid;
+                    
+                    // Update teacher record with found auth UID
+                    await teacherDoc.ref.update({ 
+                        authUid: authUid,
+                        lastLoginAt: FieldValue.serverTimestamp()
+                    });
+                } catch (findError) {
+                    console.error("Error finding existing Firebase Auth user for teacher:", findError);
+                    throw new HttpsError("internal", "Authentication service error. Please try again.");
+                }
+            }
+        } else {
+            // Update last login time
+            await teacherDoc.ref.update({ lastLoginAt: FieldValue.serverTimestamp() });
+        }
+
+        // Generate custom token for Firebase Auth
+        const customToken = await admin.auth().createCustomToken(authUid, {
+            teacherId: teacherDoc.id,
+            phone: phone,
+            fullName: teacherData.fullName,
+            subject: teacherData.subject,
+            role: 'teacher'
+        });
+
+        return {
+            customToken: customToken,
+            teacher: {
+                id: teacherDoc.id,
+                fullName: teacherData.fullName,
+                phone: phone,
+                subject: teacherData.subject,
+                role: 'teacher'
+            }
+        };
+
+    } catch (error) {
+        if (error instanceof HttpsError) {
+            throw error; // Re-throw HttpsError as-is
+        }
+        console.error("Error in authenticateTeacherWithPhone:", error);
+        throw new HttpsError("internal", "Authentication failed. Please try again.");
     }
 });
 

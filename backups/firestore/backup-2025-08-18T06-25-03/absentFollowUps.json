@@ -1,0 +1,50 @@
+{
+  "collection": "absentFollowUps",
+  "totalDocuments": 3,
+  "backupTimestamp": "2025-08-18T06:25:04.049Z",
+  "documents": [
+    {
+      "id": "RMbUVAL7EfGh5ZC2dLYm",
+      "data": {
+        "studentId": "0GR4lS3h7PZ3cWeK1Baj",
+        "studentName": "Simvi Sopheaknita",
+        "date": "2025-08-18",
+        "notes": "",
+        "updatedBy": "Admin",
+        "status": "Resolved",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-18T04:34:09.826Z"
+        }
+      }
+    },
+    {
+      "id": "UwDA82U9ZYSpFeUva8Fk",
+      "data": {
+        "studentId": "xrRHW5kArclIikVGbbhY",
+        "studentName": "Leang Vengsean",
+        "date": "2025-08-18",
+        "updatedBy": "Admin",
+        "status": "Waiting for Response",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-18T05:20:03.912Z"
+        }
+      }
+    },
+    {
+      "id": "gLvwYwVz6W9ehAOWKrTB",
+      "data": {
+        "studentId": "BlKD5htPzEeCvQcpuqim",
+        "studentName": "Prak Sopanha",
+        "date": "2025-08-18",
+        "updatedBy": "Admin",
+        "status": "Resolved",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-18T06:20:34.447Z"
+        }
+      }
+    }
+  ]
+}

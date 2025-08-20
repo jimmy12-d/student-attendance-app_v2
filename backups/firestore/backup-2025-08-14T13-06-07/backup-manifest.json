@@ -1,0 +1,142 @@
+{
+  "backupId": "backup-2025-08-14T13-06-07",
+  "timestamp": "2025-08-14T13:06:11.883Z",
+  "projectId": "rodwell-attendance",
+  "totalCollections": 22,
+  "totalDocuments": 2139,
+  "collections": [
+    {
+      "collection": "appSettings",
+      "documentCount": 1,
+      "filePath": "appSettings.json",
+      "size": 336
+    },
+    {
+      "collection": "attendance",
+      "documentCount": 1271,
+      "filePath": "attendance.json",
+      "size": 604782
+    },
+    {
+      "collection": "attendancePasscodes",
+      "documentCount": 123,
+      "filePath": "attendancePasscodes.json",
+      "size": 30857
+    },
+    {
+      "collection": "authorizedUsers",
+      "documentCount": 2,
+      "filePath": "authorizedUsers.json",
+      "size": 546
+    },
+    {
+      "collection": "classTypes",
+      "documentCount": 9,
+      "filePath": "classTypes.json",
+      "size": 2000
+    },
+    {
+      "collection": "classes",
+      "documentCount": 24,
+      "filePath": "classes.json",
+      "size": 9182
+    },
+    {
+      "collection": "counters",
+      "documentCount": 1,
+      "filePath": "counters.json",
+      "size": 218
+    },
+    {
+      "collection": "documents",
+      "documentCount": 10,
+      "filePath": "documents.json",
+      "size": 6446
+    },
+    {
+      "collection": "examControls",
+      "documentCount": 1,
+      "filePath": "examControls.json",
+      "size": 213
+    },
+    {
+      "collection": "examSettings",
+      "documentCount": 116,
+      "filePath": "examSettings.json",
+      "size": 21199
+    },
+    {
+      "collection": "faceEnrollmentQueue",
+      "documentCount": 4,
+      "filePath": "faceEnrollmentQueue.json",
+      "size": 544146
+    },
+    {
+      "collection": "financePW",
+      "documentCount": 2,
+      "filePath": "financePW.json",
+      "size": 602
+    },
+    {
+      "collection": "mockExam3",
+      "documentCount": 139,
+      "filePath": "mockExam3.json",
+      "size": 36520
+    },
+    {
+      "collection": "notifications",
+      "documentCount": 4,
+      "filePath": "notifications.json",
+      "size": 1898
+    },
+    {
+      "collection": "permissions",
+      "documentCount": 24,
+      "filePath": "permissions.json",
+      "size": 18320
+    },
+    {
+      "collection": "printRequests",
+      "documentCount": 6,
+      "filePath": "printRequests.json",
+      "size": 5654
+    },
+    {
+      "collection": "processedAbaTransactions",
+      "documentCount": 5,
+      "filePath": "processedAbaTransactions.json",
+      "size": 1572
+    },
+    {
+      "collection": "students",
+      "documentCount": 204,
+      "filePath": "students.json",
+      "size": 247372
+    },
+    {
+      "collection": "teachers",
+      "documentCount": 1,
+      "filePath": "teachers.json",
+      "size": 257
+    },
+    {
+      "collection": "tempRegistrationTokens",
+      "documentCount": 1,
+      "filePath": "tempRegistrationTokens.json",
+      "size": 513
+    },
+    {
+      "collection": "transactions",
+      "documentCount": 191,
+      "filePath": "transactions.json",
+      "size": 132490
+    },
+    {
+      "collection": "users",
+      "documentCount": 0,
+      "filePath": "users.json",
+      "size": 118
+    }
+  ],
+  "version": "1.0.0"
+}

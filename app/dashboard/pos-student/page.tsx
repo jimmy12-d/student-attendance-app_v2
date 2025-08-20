@@ -31,7 +31,7 @@ import CardBoxModal from "../../_components/CardBox/Modal";
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, where, deleteDoc, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, where, deleteDoc, orderBy, onSnapshot, setDoc } from "firebase/firestore";
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // Components
@@ -43,6 +43,37 @@ import { calculateProratedAmount } from "./utils/dateUtils";
 
 // Types
 import { Student, Transaction, Printer } from "./types";
+
+// Helper function to check if payment month is September 2025 or later
+const shouldShowQRCode = (paymentMonth: string): boolean => {
+  if (!paymentMonth) return false;
+  
+  try {
+    // Extract month and year from payment month string (e.g., "September 2025")
+    const monthMap: { [key: string]: number } = {
+      'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+      'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+    };
+    
+    const parts = paymentMonth.toLowerCase().split(' ');
+    if (parts.length !== 2) return false;
+    
+    const monthName = parts[0];
+    const year = parseInt(parts[1]);
+    const month = monthMap[monthName];
+    
+    if (!month || isNaN(year)) return false;
+    
+    // Check if payment is for September 2025 or later
+    if (year > 2025) return true;
+    if (year === 2025 && month >= 9) return true;
+    
+    return false;
+  } catch (error) {
+    console.warn('Error parsing payment month for QR code check:', error);
+    return false;
+  }
+};
 
 const POSStudentPage = () => {
     const [students, setStudents] = useState<Student[]>([]);
@@ -558,6 +589,82 @@ const POSStudentPage = () => {
 
             const docRef = await addDoc(collection(db, "transactions"), transactionData);
             
+            // Create registration token immediately for unregistered students (only for September 2025 or later)
+            if (!transactionData.isStudentRegistered && shouldShowQRCode(displayPaymentMonth)) {
+                try {
+                    console.log(`📅 Payment month check: ${displayPaymentMonth} - Token creation allowed`);
+                    
+                    // Check if token already exists to avoid duplicates
+                    const tokensRef = collection(db, 'tempRegistrationTokens');
+                    const tokenQuery = query(tokensRef, where('studentId', '==', selectedStudent.id));
+                    const existingTokens = await getDocs(tokenQuery);
+                    
+                    if (existingTokens.empty) {
+                        // Generate token for unregistered student only if none exists
+                        const generateToken = () => {
+                            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                            let token = '';
+                            for (let i = 0; i < 16; i++) {
+                                token += chars.charAt(Math.floor(Math.random() * chars.length));
+                            }
+                            return token;
+                        };
+
+                        const token = generateToken();
+                        const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
+                        
+                        // Store token in tempRegistrationTokens collection with token as document ID
+                        await setDoc(doc(db, 'tempRegistrationTokens', token), {
+                            studentId: selectedStudent.id,
+                            token: token,
+                            createdAt: new Date(),
+                            expiresAt: expiresAt
+                        });
+                        
+                        console.log(`✅ Registration token created for student ${selectedStudent.id}: ${token}`);
+                    } else {
+                        // Check if existing token is expired
+                        const existingToken = existingTokens.docs[0];
+                        const tokenData = existingToken.data();
+                        const now = new Date();
+                        const expiresAt = tokenData.expiresAt.toDate();
+                        
+                        if (now >= expiresAt) {
+                            // Generate new token if expired
+                            const generateToken = () => {
+                                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                                let token = '';
+                                for (let i = 0; i < 16; i++) {
+                                    token += chars.charAt(Math.floor(Math.random() * chars.length));
+                                }
+                                return token;
+                            };
+
+                            const newToken = generateToken();
+                            const newExpiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+                            
+                            // Delete old token and create new one
+                            await deleteDoc(doc(db, 'tempRegistrationTokens', existingToken.id));
+                            await setDoc(doc(db, 'tempRegistrationTokens', newToken), {
+                                studentId: selectedStudent.id,
+                                token: newToken,
+                                createdAt: new Date(),
+                                expiresAt: newExpiresAt
+                            });
+                            
+                            console.log(`✅ Expired token replaced for student ${selectedStudent.id}: ${newToken}`);
+                        } else {
+                            console.log(`📱 Valid token already exists for student ${selectedStudent.id}: ${tokenData.token}`);
+                        }
+                    }
+                } catch (tokenError) {
+                    console.error('❌ Failed to create registration token:', tokenError);
+                    // Don't fail the transaction if token creation fails
+                }
+            } else if (!transactionData.isStudentRegistered && !shouldShowQRCode(displayPaymentMonth)) {
+                console.log(`📅 Payment month ${displayPaymentMonth} is before September 2025, skipping token creation`);
+            }
+            
             // Now, update the student's record with the new last payment month
             await updateDoc(doc(db, "students", selectedStudent.id), {
                 lastPaymentMonth: paymentMonth 
@@ -692,7 +799,9 @@ const POSStudentPage = () => {
 
         try {
             const isStudentRegistered = !!(selectedStudent?.chatId && selectedStudent?.passwordHash);
-            const pageHeight = isStudentRegistered ? 350 : 470; // 350 if no QR, 470 if QR needed
+            // Only show QR if student is not registered AND payment month qualifies
+            const shouldShowQR = !isStudentRegistered && shouldShowQRCode(lastTransaction.paymentMonth);
+            const pageHeight = shouldShowQR ? 480 : 350; // 480 if QR needed, 350 if no QR
 
             const response = await fetch('/api/printnode', {
                 method: 'POST',
@@ -837,7 +946,9 @@ const POSStudentPage = () => {
                 console.warn("Could not fetch current student data, using stored registration status");
             }
 
-            const pageHeight = isStudentRegistered ? 350 : 470; // 350 if no QR, 470 if QR needed
+            // Only show QR if student is not registered AND payment month qualifies
+            const shouldShowQR = !isStudentRegistered && shouldShowQRCode(transaction.paymentMonth);
+            const pageHeight = shouldShowQR ? 480 : 355; // 480 if QR needed, 350 if no QR
 
             const response = await fetch('/api/printnode', {
                 method: 'POST',

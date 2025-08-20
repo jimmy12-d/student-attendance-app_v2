@@ -1,0 +1,27 @@
+{
+  "collection": "authorizedUsers",
+  "totalDocuments": 2,
+  "backupTimestamp": "2025-08-20T11:37:35.512Z",
+  "documents": [
+    {
+      "id": "chhorngjasper@gmail.com",
+      "data": {
+        "addOn": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T03:16:42.000Z"
+        },
+        "role": "admin"
+      }
+    },
+    {
+      "id": "rodwelllc@gmail.com",
+      "data": {
+        "role": "admin",
+        "addedOn": {
+          "_type": "timestamp",
+          "_value": "2025-06-01T17:00:00.088Z"
+        }
+      }
+    }
+  ]
+}

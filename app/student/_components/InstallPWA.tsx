@@ -29,34 +29,55 @@ const XIcon = ({ size = 24 }: { size?: number }) => (
 
 const IOSInstallSheet = ({ onClose }: { onClose: () => void }) => {
     return (
-        <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: "0%" }}
-            exit={{ y: "100%" }}
-            transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-            className="fixed bottom-0 left-0 right-0 p-4 pt-6 bg-slate-900 backdrop-blur-md rounded-t-3xl shadow-2xl z-50 text-white"
-        >
-            <button onClick={onClose} className="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors">
-                <XIcon size={20} />
-            </button>
-            <div className="text-center max-w-2xl mx-auto">
-                <h3 className="font-bold text-xl mb-2 text-white">Install the App</h3>
-                <p className="text-slate-300 text-sm mb-6">To install the app on your iOS device, follow these simple steps:</p>
-            </div>
-            <div className="space-y-4 px-2">
-                <div className="flex items-center gap-4">
-                    <div className="bg-blue-500 rounded-lg p-2 flex-shrink-0"><ShareIcon /></div>
-                    <p className="text-slate-200">1. Tap the <span className="font-semibold">'Share'</span> icon in the Safari menu bar.</p>
+        <div className="fixed inset-0 z-50 flex flex-col">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-[rgba(0,0,0,0.6)]"
+                onClick={onClose}
+            ></div>
+
+            {/* Bottom Sheet */}
+            <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: "0%" }}
+                exit={{ y: "100%" }}
+                transition={{ type: 'spring', damping: 25, stiffness: 180 }}
+                className="mt-auto relative p-4 pt-6 bg-slate-900 backdrop-blur-md rounded-t-3xl shadow-2xl text-white"
+            >
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 left-4 text-slate-400 hover:text-white transition-colors"
+                >
+                    <XIcon size={20} />
+                </button>
+                <div className="text-center max-w-2xl mx-auto">
+                    <h3 className="font-bold text-xl mb-2 text-white">Install the App</h3>
+                    <p className="text-slate-300 text-sm mb-6">
+                        To install the app on your iOS device, follow these simple steps:
+                    </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="bg-slate-700 rounded-lg p-2 flex-shrink-0"><AddToHomeScreenIcon /></div>
-                    <p className="text-slate-200">2. Scroll down and tap on <span className="font-semibold">'Add to Home Screen'</span>.</p>
+                <div className="space-y-4 px-2">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-blue-500 rounded-lg p-2 flex-shrink-0">
+                            <ShareIcon />
+                        </div>
+                        <p className="text-slate-200">
+                            1. Tap the <span className="font-semibold">'Share'</span> icon in the Safari menu bar.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="bg-slate-700 rounded-lg p-2 flex-shrink-0">
+                            <AddToHomeScreenIcon />
+                        </div>
+                        <p className="text-slate-200">
+                            2. Scroll down and tap on <span className="font-semibold">'Add to Home Screen'</span>.
+                        </p>
+                    </div>
                 </div>
-            </div>
-        </motion.div>
+            </motion.div>
+        </div>
     );
 };
-
 
 export const InstallPWA = ({ as_banner = false, as_button = false, as_link = false }) => {
   const { canInstallPWA, triggerInstall, isIOS } = usePWAInstall();

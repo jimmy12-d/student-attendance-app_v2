@@ -17,7 +17,6 @@ import useCountUp from '../../_hooks/useCountUp';
 import MockExamResults from './MockExamResults';
 import ProgressBar from '../_components/ProgressBar';
 import CardBoxModal from '../../_components/CardBox/Modal';
-import StudentQRPayment from '../_components/StudentQRPayment';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
 import ExamInfoBoxes from './ExamInfoBoxes';
 import PerformanceRadarChartSkeleton from './PerformanceRadarChartSkeleton';

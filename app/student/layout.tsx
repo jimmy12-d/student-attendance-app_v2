@@ -57,7 +57,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                     role: "student",
                   })
                 );
-                router.push('/link-account');
+                router.push('/login');
             }
         } else {
              // FAILURE: Authenticated, but no student record at all. Force them to link.
@@ -71,7 +71,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                   role: "student",
                 })
               );
-             router.push('/link-account');
+             router.push('/login');
         }
       } else {
         // User is not authenticated at all. Send them to the login page.

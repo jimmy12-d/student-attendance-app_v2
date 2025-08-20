@@ -78,25 +78,25 @@ export default function LayoutAuthenticated({ children }: Props) {
   }, []);
 
   // Polling for ABA pending count from the dedicated API endpoint
-  useEffect(() => {
-    const fetchAbaCount = async () => {
-      try {
-        const response = await fetch('/api/aba/pending-count');
-        if (response.ok) {
-          const data = await response.json();
-          setPendingAbaApprovalsCount(data.pendingCount || 0);
-        }
-      } catch (error) {
-        console.error("Failed to fetch ABA pending count:", error);
-        setPendingAbaApprovalsCount(0);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchAbaCount = async () => {
+  //     try {
+  //       const response = await fetch('/api/aba/pending-count');
+  //       if (response.ok) {
+  //         const data = await response.json();
+  //         setPendingAbaApprovalsCount(data.pendingCount || 0);
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to fetch ABA pending count:", error);
+  //       setPendingAbaApprovalsCount(0);
+  //     }
+  //   };
 
-    fetchAbaCount(); // Fetch on initial load
-    const interval = setInterval(fetchAbaCount, 60000); // Re-fetch every 60 seconds
+  //   fetchAbaCount(); // Fetch on initial load
+  //   const interval = setInterval(fetchAbaCount, 60000); // Re-fetch every 60 seconds
 
-    return () => clearInterval(interval); // Cleanup on unmount
-  }, []);
+  //   return () => clearInterval(interval); // Cleanup on unmount
+  // }, []);
 
   // Auth state listener
   useEffect(() => {

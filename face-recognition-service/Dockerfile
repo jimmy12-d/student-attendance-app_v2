@@ -1,28 +1,47 @@
-# Use the full official Python runtime as a parent image for better compatibility
-FROM python:3.9
+# Use official Python runtime as base image
+FROM python:3.9-slim
 
+# Build timestamp to force fresh build: 2025-08-18-OPTIMIZED
 # Set environment variables
-ENV PYTHONUNBUFFERED True
-ENV APP_HOME /app
-ENV PORT 8080
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8080
+ENV DISPLAY=:99
+ENV QT_QPA_PLATFORM=offscreen
 
-# Create and set the working directory
-WORKDIR $APP_HOME
-
-# Install system dependencies required for OpenCV (used by deepface)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1-mesa-glx \
+# Install system dependencies for OpenCV and face recognition (optimized for 1GB memory)
+RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    libgtk-3-0 \
+    libgl1-mesa-dev \
+    libgthread-2.0-0 \
+    libfontconfig1 \
+    libxrender1 \
+    libxtst6 \
+    ffmpeg \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-# Copy only the requirements file first to leverage Docker layer caching
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better caching
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the local source code to the container
-COPY . .
+# Copy application files
+COPY main.py .
 
-# Set the command to run the application using Gunicorn
-# This will be a robust, production-ready server.
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app 
+# Expose port
+EXPOSE 8080
+
+# Run the application with optimized settings for 1GB memory limit
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 1 --timeout 300 --graceful-timeout 300 --keep-alive 300 --max-requests 100 --max-requests-jitter 20 main:app

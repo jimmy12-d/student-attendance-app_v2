@@ -119,7 +119,7 @@ const CustomSingleSelectDropdown: React.FC<Props> = ({
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed z-[9999] bg-white rounded-lg shadow-xl dark:bg-gray-700 border border-gray-200 dark:border-gray-600 max-h-72 flex flex-col"
+          className="fixed z-[9999] bg-white rounded-lg shadow-xl dark:bg-gray-700 border border-gray-200 dark:border-gray-600 max-h-96 flex flex-col"
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`,

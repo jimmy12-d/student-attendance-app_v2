@@ -99,15 +99,15 @@ export const useStudentForm = (initialData) => {
     const data = {
       fullName,
       nameKhmer,
-      phone,
+      phone: phone.replace(/\s+/g, ''), // Remove all spaces from phone
       class: studentClass,
       shift,
       ay,
       scheduleType,
       motherName,
-      motherPhone,
+      motherPhone: motherPhone.replace(/\s+/g, ''), // Remove all spaces from mother phone
       fatherName,
-      fatherPhone,
+      fatherPhone: fatherPhone.replace(/\s+/g, ''), // Remove all spaces from father phone
       photoUrl,
       dropped: false, // Default to false for new students
       hasTelegramUsername: true, // Default to true for new students

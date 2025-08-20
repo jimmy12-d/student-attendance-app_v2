@@ -1,0 +1,503 @@
+{
+  "collection": "teachers",
+  "totalDocuments": 24,
+  "backupTimestamp": "2025-08-20T11:37:40.322Z",
+  "documents": [
+    {
+      "id": "010704376",
+      "data": {
+        "fullName": "Dong Vannda",
+        "phone": "010704376",
+        "subject": "History",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:18.479Z"
+        },
+        "authUid": "jSlJ2xUUl1fhJgFERCpEyiV865w1",
+        "email": "010704376@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:10.705Z"
+        },
+        "lastLoginAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T10:50:29.078Z"
+        }
+      }
+    },
+    {
+      "id": "010984886",
+      "data": {
+        "fullName": "Soeng Rithy",
+        "phone": "010984886",
+        "subject": "Math",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:19.714Z"
+        },
+        "authUid": "camDXvEv24bGQsIkIGX4ULzPvV62",
+        "email": "010984886@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:12.166Z"
+        },
+        "lastLoginAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T04:56:35.370Z"
+        }
+      }
+    },
+    {
+      "id": "011235813",
+      "data": {
+        "fullName": "Rodwell Kov",
+        "phone": "011235813",
+        "subject": "Math",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:20.052Z"
+        },
+        "authUid": "pVy4xb6C4Hd285wUdVW426zplC43",
+        "email": "011235813@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:13.644Z"
+        },
+        "lastLoginAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T10:45:22.907Z"
+        }
+      }
+    },
+    {
+      "id": "011980079",
+      "data": {
+        "fullName": "Kim Penh",
+        "phone": "011980079",
+        "subject": "Math",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:18.945Z"
+        },
+        "authUid": "3mbyjIJwGQZX3uMzhv8wCofnMqz1",
+        "email": "011980079@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:15.174Z"
+        },
+        "lastLoginAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T10:55:26.217Z"
+        }
+      }
+    },
+    {
+      "id": "015404616",
+      "data": {
+        "fullName": "An Sambo",
+        "phone": "015404616",
+        "subject": "Chemistry",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:18.019Z"
+        },
+        "authUid": "9Pxfpu4DYkbO2kICHRHJHQ0f3gG3",
+        "email": "015404616@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:16.674Z"
+        }
+      }
+    },
+    {
+      "id": "016482533",
+      "data": {
+        "fullName": "Samnang Sreypech",
+        "phone": "016482533",
+        "subject": "Chemistry",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:17.778Z"
+        },
+        "authUid": "VEIJrnVYfCVofmbECe6zKacoqq62",
+        "email": "016482533@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:18.272Z"
+        }
+      }
+    },
+    {
+      "id": "017471757",
+      "data": {
+        "fullName": "Keo Channith",
+        "phone": "017471757",
+        "subject": "Physic",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:17.093Z"
+        },
+        "authUid": "W4slv7k93ValLwxJJ7yGsuE51al1",
+        "email": "017471757@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:19.689Z"
+        }
+      }
+    },
+    {
+      "id": "017570622",
+      "data": {
+        "fullName": "Chheng Kimchhorm",
+        "phone": "017570622",
+        "subject": "Moral",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:18.251Z"
+        },
+        "authUid": "MrGQTCNQ3vQS7Yvg5LkrkIyWSiD2",
+        "email": "017570622@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:21.210Z"
+        }
+      }
+    },
+    {
+      "id": "061424939",
+      "data": {
+        "fullName": "Chhorn Sokleap",
+        "phone": "061424939",
+        "subject": "Math",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:16.916Z"
+        },
+        "authUid": "rkUzhVIbMIdb2sdHcBbrsoXTaqQ2",
+        "email": "061424939@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:23.373Z"
+        }
+      }
+    },
+    {
+      "id": "061649891",
+      "data": {
+        "fullName": "Phleav Piseth",
+        "phone": "061649891",
+        "subject": "Chemistry",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:17.588Z"
+        },
+        "authUid": "XxgNQWEZKDVlMaCyg9oJisBYqHW2",
+        "email": "061649891@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:24.947Z"
+        }
+      }
+    },
+    {
+      "id": "069675373",
+      "data": {
+        "fullName": "Leng Siekpor",
+        "phone": "069675373",
+        "subject": "Chemistry",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:19.167Z"
+        },
+        "authUid": "jjqu9XcciXTK5eL0EOc6Xfxz54i2",
+        "email": "069675373@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:26.452Z"
+        }
+      }
+    },
+    {
+      "id": "069730474",
+      "data": {
+        "fullName": "Douk Satya",
+        "phone": "069730474",
+        "subject": "Earth",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:18.600Z"
+        },
+        "authUid": "tBvMBYP54vP7tsD3nZ6xjrfxWTa2",
+        "email": "069730474@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:27.864Z"
+        }
+      }
+    },
+    {
+      "id": "0766057343",
+      "data": {
+        "fullName": "Pi Khatna",
+        "phone": "0766057343",
+        "subject": "Khmer",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:19.394Z"
+        },
+        "authUid": "qCiDdW6qPsSqkmM03miRdG8vhbl2",
+        "email": "0766057343@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:29.286Z"
+        }
+      }
+    },
+    {
+      "id": "086738118",
+      "data": {
+        "fullName": "Yong Hou",
+        "phone": "086738118",
+        "subject": "Physic",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:19.950Z"
+        },
+        "authUid": "SFDrFhSrD8bR789E0YVnOYYflu92",
+        "email": "086738118@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:30.659Z"
+        }
+      }
+    },
+    {
+      "id": "08886127530",
+      "data": {
+        "fullName": "Ry Vireak",
+        "phone": "08886127530",
+        "subject": "Math",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:19.607Z"
+        },
+        "authUid": "9a588uUjTrYFGOsaAPaEdjAiJK42",
+        "email": "08886127530@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:32.231Z"
+        }
+      }
+    },
+    {
+      "id": "093802994",
+      "data": {
+        "fullName": "Pen Vichet",
+        "phone": "093802994",
+        "subject": "Physic",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:19.289Z"
+        },
+        "authUid": "YEqJbEoTMpWSMBu8yvmEAOCMYmn1",
+        "email": "093802994@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:33.734Z"
+        }
+      }
+    },
+    {
+      "id": "0962678386",
+      "data": {
+        "fullName": "Kan Sophearak",
+        "phone": "0962678386",
+        "subject": "Biology",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:18.836Z"
+        },
+        "authUid": "nNFuT5wa5tNf00jVyQnkxJaIbX12",
+        "email": "0962678386@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:35.312Z"
+        }
+      }
+    },
+    {
+      "id": "0965606177",
+      "data": {
+        "fullName": "Tim Sreylis",
+        "phone": "0965606177",
+        "subject": "Physic",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:17.912Z"
+        },
+        "authUid": "VeSVaMN3QFdIuE0x8ybS1cAUsiq2",
+        "email": "0965606177@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:36.667Z"
+        }
+      }
+    },
+    {
+      "id": "0966131391",
+      "data": {
+        "fullName": "Doung Thida",
+        "phone": "0966131391",
+        "subject": "Chemistry",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:18.718Z"
+        },
+        "authUid": "5faaix57vmdUBhoDjH2JEtJbgaQ2",
+        "email": "0966131391@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:38.221Z"
+        }
+      }
+    },
+    {
+      "id": "0979060331",
+      "data": {
+        "fullName": "Chhoeurn ELang",
+        "phone": "0979060331",
+        "subject": "Khmer",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:18.358Z"
+        },
+        "authUid": "k1eiElbH1sRHMnNT3j8TqiS236I3",
+        "email": "0979060331@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:39.842Z"
+        }
+      }
+    },
+    {
+      "id": "099307746",
+      "data": {
+        "fullName": "Khat Sovanndaneth",
+        "phone": "099307746",
+        "subject": "Math",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:17.251Z"
+        },
+        "authUid": "kIOwWXDqlJcYELlQJQU7euBM8uu1",
+        "email": "099307746@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:41.425Z"
+        }
+      }
+    },
+    {
+      "id": "099640990",
+      "data": {
+        "fullName": "Reourn Sarith",
+        "phone": "099640990",
+        "subject": "History",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:19.501Z"
+        },
+        "authUid": "JjZgQLNpxDStYfcZnqy4o0vTOHe2",
+        "email": "099640990@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:42.933Z"
+        }
+      }
+    },
+    {
+      "id": "099852775",
+      "data": {
+        "fullName": "Vin Savat",
+        "phone": "099852775",
+        "subject": "Biology",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:19.833Z"
+        },
+        "authUid": "reDJNjXUMWbjcrWdxuz4lVe1vY83",
+        "email": "099852775@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:44.430Z"
+        }
+      }
+    },
+    {
+      "id": "០87219612",
+      "data": {
+        "fullName": "Lang Bunlong",
+        "phone": "០87219612",
+        "subject": "Math",
+        "hashPw": "RodwellTeacher",
+        "role": "teacher",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:30:17.425Z"
+        },
+        "authUid": "48ry1prnE6ctbshgFsE5iV86k5w2",
+        "email": "០87219612@teacher.local",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T03:44:45.800Z"
+        }
+      }
+    }
+  ]
+}

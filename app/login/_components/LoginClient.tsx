@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../../../firebase-config';
+import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { auth, db } from '../../../firebase-config';
 import CardBox from '../../_components/CardBox';
 import SectionFullScreen from '../../_components/Section/FullScreen';
 import StudentSignIn from './StudentSignIn';
@@ -15,11 +16,28 @@ const LoginClient = () => {
 
   useEffect(() => {
     if (auth) {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (user) {
-          // If user is logged in, redirect them away from the login page.
-          setIsAuthenticated(true);
-          router.replace('/student/home');
+          // Check if user has a complete profile before redirecting
+          const studentsRef = collection(db, "students");
+          const q = query(studentsRef, where("authUid", "==", user.uid), limit(1));
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            const studentDoc = querySnapshot.docs[0];
+            const studentData = studentDoc.data();
+
+            if (studentData && studentData.class && studentData.class !== 'Unassigned') {
+              // User has a complete profile, redirect them
+              setIsAuthenticated(true);
+              router.replace('/student/home');
+              return;
+            }
+          }
+          
+          // User is authenticated but doesn't have a complete profile
+          // Let them stay on the login page to complete registration
+          setLoading(false);
         } else {
           // If no user, stop loading and show the login button.
           setLoading(false);

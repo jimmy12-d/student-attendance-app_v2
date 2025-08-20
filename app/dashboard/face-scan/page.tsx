@@ -50,10 +50,14 @@ const RealtimeFaceScanner = () => {
   const isDetectingRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const VERIFICATION_COOLDOWN = 20000; // 20 seconds for a new face
-  const RETRY_COOLDOWN = 3000; // 3 seconds for a retry
-  const DWELL_TIME_BEFORE_VERIFY = 1500; // 1.5 seconds
-  const MIN_FACE_WIDTH_PIXELS = 100; // Require face to be at least 100px wide
+  const VERIFICATION_COOLDOWN = 30000; // 30 seconds for a new face (reduced API calls)
+  const RETRY_COOLDOWN = 10000; // 10 seconds for a retry (longer cooldown)
+  const DWELL_TIME_BEFORE_VERIFY = 3000; // 3 seconds (longer dwell time for stability)
+  const MIN_FACE_WIDTH_PIXELS = 150; // Require face to be at least 150px wide (better quality)
+  const MIN_FACE_HEIGHT_PIXELS = 150; // Require face to be at least 150px tall
+  const FACE_QUALITY_THRESHOLD = 0.8; // Face quality threshold (0-1)
+  const DETECTION_INTERVAL = 1000; // Detect every 1 second instead of 500ms
+  const MAX_FACES_TO_TRACK = 1; // Only track 1 face at a time for better performance
 
   // --- Sound ---
   const playSuccessSound = () => {
@@ -79,6 +83,46 @@ const RealtimeFaceScanner = () => {
     const box2Area = box2.width * box2.height;
     const iou = interArea / (box1Area + box2Area - interArea);
     return iou;
+  };
+
+  const assessFaceQuality = (face: TrackedFace, video: HTMLVideoElement): { isGoodQuality: boolean; reason?: string } => {
+    const { width, height, xMin, yMin, xMax, yMax } = face.box;
+    
+    // Check minimum size requirements
+    if (width < MIN_FACE_WIDTH_PIXELS || height < MIN_FACE_HEIGHT_PIXELS) {
+      return { isGoodQuality: false, reason: 'Face too small - move closer' };
+    }
+    
+    // Check if face is too close to edges (might be cut off)
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+    const edgeBuffer = 50; // pixels from edge
+    
+    if (xMin < edgeBuffer || yMin < edgeBuffer || 
+        xMax > (videoWidth - edgeBuffer) || yMax > (videoHeight - edgeBuffer)) {
+      return { isGoodQuality: false, reason: 'Center face in camera' };
+    }
+    
+    // Check aspect ratio (faces should be roughly rectangular, not too elongated)
+    const aspectRatio = width / height;
+    if (aspectRatio < 0.6 || aspectRatio > 1.4) {
+      return { isGoodQuality: false, reason: 'Face camera directly' };
+    }
+    
+    // Check if face is reasonable size (not too big either)
+    const faceArea = width * height;
+    const videoArea = videoWidth * videoHeight;
+    const faceRatio = faceArea / videoArea;
+    
+    if (faceRatio > 0.3) {
+      return { isGoodQuality: false, reason: 'Move back - too close' };
+    }
+    
+    if (faceRatio < 0.02) {
+      return { isGoodQuality: false, reason: 'Move closer - too far' };
+    }
+    
+    return { isGoodQuality: true };
   };
 
   // --- Core Logic ---
@@ -156,7 +200,7 @@ const RealtimeFaceScanner = () => {
       const idToken = await currentUser.getIdToken();
       const base64Image = imageSrc.split(',')[1];
 
-      const response = await fetch('https://face-recognition-service-us-central1-50079853705.us-central1.run.app/recognize', {
+      const response = await fetch('https://face-recognition-service-50079853705.us-central1.run.app/recognize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({ image: base64Image })
@@ -173,6 +217,7 @@ const RealtimeFaceScanner = () => {
         if (f.id !== face.id) return f;
 
         const isRecognized = result.status === 'recognized';
+        const isPoorQuality = result.status === 'poor_quality';
         
         if (isRecognized) {
             const { studentName, attendanceStatus } = result;
@@ -201,6 +246,16 @@ const RealtimeFaceScanner = () => {
                 attendanceStatus: attendanceStatus,
                 message: `${studentName} - ${attendanceStatus}`,
                 isVerificationInProgress: false
+            };
+        }
+        
+        if (isPoorQuality) {
+            console.log(`Face ${face.id} poor quality detection: ${result.message}`);
+            return { 
+              ...f, 
+              status: 'tracking', 
+              message: 'Face camera directly', 
+              isVerificationInProgress: false 
             };
         }
         
@@ -286,9 +341,9 @@ const RealtimeFaceScanner = () => {
           }
         }
 
-        // 2. Add any remaining new faces, but only up to the limit of 2 total faces
+        // 2. Add any remaining new faces, but only up to the limit
         for (const newFace of unmatchedNewFaces) {
-          if (nextFaces.length >= 2) {
+          if (nextFaces.length >= MAX_FACES_TO_TRACK) {
             break; // Stop adding new faces if we've reached the limit
           }
 
@@ -298,27 +353,46 @@ const RealtimeFaceScanner = () => {
             width: newFace.bottomRight[0] - newFace.topLeft[0],
             height: newFace.bottomRight[1] - newFace.topLeft[1],
           };
-          nextFaces.push({
-            id: generateFaceId(),
-            box: newFaceBox,
-            status: 'tracking',
-            firstSeen: now,
-            lastVerification: 0,
-            lastSeen: now,
-            isVerificationInProgress: false,
-          });
+          
+          // Only add faces that meet minimum quality requirements
+          if (newFaceBox.width >= MIN_FACE_WIDTH_PIXELS && newFaceBox.height >= MIN_FACE_HEIGHT_PIXELS) {
+            nextFaces.push({
+              id: generateFaceId(),
+              box: newFaceBox,
+              status: 'tracking',
+              firstSeen: now,
+              lastVerification: 0,
+              lastSeen: now,
+              isVerificationInProgress: false,
+            });
+          }
         }
         
         // 3. Atomically trigger verification for eligible faces that have "dwelled"
         const facesToVerify: { face: TrackedFace, image: string }[] = [];
         const finalFaces = nextFaces.map(face => {
-            const cooldown = face.message === 'Unknown' || face.message?.includes('retrying') ? RETRY_COOLDOWN : VERIFICATION_COOLDOWN;
+            // First check if face has been stable long enough
+            if (now - face.firstSeen < DWELL_TIME_BEFORE_VERIFY) {
+                return { ...face, message: 'Hold steady...' };
+            }
+
+            // Check face quality before considering verification
+            if (webcamRef.current?.video) {
+                const qualityCheck = assessFaceQuality(face, webcamRef.current.video);
+                
+                if (!qualityCheck.isGoodQuality) {
+                    return { ...face, message: qualityCheck.reason, status: 'tracking' as const };
+                }
+            }
+
+            const cooldown = face.message === 'Unknown' || face.message?.includes('retrying') || face.message === 'Face camera directly' ? RETRY_COOLDOWN : VERIFICATION_COOLDOWN;
             const isReadyForVerification = 
                 face.status === 'tracking' && 
                 !face.isVerificationInProgress && // Prevent multiple calls
                 now - face.lastVerification > cooldown &&
                 now - face.firstSeen > DWELL_TIME_BEFORE_VERIFY &&
-                face.box.width > MIN_FACE_WIDTH_PIXELS;
+                face.box.width > MIN_FACE_WIDTH_PIXELS &&
+                face.box.height > MIN_FACE_HEIGHT_PIXELS;
 
             if (isReadyForVerification) {
                 if(webcamRef.current?.video){
@@ -329,7 +403,8 @@ const RealtimeFaceScanner = () => {
                             ...face, 
                             status: 'verifying' as const, 
                             lastVerification: now,
-                            isVerificationInProgress: true  // Set flag immediately
+                            isVerificationInProgress: true,  // Set flag immediately
+                            message: 'Verifying...'
                         };
                     }
                 }
@@ -344,7 +419,7 @@ const RealtimeFaceScanner = () => {
 
         return finalFaces;
       });
-    }, 500); // Detect every 500ms
+    }, DETECTION_INTERVAL); // Use the configurable detection interval
   }, [verifyAndMarkFace]);
 
   const stopDetection = () => {
@@ -404,6 +479,14 @@ const RealtimeFaceScanner = () => {
             if (label === 'Unknown') {
                 borderColor = '#ef4444';
             }
+            // If the message is about face positioning, make it orange
+            if (label.includes('camera') || label.includes('closer') || label.includes('back') || label.includes('Center')) {
+                borderColor = '#f59e0b'; // Orange for guidance
+            }
+            // If the message is 'Hold steady', make it blue to indicate good positioning
+            if (label === 'Hold steady...') {
+                borderColor = '#3b82f6'; // Blue for ready state
+            }
         }
         let subLabel = '';
 
@@ -457,6 +540,33 @@ const RealtimeFaceScanner = () => {
   return (
     <CardBox>
       <div className="flex flex-col items-center">
+        {/* Status Information */}
+        <div className="w-full max-w-2xl mx-auto mb-4 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-lg font-semibold mb-2">Face Recognition Status</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="font-medium">Faces Tracked:</span> {trackedFaces.length}/{MAX_FACES_TO_TRACK}
+            </div>
+            <div>
+              <span className="font-medium">Camera:</span> {isCameraActive ? 'Active' : 'Inactive'}
+            </div>
+            <div>
+              <span className="font-medium">Detection Rate:</span> Every {DETECTION_INTERVAL/1000}s
+            </div>
+            <div>
+              <span className="font-medium">Model:</span> {isLoading ? 'Loading...' : 'Ready'}
+            </div>
+          </div>
+          
+          {trackedFaces.length > 0 && (
+            <div className="mt-2 p-2 bg-blue-100 rounded">
+              <span className="text-blue-800 text-sm font-medium">
+                📍 Instructions: {trackedFaces[0].message || 'Hold position steady for 3 seconds'}
+              </span>
+            </div>
+          )}
+        </div>
+
         <div className="relative w-full max-w-2xl mx-auto mb-4">
           {isCameraActive ? (
             <Webcam

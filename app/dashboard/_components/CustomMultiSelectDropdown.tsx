@@ -126,7 +126,7 @@ const CustomMultiSelectDropdown: React.FC<Props> = ({
       </button>
 
       {isOpen && (
-        <div className="z-20 absolute mt-1 w-full bg-white rounded-lg shadow-xl dark:bg-gray-700 border border-gray-200 dark:border-gray-600 max-h-72 flex flex-col">
+        <div className="z-20 absolute mt-1 w-full bg-white rounded-lg shadow-xl dark:bg-gray-700 border border-gray-200 dark:border-gray-600 max-h-96 flex flex-col">
           <div className="p-2 border-b border-gray-200 dark:border-gray-600 sticky top-0 bg-white dark:bg-gray-700">
             <input
               ref={searchInputRef}

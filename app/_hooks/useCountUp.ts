@@ -17,7 +17,7 @@ function useCountUp(end: number, duration: number = 3000, deps: any[] = []) {
     const counter = () => {
       frame++;
       const progress = easeOutExpo(frame / totalFrames);
-      const currentCount = Math.round(end * progress);
+      const currentCount = Math.round((end * progress) * 10) / 10; // Round to 1 decimal place
       setCount(currentCount);
 
       if (frame < totalFrames) {

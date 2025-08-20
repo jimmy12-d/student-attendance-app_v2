@@ -1,0 +1,583 @@
+{
+  "collection": "permissions",
+  "totalDocuments": 24,
+  "backupTimestamp": "2025-08-14T13:06:10.924Z",
+  "documents": [
+    {
+      "id": "1FlUeFZQvaMlDe8OPqzC",
+      "data": {
+        "studentId": "R0uVROTT5a0xS7sdiwsf",
+        "studentName": "Eay Dara",
+        "studentClass": "205",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-09",
+        "permissionEndDate": "2025-08-12",
+        "duration": 4,
+        "reason": "I have to take the second semester for public school ",
+        "details": "I was sick for 2 days and now not  well yet and i have to take second semester on monday and Tuesday ",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-09T05:55:12.808Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-09T06:01:26.217Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "1i6I2IdKCrQ7btQTLH8v",
+      "data": {
+        "studentId": "tRqMxk9lefD9l4r6ht9H",
+        "studentName": "Sovannadany Narita",
+        "studentClass": "12C",
+        "studentShift": "Morning",
+        "permissionStartDate": "2025-08-09",
+        "permissionEndDate": "2025-08-09",
+        "duration": 1,
+        "reason": "accident ",
+        "details": "I have an accident yesterday and I got my knee injured",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-09T06:18:00.199Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-09T07:15:55.980Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "5Kq7XbKXPKhzo5u4D9UZ",
+      "data": {
+        "studentId": "yPc1thygsKXMnIpV0NPm",
+        "studentName": "Savy SereyVaddtey",
+        "studentClass": "12C",
+        "studentShift": "Mlrning ",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-11",
+        "duration": 1,
+        "reason": "Medical Appointment",
+        "details": "I have been very sick for a few days and is diagnosed with bronchiolitis. Therefore, I cannot come to school today.",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T00:59:04.464Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T05:19:13.117Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "A81rAH8GGreRilYKW0BU",
+      "data": {
+        "studentId": "SDRyQCwOVCoSf2bk48M9",
+        "studentName": "Sam Sopheakneary",
+        "studentClass": "Grade 8 Room 103",
+        "studentShift": "Evening",
+        "permissionStartDate": "2025-08-12",
+        "permissionEndDate": "2025-08-12",
+        "duration": 1,
+        "reason": "Bad weather",
+        "details": "It was a bad weather, it was raining hard so I couldn’t come.",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-12T12:38:22.222Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-12T12:41:55.381Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "BUcoB3F6YX2YJArOdmHw",
+      "data": {
+        "studentId": "h9atyDlHVHH9f5qlePf3",
+        "studentName": "Samith Soeunghaksenna",
+        "studentClass": "Class 12NKGS",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-31",
+        "duration": 21,
+        "reason": "Not Yet Start",
+        "details": "Wait for NGS class to finish to start new class\n",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:14:28.701Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:15:30.269Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "LZlY14SWvlTZeo6PYU8j",
+      "data": {
+        "studentId": "n9pLtUPGtwPwMABEzjy8",
+        "studentName": "Tang PichLyka",
+        "studentClass": "Class 12I",
+        "studentShift": "Morning",
+        "permissionStartDate": "2025-08-06",
+        "permissionEndDate": "2025-08-10",
+        "duration": 5,
+        "reason": "English Class",
+        "details": "She still haven't finish here ACE class yet, will join next month.",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T06:09:16.113Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T07:39:32.553Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "O8WX4DehewDM2kPtwccZ",
+      "data": {
+        "studentId": "pH4pwbYgTyoo0ws98Jhk",
+        "studentName": "Tang Chhivly",
+        "studentClass": "12s",
+        "studentShift": "Afternoon ",
+        "permissionStartDate": "2025-08-09",
+        "permissionEndDate": "2025-08-09",
+        "duration": 1,
+        "reason": "Personal Matter",
+        "details": "I catch a cold so I won’t be able to make it to class today",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-09T05:40:16.405Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-09T06:01:28.051Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "R6DoOsS1E7Bp1DswLk7g",
+      "data": {
+        "studentId": "yPc1thygsKXMnIpV0NPm",
+        "studentName": "Savy SereyVaddtey",
+        "studentClass": "12C",
+        "studentShift": "Morning ",
+        "permissionStartDate": "2025-08-06",
+        "permissionEndDate": "2025-08-06",
+        "duration": 1,
+        "reason": "Family Emergency",
+        "details": "We have to attend grand aunt’s funeral in Battambang province",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T09:19:33.639Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T10:34:07.825Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "TJuFzvtSnZXS3nKM7TFr",
+      "data": {
+        "studentId": "yPc1thygsKXMnIpV0NPm",
+        "studentName": "Savy SereyVaddtey",
+        "studentClass": "12 C",
+        "studentShift": "Morning",
+        "permissionStartDate": "2025-08-14",
+        "permissionEndDate": "2025-08-15",
+        "duration": 2,
+        "reason": "Medical Appointment",
+        "details": "I have been hospitalized due ho dengue fever since  Monday ",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-14T00:08:17.397Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-14T06:54:41.559Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "TLjBtfi4rP7EdjangGLk",
+      "data": {
+        "studentId": "ZsHj0iB9e4iKWaCy39L3",
+        "studentName": "Khun Soktin",
+        "studentClass": "12i",
+        "studentShift": "Evening ",
+        "permissionStartDate": "2025-08-13",
+        "permissionEndDate": "2025-08-13",
+        "duration": 1,
+        "reason": "Personal Matter",
+        "details": "Because I have a football match with my club .",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-13T04:56:45.116Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-13T08:26:12.799Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "VYDygZ6gxITxCugK3na4",
+      "data": {
+        "studentId": "hOLM7PxbBd8yJawPitBY",
+        "studentName": "Heng Panhasoth",
+        "studentClass": "12c",
+        "studentShift": "Morning",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-11",
+        "duration": 1,
+        "reason": "Go to country side to my grandpas temple",
+        "details": "Only for today tmr ill be back in the city",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T05:51:34.170Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T06:41:18.151Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "Ylc4EfanczdbECXMbzEe",
+      "data": {
+        "studentId": "GF64OJqvYHnmuI42epsf",
+        "studentName": "Mony Vichita",
+        "studentClass": "Class 12NKGS",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-31",
+        "duration": 21,
+        "reason": "Not Yet Start",
+        "details": "Wait for NGS class to finish to start new class",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:13:58.874Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:15:31.747Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "bzzLvrN7LqwEiUPY1t3I",
+      "data": {
+        "studentId": "bf0wTuwEk7nhHg7oEGHy",
+        "studentName": "Sum Kimlay",
+        "studentClass": "12C",
+        "studentShift": "Afterwords ",
+        "permissionStartDate": "2025-08-14",
+        "permissionEndDate": "2025-08-14",
+        "duration": 1,
+        "reason": "Personal Matter",
+        "details": "My Family celebrate birthday for my sister today and I have to go out with them",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-14T06:24:20.777Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-14T06:54:40.426Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "fvEZh6iUpYXA0aSc9ZaD",
+      "data": {
+        "studentId": "bf0wTuwEk7nhHg7oEGHy",
+        "studentName": "Sum Kimlay",
+        "studentClass": "Class 12C",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-06",
+        "permissionEndDate": "2025-08-10",
+        "duration": 5,
+        "reason": "Not Yet join",
+        "details": "Stiil can't join class yet. Wait until 11th August to start",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T07:38:20.078Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-06T07:39:30.788Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "iD3KNV1ulYiP6WZTkrLs",
+      "data": {
+        "studentId": "4RPr5w3rPRs3MIQ5zJCI",
+        "studentName": "You Sopheakpanhavatey",
+        "studentClass": "10F",
+        "studentShift": "5:45 to 8:00",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-11",
+        "duration": 1,
+        "reason": "Family Emergency",
+        "details": "My uncle dead on Saturday in Preah Sihanouk. Thank you .",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T05:22:50.096Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T05:23:54.947Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "juJXtfQPCWO8o0sevWGv",
+      "data": {
+        "studentId": "oybTXQ1muBcMBvp0xAlJ",
+        "studentName": "Chamroeun Chantraboth",
+        "studentClass": "Class 12E",
+        "studentShift": "Evening",
+        "permissionStartDate": "2025-08-07",
+        "permissionEndDate": "2025-08-09",
+        "duration": 3,
+        "reason": "will start later",
+        "details": "wait for NGS class to finish first to start his class",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-07T05:11:43.615Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-07T05:12:37.941Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "nFPvMAudgkmKfuXJ6KUH",
+      "data": {
+        "studentId": "ZsHj0iB9e4iKWaCy39L3",
+        "studentName": "Khun Soktin",
+        "studentClass": "11i",
+        "studentShift": "Evening ",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-11",
+        "duration": 1,
+        "reason": "Personal Matter",
+        "details": "Today I ask permission I came to the province and haven’t returned yet",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T06:47:21.076Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T08:40:59.717Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "qxZoZkWW4oQCxJTScvYa",
+      "data": {
+        "studentId": "zraoypaabQKuAo7W6kwI",
+        "studentName": "Lun Chansomethea",
+        "studentClass": "Class 12NKGS",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-31",
+        "duration": 21,
+        "reason": "Not Yet Start",
+        "details": "Wait for NGS class to finish to start new class\n",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:12:36.363Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:15:36.392Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "tEMk1whYHbPhiQAxbHiU",
+      "data": {
+        "studentId": "Ox4qT27YS53WJJSOdV0i",
+        "studentName": "Ly Thavrakbuth",
+        "studentClass": "Class 12NKGS",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-31",
+        "duration": 21,
+        "reason": "Not Yet Start",
+        "details": "Wait for NGS class to finish to start new class\n",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:13:10.049Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:15:34.447Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "ty0FkXjC7EezxkC0dAi2",
+      "data": {
+        "studentId": "hvPHY9nLSmfMhRMw4oQw",
+        "studentName": "Nut Tymoeung",
+        "studentClass": "Class 12E",
+        "studentShift": "Evening",
+        "permissionStartDate": "2025-08-07",
+        "permissionEndDate": "2025-08-09",
+        "duration": 3,
+        "reason": "will start later",
+        "details": "My dad want me to start at next week, will start later.",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-07T05:11:06.270Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-07T05:12:39.442Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "uS9BTTblRKO8GGtdOE9t",
+      "data": {
+        "studentId": "IZ1NOSc1sXZUDdMKvdBm",
+        "studentName": "Tao Sokretmony",
+        "studentClass": "Class 12NKGS",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-30",
+        "duration": 20,
+        "reason": "Not Yet Start",
+        "details": "Wait for NGS class to finish to start new class\n",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:15:20.983Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:15:28.478Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "vSqb7nm3CJCYi5s9TBYN",
+      "data": {
+        "studentId": "LAyeHZMi6qpZF39XF5lA",
+        "studentName": "Khat Sovanpanha",
+        "studentClass": "Class 12NKGS",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-31",
+        "duration": 21,
+        "reason": "Not Join Yet",
+        "details": "Wait for NGS class to finish to start new class",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:11:40.830Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T10:15:38.203Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "z9U5HBecMz07I0LsH1o6",
+      "data": {
+        "studentId": "GFIypIif7T3qGYSQ6aZ9",
+        "studentName": "Sok ChanMeyjing",
+        "studentClass": "9E",
+        "studentShift": "Free style ",
+        "permissionStartDate": "2025-08-11",
+        "permissionEndDate": "2025-08-11",
+        "duration": 1,
+        "reason": "Personal Matter",
+        "details": "I don’t feel well today,I have a headache and leg pain",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T11:31:27.296Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-11T13:15:55.495Z"
+        },
+        "status": "approved"
+      }
+    },
+    {
+      "id": "zoOrrYr9MQ0gi55mgqdy",
+      "data": {
+        "studentId": "RQKNhoVoLmTM01oIaBWA",
+        "studentName": "Leang Lier",
+        "studentClass": "Class 12S",
+        "studentShift": "Afternoon",
+        "permissionStartDate": "2025-08-12",
+        "permissionEndDate": "2025-08-12",
+        "duration": 1,
+        "reason": "Mom call",
+        "details": "by jimmy: her mom called to ask for absent permission",
+        "requestedBy": "Anonymous",
+        "requestedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-12T09:51:39.456Z"
+        },
+        "reviewedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-12T09:51:44.966Z"
+        },
+        "status": "approved"
+      }
+    }
+  ]
+}

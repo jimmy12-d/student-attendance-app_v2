@@ -6,7 +6,7 @@ import { db } from '../../../firebase-config';
 import { collection, query, where, onSnapshot, getDocs, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { Student, PermissionRecord } from '../../_interfaces';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
-import { isSchoolDay } from '../../dashboard/_lib/attendanceLogic';
+import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord } from '../../dashboard/_lib/attendanceLogic';
 import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
@@ -146,19 +146,102 @@ const AttendancePage = () => {
            currentDate.setDate(currentDate.getDate() - 1);
          }
          
-         const permsQuery = query(collection(db, "attendance"), where("authUid", "==", studentUid), where("date", "in", schoolDays));
-         unsubscribe = onSnapshot(permsQuery, (snapshot) => {
+         // Fetch approved permissions for the student
+         const permsQuery = query(
+           collection(db, "permissions"),
+           where("authUid", "==", studentUid),
+           where("status", "==", "approved")
+         );
+         const permsSnap = await getDocs(permsQuery);
+         const approvedPermissions = permsSnap.docs.map(doc => doc.data() as PermissionRecord);
+         
+         const attendanceQuery = query(collection(db, "attendance"), where("authUid", "==", studentUid), where("date", "in", schoolDays));
+         unsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
            const fetchedRecords: { [date: string]: AttendanceRecord } = {};
            snapshot.docs.forEach(doc => { fetchedRecords[doc.data().date] = { ...doc.data(), id: doc.id } as AttendanceRecord; });
+           
            const displayRecords = schoolDays.map(dateStr => {
-             if (fetchedRecords[dateStr]) return fetchedRecords[dateStr];
-             return { id: dateStr, date: dateStr, status: 'absent' };
+             // Convert the AttendanceRecord to RawAttendanceRecord format for getStudentDailyStatus
+             const rawAttendanceRecord: RawAttendanceRecord | undefined = fetchedRecords[dateStr] ? {
+               studentId: studentDataFromDb.studentId,
+               date: dateStr,
+               status: fetchedRecords[dateStr].status as 'present' | 'late' | 'pending',
+               timestamp: fetchedRecords[dateStr].timestamp instanceof Date ? 
+                         Timestamp.fromDate(fetchedRecords[dateStr].timestamp as Date) : 
+                         fetchedRecords[dateStr].timestamp as Timestamp,
+               class: studentDataFromDb.class,
+               shift: studentDataFromDb.shift,
+               id: fetchedRecords[dateStr].id
+             } : undefined;
+
+             // Use the centralized status calculation function
+             const calculatedStatus = getStudentDailyStatus(
+               studentDataFromDb,
+               dateStr,
+               rawAttendanceRecord,
+               classConfigs,
+               approvedPermissions
+             );
+
+             // Convert back to AttendanceRecord format for display
+             if (fetchedRecords[dateStr]) {
+               return fetchedRecords[dateStr];
+             }
+             
+             // Create a display record based on the calculated status
+             const displayStatus = calculatedStatus.status === "Permission" ? 'permission' :
+                                 calculatedStatus.status === "Not Yet Enrolled" ? 'not-enrolled' :
+                                 calculatedStatus.status === "No School" ? 'no-school' :
+                                 calculatedStatus.status === "Present" ? 'present' :
+                                 calculatedStatus.status === "Late" ? 'late' :
+                                 calculatedStatus.status === "Pending" ? 'pending' : 'absent';
+             
+             return { 
+               id: dateStr, 
+               date: dateStr, 
+               status: displayStatus,
+               calculatedTime: calculatedStatus.time 
+             };
            }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+           
            setRecentRecords(displayRecords);
            
-           // Set today's record
+           // Set today's record using the same logic
            const today = new Date().toISOString().split('T')[0];
-           const todaysRecord = fetchedRecords[today] || { id: today, date: today, status: 'absent' };
+           const todaysAttendanceRecord = fetchedRecords[today];
+           const rawTodayRecord: RawAttendanceRecord | undefined = todaysAttendanceRecord ? {
+             studentId: studentDataFromDb.studentId,
+             date: today,
+             status: todaysAttendanceRecord.status as 'present' | 'late' | 'pending',
+             timestamp: todaysAttendanceRecord.timestamp instanceof Date ? 
+                       Timestamp.fromDate(todaysAttendanceRecord.timestamp as Date) : 
+                       todaysAttendanceRecord.timestamp as Timestamp,
+             class: studentDataFromDb.class,
+             shift: studentDataFromDb.shift,
+             id: todaysAttendanceRecord.id
+           } : undefined;
+
+           const todayCalculatedStatus = getStudentDailyStatus(
+             studentDataFromDb,
+             today,
+             rawTodayRecord,
+             classConfigs,
+             approvedPermissions
+           );
+
+           const todayDisplayStatus = todayCalculatedStatus.status === "Permission" ? 'permission' :
+                                    todayCalculatedStatus.status === "Not Yet Enrolled" ? 'not-enrolled' :
+                                    todayCalculatedStatus.status === "No School" ? 'no-school' :
+                                    todayCalculatedStatus.status === "Present" ? 'present' :
+                                    todayCalculatedStatus.status === "Late" ? 'late' :
+                                    todayCalculatedStatus.status === "Pending" ? 'pending' : 'absent';
+
+           const todaysRecord = todaysAttendanceRecord || { 
+             id: today, 
+             date: today, 
+             status: todayDisplayStatus,
+             calculatedTime: todayCalculatedStatus.time 
+           };
            setTodayRecord(todaysRecord);
            
            setLoading(false);
@@ -394,9 +477,7 @@ const AttendancePage = () => {
            {/* Quick Actions */}
            <div className="space-y-5 px-1">
              <div className="flex items-center space-x-3 px-2">
-               <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-               </div>
+
                <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
                  Quick Actions
                </h2>
@@ -410,7 +491,7 @@ const AttendancePage = () => {
                  <button 
                    onClick={() => setIsRequestConfirmOpen(true)}
                    disabled={['present', 'late', 'permission', 'pending'].includes(todayRecord?.status)}
-                   className="relative w-full bg-white dark:bg-slate-800/90 backdrop-blur-sm p-6 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-700/80 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
+                   className="relative w-full bg-white dark:bg-slate-800/90 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-700/80 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
                    <div className="flex items-center w-full space-x-4">
@@ -431,13 +512,10 @@ const AttendancePage = () => {
                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
                          Request Attendance
                        </h3>
-                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 leading-relaxed">
-                         Use when face scanning is unavailable
-                       </p>
                        <div className="flex items-center space-x-2">
                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                           Instant processing
+                           Use when face scanning is unavailable
                          </span>
                        </div>
                      </div>
@@ -455,7 +533,7 @@ const AttendancePage = () => {
                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-all duration-200"></div>
                  <button 
                    onClick={() => setIsPermissionPanelOpen(true)}
-                   className="relative w-full bg-white dark:bg-slate-800/90 backdrop-blur-sm p-6 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-700/80 active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
+                   className="relative w-full bg-white dark:bg-slate-800/90 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-700/80 active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
                    <div className="flex items-center w-full space-x-4">
@@ -476,13 +554,10 @@ const AttendancePage = () => {
                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
                          Request Permission
                        </h3>
-                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 leading-relaxed">
-                         For planned absences or emergencies
-                       </p>
                        <div className="flex items-center space-x-2">
                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                          <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                           Requires approval
+                           For planned absences or emergencies
                          </span>
                        </div>
                      </div>

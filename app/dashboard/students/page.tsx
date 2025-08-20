@@ -8,6 +8,9 @@ import {
   mdiPencilBox,
   mdiClipboardCheck,
   mdiDownload,
+  mdiAccountOff,
+  mdiChevronDown,
+  mdiChevronUp,
 } from "@mdi/js";
 import Button from "../../_components/Button";
 import CardBox from "../../_components/CardBox";
@@ -24,6 +27,7 @@ import DroppedStudentsSection from "./components/DroppedStudentsSection";
 import WaitlistStudentsSection from "./components/WaitlistStudentsSection";
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
 import { ExportStudentsModal } from "./components/ExportStudentsModal";
+import { AbsentFollowUpDashboard } from "./components/AbsentFollowUpDashboard";
 import { toast } from 'sonner';
 
 // Firebase
@@ -40,8 +44,17 @@ export default function StudentsPage() {
   const [waitlistStudents, setWaitlistStudents] = useState<Student[]>([]);
   const [showDroppedStudents, setShowDroppedStudents] = useState(false);
   const [showWaitlistStudents, setShowWaitlistStudents] = useState(false);
+  const [showAbsentFollowUp, setShowAbsentFollowUp] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // State for Absent Follow-Up Dashboard filters
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  });
+  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedShift, setSelectedShift] = useState<string>('');
 
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [isDeleteModalActive, setIsDeleteModalActive] = useState(false);
@@ -63,6 +76,9 @@ export default function StudentsPage() {
 
   // Export modal state
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  // Expand buttons state
+  const [isButtonsExpanded, setIsButtonsExpanded] = useState(false);
 
   // Set up real-time listener for students
   useEffect(() => {
@@ -312,11 +328,34 @@ export default function StudentsPage() {
         {!isFormActive && ( // Use isFormActive here
           <>
           <div className="flex items-center space-x-4"> {/* New flex container for the buttons */}
+            {/* Batch Edit and Export buttons - only show when expanded */}
+            {isButtonsExpanded && (
+              <>
+                <Button
+                  onClick={handleToggleBatchEdit}
+                  icon={mdiPencilBox}
+                  label={isBatchEditMode ? "Exit Batch Edit" : "Batch Edit"}
+                  color={isBatchEditMode ? "danger" : "warning"}
+                  roundedFull
+                  small
+                />
+                <Button
+                  onClick={() => setIsExportModalOpen(true)}
+                  icon={mdiDownload}
+                  label="Export"
+                  color="success"
+                  roundedFull
+                  small
+                />
+              </>
+            )}
+            
+            {/* Main action buttons - always visible */}
             <Button
-              onClick={() => setIsExportModalOpen(true)}
-              icon={mdiDownload}
-              label="Export"
-              color="success"
+              onClick={() => setShowAbsentFollowUp(!showAbsentFollowUp)}
+              icon={mdiAccountOff}
+              label={showAbsentFollowUp ? "Hide Follow-ups" : "Absent Follow-ups"}
+              color={showAbsentFollowUp ? "danger" : "info"}
               roundedFull
               small
             />
@@ -324,15 +363,7 @@ export default function StudentsPage() {
               onClick={handleToggleTakeAttendance}
               icon={mdiClipboardCheck}
               label={isTakeAttendanceMode ? "Exit Take Attendance" : "Take Attendance"}
-              color={isTakeAttendanceMode ? "danger" : "info"}
-              roundedFull
-              small
-            />
-            <Button
-              onClick={handleToggleBatchEdit}
-              icon={mdiPencilBox}
-              label={isBatchEditMode ? "Exit Batch Edit" : "Batch Edit"}
-              color={isBatchEditMode ? "danger" : "warning"}
+              color={isTakeAttendanceMode ? "danger" : "company-purple"}
               roundedFull
               small
             />
@@ -341,6 +372,16 @@ export default function StudentsPage() {
               icon={mdiAccountPlus}
               label="Create Student"
               color="white"
+              roundedFull
+              small
+            />
+            
+            {/* Expand/Collapse button */}
+            <Button
+              onClick={() => setIsButtonsExpanded(!isButtonsExpanded)}
+              icon={isButtonsExpanded ? mdiChevronUp : mdiChevronDown}
+              label={isButtonsExpanded ? "Less" : "More"}
+              color={isButtonsExpanded ? "white" : "void"}
               roundedFull
               small
             />
@@ -377,12 +418,79 @@ export default function StudentsPage() {
         </CardBox>
       )}
 
+      {/* Absent Follow-Up Dashboard */}
+      {showAbsentFollowUp && !isFormActive && !isDeleteModalActive && (
+        <CardBox className="mb-6">
+          <div className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Absent Follow-Up Dashboard</h2>
+            
+            {/* Date and Filter Controls */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:text-white"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Class (Optional)
+                </label>
+                <select
+                  value={selectedClass}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:text-white"
+                >
+                  <option value="">All Classes</option>
+                  <option value="Class 10A">Class 10A</option>
+                  <option value="Class 10B">Class 10B</option>
+                  <option value="Class 11A">Class 11A</option>
+                  <option value="Class 11B">Class 11B</option>
+                  <option value="Class 12A">Class 12A</option>
+                  <option value="Class 12B">Class 12B</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Shift (Optional)
+                </label>
+                <select
+                  value={selectedShift}
+                  onChange={(e) => setSelectedShift(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:text-white"
+                >
+                  <option value="">All Shifts</option>
+                  <option value="Morning">Morning</option>
+                  <option value="Afternoon">Afternoon</option>
+                  <option value="Evening">Evening</option>
+                </select>
+              </div>
+            </div>
+            
+            <AbsentFollowUpDashboard 
+              selectedDate={selectedDate}
+              selectedClass={selectedClass}
+              selectedShift={selectedShift}
+              onViewDetails={handleViewDetails}
+            />
+          </div>
+        </CardBox>
+      )}
+
       {/* Waitlist Students Section - Show above active students when not in specific modes */}
       {!isFormActive && 
        !isDeleteModalActive && 
        !isTakeAttendanceMode && 
        !isBatchEditMode && 
-       !studentToEdit && (
+       !studentToEdit &&
+       !showAbsentFollowUp && (
         <WaitlistStudentsSection
           waitlistStudents={waitlistStudents}
           showWaitlistStudents={showWaitlistStudents}
@@ -400,7 +508,7 @@ export default function StudentsPage() {
             <NotificationBar color="warning" icon={mdiMonitorCellphone}>
               No students found. Add one to get started!
             </NotificationBar>
-          ) : (
+          ) : !showAbsentFollowUp ? (
             <CardBox className="mb-6" hasTable>
               <TableStudents
                 students={students}
@@ -413,7 +521,7 @@ export default function StudentsPage() {
                 onExitTakeAttendance={() => setIsTakeAttendanceMode(false)}
               />
             </CardBox>
-          )}
+          ) : null}
         </>
       )}
 
@@ -435,7 +543,8 @@ export default function StudentsPage() {
        !isDeleteModalActive && 
        !isTakeAttendanceMode && 
        !isBatchEditMode && 
-       !studentToEdit && (
+       !studentToEdit &&
+       !showAbsentFollowUp && (
         <DroppedStudentsSection
           droppedStudents={droppedStudents}
           showDroppedStudents={showDroppedStudents}

@@ -1,0 +1,19 @@
+{
+  "collection": "examControls",
+  "totalDocuments": 2,
+  "backupTimestamp": "2025-08-18T06:25:06.125Z",
+  "documents": [
+    {
+      "id": "mock3",
+      "data": {
+        "isPublished": true
+      }
+    },
+    {
+      "id": "mock4",
+      "data": {
+        "state": "not yet"
+      }
+    }
+  ]
+}

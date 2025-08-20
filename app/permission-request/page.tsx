@@ -188,6 +188,8 @@ function PermissionRequestContent() {
   // Get prefilled data from URL parameters
   const studentId = searchParams?.get('studentId') || '';
   const studentName = searchParams?.get('studentName') || '';
+  const studentClass = searchParams?.get('studentClass') || '';
+  const studentShift = searchParams?.get('studentShift') || '';
 
   // Calculate end date based on start date and duration
   const calculateEndDate = (startDate: string, duration: number): string => {
@@ -200,7 +202,8 @@ function PermissionRequestContent() {
   // Fetch student data
   useEffect(() => {
     const fetchStudentData = async () => {
-      if (!studentId) {
+      // If we don't have a studentId, or we already have both class and shift from URL, no need to fetch
+      if (!studentId || (studentClass && studentShift)) {
         setLoadingStudent(false);
         return;
       }
@@ -222,7 +225,7 @@ function PermissionRequestContent() {
     };
 
     fetchStudentData();
-  }, [studentId]);
+  }, [studentId, studentClass, studentShift]);
 
   const handleSubmit = async (values: FormValues, { setSubmitting, resetForm }: any) => {
     try {
@@ -416,8 +419,8 @@ function PermissionRequestContent() {
                   initialValues={{
                     studentId: studentId,
                     studentName: studentName,
-                    studentClass: studentData?.class || '',
-                    studentShift: studentData?.shift || '',
+                    studentClass: studentClass || studentData?.class || '',
+                    studentShift: studentShift || studentData?.shift || '',
                     permissionStartDate: '',
                     duration: 1,
                     reason: '',
@@ -457,7 +460,7 @@ function PermissionRequestContent() {
                               name="studentClass" 
                               className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-4 focus:ring-purple-300 dark:focus:ring-purple-800 focus:border-purple-500 transition-all duration-200"
                               placeholder="Student Class"
-                              readOnly={!!studentData?.class}
+                              readOnly={!!(studentClass || studentData?.class)}
                             />
                             <ErrorMessage name="studentClass" component="div" className="text-red-500 text-sm mt-1" />
                           </div>
@@ -470,7 +473,7 @@ function PermissionRequestContent() {
                               name="studentShift" 
                               className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-4 focus:ring-purple-300 dark:focus:ring-purple-800 focus:border-purple-500 transition-all duration-200"
                               placeholder="Student Shift"
-                              readOnly={!!studentData?.shift}
+                              readOnly={!!(studentShift || studentData?.shift)}
                             />
                             <ErrorMessage name="studentShift" component="div" className="text-red-500 text-sm mt-1" />
                           </div>

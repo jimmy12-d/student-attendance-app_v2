@@ -45,6 +45,37 @@ function generateQRCodeURL(token: string): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(startPayload)}`;
 }
 
+// Helper function to check if payment month is September 2025 or later
+function shouldShowQRCode(paymentMonth: string): boolean {
+  if (!paymentMonth) return false;
+  
+  try {
+    // Extract month and year from payment month string (e.g., "September 2025")
+    const monthMap: { [key: string]: number } = {
+      'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+      'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+    };
+    
+    const parts = paymentMonth.toLowerCase().split(' ');
+    if (parts.length !== 2) return false;
+    
+    const monthName = parts[0];
+    const year = parseInt(parts[1]);
+    const month = monthMap[monthName];
+    
+    if (!month || isNaN(year)) return false;
+    
+    // Check if payment is for September 2025 or later
+    if (year > 2025) return true;
+    if (year === 2025 && month >= 9) return true;
+    
+    return false;
+  } catch (error) {
+    console.warn('Error parsing payment month for QR code check:', error);
+    return false;
+  }
+}
+
 // Helper function to store temporary registration token in Firebase
 async function storeTempRegistrationToken(studentId: string, token: string): Promise<void> {
   if (!db) {
@@ -183,30 +214,83 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
     // Printer already has empty space available, but downloads need visual padding
     const topPadding = isForPrinting ? 0 : 10;
     
-    // Generate QR token and QR code only if student is not registered and Firebase is available
+    // Fetch existing QR token and generate QR code only if:
+    // 1. Student is not registered
+    // 2. Firebase is available  
+    // 3. Payment is for September 2025 or later
     let qrCodeImage = null;
     let studentToken = null;
-    if (studentId && db && !isStudentRegistered) {
+    if (studentId && db && !isStudentRegistered && shouldShowQRCode(transaction.paymentMonth)) {
       try {
-        studentToken = generateStudentToken();
-        const qrCodeURL = generateQRCodeURL(studentToken);
+        console.log(`📅 Payment month check: ${transaction.paymentMonth} - QR code generation allowed`);
         
-        // Store the temporary token in Firebase
-        await storeTempRegistrationToken(studentId, studentToken);
+        // Try to fetch existing token from tempRegistrationTokens collection
+        const tokensRef = db.collection('tempRegistrationTokens');
+        const tokenQuery = tokensRef.where('studentId', '==', studentId);
+        const tokenSnapshot = await tokenQuery.get();
         
-        // Download QR code image
-        const qrResponse = await fetch(qrCodeURL);
-        if (qrResponse.ok) {
-          const qrImageBytes = await qrResponse.arrayBuffer();
-          qrCodeImage = await pdfDoc.embedPng(new Uint8Array(qrImageBytes));
+        if (!tokenSnapshot.empty) {
+          // Use existing token
+          const tokenDoc = tokenSnapshot.docs[0];
+          const tokenData = tokenDoc.data();
+          studentToken = tokenData.token;
+          
+          // Check if token is not expired
+          const now = new Date();
+          const expiresAt = tokenData.expiresAt.toDate();
+          
+          if (now < expiresAt) {
+            const qrCodeURL = generateQRCodeURL(studentToken);
+            
+            // Download QR code image
+            const qrResponse = await fetch(qrCodeURL);
+            if (qrResponse.ok) {
+              const qrImageBytes = await qrResponse.arrayBuffer();
+              qrCodeImage = await pdfDoc.embedPng(new Uint8Array(qrImageBytes));
+            }
+            console.log(`📱 Using existing token for student ${studentId}: ${studentToken}`);
+          } else {
+            console.log(`⏰ Token expired for student ${studentId}, QR code will not be shown`);
+          }
+        } else {
+          // No token found - create one for immediate use
+          console.log(`🔍 No token found for student ${studentId}, creating new token for PDF generation`);
+          
+          try {
+            // Generate new token
+            studentToken = generateStudentToken();
+            const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
+            
+            // Store token in database
+            await db.collection('tempRegistrationTokens').doc(studentToken).set({
+              studentId: studentId,
+              token: studentToken,
+              createdAt: new Date(),
+              expiresAt: expiresAt
+            });
+            
+            // Generate QR code
+            const qrCodeURL = generateQRCodeURL(studentToken);
+            const qrResponse = await fetch(qrCodeURL);
+            if (qrResponse.ok) {
+              const qrImageBytes = await qrResponse.arrayBuffer();
+              qrCodeImage = await pdfDoc.embedPng(new Uint8Array(qrImageBytes));
+            }
+            
+            console.log(`✅ Created new token for student ${studentId}: ${studentToken}`);
+          } catch (tokenCreateError) {
+            console.warn('Failed to create new token during PDF generation:', tokenCreateError);
+          }
         }
       } catch (error) {
-        console.warn('Failed to generate or store QR code:', error);
+        console.warn('Failed to fetch or display QR code:', error);
       }
     } else if (studentId && !db) {
-      console.warn('Firebase not available, skipping QR code generation for receipt');
+      console.warn('Firebase not available, skipping QR code display for receipt');
     } else if (studentId && isStudentRegistered) {
-      console.log('Student already registered, skipping QR code generation');
+      console.log('Student already registered, skipping QR code display');
+    } else if (studentId && !shouldShowQRCode(transaction.paymentMonth)) {
+      console.log(`📅 Payment month ${transaction.paymentMonth} is before September 2025, skipping QR code display`);
     }
     
     // --- Logo ---

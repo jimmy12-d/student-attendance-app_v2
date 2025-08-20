@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { doc, writeBatch, collection, getDocs, addDoc } from "firebase/firestore";
+import { doc, writeBatch, collection, getDocs, addDoc, setDoc } from "firebase/firestore";
 import { getFunctions, httpsCallable } from "firebase/functions";
 
 // Attendance logic imports
@@ -678,29 +678,38 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
     setGeneratingQR(true);
     try {
-      const functions = getFunctions();
-      const generateQRCodes = httpsCallable(functions, 'generateStudentQRCodes');
-      
-      const result = await generateQRCodes({
-        studentIds: [student.id],
-        adminUid: user?.uid || 'anonymous'
-      });
+      // Generate token on the client side
+      const generateToken = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let token = '';
+        for (let i = 0; i < 16; i++) {
+          token += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return token;
+      };
 
-      const data = result.data as any; // Type assertion for Firebase function result
+      const token = generateToken();
+      const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
       
-      if (data.success) {
-        toast.success(`QR code generated for ${student.fullName}`);
-        
-        // Auto-open the QR modal
-        setTimeout(() => {
-          setSelectedQRStudent({
-            ...student,
-            registrationToken: data.qrCodes[0]?.token,
-            tokenExpiresAt: new Date(data.qrCodes[0]?.expiresAt)
-          });
-          setIsQRModalOpen(true);
-        }, 1000);
-      }
+      // Store token in tempRegistrationTokens collection
+      await setDoc(doc(db, 'tempRegistrationTokens', token), {
+        studentId: student.id,
+        token: token,
+        createdAt: new Date(),
+        expiresAt: expiresAt
+      });
+      
+      toast.success(`QR code generated for ${student.fullName}`);
+      
+      // Auto-open the QR modal
+      setTimeout(() => {
+        setSelectedQRStudent({
+          ...student,
+          registrationToken: token,
+          tokenExpiresAt: expiresAt
+        });
+        setIsQRModalOpen(true);
+      }, 1000);
     } catch (error) {
       console.error('Error generating QR code:', error);
       toast.error(`Failed to generate QR code for ${student.fullName}`);

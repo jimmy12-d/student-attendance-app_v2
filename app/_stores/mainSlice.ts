@@ -9,7 +9,9 @@ export interface User {
   avatar: string | null;
   uid?: string; // Optional: Store Firebase UID if needed
   studentDocId?: string | null; // Firestore document ID from 'students' collection
-  role?: 'admin' | 'student'; // Add role property
+  role?: 'admin' | 'student' | 'teacher'; // Add teacher role
+  subject?: string; // For teachers
+  phone?: string; // For teachers
 }
 
 export interface AppNotification {
@@ -61,7 +63,9 @@ export interface MainState {
   userAvatar: string | null;
   userUid?: string | null; // Optional: For Firebase UID
   studentDocId?: string | null; // Firestore document ID
-  userRole?: 'admin' | 'student' | null; // Add role to state
+  userRole?: 'admin' | 'student' | 'teacher' | null; // Add teacher role to state
+  userSubject?: string | null; // For teachers
+  userPhone?: string | null; // For teachers
   isFieldFocusRegistered: boolean;
   mockExamCache: {
     [examName: string]: MockExamData;
@@ -92,6 +96,8 @@ const initialState: MainState = {
   userUid: null,
   studentDocId: null,
   userRole: null, // Default role to null
+  userSubject: null,
+  userPhone: null,
   mockExamCache: {},
   mockExamSettingsCache: {},
   progressCache: {},
@@ -120,6 +126,8 @@ export const mainSlice = createSlice({
         state.userUid = action.payload.uid; // Store UID if provided
         state.studentDocId = action.payload.studentDocId;
         state.userRole = action.payload.role; // Store role
+        state.userSubject = action.payload.subject; // Store subject for teachers
+        state.userPhone = action.payload.phone; // Store phone for teachers
       } else {
         // Reset user state on logout
         state.userName = null;
@@ -128,6 +136,8 @@ export const mainSlice = createSlice({
         state.userUid = null;
         state.studentDocId = null;
         state.userRole = null;
+        state.userSubject = null;
+        state.userPhone = null;
       }
     },
     setMockExamData: (state, action: PayloadAction<{ examName: string; data: MockExamData }>) => {

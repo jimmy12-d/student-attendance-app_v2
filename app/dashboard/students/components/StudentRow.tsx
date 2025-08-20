@@ -4,6 +4,7 @@ import { ColumnConfig } from './ColumnToggle';
 import { db } from '../../../../firebase-config';
 import { doc, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { AbsentStatusTracker } from './AbsentStatusTracker';
 
 // Phone formatting utility
 const formatPhoneNumber = (phone: string | undefined | null): string => {
@@ -296,6 +297,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
 
           case 'todayAttendance':
             const todayStatus = getTodayAttendanceStatus ? getTodayAttendanceStatus(student) : { status: 'Unknown' };
+            const todayDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
             
             return (
               <td key="todayAttendance" className="p-3 whitespace-nowrap">
@@ -319,16 +321,13 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                       )}
                     </span>
                   ) : todayStatus.status === 'Absent' ? (
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
-                      student.warning 
-                        ? 'bg-red-200 dark:bg-red-800/50 text-red-900 dark:text-red-200 border-red-300 dark:border-red-600 animate-pulse shadow-lg font-bold' 
-                        : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'
-                    }`}>
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      {student.warning ? 'URGENT ABSENT' : 'Absent'}
-                    </span>
+                    // Use AbsentStatusTracker for absent students
+                    <AbsentStatusTracker
+                      studentId={student.id}
+                      studentName={student.fullName}
+                      date={todayDate}
+                      currentStatus="Absent"
+                    />
                   ) : todayStatus.status === 'Permission' ? (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -406,9 +405,10 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                       className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 animate-pulse hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors cursor-pointer"
                       title="Click to view unused QR code"
                     >
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11a9 9 0 11-18 0 9 9 0 0118 0zm-9 8a1 1 0 100-2 1 1 0 000 2z" />
-                      </svg>
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z" />
+                      <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+                    </svg>
                       Unused QR
                     </button>
                   ) : hasExpiredToken ? (
@@ -427,9 +427,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                     // 4. Unpaid - Never made a sale, no QR available
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2 0 1.105 1.343 2 3 2s3-.895 3-2c0-1.105-1.343-2-3-2z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14c1.657 0 3 .895 3 2s-1.343 2-3 2-3-.895-3-2 1.343-2 3-2z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V2m0 16v4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                       Unpaid
                     </span>

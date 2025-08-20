@@ -1,0 +1,67 @@
+{
+  "collection": "processedAbaTransactions",
+  "totalDocuments": 5,
+  "backupTimestamp": "2025-08-18T06:25:09.151Z",
+  "documents": [
+    {
+      "id": "Ke201753175273",
+      "data": {
+        "studentId": "0JHWA2q1mnVzNWB9NDut",
+        "studentName": "Kuong Tymean",
+        "approvedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-22T11:04:22.770Z"
+        },
+        "amount": 2
+      }
+    },
+    {
+      "id": "Ke201753182574",
+      "data": {
+        "studentId": "0JHWA2q1mnVzNWB9NDut",
+        "studentName": "Kuong Tymean",
+        "approvedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-22T11:10:11.308Z"
+        },
+        "amount": 150
+      }
+    },
+    {
+      "id": "Ke201753182590",
+      "data": {
+        "studentId": "0JHWA2q1mnVzNWB9NDut",
+        "studentName": "Kuong Tymean",
+        "approvedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-22T11:29:08.232Z"
+        },
+        "amount": 150
+      }
+    },
+    {
+      "id": "Ke201753184179",
+      "data": {
+        "studentId": "0JHWA2q1mnVzNWB9NDut",
+        "studentName": "Kuong Tymean",
+        "approvedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-22T11:36:53.061Z"
+        },
+        "amount": 150
+      }
+    },
+    {
+      "id": "Ke201753677017",
+      "data": {
+        "studentId": "0JHWA2q1mnVzNWB9NDut",
+        "studentName": "Kuong Tymean",
+        "approvedAt": {
+          "_type": "timestamp",
+          "_value": "2025-07-28T04:48:05.040Z"
+        },
+        "amount": 150
+      }
+    }
+  ]
+}

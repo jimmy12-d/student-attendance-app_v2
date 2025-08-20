@@ -14,7 +14,10 @@ import {
   mdiCardAccountDetails,
   mdiCreditCard,
   mdiCashCheck,
-  mdiChartLine
+  mdiChartLine,
+  mdiCloudOutline,
+  mdiCameraIris,
+  mdiViewGrid
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -54,9 +57,19 @@ const menuAside: MenuAsideItem[] = [
         icon: mdiMagnify,
       },
       {
+        href: "/dashboard/face-attendance-selector",
+        label: "Face Attendance",
+        icon: mdiViewGrid,
+      },
+      {
+        href: "/dashboard/face-scan-faceio",
+        label: "FaceIO Scanner",
+        icon: mdiCloudOutline,
+      },
+      {
         href: "/dashboard/face-scan",
-        label: "Face Scan",
-        icon: mdiFaceRecognition,
+        label: "Legacy Face Scan",
+        icon: mdiCameraIris,
       },
       {
         href: "/dashboard/permission",
@@ -76,9 +89,20 @@ const menuAside: MenuAsideItem[] = [
     label: "Payment Summary",
   },
   {
-    href: "/dashboard/mock-exams",
-    label: "Mock Control",
+    label: "Mock Exam",
     icon: mdiNotebookEditOutline,
+    menu: [
+      {
+        href: "/dashboard/mock-exams",
+        label: "Mock Control",
+        icon: mdiClipboardListOutline,
+      },
+      {
+        href: "/dashboard/mock-results",
+        label: "Result",
+        icon: mdiChartLine,
+      },
+    ]
   },
   // {
   //   href: "/dashboard/approvals",

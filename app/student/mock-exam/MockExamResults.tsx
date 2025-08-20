@@ -33,7 +33,13 @@ interface MockExamResultsProps {
   SOCIAL_STUDIES_LABELS: { [key: string]: string };
   seatInfo: string | null;
   phoneInfo: string | null;
+  studentName?: string;
 }
+
+const capitalize = (s: string) => {
+    if (typeof s !== 'string' || s.length === 0) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+};
 
 const MockExamResults: React.FC<MockExamResultsProps> = ({
   availableTabs,
@@ -51,6 +57,7 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
   SOCIAL_STUDIES_LABELS,
   seatInfo,
   phoneInfo,
+  studentName,
 }) => {
   const getGradeDependentStyles = (grade: string) => {
     switch (grade) {
@@ -137,6 +144,16 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                         <div className="absolute bottom-0 right-0 w-1/2 h-1/2 rounded-full filter blur-3xl opacity-30" style={{ background: gradeStyles.glow2 }}></div>
 
                         <div className="relative z-10 flex flex-col items-center">
+                            {/* Student Name */}
+                            {studentName && (
+                              <div className="mb-4 text-center">
+                                <h3 className="text-xl font-bold text-white mb-1 tracking-wide">
+                                  {studentName}
+                                </h3>
+                                <div className="w-12 h-0.5 bg-white/50 mx-auto rounded-full"></div>
+                              </div>
+                            )}
+                            
                             <div className="relative w-40 h-40 sm:w-44 sm:h-44">
                                 <CircularProgress percentage={examResults.totalPercentage} progressColor={gradeStyles.progressColor} />
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -144,7 +161,7 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                                         Total Score
                                     </div>
                                     <span className="-mt-1 text-5xl font-bold text-white tracking-tighter">
-                                        {animatedTotalScore}
+                                        {animatedTotalScore % 1 === 0 ? animatedTotalScore.toString() : animatedTotalScore.toFixed(1)}
                                     </span>
                                 </div>
                             </div>
@@ -158,9 +175,12 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                       {SUBJECT_ORDER.map(subjectKey => {
                         if (examScores.hasOwnProperty(subjectKey)) {
-                          const displayLabel = studentClassType === 'Grade 12S'
+                          // Check if it's social studies class (same logic as PerformanceRadarChart)
+                          const isSocial = studentClassType && (studentClassType.includes('Social') || studentClassType.includes('S'));
+                          const baseLabel = isSocial
                             ? SOCIAL_STUDIES_LABELS[subjectKey] || subjectKey
                             : subjectKey;
+                          const displayLabel = capitalize(baseLabel);
 
                           return (
                             <ScoreCard

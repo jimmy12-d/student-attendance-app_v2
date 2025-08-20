@@ -1,0 +1,3799 @@
+{
+  "collection": "mockResults",
+  "totalDocuments": 79,
+  "backupTimestamp": "2025-08-16T04:44:21.090Z",
+  "documents": [
+    {
+      "id": "0121",
+      "data": {
+        "fullName": "Khe Sokagna",
+        "studentId": "0121",
+        "phone": 618,
+        "class": "Class 12A",
+        "shift": "Morning",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": "04",
+        "mockResults": {
+          "mock_1": {
+            "math": 37,
+            "khmer": 52,
+            "chemistry": 51,
+            "physics": 36,
+            "biology": 31,
+            "history": 19
+          },
+          "mock_2": {
+            "math": 47,
+            "khmer": 42,
+            "chemistry": 41,
+            "physics": 26,
+            "biology": 30,
+            "history": 29
+          },
+          "mock_3": {
+            "math": 66,
+            "khmer": 42,
+            "chemistry": 53,
+            "physics": 38,
+            "biology": 33,
+            "history": 32,
+            "english": 31
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.566Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.566Z"
+        }
+      }
+    },
+    {
+      "id": "0274",
+      "data": {
+        "fullName": "Chou Vannika",
+        "studentId": "0274",
+        "phone": 514,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 201,
+        "roomLabel": "Room 201",
+        "seat": 14,
+        "mockResults": {
+          "mock_1": {
+            "math": 86,
+            "khmer": 48,
+            "chemistry": 45,
+            "physics": 0,
+            "biology": 57,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 93,
+            "khmer": 51,
+            "chemistry": 52,
+            "physics": 49,
+            "biology": 59,
+            "history": 26
+          },
+          "mock_3": {
+            "math": 95,
+            "khmer": 10,
+            "chemistry": 50,
+            "physics": 60,
+            "biology": 51,
+            "history": 37,
+            "english": 32
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.763Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.763Z"
+        }
+      }
+    },
+    {
+      "id": "0373",
+      "data": {
+        "fullName": "San Phanith",
+        "studentId": "0373",
+        "phone": 809,
+        "class": "Class 12B",
+        "shift": "Afternoon",
+        "room": 206,
+        "roomLabel": "Room 206",
+        "seat": "09",
+        "mockResults": {
+          "mock_1": {
+            "math": 99,
+            "khmer": 61,
+            "chemistry": 71,
+            "physics": 74,
+            "biology": 55,
+            "history": 36
+          },
+          "mock_2": {
+            "math": 121,
+            "khmer": 65,
+            "chemistry": 73,
+            "physics": 71,
+            "biology": 58,
+            "history": 46
+          },
+          "mock_3": {
+            "math": 117,
+            "khmer": 66,
+            "chemistry": 63,
+            "physics": 66,
+            "biology": 52,
+            "history": 50,
+            "english": 18
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.646Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.646Z"
+        }
+      }
+    },
+    {
+      "id": "0555",
+      "data": {
+        "fullName": "Long Kimchhe",
+        "studentId": "0555",
+        "phone": 710,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 205,
+        "roomLabel": "Room 205",
+        "seat": 10,
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 92,
+            "khmer": 45,
+            "chemistry": 59,
+            "physics": 63,
+            "biology": 75,
+            "history": 31
+          },
+          "mock_3": {
+            "math": 70,
+            "khmer": 39,
+            "chemistry": 58,
+            "physics": 63,
+            "biology": 57,
+            "history": 41,
+            "english": 16
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.684Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.684Z"
+        }
+      }
+    },
+    {
+      "id": "0818",
+      "data": {
+        "fullName": "Tann Thangvanvireakkhemara",
+        "studentId": "0818",
+        "phone": 518,
+        "class": "Class 12K",
+        "shift": "Afternoon",
+        "room": 207,
+        "roomLabel": "Room 207",
+        "seat": "04",
+        "mockResults": {
+          "mock_1": {
+            "math": 46,
+            "khmer": 33,
+            "chemistry": 60,
+            "physics": 56,
+            "biology": 24,
+            "history": 44
+          },
+          "mock_2": {
+            "math": 41,
+            "khmer": 43,
+            "chemistry": 57,
+            "physics": 44,
+            "biology": 51,
+            "history": 34
+          },
+          "mock_3": {
+            "math": 64,
+            "khmer": 52,
+            "chemistry": 45,
+            "physics": 29,
+            "biology": 38,
+            "history": 48,
+            "english": 26
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.370Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.370Z"
+        }
+      }
+    },
+    {
+      "id": "0838",
+      "data": {
+        "fullName": "Chhim Chharo",
+        "studentId": "0838",
+        "phone": 208,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 106,
+        "roomLabel": "Room 106",
+        "seat": "08",
+        "mockResults": {
+          "mock_1": {
+            "math": 57,
+            "khmer": 62,
+            "chemistry": 41,
+            "physics": 63,
+            "biology": 48,
+            "history": 36
+          },
+          "mock_2": {
+            "math": 101,
+            "khmer": 51,
+            "chemistry": 57,
+            "physics": 55,
+            "biology": 58,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 109,
+            "khmer": 50,
+            "chemistry": 66,
+            "physics": 62,
+            "biology": 50,
+            "history": 50,
+            "english": 38
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.072Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.072Z"
+        }
+      }
+    },
+    {
+      "id": "0895",
+      "data": {
+        "fullName": "Huon Roathanaksocheata",
+        "studentId": "0895",
+        "phone": 802,
+        "class": "Class 12A",
+        "shift": "Afternoon",
+        "room": 206,
+        "roomLabel": "Room 206",
+        "seat": "02",
+        "mockResults": {
+          "mock_1": {
+            "math": 55,
+            "khmer": 45,
+            "chemistry": 40,
+            "physics": 65,
+            "biology": 21,
+            "history": 35
+          },
+          "mock_2": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 38,
+            "physics": 9,
+            "biology": 9,
+            "history": 26
+          },
+          "mock_3": {
+            "math": 28,
+            "khmer": 36,
+            "chemistry": 15,
+            "physics": 15,
+            "biology": 30,
+            "history": 35,
+            "english": 35
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.889Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.889Z"
+        }
+      }
+    },
+    {
+      "id": "1113",
+      "data": {
+        "fullName": "Van Seutong",
+        "studentId": 1113,
+        "phone": 625,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": 11,
+        "mockResults": {
+          "mock_1": {
+            "math": 85,
+            "khmer": 59,
+            "chemistry": 70,
+            "physics": 74,
+            "biology": 57,
+            "history": 30
+          },
+          "mock_2": {
+            "math": 121,
+            "khmer": 53,
+            "chemistry": 72,
+            "physics": 69,
+            "biology": 68,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 116,
+            "khmer": 63,
+            "chemistry": 72,
+            "physics": 70,
+            "biology": 65,
+            "history": 50,
+            "english": 27
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:08.270Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:08.270Z"
+        }
+      }
+    },
+    {
+      "id": "1283",
+      "data": {
+        "fullName": "Yeng Mouyse",
+        "studentId": 1283,
+        "phone": 108,
+        "class": "Class 12J",
+        "shift": "Afternoon",
+        "room": 105,
+        "roomLabel": "Room 105",
+        "seat": "08",
+        "mockResults": {
+          "mock_1": {
+            "math": 76,
+            "khmer": 52,
+            "chemistry": 60,
+            "physics": 67,
+            "biology": 35,
+            "history": 44
+          },
+          "mock_2": {
+            "math": 115,
+            "khmer": 61,
+            "chemistry": 68,
+            "physics": 69,
+            "biology": 58,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 104,
+            "khmer": 61,
+            "chemistry": 49,
+            "physics": 53,
+            "biology": 59,
+            "history": 50,
+            "english": 26
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.743Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.743Z"
+        }
+      }
+    },
+    {
+      "id": "1631",
+      "data": {
+        "fullName": "Kruoch Vansreypich",
+        "studentId": 1631,
+        "phone": 211,
+        "class": "Class 12B",
+        "shift": "Afternoon",
+        "room": 106,
+        "roomLabel": "Room 106",
+        "seat": 11,
+        "mockResults": {
+          "mock_1": {
+            "math": 94,
+            "khmer": 72,
+            "chemistry": 74,
+            "physics": 73,
+            "biology": 73,
+            "history": 43
+          },
+          "mock_2": {
+            "math": 122,
+            "khmer": 54,
+            "chemistry": 65,
+            "physics": 67,
+            "biology": 70,
+            "history": 47
+          },
+          "mock_3": {
+            "math": 121,
+            "khmer": 62,
+            "chemistry": 75,
+            "physics": 73,
+            "biology": 68,
+            "history": 48,
+            "english": 45
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.405Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.405Z"
+        }
+      }
+    },
+    {
+      "id": "1681",
+      "data": {
+        "fullName": "Mom Measlipin",
+        "studentId": "1681",
+        "phone": 520,
+        "class": "Class 12J",
+        "shift": "Afternoon",
+        "room": 207,
+        "roomLabel": "Room 207",
+        "seat": "06",
+        "mockResults": {
+          "mock_1": {
+            "math": 83,
+            "khmer": 60,
+            "chemistry": 63,
+            "physics": 54,
+            "biology": 33,
+            "history": 39
+          },
+          "mock_2": {
+            "math": 104,
+            "khmer": 55,
+            "chemistry": 60,
+            "physics": 53,
+            "biology": 38.5,
+            "history": 40
+          },
+          "mock_3": {
+            "math": 100,
+            "khmer": 51,
+            "chemistry": 53,
+            "physics": 70,
+            "biology": 40,
+            "history": 32,
+            "english": 37
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.578Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.578Z"
+        }
+      }
+    },
+    {
+      "id": "1686",
+      "data": {
+        "fullName": "Se Kimgech",
+        "studentId": 1686,
+        "phone": 808,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 206,
+        "roomLabel": "Room 206",
+        "seat": "08",
+        "mockResults": {
+          "mock_1": {
+            "math": 67,
+            "khmer": 53,
+            "chemistry": 67,
+            "physics": 64,
+            "biology": 42,
+            "history": 46
+          },
+          "mock_2": {
+            "math": 103,
+            "khmer": 70,
+            "chemistry": 70,
+            "physics": 69,
+            "biology": 56,
+            "history": 47
+          },
+          "mock_3": {
+            "math": 94,
+            "khmer": 55,
+            "chemistry": 49,
+            "physics": 58,
+            "biology": 62.5,
+            "history": 45,
+            "english": 34
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.544Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.544Z"
+        }
+      }
+    },
+    {
+      "id": "1848",
+      "data": {
+        "fullName": "Touch Sodalis",
+        "studentId": 1848,
+        "phone": 405,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 108,
+        "roomLabel": "Room 108",
+        "seat": "05",
+        "mockResults": {
+          "mock_1": {
+            "math": 15,
+            "khmer": 48,
+            "chemistry": 34,
+            "physics": 64,
+            "biology": 17,
+            "history": 35
+          },
+          "mock_2": {
+            "math": 54,
+            "khmer": 56,
+            "chemistry": 52,
+            "physics": 64,
+            "biology": 45,
+            "history": 47
+          },
+          "mock_3": {
+            "math": 78,
+            "khmer": 58,
+            "chemistry": 30,
+            "physics": 47,
+            "biology": 48,
+            "history": 50,
+            "english": 26
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.166Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.166Z"
+        }
+      }
+    },
+    {
+      "id": "1862",
+      "data": {
+        "fullName": "Eng Sonita",
+        "studentId": 1862,
+        "phone": 103,
+        "class": "Class 12A",
+        "shift": "Morning",
+        "room": 105,
+        "roomLabel": "Room 105",
+        "seat": "03",
+        "mockResults": {
+          "mock_1": {
+            "math": 14,
+            "khmer": 41,
+            "chemistry": 16,
+            "physics": 36,
+            "biology": 13,
+            "history": 15
+          },
+          "mock_2": {
+            "math": 39,
+            "khmer": 38,
+            "chemistry": 38,
+            "physics": 49,
+            "biology": 25,
+            "history": 40
+          },
+          "mock_3": {
+            "math": 53,
+            "khmer": 33,
+            "chemistry": 31,
+            "physics": 40,
+            "biology": 26,
+            "history": 31,
+            "english": 21
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.097Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.097Z"
+        }
+      }
+    },
+    {
+      "id": "2121",
+      "data": {
+        "fullName": "Sim Kakada",
+        "studentId": 2121,
+        "phone": 101,
+        "class": "Class 12A",
+        "shift": "Afternoon",
+        "room": 105,
+        "roomLabel": "Room 105",
+        "seat": "01",
+        "mockResults": {
+          "mock_1": {
+            "math": 45,
+            "khmer": 55,
+            "chemistry": 42,
+            "physics": 44,
+            "biology": 26,
+            "history": 44
+          },
+          "mock_2": {
+            "math": 57,
+            "khmer": 49,
+            "chemistry": 38,
+            "physics": 46,
+            "biology": 34,
+            "history": 28
+          },
+          "mock_3": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0,
+            "english": 0
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:55.786Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:55.786Z"
+        }
+      }
+    },
+    {
+      "id": "2588",
+      "data": {
+        "fullName": "Ung Keahuy",
+        "studentId": 2588,
+        "phone": 602,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 203,
+        "roomLabel": "Room 203",
+        "seat": "02",
+        "mockResults": {
+          "mock_1": {
+            "math": 70,
+            "khmer": 61,
+            "chemistry": 69,
+            "physics": 75,
+            "biology": 66,
+            "history": 48
+          },
+          "mock_2": {
+            "math": 124,
+            "khmer": 63,
+            "chemistry": 69,
+            "physics": 65,
+            "biology": 66,
+            "history": 49
+          },
+          "mock_3": {
+            "math": 119,
+            "khmer": 58,
+            "chemistry": 74,
+            "physics": 66,
+            "biology": 69,
+            "history": 42,
+            "english": 45
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.072Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.072Z"
+        }
+      }
+    },
+    {
+      "id": "2617",
+      "data": {
+        "fullName": "Soeu Pisey",
+        "studentId": 2617,
+        "phone": 202,
+        "class": "Class 12A",
+        "shift": "Morning",
+        "room": 106,
+        "roomLabel": "Room 106",
+        "seat": "02",
+        "mockResults": {
+          "mock_1": {
+            "math": 68,
+            "khmer": 33,
+            "chemistry": 49,
+            "physics": 59,
+            "biology": 39,
+            "history": 38
+          },
+          "mock_2": {
+            "math": 77,
+            "khmer": 48,
+            "chemistry": 33,
+            "physics": 38,
+            "biology": 44,
+            "history": 36
+          },
+          "mock_3": {
+            "math": 86,
+            "khmer": 41,
+            "chemistry": 13,
+            "physics": 15,
+            "biology": 23,
+            "history": 33,
+            "english": 30
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.415Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.415Z"
+        }
+      }
+    },
+    {
+      "id": "2852",
+      "data": {
+        "fullName": "Tom Somputvichat",
+        "studentId": 2852,
+        "phone": 622,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": "08",
+        "mockResults": {
+          "mock_1": {
+            "math": 72,
+            "khmer": 63,
+            "chemistry": 67,
+            "physics": 50,
+            "biology": 51,
+            "history": 35
+          },
+          "mock_2": {
+            "math": 111,
+            "khmer": 57,
+            "chemistry": 32,
+            "physics": 42,
+            "biology": 58,
+            "history": 48
+          },
+          "mock_3": {
+            "math": 90,
+            "khmer": 69,
+            "chemistry": 48,
+            "physics": 46,
+            "biology": 67,
+            "history": 49,
+            "english": 16
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.970Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.970Z"
+        }
+      }
+    },
+    {
+      "id": "3168",
+      "data": {
+        "fullName": "Seng Meyjing",
+        "studentId": "3168",
+        "phone": 109,
+        "class": "Class 12J",
+        "shift": "Afternoon",
+        "room": 105,
+        "roomLabel": "Room 105",
+        "seat": "09",
+        "mockResults": {
+          "mock_1": {
+            "math": 85,
+            "khmer": 37,
+            "chemistry": 74,
+            "physics": 70,
+            "biology": 30,
+            "history": 39
+          },
+          "mock_2": {
+            "math": 106,
+            "khmer": 64,
+            "chemistry": 64,
+            "physics": 67,
+            "biology": 28,
+            "history": 45
+          },
+          "mock_3": {
+            "math": 116,
+            "khmer": 49,
+            "chemistry": 71,
+            "physics": 57,
+            "biology": 50,
+            "history": 41,
+            "english": 26
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.859Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.859Z"
+        }
+      }
+    },
+    {
+      "id": "3747",
+      "data": {
+        "fullName": "Nut Sokunthyro",
+        "studentId": 3747,
+        "phone": 408,
+        "class": "Class 12B",
+        "shift": "Afternoon",
+        "room": 108,
+        "roomLabel": "Room 108",
+        "seat": "09",
+        "mockResults": {
+          "mock_1": {
+            "math": 60,
+            "khmer": 56,
+            "chemistry": 65,
+            "physics": 65,
+            "biology": 59,
+            "history": 43
+          },
+          "mock_2": {
+            "math": 109,
+            "khmer": 67,
+            "chemistry": 61,
+            "physics": 70,
+            "biology": 62,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 120,
+            "khmer": 67,
+            "chemistry": 60,
+            "physics": 64,
+            "biology": 71,
+            "history": 49,
+            "english": 25
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.484Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.484Z"
+        }
+      }
+    },
+    {
+      "id": "3945",
+      "data": {
+        "fullName": "Mang Kimchheng",
+        "studentId": 3945,
+        "phone": 810,
+        "class": "Class 12J",
+        "shift": "Afternoon",
+        "room": 206,
+        "roomLabel": "Room 206",
+        "seat": 10,
+        "mockResults": {
+          "mock_1": {
+            "math": 92,
+            "khmer": 51,
+            "chemistry": 68,
+            "physics": 73,
+            "biology": 71,
+            "history": 35
+          },
+          "mock_2": {
+            "math": 122,
+            "khmer": 55,
+            "chemistry": 54,
+            "physics": 67,
+            "biology": 70,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 106,
+            "khmer": 62,
+            "chemistry": 63,
+            "physics": 65,
+            "biology": 58.5,
+            "history": 44,
+            "english": 41
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.746Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.746Z"
+        }
+      }
+    },
+    {
+      "id": "4002",
+      "data": {
+        "fullName": "Kang Kimsour",
+        "studentId": 4002,
+        "phone": 702,
+        "class": "Class 12T",
+        "shift": "Afternoon",
+        "room": 205,
+        "roomLabel": "Room 205",
+        "seat": "02",
+        "mockResults": {
+          "mock_1": {
+            "math": 100,
+            "khmer": 31,
+            "chemistry": 28,
+            "physics": 46.5,
+            "biology": 48,
+            "history": 25
+          },
+          "mock_2": {
+            "math": 95,
+            "khmer": 33,
+            "chemistry": 41,
+            "physics": 44.5,
+            "biology": 55,
+            "history": 28
+          },
+          "mock_3": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0,
+            "english": 0
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.875Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.875Z"
+        }
+      }
+    },
+    {
+      "id": "4281",
+      "data": {
+        "fullName": "Ya Limheng",
+        "studentId": 4281,
+        "phone": 512,
+        "class": "Class 12T",
+        "shift": "Afternoon",
+        "room": 201,
+        "roomLabel": "Room 201",
+        "seat": 12,
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_3": {
+            "math": 62,
+            "khmer": 49,
+            "chemistry": 38,
+            "physics": 58,
+            "biology": 45,
+            "history": 28,
+            "english": 13
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.562Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.562Z"
+        }
+      }
+    },
+    {
+      "id": "4335",
+      "data": {
+        "fullName": "Leng Mengchhong",
+        "studentId": "4335",
+        "phone": 403,
+        "class": "Class 12A",
+        "shift": "Afternoon",
+        "room": 108,
+        "roomLabel": "Room 108",
+        "seat": "03",
+        "mockResults": {
+          "mock_1": {
+            "math": 36,
+            "khmer": 24,
+            "chemistry": 46,
+            "physics": 54,
+            "biology": 23,
+            "history": 19
+          },
+          "mock_2": {
+            "math": 55,
+            "khmer": 37,
+            "chemistry": 43,
+            "physics": 42,
+            "biology": 16,
+            "history": 20
+          },
+          "mock_3": {
+            "math": 70,
+            "khmer": 29,
+            "chemistry": 37,
+            "physics": 53,
+            "biology": 21,
+            "history": 21,
+            "english": 25
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.944Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.944Z"
+        }
+      }
+    },
+    {
+      "id": "46517",
+      "data": {
+        "fullName": "Nget Chhayhourt",
+        "studentId": 46517,
+        "phone": 406,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 108,
+        "roomLabel": "Room 108",
+        "seat": "07",
+        "mockResults": {
+          "mock_1": {
+            "math": 69,
+            "khmer": 60,
+            "chemistry": 73,
+            "physics": 68,
+            "biology": 60,
+            "history": 39
+          },
+          "mock_2": {
+            "math": 93,
+            "khmer": 51,
+            "chemistry": 60,
+            "physics": 53,
+            "biology": 51,
+            "history": 40
+          },
+          "mock_3": {
+            "math": 89,
+            "khmer": 56,
+            "chemistry": 65,
+            "physics": 39,
+            "biology": 62,
+            "history": 46,
+            "english": 37
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.275Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.275Z"
+        }
+      }
+    },
+    {
+      "id": "4709",
+      "data": {
+        "fullName": "Lao Chinhniang",
+        "studentId": 4709,
+        "phone": 515,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 201,
+        "roomLabel": "Room 201",
+        "seat": 15,
+        "mockResults": {
+          "mock_1": {
+            "math": 90,
+            "khmer": 41,
+            "chemistry": 35,
+            "physics": 44.5,
+            "biology": 45,
+            "history": 25
+          },
+          "mock_2": {
+            "math": 87,
+            "khmer": 58,
+            "chemistry": 42,
+            "physics": 49,
+            "biology": 71,
+            "history": 31
+          },
+          "mock_3": {
+            "math": 101,
+            "khmer": 53,
+            "chemistry": 66,
+            "physics": 59,
+            "biology": 51,
+            "history": 29,
+            "english": 17
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.861Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.861Z"
+        }
+      }
+    },
+    {
+      "id": "4787",
+      "data": {
+        "fullName": "Yiep Vouchchheng",
+        "studentId": 4787,
+        "phone": 505,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 201,
+        "roomLabel": "Room 201",
+        "seat": "05",
+        "mockResults": {
+          "mock_1": {
+            "math": 90,
+            "khmer": 71,
+            "chemistry": 68,
+            "physics": 55,
+            "biology": 49,
+            "history": 35
+          },
+          "mock_2": {
+            "math": 104,
+            "khmer": 64,
+            "chemistry": 55,
+            "physics": 70.5,
+            "biology": 51,
+            "history": 46
+          },
+          "mock_3": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0,
+            "english": 0
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:01.677Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:01.677Z"
+        }
+      }
+    },
+    {
+      "id": "4821",
+      "data": {
+        "fullName": "Sok MengLeang",
+        "studentId": 4821,
+        "phone": 308,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 107,
+        "roomLabel": "Room 107",
+        "seat": "08",
+        "mockResults": {
+          "mock_1": {
+            "math": 73,
+            "khmer": 55,
+            "chemistry": 48,
+            "physics": 64,
+            "biology": 34,
+            "history": 45
+          },
+          "mock_2": {
+            "math": 104,
+            "khmer": 53,
+            "chemistry": 52,
+            "physics": 57,
+            "biology": 44,
+            "history": 46
+          },
+          "mock_3": {
+            "math": 101,
+            "khmer": 60,
+            "chemistry": 56,
+            "physics": 63,
+            "biology": 52,
+            "history": 49,
+            "english": 20
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.332Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.332Z"
+        }
+      }
+    },
+    {
+      "id": "5011",
+      "data": {
+        "fullName": "Lim Ratanakkaknika",
+        "studentId": 5011,
+        "phone": 513,
+        "class": "Class 12T",
+        "shift": "Afternoon",
+        "room": 201,
+        "roomLabel": "Room 201",
+        "seat": 13,
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 80,
+            "khmer": 66,
+            "chemistry": 60,
+            "physics": 45,
+            "biology": 51,
+            "history": 39
+          },
+          "mock_3": {
+            "math": 65,
+            "khmer": 62,
+            "chemistry": 49,
+            "physics": 47,
+            "biology": 51,
+            "history": 29,
+            "english": 8
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.661Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.661Z"
+        }
+      }
+    },
+    {
+      "id": "5134",
+      "data": {
+        "fullName": "Ly Cheachanrangsey",
+        "studentId": 5134,
+        "phone": 811,
+        "class": "Class 12B",
+        "shift": "Afternoon",
+        "room": 206,
+        "roomLabel": "Room 206",
+        "seat": 11,
+        "mockResults": {
+          "mock_1": {
+            "math": 78,
+            "khmer": 53,
+            "chemistry": 68,
+            "physics": 66,
+            "biology": 51,
+            "history": 40
+          },
+          "mock_2": {
+            "math": 99,
+            "khmer": 66,
+            "chemistry": 68,
+            "physics": 67,
+            "biology": 71,
+            "history": 35
+          },
+          "mock_3": {
+            "math": 104,
+            "khmer": 59,
+            "chemistry": 61,
+            "physics": 64,
+            "biology": 68,
+            "history": 50,
+            "english": 45
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.846Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.846Z"
+        }
+      }
+    },
+    {
+      "id": "5428",
+      "data": {
+        "fullName": "Heng Vongraksmey",
+        "studentId": 5428,
+        "phone": 616,
+        "class": "Class 12K",
+        "shift": "Afternoon",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": "02",
+        "mockResults": {
+          "mock_1": {
+            "math": 19,
+            "khmer": 57,
+            "chemistry": 34,
+            "physics": 47,
+            "biology": 30,
+            "history": 25
+          },
+          "mock_2": {
+            "math": 43,
+            "khmer": 60,
+            "chemistry": 50,
+            "physics": 37,
+            "biology": 35.5,
+            "history": 27
+          },
+          "mock_3": {
+            "math": 40,
+            "khmer": 58,
+            "chemistry": 23,
+            "physics": 48,
+            "biology": 35,
+            "history": 37,
+            "english": 16
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.371Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.371Z"
+        }
+      }
+    },
+    {
+      "id": "5475",
+      "data": {
+        "fullName": "At Veasna",
+        "studentId": 5475,
+        "phone": 511,
+        "class": "Class 12T",
+        "shift": "Afternoon",
+        "room": 201,
+        "roomLabel": "Room 201",
+        "seat": 11,
+        "mockResults": {
+          "mock_1": {
+            "math": 65,
+            "khmer": 26,
+            "chemistry": 20,
+            "physics": 40.5,
+            "biology": 35,
+            "history": 35
+          },
+          "mock_2": {
+            "math": 77,
+            "khmer": 14,
+            "chemistry": 26,
+            "physics": 48.5,
+            "biology": 38,
+            "history": 21
+          },
+          "mock_3": {
+            "math": 68,
+            "khmer": 22,
+            "chemistry": 56,
+            "physics": 52,
+            "biology": 38,
+            "history": 27,
+            "english": 10
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.451Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.451Z"
+        }
+      }
+    },
+    {
+      "id": "55047",
+      "data": {
+        "fullName": "Sok Mony",
+        "studentId": 55047,
+        "phone": 525,
+        "class": "Class 12B",
+        "shift": "Afternoon",
+        "room": 207,
+        "roomLabel": "Room 207",
+        "seat": 11,
+        "mockResults": {
+          "mock_1": {
+            "math": 100,
+            "khmer": 61,
+            "chemistry": 74,
+            "physics": 66,
+            "biology": 70,
+            "history": 48
+          },
+          "mock_2": {
+            "math": 121,
+            "khmer": 73,
+            "chemistry": 68,
+            "physics": 72,
+            "biology": 68,
+            "history": 42
+          },
+          "mock_3": {
+            "math": 117,
+            "khmer": 66,
+            "chemistry": 75,
+            "physics": 65,
+            "biology": 65,
+            "history": 46,
+            "english": 46
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.067Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.067Z"
+        }
+      }
+    },
+    {
+      "id": "5509",
+      "data": {
+        "fullName": "Narong Kimpheng",
+        "studentId": 5509,
+        "phone": 605,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 203,
+        "roomLabel": "Room 203",
+        "seat": "05",
+        "mockResults": {
+          "mock_1": {
+            "math": 93,
+            "khmer": 51,
+            "chemistry": 62,
+            "physics": 66,
+            "biology": 55,
+            "history": 43
+          },
+          "mock_2": {
+            "math": 118,
+            "khmer": 72,
+            "chemistry": 67,
+            "physics": 71,
+            "biology": 66.5,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 113,
+            "khmer": 51,
+            "chemistry": 51,
+            "physics": 53,
+            "biology": 39,
+            "history": 40,
+            "english": 30
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.407Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.407Z"
+        }
+      }
+    },
+    {
+      "id": "5525",
+      "data": {
+        "fullName": "Pha Lina",
+        "studentId": 5525,
+        "phone": 812,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 206,
+        "roomLabel": "Room 206",
+        "seat": 12,
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 110,
+            "khmer": 64,
+            "chemistry": 63,
+            "physics": 68,
+            "biology": 53,
+            "history": 47
+          },
+          "mock_3": {
+            "math": 123,
+            "khmer": 58,
+            "chemistry": 71,
+            "physics": 68,
+            "biology": 65.5,
+            "history": 47,
+            "english": 46
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.954Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.954Z"
+        }
+      }
+    },
+    {
+      "id": "5562",
+      "data": {
+        "fullName": "Mao Rottanakkhemarin",
+        "studentId": 5562,
+        "phone": 410,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 108,
+        "roomLabel": "Room 108",
+        "seat": 11,
+        "mockResults": {
+          "mock_1": {
+            "math": 83,
+            "khmer": 67,
+            "chemistry": 64,
+            "physics": 69,
+            "biology": 45,
+            "history": 43
+          },
+          "mock_2": {
+            "math": 120,
+            "khmer": 65,
+            "chemistry": 61,
+            "physics": 64,
+            "biology": 67,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 116,
+            "khmer": 64,
+            "chemistry": 70,
+            "physics": 60,
+            "biology": 67,
+            "history": 50,
+            "english": 40
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.701Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.701Z"
+        }
+      }
+    },
+    {
+      "id": "5574",
+      "data": {
+        "fullName": "Srey Sokchannita",
+        "studentId": 5574,
+        "phone": 503,
+        "class": "Class 12T",
+        "shift": "Afternoon",
+        "room": 201,
+        "roomLabel": "Room 201",
+        "seat": "03",
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 71,
+            "khmer": 57,
+            "chemistry": 52,
+            "physics": 49,
+            "biology": 59,
+            "history": 36
+          },
+          "mock_3": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0,
+            "english": 0
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:01.348Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:01.348Z"
+        }
+      }
+    },
+    {
+      "id": "56517",
+      "data": {
+        "fullName": "Oeur Raksa",
+        "studentId": 56517,
+        "phone": 803,
+        "class": "Class 12A",
+        "shift": "Morning",
+        "room": 206,
+        "roomLabel": "Room 206",
+        "seat": "03",
+        "mockResults": {
+          "mock_1": {
+            "math": 35,
+            "khmer": 24,
+            "chemistry": 7,
+            "physics": 33,
+            "biology": 9,
+            "history": 15
+          },
+          "mock_2": {
+            "math": 28,
+            "khmer": 43,
+            "chemistry": 21,
+            "physics": 23,
+            "biology": 18,
+            "history": 44
+          },
+          "mock_3": {
+            "math": 45,
+            "khmer": 41,
+            "chemistry": 27,
+            "physics": 26,
+            "biology": 35,
+            "history": 50,
+            "english": 12
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.981Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.981Z"
+        }
+      }
+    },
+    {
+      "id": "5700",
+      "data": {
+        "fullName": "Dom Chetra",
+        "studentId": 5700,
+        "phone": 203,
+        "class": "Class 12A",
+        "shift": "Morning",
+        "room": 106,
+        "roomLabel": "Room 106",
+        "seat": "03",
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 49,
+            "khmer": 38,
+            "chemistry": 38,
+            "physics": 53,
+            "biology": 17,
+            "history": 37
+          },
+          "mock_3": {
+            "math": 44,
+            "khmer": 48,
+            "chemistry": 25,
+            "physics": 26,
+            "biology": 39,
+            "history": 30,
+            "english": 37
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.513Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.513Z"
+        }
+      }
+    },
+    {
+      "id": "5735",
+      "data": {
+        "fullName": "Suy Lina",
+        "studentId": 5735,
+        "phone": 708,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 205,
+        "roomLabel": "Room 205",
+        "seat": "08",
+        "mockResults": {
+          "mock_1": {
+            "math": 68,
+            "khmer": 32,
+            "chemistry": 40,
+            "physics": 27,
+            "biology": 63,
+            "history": 36
+          },
+          "mock_2": {
+            "math": 70,
+            "khmer": 40,
+            "chemistry": 57,
+            "physics": 49.5,
+            "biology": 56,
+            "history": 31
+          },
+          "mock_3": {
+            "math": 82,
+            "khmer": 9,
+            "chemistry": 64,
+            "physics": 49,
+            "biology": 41,
+            "history": 42,
+            "english": 15
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.479Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.479Z"
+        }
+      }
+    },
+    {
+      "id": "5865",
+      "data": {
+        "fullName": "Eang Paoernu",
+        "studentId": 5865,
+        "phone": 206,
+        "class": "Class 12A",
+        "shift": "Afternoon",
+        "room": 106,
+        "roomLabel": "Room 106",
+        "seat": "06",
+        "mockResults": {
+          "mock_1": {
+            "math": 21,
+            "khmer": 38,
+            "chemistry": 35,
+            "physics": 46,
+            "biology": 34,
+            "history": 37
+          },
+          "mock_2": {
+            "math": 81,
+            "khmer": 46,
+            "chemistry": 43,
+            "physics": 48,
+            "biology": 40,
+            "history": 37
+          },
+          "mock_3": {
+            "math": 72,
+            "khmer": 40,
+            "chemistry": 41,
+            "physics": 27,
+            "biology": 56,
+            "history": 46,
+            "english": 16
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.850Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.850Z"
+        }
+      }
+    },
+    {
+      "id": "5888",
+      "data": {
+        "fullName": "Khim Sovannika",
+        "studentId": 5888,
+        "phone": 703,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 205,
+        "roomLabel": "Room 205",
+        "seat": "03",
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 111,
+            "khmer": 70,
+            "chemistry": 50,
+            "physics": 58.5,
+            "biology": 65,
+            "history": 46
+          },
+          "mock_3": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0,
+            "english": 0
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.971Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.971Z"
+        }
+      }
+    },
+    {
+      "id": "5915",
+      "data": {
+        "fullName": "Sok Chomrouen",
+        "studentId": 5915,
+        "phone": 706,
+        "class": "Class 12T",
+        "shift": "Afternoon",
+        "room": 205,
+        "roomLabel": "Room 205",
+        "seat": "06",
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_3": {
+            "math": 27,
+            "khmer": 7,
+            "chemistry": 48,
+            "physics": 22,
+            "biology": 29,
+            "history": 20,
+            "english": 11
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.273Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.273Z"
+        }
+      }
+    },
+    {
+      "id": "5919",
+      "data": {
+        "fullName": "Wightman Rosa",
+        "studentId": "5919",
+        "phone": 615,
+        "class": "Class 12A",
+        "shift": "Afternoon",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": "01",
+        "mockResults": {
+          "mock_1": {
+            "math": 39,
+            "khmer": 27,
+            "chemistry": 11,
+            "physics": 45,
+            "biology": 18,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 45,
+            "khmer": 15,
+            "chemistry": 37,
+            "physics": 42,
+            "biology": 28,
+            "history": 29
+          },
+          "mock_3": {
+            "math": 63,
+            "khmer": 21,
+            "chemistry": 13,
+            "physics": 44,
+            "biology": 28,
+            "history": 18,
+            "english": 46
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.265Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.265Z"
+        }
+      }
+    },
+    {
+      "id": "5931",
+      "data": {
+        "fullName": "Kimheng Chhengkim",
+        "studentId": 5931,
+        "phone": 707,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 205,
+        "roomLabel": "Room 205",
+        "seat": "07",
+        "mockResults": {
+          "mock_1": {
+            "math": 26,
+            "khmer": 4,
+            "chemistry": 53,
+            "physics": 29,
+            "biology": 25,
+            "history": 15
+          },
+          "mock_2": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_3": {
+            "math": 42,
+            "khmer": 3,
+            "chemistry": 51,
+            "physics": 33,
+            "biology": 17,
+            "history": 20,
+            "english": 9
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.376Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:04.376Z"
+        }
+      }
+    },
+    {
+      "id": "5995",
+      "data": {
+        "fullName": "Moek Harry",
+        "studentId": 5995,
+        "phone": 204,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 106,
+        "roomLabel": "Room 106",
+        "seat": "04",
+        "mockResults": {
+          "mock_1": {
+            "math": 81,
+            "khmer": 20,
+            "chemistry": 39,
+            "physics": 70,
+            "biology": 32,
+            "history": 25
+          },
+          "mock_2": {
+            "math": 112,
+            "khmer": 26,
+            "chemistry": 55,
+            "physics": 54,
+            "biology": 28,
+            "history": 48
+          },
+          "mock_3": {
+            "math": 79,
+            "khmer": 38,
+            "chemistry": 33,
+            "physics": 44,
+            "biology": 17,
+            "history": 25,
+            "english": 24
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.616Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.616Z"
+        }
+      }
+    },
+    {
+      "id": "6168",
+      "data": {
+        "fullName": "Mean Alex",
+        "studentId": 6168,
+        "phone": 409,
+        "class": "Class 12B",
+        "shift": "Afternoon",
+        "room": 108,
+        "roomLabel": "Room 108",
+        "seat": 10,
+        "mockResults": {
+          "mock_1": {
+            "math": 75,
+            "khmer": 71,
+            "chemistry": 73,
+            "physics": 72,
+            "biology": 38,
+            "history": 47
+          },
+          "mock_2": {
+            "math": 120,
+            "khmer": 72,
+            "chemistry": 65,
+            "physics": 69,
+            "biology": 67,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 118,
+            "khmer": 65,
+            "chemistry": 64,
+            "physics": 70,
+            "biology": 68.5,
+            "history": 50,
+            "english": 31
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.595Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:00.595Z"
+        }
+      }
+    },
+    {
+      "id": "6207",
+      "data": {
+        "fullName": "Laing Sueng",
+        "studentId": 6207,
+        "phone": 524,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 207,
+        "roomLabel": "Room 207",
+        "seat": 10,
+        "mockResults": {
+          "mock_1": {
+            "math": 92,
+            "khmer": 62,
+            "chemistry": 73,
+            "physics": 74,
+            "biology": 68,
+            "history": 49
+          },
+          "mock_2": {
+            "math": 117,
+            "khmer": 73,
+            "chemistry": 63,
+            "physics": 72,
+            "biology": 68,
+            "history": 45
+          },
+          "mock_3": {
+            "math": 123,
+            "khmer": 68,
+            "chemistry": 65,
+            "physics": 66,
+            "biology": 68,
+            "history": 50,
+            "english": 39
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.971Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.971Z"
+        }
+      }
+    },
+    {
+      "id": "6299",
+      "data": {
+        "fullName": "Heng Kimly",
+        "studentId": "6299",
+        "phone": 207,
+        "class": "Class 12J",
+        "shift": "Afternoon",
+        "room": 106,
+        "roomLabel": "Room 106",
+        "seat": "07",
+        "mockResults": {
+          "mock_1": {
+            "math": 58,
+            "khmer": 49,
+            "chemistry": 46,
+            "physics": 70,
+            "biology": 65,
+            "history": 50
+          },
+          "mock_2": {
+            "math": 108,
+            "khmer": 61,
+            "chemistry": 52,
+            "physics": 70,
+            "biology": 68,
+            "history": 42
+          },
+          "mock_3": {
+            "math": 113,
+            "khmer": 54,
+            "chemistry": 51,
+            "physics": 59,
+            "biology": 72,
+            "history": 43,
+            "english": 30
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.964Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.964Z"
+        }
+      }
+    },
+    {
+      "id": "6314",
+      "data": {
+        "fullName": "An Sokphearomvotey",
+        "studentId": 6314,
+        "phone": 626,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 203,
+        "roomLabel": "Room 203",
+        "seat": 8,
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 32,
+            "khmer": 43,
+            "chemistry": 45,
+            "physics": 30,
+            "biology": 36,
+            "history": 45
+          },
+          "mock_3": {
+            "math": 63,
+            "khmer": 49,
+            "chemistry": 27,
+            "physics": 48,
+            "biology": 49,
+            "history": 40,
+            "english": 45
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:08.367Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:08.367Z"
+        }
+      }
+    },
+    {
+      "id": "6365",
+      "data": {
+        "fullName": "Sar Dalis",
+        "studentId": 6365,
+        "phone": 807,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 206,
+        "roomLabel": "Room 206",
+        "seat": "07",
+        "mockResults": {
+          "mock_1": {
+            "math": 54,
+            "khmer": 47,
+            "chemistry": 52,
+            "physics": 67,
+            "biology": 59,
+            "history": 42
+          },
+          "mock_2": {
+            "math": 113,
+            "khmer": 60,
+            "chemistry": 71,
+            "physics": 70,
+            "biology": 53,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 106,
+            "khmer": 46,
+            "chemistry": 43,
+            "physics": 61,
+            "biology": 50,
+            "history": 50,
+            "english": 27
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.433Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.433Z"
+        }
+      }
+    },
+    {
+      "id": "6551",
+      "data": {
+        "fullName": "Sek Bolivan",
+        "studentId": 6551,
+        "phone": 307,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 107,
+        "roomLabel": "Room 107",
+        "seat": "07",
+        "mockResults": {
+          "mock_1": {
+            "math": 73,
+            "khmer": 52,
+            "chemistry": 30,
+            "physics": 59,
+            "biology": 27,
+            "history": 48
+          },
+          "mock_2": {
+            "math": 71,
+            "khmer": 63,
+            "chemistry": 66,
+            "physics": 72,
+            "biology": 68.5,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 83,
+            "khmer": 69,
+            "chemistry": 35,
+            "physics": 50,
+            "biology": 58,
+            "history": 43,
+            "english": 37
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.232Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.232Z"
+        }
+      }
+    },
+    {
+      "id": "6617",
+      "data": {
+        "fullName": "Tith Somaly",
+        "studentId": "6617",
+        "phone": 522,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 207,
+        "roomLabel": "Room 207",
+        "seat": "08",
+        "mockResults": {
+          "mock_1": {
+            "math": 69,
+            "khmer": 56,
+            "chemistry": 57,
+            "physics": 69,
+            "biology": 61,
+            "history": 38
+          },
+          "mock_2": {
+            "math": 116,
+            "khmer": 50,
+            "chemistry": 63,
+            "physics": 61,
+            "biology": 72,
+            "history": 45
+          },
+          "mock_3": {
+            "math": 100,
+            "khmer": 58,
+            "chemistry": 54,
+            "physics": 62,
+            "biology": 67.5,
+            "history": 43,
+            "english": 42
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.770Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.770Z"
+        }
+      }
+    },
+    {
+      "id": "6649",
+      "data": {
+        "fullName": "Eang Chhayhout",
+        "studentId": 6649,
+        "phone": 107,
+        "class": "Class 12B",
+        "shift": "Afternoon",
+        "room": 105,
+        "roomLabel": "Room 105",
+        "seat": "07",
+        "mockResults": {
+          "mock_1": {
+            "math": 88,
+            "khmer": 64,
+            "chemistry": 56,
+            "physics": 45,
+            "biology": 56,
+            "history": 36
+          },
+          "mock_2": {
+            "math": 122,
+            "khmer": 70,
+            "chemistry": 62,
+            "physics": 67,
+            "biology": 61,
+            "history": 34
+          },
+          "mock_3": {
+            "math": 88,
+            "khmer": 57,
+            "chemistry": 38,
+            "physics": 46,
+            "biology": 59,
+            "history": 45,
+            "english": 21
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.632Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.632Z"
+        }
+      }
+    },
+    {
+      "id": "6661",
+      "data": {
+        "fullName": "Rithy Vong",
+        "studentId": 6661,
+        "phone": 102,
+        "class": "Class 12K",
+        "shift": "Afternoon",
+        "room": 105,
+        "roomLabel": "Room 105",
+        "seat": "02",
+        "mockResults": {
+          "mock_1": {
+            "math": 22,
+            "khmer": 0,
+            "chemistry": 7,
+            "physics": 13,
+            "biology": 2,
+            "history": 14
+          },
+          "mock_2": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_3": {
+            "math": 5,
+            "khmer": 36,
+            "chemistry": 11,
+            "physics": 14,
+            "biology": 33,
+            "history": 40,
+            "english": 34
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:55.966Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:55.966Z"
+        }
+      }
+    },
+    {
+      "id": "6785",
+      "data": {
+        "fullName": "Kuy Lying",
+        "studentId": 6785,
+        "phone": 201,
+        "class": "Class 12A",
+        "shift": "Afternoon",
+        "room": 106,
+        "roomLabel": "Room 106",
+        "seat": "01",
+        "mockResults": {
+          "mock_1": {
+            "math": 5,
+            "khmer": 46,
+            "chemistry": 35,
+            "physics": 46,
+            "biology": 14,
+            "history": 28
+          },
+          "mock_2": {
+            "math": 25,
+            "khmer": 27,
+            "chemistry": 21,
+            "physics": 37,
+            "biology": 33,
+            "history": 37
+          },
+          "mock_3": {
+            "math": 32,
+            "khmer": 40,
+            "chemistry": 32,
+            "physics": 32,
+            "biology": 35,
+            "history": 33,
+            "english": 37
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.191Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.191Z"
+        }
+      }
+    },
+    {
+      "id": "6789",
+      "data": {
+        "fullName": "Ear Kimhout",
+        "studentId": 6789,
+        "phone": 304,
+        "class": "Class 12K",
+        "shift": "Afternoon",
+        "room": 107,
+        "roomLabel": "Room 107",
+        "seat": "04",
+        "mockResults": {
+          "mock_1": {
+            "math": 43,
+            "khmer": 16,
+            "chemistry": 38,
+            "physics": 62,
+            "biology": 27,
+            "history": 28
+          },
+          "mock_2": {
+            "math": 64,
+            "khmer": 25,
+            "chemistry": 67,
+            "physics": 36,
+            "biology": 34,
+            "history": 30
+          },
+          "mock_3": {
+            "math": 63,
+            "khmer": 24,
+            "chemistry": 29,
+            "physics": 40,
+            "biology": 55,
+            "history": 30,
+            "english": 40
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.855Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.855Z"
+        }
+      }
+    },
+    {
+      "id": "7084",
+      "data": {
+        "fullName": "Tum Sopheabandit",
+        "studentId": 7084,
+        "phone": 805,
+        "class": "Class 12K",
+        "shift": "Afternoon",
+        "room": 206,
+        "roomLabel": "Room 206",
+        "seat": "05",
+        "mockResults": {
+          "mock_1": {
+            "math": 55,
+            "khmer": 51,
+            "chemistry": 61,
+            "physics": 60,
+            "biology": 56,
+            "history": 22
+          },
+          "mock_2": {
+            "math": 56,
+            "khmer": 54,
+            "chemistry": 53,
+            "physics": 57,
+            "biology": 52,
+            "history": 44
+          },
+          "mock_3": {
+            "math": 63,
+            "khmer": 47,
+            "chemistry": 60,
+            "physics": 42,
+            "biology": 45,
+            "history": 29,
+            "english": 35
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.236Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:05.236Z"
+        }
+      }
+    },
+    {
+      "id": "7166",
+      "data": {
+        "fullName": "Seng Chanmonyroth",
+        "studentId": "7166",
+        "phone": 521,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 207,
+        "roomLabel": "Room 207",
+        "seat": "07",
+        "mockResults": {
+          "mock_1": {
+            "math": 91,
+            "khmer": 54,
+            "chemistry": 56,
+            "physics": 74,
+            "biology": 65,
+            "history": 34
+          },
+          "mock_2": {
+            "math": 107,
+            "khmer": 55,
+            "chemistry": 69,
+            "physics": 53,
+            "biology": 46,
+            "history": 36
+          },
+          "mock_3": {
+            "math": 110,
+            "khmer": 31,
+            "chemistry": 57,
+            "physics": 60,
+            "biology": 56,
+            "history": 45,
+            "english": 23
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.673Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.673Z"
+        }
+      }
+    },
+    {
+      "id": "7387",
+      "data": {
+        "fullName": "Kaing SotheaKolabandith",
+        "studentId": 7387,
+        "phone": 617,
+        "class": "Class 12A",
+        "shift": "Morning",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": "03",
+        "mockResults": {
+          "mock_1": {
+            "math": 42,
+            "khmer": 40,
+            "chemistry": 23,
+            "physics": 45,
+            "biology": 12,
+            "history": 19
+          },
+          "mock_2": {
+            "math": 62,
+            "khmer": 28,
+            "chemistry": 36,
+            "physics": 29,
+            "biology": 32,
+            "history": 32
+          },
+          "mock_3": {
+            "math": 59,
+            "khmer": 40,
+            "chemistry": 39,
+            "physics": 28,
+            "biology": 32,
+            "history": 47,
+            "english": 29
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.470Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.470Z"
+        }
+      }
+    },
+    {
+      "id": "7448",
+      "data": {
+        "fullName": "Meas Sokleap",
+        "studentId": 7448,
+        "phone": 603,
+        "class": "Class 12A",
+        "shift": "Morning",
+        "room": 203,
+        "roomLabel": "Room 203",
+        "seat": "03",
+        "mockResults": {
+          "mock_1": {
+            "math": 5,
+            "khmer": 53,
+            "chemistry": 19,
+            "physics": 25,
+            "biology": 17,
+            "history": 30
+          },
+          "mock_2": {
+            "math": 54,
+            "khmer": 55,
+            "chemistry": 7,
+            "physics": 19,
+            "biology": 28,
+            "history": 40
+          },
+          "mock_3": {
+            "math": 42,
+            "khmer": 55,
+            "chemistry": 26,
+            "physics": 27,
+            "biology": 23,
+            "history": 39,
+            "english": 17
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.186Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.186Z"
+        }
+      }
+    },
+    {
+      "id": "75047",
+      "data": {
+        "fullName": "Rath Hengsovann",
+        "studentId": 75047,
+        "phone": 305,
+        "class": "Class 12A",
+        "shift": "Morning",
+        "room": 107,
+        "roomLabel": "Room 107",
+        "seat": "05",
+        "mockResults": {
+          "mock_1": {
+            "math": 69,
+            "khmer": 40,
+            "chemistry": 46,
+            "physics": 57,
+            "biology": 34,
+            "history": 43
+          },
+          "mock_2": {
+            "math": 77,
+            "khmer": 44,
+            "chemistry": 58,
+            "physics": 44,
+            "biology": 49,
+            "history": 23
+          },
+          "mock_3": {
+            "math": 75,
+            "khmer": 39,
+            "chemistry": 46,
+            "physics": 43,
+            "biology": 36,
+            "history": 32,
+            "english": 24
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.956Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.956Z"
+        }
+      }
+    },
+    {
+      "id": "7795",
+      "data": {
+        "fullName": "Chay Janieyeak",
+        "studentId": 7795,
+        "phone": 311,
+        "class": "Class 12B",
+        "shift": "Afternoon",
+        "room": 107,
+        "roomLabel": "Room 107",
+        "seat": 11,
+        "mockResults": {
+          "mock_1": {
+            "math": 91,
+            "khmer": 71,
+            "chemistry": 68,
+            "physics": 75,
+            "biology": 72,
+            "history": 44
+          },
+          "mock_2": {
+            "math": 121,
+            "khmer": 60,
+            "chemistry": 60,
+            "physics": 59,
+            "biology": 68,
+            "history": 47
+          },
+          "mock_3": {
+            "math": 120,
+            "khmer": 63,
+            "chemistry": 68,
+            "physics": 59,
+            "biology": 66,
+            "history": 50,
+            "english": 36
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.639Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.639Z"
+        }
+      }
+    },
+    {
+      "id": "7877",
+      "data": {
+        "fullName": "Kun Sophana",
+        "studentId": 7877,
+        "phone": 519,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 207,
+        "roomLabel": "Room 207",
+        "seat": "05",
+        "mockResults": {
+          "mock_1": {
+            "math": 71,
+            "khmer": 59,
+            "chemistry": 40,
+            "physics": 41,
+            "biology": 52,
+            "history": 30
+          },
+          "mock_2": {
+            "math": 96,
+            "khmer": 40,
+            "chemistry": 40,
+            "physics": 42,
+            "biology": 50,
+            "history": 38
+          },
+          "mock_3": {
+            "math": 79,
+            "khmer": 56,
+            "chemistry": 36,
+            "physics": 30,
+            "biology": 64,
+            "history": 33,
+            "english": 13
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.477Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:06.477Z"
+        }
+      }
+    },
+    {
+      "id": "7919",
+      "data": {
+        "fullName": "Vong Sovanreach",
+        "studentId": 7919,
+        "phone": 507,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 201,
+        "roomLabel": "Room 201",
+        "seat": "07",
+        "mockResults": {
+          "mock_1": {
+            "math": 74,
+            "khmer": 15,
+            "chemistry": 66,
+            "physics": 52,
+            "biology": 52,
+            "history": 30
+          },
+          "mock_2": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_3": {
+            "math": 54,
+            "khmer": 5,
+            "chemistry": 48,
+            "physics": 50,
+            "biology": 31,
+            "history": 31,
+            "english": 14
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:01.936Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:01.936Z"
+        }
+      }
+    },
+    {
+      "id": "8287",
+      "data": {
+        "fullName": "Vin Mary",
+        "studentId": 8287,
+        "phone": 604,
+        "class": "Class 12J",
+        "shift": "Afternoon",
+        "room": 203,
+        "roomLabel": "Room 203",
+        "seat": "04",
+        "mockResults": {
+          "mock_1": {
+            "math": 68,
+            "khmer": 69,
+            "chemistry": 52,
+            "physics": 65,
+            "biology": 40,
+            "history": 49
+          },
+          "mock_2": {
+            "math": 84,
+            "khmer": 60,
+            "chemistry": 68,
+            "physics": 67,
+            "biology": 60,
+            "history": 49
+          },
+          "mock_3": {
+            "math": 100,
+            "khmer": 70,
+            "chemistry": 46,
+            "physics": 51,
+            "biology": 68,
+            "history": 50,
+            "english": 22
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.291Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.291Z"
+        }
+      }
+    },
+    {
+      "id": "8339",
+      "data": {
+        "fullName": "Sok Vichet",
+        "studentId": 8339,
+        "phone": 601,
+        "class": "Class 12A",
+        "shift": "Morning",
+        "room": 203,
+        "roomLabel": "Room 203",
+        "seat": "01",
+        "mockResults": {
+          "mock_1": {
+            "math": 63,
+            "khmer": 47,
+            "chemistry": 30,
+            "physics": 28,
+            "biology": 38,
+            "history": 31
+          },
+          "mock_2": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_3": {
+            "math": 40,
+            "khmer": 6,
+            "chemistry": 51,
+            "physics": 46,
+            "biology": 32,
+            "history": 19,
+            "english": 6
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.976Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:02.976Z"
+        }
+      }
+    },
+    {
+      "id": "8434",
+      "data": {
+        "fullName": "Mao Puthearith",
+        "studentId": 8434,
+        "phone": 106,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 105,
+        "roomLabel": "Room 105",
+        "seat": "06",
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_3": {
+            "math": 80,
+            "khmer": 43,
+            "chemistry": 34,
+            "physics": 53,
+            "biology": 28,
+            "history": 45,
+            "english": 28
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.521Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.521Z"
+        }
+      }
+    },
+    {
+      "id": "8695",
+      "data": {
+        "fullName": "Sat Dalinet",
+        "studentId": 8695,
+        "phone": 110,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 105,
+        "roomLabel": "Room 105",
+        "seat": 10,
+        "mockResults": {
+          "mock_1": {
+            "math": 94,
+            "khmer": 58,
+            "chemistry": 68,
+            "physics": 70,
+            "biology": 49,
+            "history": 33
+          },
+          "mock_2": {
+            "math": 118,
+            "khmer": 70,
+            "chemistry": 71,
+            "physics": 70,
+            "biology": 57.5,
+            "history": 35
+          },
+          "mock_3": {
+            "math": 110,
+            "khmer": 57,
+            "chemistry": 70,
+            "physics": 65,
+            "biology": 63.5,
+            "history": 50,
+            "english": 17
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.979Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:56.979Z"
+        }
+      }
+    },
+    {
+      "id": "9165",
+      "data": {
+        "fullName": "Lunsokha Sakphea",
+        "studentId": 9165,
+        "phone": 620,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": "06",
+        "mockResults": {
+          "mock_1": {
+            "math": 34,
+            "khmer": 71,
+            "chemistry": 43,
+            "physics": 56,
+            "biology": 33,
+            "history": 40
+          },
+          "mock_2": {
+            "math": 99,
+            "khmer": 69,
+            "chemistry": 55,
+            "physics": 61,
+            "biology": 42,
+            "history": 49
+          },
+          "mock_3": {
+            "math": 74,
+            "khmer": 49,
+            "chemistry": 41,
+            "physics": 51,
+            "biology": 40,
+            "history": 47,
+            "english": 46
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.776Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.776Z"
+        }
+      }
+    },
+    {
+      "id": "9233",
+      "data": {
+        "fullName": "Meng Pichsolika",
+        "studentId": 9233,
+        "phone": 310,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 107,
+        "roomLabel": "Room 107",
+        "seat": 10,
+        "mockResults": {
+          "mock_1": {
+            "math": 94,
+            "khmer": 59,
+            "chemistry": 71,
+            "physics": 73,
+            "biology": 34,
+            "history": 50
+          },
+          "mock_2": {
+            "math": 117,
+            "khmer": 64,
+            "chemistry": 65,
+            "physics": 64,
+            "biology": 61,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 103,
+            "khmer": 68,
+            "chemistry": 67,
+            "physics": 64,
+            "biology": 72,
+            "history": 49,
+            "english": 31
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.534Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:59.534Z"
+        }
+      }
+    },
+    {
+      "id": "9266",
+      "data": {
+        "fullName": "Phat Sokkim",
+        "studentId": 9266,
+        "phone": 502,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 201,
+        "roomLabel": "Room 201",
+        "seat": "02",
+        "mockResults": {
+          "mock_1": {
+            "math": 84,
+            "khmer": 41,
+            "chemistry": 46,
+            "physics": 43.5,
+            "biology": 53,
+            "history": 44
+          },
+          "mock_2": {
+            "math": 91,
+            "khmer": 67,
+            "chemistry": 49,
+            "physics": 59,
+            "biology": 74,
+            "history": 45
+          },
+          "mock_3": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0,
+            "english": 0
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:01.181Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:01.181Z"
+        }
+      }
+    },
+    {
+      "id": "9336",
+      "data": {
+        "fullName": "Aun Ratharanuth",
+        "studentId": 9336,
+        "phone": 526,
+        "class": "Class 12B",
+        "shift": "Afternoon",
+        "room": 207,
+        "roomLabel": "Room 207",
+        "seat": 12,
+        "mockResults": {
+          "mock_1": {
+            "math": 98,
+            "khmer": 56,
+            "chemistry": 72,
+            "physics": 70,
+            "biology": 64,
+            "history": 44
+          },
+          "mock_2": {
+            "math": 117,
+            "khmer": 65,
+            "chemistry": 64,
+            "physics": 63,
+            "biology": 61,
+            "history": 42
+          },
+          "mock_3": {
+            "math": 112,
+            "khmer": 55,
+            "chemistry": 72,
+            "physics": 69,
+            "biology": 71,
+            "history": 50,
+            "english": 46
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.163Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.163Z"
+        }
+      }
+    },
+    {
+      "id": "9609",
+      "data": {
+        "fullName": "Tan Sereyrith",
+        "studentId": 9609,
+        "phone": 621,
+        "class": "Class 12P",
+        "shift": "Morning",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": "07",
+        "mockResults": {
+          "mock_1": {
+            "math": 65,
+            "khmer": 49,
+            "chemistry": 55,
+            "physics": 56,
+            "biology": 38,
+            "history": 48
+          },
+          "mock_2": {
+            "math": 73,
+            "khmer": 58,
+            "chemistry": 52,
+            "physics": 56,
+            "biology": 51,
+            "history": 48
+          },
+          "mock_3": {
+            "math": 82,
+            "khmer": 58,
+            "chemistry": 37,
+            "physics": 46,
+            "biology": 64,
+            "history": 48,
+            "english": 41
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.872Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:07.872Z"
+        }
+      }
+    },
+    {
+      "id": "9616",
+      "data": {
+        "fullName": "Chhuon Chhorvin",
+        "studentId": 9616,
+        "phone": 623,
+        "class": "Class 12J",
+        "shift": "Afternoon",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": "09",
+        "mockResults": {
+          "mock_1": {
+            "math": 86,
+            "khmer": 49,
+            "chemistry": 73,
+            "physics": 67,
+            "biology": 53,
+            "history": 49
+          },
+          "mock_2": {
+            "math": 102,
+            "khmer": 55,
+            "chemistry": 61,
+            "physics": 71,
+            "biology": 62,
+            "history": 50
+          },
+          "mock_3": {
+            "math": 96,
+            "khmer": 51,
+            "chemistry": 60,
+            "physics": 52,
+            "biology": 62,
+            "history": 50,
+            "english": 30
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:08.071Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:08.071Z"
+        }
+      }
+    },
+    {
+      "id": "9909",
+      "data": {
+        "fullName": "Hong Eklinh",
+        "studentId": 9909,
+        "phone": 701,
+        "class": "Class 12T",
+        "shift": "Morning",
+        "room": 205,
+        "roomLabel": "Room 205",
+        "seat": "01",
+        "mockResults": {
+          "mock_1": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0
+          },
+          "mock_2": {
+            "math": 83,
+            "khmer": 75,
+            "chemistry": 52,
+            "physics": 45,
+            "biology": 54,
+            "history": 44
+          },
+          "mock_3": {
+            "math": 0,
+            "khmer": 0,
+            "chemistry": 0,
+            "physics": 0,
+            "biology": 0,
+            "history": 0,
+            "english": 0
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.775Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:03.775Z"
+        }
+      }
+    },
+    {
+      "id": "9918",
+      "data": {
+        "fullName": "Peang Jedidijah",
+        "studentId": 9918,
+        "phone": 210,
+        "class": "Class 12J",
+        "shift": "Afternoon",
+        "room": 106,
+        "roomLabel": "Room 106",
+        "seat": 10,
+        "mockResults": {
+          "mock_1": {
+            "math": 88,
+            "khmer": 56,
+            "chemistry": 68,
+            "physics": 74,
+            "biology": 38,
+            "history": 45
+          },
+          "mock_2": {
+            "math": 114,
+            "khmer": 64,
+            "chemistry": 68,
+            "physics": 67,
+            "biology": 51,
+            "history": 48
+          },
+          "mock_3": {
+            "math": 122,
+            "khmer": 68,
+            "chemistry": 52,
+            "physics": 66,
+            "biology": 65,
+            "history": 50,
+            "english": 40
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.298Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:58.298Z"
+        }
+      }
+    },
+    {
+      "id": "9938",
+      "data": {
+        "fullName": "Suon Dinvina",
+        "studentId": 9938,
+        "phone": 111,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 105,
+        "roomLabel": "Room 105",
+        "seat": 11,
+        "mockResults": {
+          "mock_1": {
+            "math": 100,
+            "khmer": 44,
+            "chemistry": 74,
+            "physics": 73,
+            "biology": 61,
+            "history": 44
+          },
+          "mock_2": {
+            "math": 109,
+            "khmer": 46,
+            "chemistry": 68,
+            "physics": 63,
+            "biology": 68,
+            "history": 47
+          },
+          "mock_3": {
+            "math": 122,
+            "khmer": 59,
+            "chemistry": 60,
+            "physics": 62,
+            "biology": 63,
+            "history": 49,
+            "english": 38
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.082Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:17:57.082Z"
+        }
+      }
+    },
+    {
+      "id": "No Register",
+      "data": {
+        "fullName": "Kuong Tymean",
+        "studentId": "No Register",
+        "phone": 624,
+        "class": "Class 12B",
+        "shift": "Morning",
+        "room": 208,
+        "roomLabel": "Room 208",
+        "seat": 10,
+        "mockResults": {
+          "mock_1": {
+            "math": 77,
+            "khmer": 44,
+            "chemistry": 58,
+            "physics": 74,
+            "biology": 53,
+            "history": 34
+          },
+          "mock_2": {
+            "math": 120,
+            "khmer": 44,
+            "chemistry": 48,
+            "physics": 50,
+            "biology": 61,
+            "history": 30
+          },
+          "mock_3": {
+            "math": 105,
+            "khmer": 61,
+            "chemistry": 57,
+            "physics": 62,
+            "biology": 53,
+            "history": 49,
+            "english": 43
+          }
+        },
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:08.167Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-16T03:18:08.167Z"
+        }
+      }
+    }
+  ]
+}

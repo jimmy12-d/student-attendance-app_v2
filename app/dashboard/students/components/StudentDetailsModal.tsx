@@ -635,7 +635,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                           <button
                             onClick={() => {
                               const baseUrl = window.location.origin;
-                              const permissionUrl = `${baseUrl}/permission-request?studentId=${encodeURIComponent(student.id)}&studentName=${encodeURIComponent(student.fullName)}`;
+                              const permissionUrl = `${baseUrl}/permission-request?studentId=${encodeURIComponent(student.id)}&studentName=${encodeURIComponent(student.fullName)}&studentClass=${encodeURIComponent(student.class || '')}&studentShift=${encodeURIComponent(student.shift || '')}`;
                               navigator.clipboard.writeText(permissionUrl).then(() => {
                                 toast.success('Permission link copied to clipboard!');
                               }).catch(() => {

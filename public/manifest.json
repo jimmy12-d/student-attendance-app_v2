@@ -2,7 +2,7 @@
   "name": "Rodwell Attendance Portal",
   "short_name": "Rodwell Portal",
   "description": "Student attendance and portal for Rodwell.",
-  "start_url": "/student/mock-exam",
+  "start_url": "/login",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
