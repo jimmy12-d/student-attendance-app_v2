@@ -15,37 +15,48 @@ export const calculateGrade = (score: number, maxScore: number): string => {
   return 'F';
 };
 
-// Calculate student total scores with English bonus logic
+// Calculate student total scores with English bonus logic and absent handling
 export const calculateStudentTotals = (
   mockData: { [subject: string]: number }, 
   studentClass: string, 
-  maxScoresConfig: { [subject: string]: number }
+  maxScoresConfig: { [subject: string]: number },
+  absentSubjects?: string[]
 ) => {
   let totalScore = 0;
   let totalMaxScore = 0;
 
-  // Use the actual subjects that exist in the mockData for this student
-  Object.keys(mockData).forEach(subject => {
-    const score = mockData[subject];
+  // Get all subjects that should be included (from maxScoresConfig which comes from examSettings)
+  Object.keys(maxScoresConfig).forEach(subject => {
     const maxScore = maxScoresConfig[subject] || 0;
+    const score = mockData[subject];
+    const isAbsent = absentSubjects?.includes(subject) || false;
     
-    // Only process if the score exists and is a valid number
-    if (score !== undefined && score !== null && !isNaN(score)) {
-      if (subject === 'english') {
-        // English is bonus subject - only add if score > 25
-        if (score > 25) {
-          totalScore += (score - 25); // Add only the bonus amount
-        }
-        // Don't add English to totalMaxScore as it's bonus only
-      } else {
-        // Regular subjects - add both score and max score only if they exist in this mock
+    if (subject === 'english') {
+      // English is bonus subject - only add if score > 25 and not absent
+      if (!isAbsent && score !== undefined && score !== null && !isNaN(score) && score > 25) {
+        totalScore += (score - 25); // Add only the bonus amount
+      }
+      // Don't add English to totalMaxScore as it's bonus only
+    } else {
+      // Regular subjects
+      if (isAbsent) {
+        // Subject is absent - score is 0 but maxScore still counts for total possible
+        totalScore += 0;
+        totalMaxScore += maxScore;
+      } else if (score !== undefined && score !== null && !isNaN(score)) {
+        // Subject has a score
         totalScore += score;
+        totalMaxScore += maxScore;
+      } else {
+        // Subject is missing (NC) - still count towards total since it will be filled soon
+        // Count maxScore but give 0 points for now
+        totalScore += 0;
         totalMaxScore += maxScore;
       }
     }
   });
   
-  const totalGrade = totalMaxScore > 0 ? calculateGrade(totalScore, totalMaxScore) : 'N/A';
+  const totalGrade = totalMaxScore > 0 ? calculateGrade(totalScore, totalMaxScore) : 'NC';
   const totalPercentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
   
   return { totalScore, totalMaxScore, totalGrade, totalPercentage };

@@ -50,6 +50,10 @@ export interface StudentResult {
     mock_3?: number;
     mock_4?: number;
   };
+  // Absent data for Mock 4
+  mock_4_absent_subjects?: string[];
+  mock_4_absent_timestamp?: string | null;
+  mock_4_absent_recorded_by?: string | null;
 }
 
 export interface ClassStats {

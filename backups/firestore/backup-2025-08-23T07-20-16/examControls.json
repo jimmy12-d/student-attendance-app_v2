@@ -1,0 +1,36 @@
+{
+  "collection": "examControls",
+  "totalDocuments": 4,
+  "backupTimestamp": "2025-08-23T07:20:20.017Z",
+  "documents": [
+    {
+      "id": "mock1",
+      "data": {
+        "isReady": true,
+        "isReadyForStudent": true
+      }
+    },
+    {
+      "id": "mock2",
+      "data": {
+        "isReady": true,
+        "isReadyForStudent": true
+      }
+    },
+    {
+      "id": "mock3",
+      "data": {
+        "isReady": true,
+        "isReadyForStudent": true,
+        "isPublished": true
+      }
+    },
+    {
+      "id": "mock4",
+      "data": {
+        "isReady": true,
+        "isReadyForStudent": false
+      }
+    }
+  ]
+}

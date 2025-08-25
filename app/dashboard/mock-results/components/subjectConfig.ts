@@ -4,8 +4,8 @@
  */
 
 // Define subject orders for different grade types
-export const GRADE_12_SCIENCE_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'english']; // Math, Khmer, Chemistry, Physics, Biology, English
-export const GRADE_12_SOCIAL_ORDER = ['khmer', 'math', 'chemistry', 'physics', 'biology', 'history', 'english']; // Math(khmer field), Khmer(math field), History, Moral, Geography, Earth, English
+export const GRADE_12_SCIENCE_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'english']; // Math, Khmer, Chemistry, Physics, Biology, History, English
+export const GRADE_12_SOCIAL_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'english']; // Math(khmer field), Khmer(math field), History, Moral, Geography, Earth, English
 export const ALL_SUBJECT_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'english'];
 
 // Subject mapping - Different subjects for different grades
@@ -15,6 +15,7 @@ export const GRADE_12_SCIENCE_LABELS: { [key: string]: string } = {
   chemistry: 'Chemistry',
   physics: 'Physics',
   biology: 'Biology',
+  history: 'History',
   english: 'English',
 };
 
@@ -70,13 +71,13 @@ export const shouldShowSubject = (
   
   // Handle subject visibility based on filter and student type
   if (selectedGrade === 'Grade 12' && subject === 'history') {
-    // When filtering Grade 12 only, don't show history column at all
-    return false;
+    // When filtering Grade 12 only, show history column (Science students will show NC/empty)
+    return true;
   } else if (selectedGrade === 'all') {
     // When showing all grades, only show subjects that apply to this specific student
     if (isGrade12Science && subject === 'history') {
       // Science students don't have Earth/History
-      return false;
+  //    return false;
     }
   }
   

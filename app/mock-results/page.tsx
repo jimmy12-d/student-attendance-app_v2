@@ -45,6 +45,7 @@ type MockResultsData = {
     mock_1: ExamScores;
     mock_2: ExamScores;
     mock_3: ExamScores;
+    mock_4?: ExamScores;
   };
 };
 
@@ -118,6 +119,7 @@ export default function Mock3ResultPage() {
   const [selectedTab, setSelectedTab] = useState('mock3');
   const [availableTabs, setAvailableTabs] = useState(['mock1', 'mock2', 'mock3']);
   const [mock4Ready, setMock4Ready] = useState(false);
+  const [availableMocks, setAvailableMocks] = useState<string[]>([]);
 
   const handleFetchResult = async () => {
     if (!id || !/^\d{4,5}$/.test(id.trim())) {
@@ -146,6 +148,35 @@ export default function Mock3ResultPage() {
       const mockData = docSnap.data() as MockResultsData;
       setStudentData(mockData);
 
+      // Check which mocks are ready for students
+      const mockControls = ['mock1', 'mock2', 'mock3', 'mock4'];
+      const readyMocks: string[] = [];
+      
+      for (const mockId of mockControls) {
+        try {
+          const controlDocRef = doc(db, "examControls", mockId);
+          const controlDocSnap = await getDoc(controlDocRef);
+          
+          if (controlDocSnap.exists()) {
+            const controlData = controlDocSnap.data();
+            if (controlData.isReadyForStudent === true) {
+              readyMocks.push(mockId);
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to check ${mockId} readiness:`, error);
+        }
+      }
+      
+      setAvailableMocks(readyMocks);
+      setAvailableTabs(readyMocks);
+      
+      // Set default selected tab to the highest available mock
+      if (readyMocks.length > 0) {
+        const highestMock = readyMocks[readyMocks.length - 1];
+        setSelectedTab(highestMock);
+      }
+
       // Set current mock scores and all mock scores
       const currentMockScores = mockData.mockResults.mock_3;
       setExamScores(currentMockScores);
@@ -155,6 +186,12 @@ export default function Mock3ResultPage() {
         mock2: mockData.mockResults.mock_2,
         mock3: mockData.mockResults.mock_3
       };
+      
+      // Add mock4 if it exists in the data
+      if (mockData.mockResults && (mockData.mockResults as any).mock_4) {
+        (allScores as any).mock4 = (mockData.mockResults as any).mock_4;
+      }
+      
       setAllMockScores(allScores);
 
       // Determine student class type from class name
@@ -181,11 +218,10 @@ export default function Mock3ResultPage() {
         }
       }
 
-      // Fetch exam settings for all mocks
+      // Fetch exam settings for all available mocks
       const allSettings: { [mockName: string]: ExamSettings } = {};
-      const mockNames = ['mock1', 'mock2', 'mock3'];
       
-      for (const mockName of mockNames) {
+      for (const mockName of readyMocks) {
         const settingsQuery = query(
           collection(db, "examSettings"),
           where("type", "==", studentClassType),
@@ -204,7 +240,21 @@ export default function Mock3ResultPage() {
       }
 
       setAllExamSettings(allSettings);
-      setExamSettings(allSettings.mock3 || {});
+      
+      // Set current exam settings to the highest available mock
+      if (readyMocks.length > 0) {
+        const highestMock = readyMocks[readyMocks.length - 1];
+        setExamSettings(allSettings[highestMock] || {});
+        
+        // Update current exam scores to match the selected tab
+        const mockKey = highestMock === 'mock1' ? 'mock_1' : 
+                       highestMock === 'mock2' ? 'mock_2' : 
+                       highestMock === 'mock3' ? 'mock_3' : 'mock_4';
+        
+        if (mockData.mockResults && (mockData.mockResults as any)[mockKey]) {
+          setExamScores((mockData.mockResults as any)[mockKey]);
+        }
+      }
 
       // Check if Mock 4 is ready
       const mock4DocRef = doc(db, "examSettings", "mock_4");
@@ -264,9 +314,14 @@ export default function Mock3ResultPage() {
   const handleTabChange = (tab: string) => {
     setSelectedTab(tab);
     if (studentData && allExamSettings[tab]) {
-      const mockKey = tab === 'mock1' ? 'mock_1' : tab === 'mock2' ? 'mock_2' : 'mock_3';
-      setExamScores(studentData.mockResults[mockKey]);
-      setExamSettings(allExamSettings[tab]);
+      const mockKey = tab === 'mock1' ? 'mock_1' : 
+                     tab === 'mock2' ? 'mock_2' : 
+                     tab === 'mock3' ? 'mock_3' : 'mock_4';
+      
+      if (studentData.mockResults && (studentData.mockResults as any)[mockKey]) {
+        setExamScores((studentData.mockResults as any)[mockKey]);
+        setExamSettings(allExamSettings[tab]);
+      }
     }
   };
   
@@ -408,8 +463,8 @@ export default function Mock3ResultPage() {
             </div>
 
             {/* Enhanced Results Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
+            <div className="flex justify-center">
+              <div className="w-full max-w-4xl">
                 <MockExamResults
                   availableTabs={availableTabs}
                   selectedTab={selectedTab}
@@ -438,8 +493,9 @@ export default function Mock3ResultPage() {
                   <PerformanceRadarChartSkeleton />
               ) : (
                   <PerformanceRadarChart 
-                    allMockData={allMockScores} 
-                    progressStatus="Paid Star" 
+                    allMockData={Object.fromEntries(
+                      Object.entries(allMockScores).filter(([key]) => availableMocks.includes(key))
+                    )}
                     studentClassType={studentData.class.includes('12R') || studentData.class.includes('12S') || studentData.class.includes('12T') ? "Grade 12 Social" : "Grade 12"} 
                     allExamSettings={allExamSettings} 
                   />

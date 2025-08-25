@@ -1,0 +1,37 @@
+{
+  "collection": "cleanupLogs",
+  "totalDocuments": 2,
+  "backupTimestamp": "2025-08-22T09:41:58.472Z",
+  "documents": [
+    {
+      "id": "TRrVW8UTkcKgq4j35JMd",
+      "data": {
+        "deletedDocuments": 3,
+        "errors": 0,
+        "cutoffDate": {
+          "_type": "timestamp",
+          "_value": "2025-07-22T00:00:07.538Z"
+        },
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-08-21T00:00:13.861Z"
+        }
+      }
+    },
+    {
+      "id": "sSCvSB9VSLluwPftl181",
+      "data": {
+        "deletedDocuments": 7,
+        "errors": 0,
+        "cutoffDate": {
+          "_type": "timestamp",
+          "_value": "2025-07-18T00:00:09.846Z"
+        },
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-08-17T00:00:19.165Z"
+        }
+      }
+    }
+  ]
+}

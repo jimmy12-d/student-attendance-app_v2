@@ -49,6 +49,15 @@
   }
 }
 
+/* Frozen first column styles */
+.frozen-column-shadow {
+  box-shadow: 3px 0 6px rgba(0, 0, 0, 0.1);
+}
+
+.dark .frozen-column-shadow {
+  box-shadow: 3px 0 6px rgba(0, 0, 0, 0.3);
+}
+
 @keyframes fade-out-right {
   from {
     opacity: 1;
@@ -160,5 +169,46 @@ html, body {
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgb(100 116 139);
+}
+
+/* Frozen column styles */
+.frozen-column {
+  position: sticky;
+  left: 0;
+  background-color: inherit;
+}
+
+.frozen-column-shadow {
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure table cells maintain their background */
+.sticky {
+  background-clip: padding-box;
+  position: sticky;
+}
+
+/* Force proper layering for frozen column */
+th.sticky {
+  z-index: 40 !important;
+}
+
+td.sticky {
+  z-index: 30 !important;
+}
+
+/* Ensure content doesn't overflow in frozen column */
+.sticky .flex {
+  max-width: 100%;
+}
+
+.sticky .text-sm {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Dark mode shadow */
+.dark .frozen-column-shadow {
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.3);
 }
 

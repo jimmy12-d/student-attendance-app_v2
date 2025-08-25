@@ -1,0 +1,13 @@
+{
+  "collection": "telegramUserStates",
+  "totalDocuments": 1,
+  "backupTimestamp": "2025-08-21T11:14:37.536Z",
+  "documents": [
+    {
+      "id": "4Bl12h4k41AkOI0oBuLF",
+      "data": {
+        "test": "testing"
+      }
+    }
+  ]
+}

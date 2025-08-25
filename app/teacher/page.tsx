@@ -9,7 +9,7 @@ import { setUser } from '../_stores/mainSlice';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../../firebase-config';
 import { mdiLogout, mdiMagnify, mdiContentSave, mdiChevronLeft, mdiChevronRight } from '@mdi/js';
-import { collection, query, where, getDocs, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import FormField from '../_components/FormField';
 
@@ -59,6 +59,8 @@ const TeacherDashboard = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [sessionStats, setSessionStats] = useState({ studentsFound: 0, scoresEntered: 0 });
+  const [examSettings, setExamSettings] = useState<{ [subject: string]: { maxScore: number } }>({});
+  const [currentMaxScore, setCurrentMaxScore] = useState(100);
 
   // Helper function to determine if student is in Grade 12 Social
   const isGrade12Social = (studentClass: string) => {
@@ -81,7 +83,7 @@ const TeacherDashboard = () => {
       case 'chemistry': return 'history';  // Chemistry teacher -> store in history field
       case 'physics': return 'biology';    // Physics teacher -> store in biology field (Moral)
       case 'biology': return 'chemistry';  // Biology teacher -> store in chemistry field (Geometry)
-      case 'history': return 'physics';    // History teacher -> store in physics field (Earth)
+      case 'history': return 'chemistry';    // History teacher -> store in physics field (Earth)
       case 'english': return 'english';    // English stays the same
       default: return teacherSubjectLower;
     }
@@ -94,6 +96,133 @@ const TeacherDashboard = () => {
     }
     
     return SOCIAL_STUDIES_LABELS[teacherSubject.toLowerCase()] || teacherSubject;
+  };
+
+  // Function to fetch exam settings for mock_4
+  const fetchExamSettings = async (studentClass: string) => {
+    try {
+      // Determine student class type from class name
+      let studentClassType = 'Grade 12 Science'; // default
+      if (studentClass) {
+        if (studentClass.startsWith('Class 7')) {
+          studentClassType = "Grade 7";
+        } else if (studentClass.startsWith('Class 8')) {
+          studentClassType = "Grade 8";
+        } else if (studentClass.startsWith('Class 9')) {
+          studentClassType = "Grade 9";
+        } else if (studentClass.startsWith('Class 10')) {
+          studentClassType = "Grade 10";
+        } else if (studentClass === 'Class 11A') {
+          studentClassType = "Grade 11A";
+        } else if (['Class 11E', 'Class 11F', 'Class 11G'].includes(studentClass)) {
+          studentClassType = "Grade 11E";
+        } else if (['Class 12R', 'Class 12S', 'Class 12T'].includes(studentClass)) {
+          studentClassType = "Grade 12 Social";
+        } else if (studentClass.startsWith('Class 12')) {
+          studentClassType = "Grade 12";
+        }
+      }
+
+      // Convert class type format for document ID
+      const settingsKey = `mock4_${studentClassType.replace(/\s+/g, '_')}`;
+      
+      // Get exam settings for this specific mock and class type
+      const examSettingsRef = doc(db, 'examSettings', settingsKey);
+      const examSettingsDoc = await getDoc(examSettingsRef);
+      
+      if (examSettingsDoc.exists()) {
+        const settings = examSettingsDoc.data();
+        setExamSettings(settings);
+        return settings;
+      } else {
+        console.warn(`No exam settings found for ${settingsKey}`);
+        return {};
+      }
+    } catch (error) {
+      console.error('Error fetching exam settings:', error);
+      return {};
+    }
+  };
+
+  const getMaxScore = async (studentClass?: string, teacherSubject?: string) => {
+    if (!teacherSubject || !studentClass) return 100;
+    
+    try {
+      // Get the actual database field that will be used to store the score
+      const actualSubject = getActualSubject(teacherSubject, studentClass);
+      
+      // Determine student class type from class name
+      let studentClassType = 'Grade 12'; // default
+      if (studentClass) {
+        if (studentClass.startsWith('Class 7')) {
+          studentClassType = "Grade 7";
+        } else if (studentClass.startsWith('Class 8')) {
+          studentClassType = "Grade 8";
+        } else if (studentClass.startsWith('Class 9')) {
+          studentClassType = "Grade 9";
+        } else if (studentClass.startsWith('Class 10')) {
+          studentClassType = "Grade 10";
+        } else if (studentClass === 'Class 11A') {
+          studentClassType = "Grade 11A";
+        } else if (['Class 11E', 'Class 11F', 'Class 11G'].includes(studentClass)) {
+          studentClassType = "Grade 11E";
+        } else if (['Class 12R', 'Class 12S', 'Class 12T'].includes(studentClass)) {
+          studentClassType = "Grade 12 Social";
+        } else if (studentClass.startsWith('Class 12')) {
+          studentClassType = "Grade 12";
+        }
+      }
+
+      // Query exam settings where subject matches the actual field and type matches class type
+      const examSettingsRef = collection(db, 'examSettings');
+      const q = query(
+        examSettingsRef,
+        where('subject', '==', actualSubject),
+        where('type', '==', studentClassType),
+        where('mock', '==', 'mock4')
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const settingsDoc = querySnapshot.docs[0];
+        const settings = settingsDoc.data();
+        console.log(`Found maxScore for ${actualSubject} in ${studentClassType}: ${settings.maxScore}`);
+        return settings.maxScore || 100;
+      }
+      
+      console.warn(`No exam settings found for subject: ${actualSubject}, type: ${studentClassType}, mock: mock4`);
+      
+      // Fallback to hardcoded values based on actual subject field
+      // English is always 50 for both Grade 12 and Grade 12 Social
+      if (actualSubject === 'english') return 50;
+      
+      // For Grade 12 Social students: Math field (storing Khmer) = 125, Khmer field (storing Math) = 75, others = 75
+      if (studentClass && isGrade12Social(studentClass)) {
+        if (actualSubject === 'math') return 125; // Khmer score stored in math field
+        if (actualSubject === 'khmer') return 75; // Math score stored in khmer field
+        return 75; // All other subjects for Grade 12 Social
+      }
+      
+      // For regular Grade 12 students: Khmer field (storing Math) = 125, Math field (storing Khmer) = 75, others = 75
+      if (actualSubject === 'khmer') return 125; // Math score stored in khmer field
+      if (actualSubject === 'math') return 75;   // Khmer score stored in math field
+      return 75; // All other subjects for regular Grade 12
+    } catch (error) {
+      console.error('Error fetching maxScore from examSettings:', error);
+      
+      // Fallback to hardcoded values on error
+      const actualSubject = getActualSubject(teacherSubject, studentClass);
+      if (actualSubject === 'english') return 50;
+      if (studentClass && isGrade12Social(studentClass)) {
+        if (actualSubject === 'math') return 125;
+        if (actualSubject === 'khmer') return 75;
+        return 75;
+      }
+      if (actualSubject === 'khmer') return 125;
+      if (actualSubject === 'math') return 75;
+      return 75;
+    }
   };
 
   const handleLogout = async () => {
@@ -110,25 +239,6 @@ const TeacherDashboard = () => {
     }
   };
 
-  const getMaxScore = (studentClass?: string) => {
-    if (!userSubject) return 100;
-    
-    const teacherSubject = userSubject.toLowerCase();
-    
-    // English is always 50 for both Grade 12 and Grade 12 Social
-    if (teacherSubject === 'english') return 50;
-    
-    // For Grade 12 Social students: Khmer = 125, others = 75
-    if (studentClass && isGrade12Social(studentClass)) {
-      if (teacherSubject === 'khmer' || teacherSubject === 'khm') return 125;
-      return 75; // All other subjects for Grade 12 Social
-    }
-    
-    // For regular Grade 12 students: Math = 125, others = 75
-    if (teacherSubject === 'math') return 125;
-    return 75; // All other subjects for regular Grade 12
-  };
-
   const handleSearchStudent = async () => {
     if (!searchRoom || !searchSeat) {
       setMessage({ type: 'error', text: 'Please enter both room and seat number' });
@@ -142,16 +252,41 @@ const TeacherDashboard = () => {
     try {
       // Search for student by room and seat in mockResults collection
       const mockResultsRef = collection(db, 'mockResults');
-      const q = query(
-        mockResultsRef,
-        where('room', '==', parseInt(searchRoom)),
-        where('seat', '==', searchSeat.padStart(2, '0')) // Ensure seat is zero-padded
-      );
+      
+      // Convert room to number for consistent searching
+      const roomNumber = parseInt(searchRoom);
+      
+      // Try multiple seat formats to handle inconsistent data storage
+      const seatFormats = [
+        searchSeat, // Original format (e.g., "10")
+        searchSeat.padStart(2, '0'), // Zero-padded format (e.g., "01", "10")
+        parseInt(searchSeat).toString(), // Remove leading zeros (e.g., "01" → "1")
+        parseInt(searchSeat) // As a number
+      ];
+            
+      let studentFound = false;
+      let studentDoc = null;
+      
+      // Try each seat format until we find a match
+      for (const seatFormat of seatFormats) {
+        if (studentFound) break;
+                
+        const q = query(
+          mockResultsRef,
+          where('room', '==', roomNumber),
+          where('seat', '==', seatFormat)
+        );
 
-      const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(q);
+                
+        if (!querySnapshot.empty) {
+          studentDoc = querySnapshot.docs[0];
+          studentFound = true;
+          break;
+        }
+      }
 
-      if (!querySnapshot.empty) {
-        const studentDoc = querySnapshot.docs[0];
+      if (studentFound && studentDoc) {
         const studentData = studentDoc.data();
         
         setFoundStudent({
@@ -168,6 +303,13 @@ const TeacherDashboard = () => {
         // Update session stats
         setSessionStats(prev => ({ ...prev, studentsFound: prev.studentsFound + 1 }));
         
+        // Fetch exam settings for this student's class
+        await fetchExamSettings(studentData.class);
+        
+        // Get max score for this student and subject
+        const maxScore = await getMaxScore(studentData.class, userSubject || '');
+        setCurrentMaxScore(maxScore);
+        
         // Get actual subject for checking existing scores
         const actualSubject = getActualSubject(userSubject || '', studentData.class);
         const displaySubject = getDisplaySubject(userSubject || '', studentData.class);
@@ -181,7 +323,17 @@ const TeacherDashboard = () => {
           setMessage({ type: 'success', text: 'Student found! No Mock 4 score recorded yet.' });
         }
       } else {
-        setMessage({ type: 'error', text: 'No student found with the specified room and seat' });
+        // If still not found, try a broader search to see what students exist in this room
+        const broadQuery = query(mockResultsRef, where('room', '==', roomNumber));
+        const broadSnapshot = await getDocs(broadQuery);
+        
+        if (!broadSnapshot.empty) {
+          broadSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+          });
+        }
+        
+        setMessage({ type: 'error', text: `No student found with Room ${roomNumber} and Seat ${searchSeat}. Please check the room and seat numbers.` });
       }
     } catch (error) {
       console.error('Error searching for student:', error);
@@ -214,10 +366,15 @@ const TeacherDashboard = () => {
       return;
     }
 
-    const score = parseInt(mock4Score);
-    const maxScore = getMaxScore(foundStudent.class);
-    if (isNaN(score) || score < 0 || score > maxScore) {
-      setMessage({ type: 'error', text: `Please enter a valid score between 0 and ${maxScore}` });
+    const score = parseFloat(mock4Score);
+    if (isNaN(score) || score < 0 || score > currentMaxScore) {
+      setMessage({ type: 'error', text: `Please enter a valid score between 0 and ${currentMaxScore}` });
+      return;
+    }
+
+    // Check if the score has more than 2 decimal places
+    if (score % 1 !== 0 && score.toString().split('.')[1]?.length > 2) {
+      setMessage({ type: 'error', text: 'Score can have at most 2 decimal places' });
       return;
     }
 
@@ -243,7 +400,7 @@ const TeacherDashboard = () => {
       
       // Show success toast with student name and score
       toast.success(`Score Saved!`, {
-        description: `${foundStudent.fullName} - ${userSubject}: ${score}/${maxScore}`,
+        description: `${foundStudent.fullName} - ${userSubject}: ${score}/${currentMaxScore}`,
         duration: 4000,
       });
       
@@ -276,6 +433,7 @@ const TeacherDashboard = () => {
     setFoundStudent(null);
     setMock4Score('');
     setMessage(null);
+    setCurrentMaxScore(100); // Reset to default
   };
 
   return (
@@ -459,7 +617,7 @@ const TeacherDashboard = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" htmlFor="score">
-                    Mock 4 {userSubject} Score (Max: {getMaxScore(foundStudent.class)})
+                    Mock 4 {userSubject} Score (Max: {currentMaxScore})
                   </label>
                   <div className="relative">
                     <input
@@ -467,10 +625,12 @@ const TeacherDashboard = () => {
                       id="score"
                       value={mock4Score}
                       onChange={(e) => setMock4Score(e.target.value)}
-                      placeholder={`Enter score (0-${getMaxScore(foundStudent.class)})`}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      placeholder={`Enter score (0-${currentMaxScore})`}
                       min="0"
-                      max={getMaxScore(foundStudent.class)}
-                      className="w-full h-[42px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-xl font-bold pl-8"
+                      max={currentMaxScore}
+                      step="0.01"
+                      className="w-full h-[42px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-xl font-bold pl-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                     <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -496,7 +656,7 @@ const TeacherDashboard = () => {
                     icon={mdiContentSave}
                     label={isSaving ? "Saving..." : (foundStudent.mockResults?.mock_4?.[getActualSubject(userSubject || '', foundStudent.class)] ? "Update Score" : "Save Score")}
                     color="success"
-                    disabled={isSaving || !mock4Score || isNaN(parseInt(mock4Score)) || parseInt(mock4Score) < 0 || parseInt(mock4Score) > getMaxScore(foundStudent.class)}
+                    disabled={isSaving || !mock4Score || isNaN(parseFloat(mock4Score)) || parseFloat(mock4Score) < 0 || parseFloat(mock4Score) > currentMaxScore}
                     className="h-[42px] w-full font-medium"
                   />
                 </div>
@@ -506,21 +666,36 @@ const TeacherDashboard = () => {
               <div className="mt-3 h-6 flex items-center text-sm">
                 {mock4Score && (
                   <>
-                    {parseInt(mock4Score) >= 0 && parseInt(mock4Score) <= getMaxScore(foundStudent.class) ? (
-                      <div className="flex items-center text-green-600 dark:text-green-400">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Valid score
-                      </div>
-                    ) : (
-                      <div className="flex items-center text-red-600 dark:text-red-400">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Score must be between 0 and {getMaxScore(foundStudent.class)}
-                      </div>
-                    )}
+                    {(() => {
+                      const score = parseFloat(mock4Score);
+                      const isValidRange = score >= 0 && score <= currentMaxScore;
+                      const hasValidDecimals = score % 1 === 0 || score.toString().split('.')[1]?.length <= 2;
+                      const isValid = !isNaN(score) && isValidRange && hasValidDecimals;
+                      
+                      if (isValid) {
+                        return (
+                          <div className="flex items-center text-green-600 dark:text-green-400">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Valid score
+                          </div>
+                        );
+                      } else {
+                        let errorMessage = `Score must be between 0 and ${currentMaxScore}`;
+                        if (!hasValidDecimals) {
+                          errorMessage = 'Score can have at most 2 decimal places';
+                        }
+                        return (
+                          <div className="flex items-center text-red-600 dark:text-red-400">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {errorMessage}
+                          </div>
+                        );
+                      }
+                    })()}
                   </>
                 )}
               </div>
@@ -553,7 +728,7 @@ const TeacherDashboard = () => {
                 </div>
                 <div className="flex items-start space-x-3">
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-600 dark:bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
-                  <p className="text-blue-800 dark:text-blue-200">Scores must be between <strong>0 and {userSubject === 'Math' ? '125' : userSubject === 'English' ? '50' : '75'}</strong> points</p>
+                  <p className="text-blue-800 dark:text-blue-200">Score limits are determined by exam settings for each subject and class type</p>
                 </div>
                 <div className="flex items-start space-x-3">
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-600 dark:bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</span>

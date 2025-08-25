@@ -1,0 +1,28 @@
+{
+  "collection": "financePW",
+  "totalDocuments": 2,
+  "backupTimestamp": "2025-08-21T11:14:36.421Z",
+  "documents": [
+    {
+      "id": "GHbyycXaSVxcu0ApH6X7",
+      "data": {
+        "password": "9355"
+      }
+    },
+    {
+      "id": "access",
+      "data": {
+        "password": "CAMbodia",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-05T08:01:20.119Z"
+        },
+        "description": "Finance dashboard access password",
+        "lastUpdated": {
+          "_type": "timestamp",
+          "_value": "2025-08-05T08:01:49.180Z"
+        }
+      }
+    }
+  ]
+}

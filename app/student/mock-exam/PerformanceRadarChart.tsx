@@ -33,7 +33,6 @@ type AllMockData = {
 
 interface PerformanceRadarChartProps {
   allMockData: AllMockData;
-  progressStatus: string;
   studentClassType?: string | null;
   allExamSettings?: { [mockName: string]: ExamSettings };
 }
@@ -53,10 +52,23 @@ const capitalize = (s: string) => {
     return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
+// Grade calculation utility
+const calculateGrade = (score: number, maxScore: number): string => {
+    if (maxScore === 0) return 'N/A';
+    const percentage = score / maxScore;
+    if (percentage >= 0.9) return 'A';
+    if (percentage >= 0.8) return 'B';
+    if (percentage >= 0.7) return 'C';
+    if (percentage >= 0.6) return 'D';
+    if (percentage >= 0.5) return 'E';
+    return 'F';
+};
+
 const MOCK_COLORS = {
     mock1: 'rgba(136, 132, 216, 1)',
     mock2: 'rgba(255, 198, 88, 1)',
     mock3: 'rgba(130, 202, 157, 1)',
+    mock4: 'rgba(88, 169, 255, 1)',
 };
 
 const Checkmark = () => (
@@ -75,12 +87,10 @@ const Checkmark = () => (
     </motion.svg>
 );
 
-const CustomLegend = ({ datasets, totals, toggleDataset, hiddenDatasets, showMock3 }: any) => {
+const CustomLegend = ({ datasets, totals, toggleDataset, hiddenDatasets }: any) => {
     return (
-        <div className="flex justify-center items-start gap-x-8 mt-4">
+        <div className="flex flex-wrap justify-center items-start gap-x-6 sm:gap-x-8 gap-y-4 mt-4">
             {datasets.map((dataset: any) => {
-                if (dataset.label === 'Mock 3' && !showMock3) return null;
-
                 const isHidden = hiddenDatasets.includes(dataset.label);
                 const mockKey = dataset.label.toLowerCase().replace(' ', '');
                 const color = MOCK_COLORS[mockKey as keyof typeof MOCK_COLORS];
@@ -126,9 +136,8 @@ const CustomLegend = ({ datasets, totals, toggleDataset, hiddenDatasets, showMoc
     );
 };
 
-const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, progressStatus, studentClassType, allExamSettings }) => {
+const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, studentClassType, allExamSettings }) => {
   const [hiddenDatasets, setHiddenDatasets] = useState<string[]>([]);
-  const showMock3 = progressStatus === 'Paid Star';
 
   const toggleDataset = (label: string) => {
     setHiddenDatasets(prev => 
@@ -170,7 +179,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
     const datasets: any[] = [];
 
     Object.entries(allMockData).forEach(([mockKey, scores]) => {
-        if (!scores || (mockKey === 'mock3' && !showMock3)) return;
+        if (!scores) return;
 
         const mockLabel = `Mock ${mockKey.replace('mock', '')}`;
         const color = MOCK_COLORS[mockKey as keyof typeof MOCK_COLORS] || 'rgba(255, 255, 255, 1)';
@@ -197,7 +206,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
     });
 
     return { labels, datasets };
-  }, [allMockData, showMock3, hiddenDatasets, studentClassType, allExamSettings]);
+  }, [allMockData, hiddenDatasets, studentClassType, allExamSettings]);
   
   const chartOptions: any = {
     maintainAspectRatio: false,
@@ -225,8 +234,8 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
             const dataIndex = context.dataIndex;
             const rawScore = dataset.rawScores[dataIndex];
             const maxScore = dataset.maxScores[dataIndex];
-            const percentage = Math.round(context.raw);
-            return `${dataset.label}: ${rawScore} / ${maxScore} (${percentage}%)`;
+            const grade = calculateGrade(rawScore, maxScore);
+            return `${dataset.label}: ${rawScore} / ${maxScore} (${grade})`;
           },
           labelColor: function(context: any) {
             return {
@@ -267,7 +276,6 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
         totals={totals}
         toggleDataset={toggleDataset}
         hiddenDatasets={hiddenDatasets}
-        showMock3={showMock3}
       />
     </motion.div>
   );
