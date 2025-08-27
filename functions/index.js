@@ -531,10 +531,8 @@ const handleGeneratePassword = async (bot, chatId, userId, messageId) => {
 
         // Edit the original message to show password
         await bot.editMessageText(
-            `✅ **Password Generated Successfully!**\n\n` +
             `🔐 **Your secure password is:**\n` +
             `\`${newPassword}\`\n` +
-            `👆 *Long press the password above to copy it*\n\n` +
             `📱 **Login Information:**\n` +
             `• Website: **portal.rodwell.center/login**\n` +
             `• Phone: Use your registered phone number\n` +
@@ -623,9 +621,20 @@ const handleRequestCustomPassword = async (bot, chatId, userId, messageId) => {
                 message_id: messageId
             });
         } catch (editError) {
-            console.error('Error editing message:', editError);
+            console.error('Error editing message after custom password error:', editError);
             // If we can't edit the message, send a new one
-            await bot.sendMessage(chatId, "❌ An error occurred. Please try /start to begin registration again.");
+            try {
+                await bot.sendMessage(chatId, "❌ An error occurred. Please try /start to begin registration again.");
+            } catch (sendError) {
+                console.error('Error sending fallback message:', sendError);
+            }
+        }
+        
+        // Clean up any existing state on error
+        try {
+            await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+        } catch (cleanupError) {
+            console.error('Error cleaning up state on error:', cleanupError);
         }
     }
 };
@@ -635,6 +644,8 @@ const handleRequestCustomPassword = async (bot, chatId, userId, messageId) => {
  */
 const handleTextMessage = async (bot, chatId, userId, text, messageId) => {
     try {
+        console.log(`handleTextMessage called for chatId ${chatId} with text: "${text}" (length: ${text.length})`);
+        
         // Handle cancel command
         if (text.toLowerCase() === '/cancel') {
             await db.collection("telegramUserStates").doc(chatId.toString()).delete();
@@ -646,11 +657,13 @@ const handleTextMessage = async (bot, chatId, userId, text, messageId) => {
         const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
 
         if (!stateDoc.exists) {
+            console.log(`No user state found for chatId ${chatId}`);
             await bot.sendMessage(chatId, "Please use /start to begin registration or /changepassword to change your password.");
             return;
         }
 
         const state = stateDoc.data();
+        console.log(`User state for chatId ${chatId}: ${state.state}`);
 
         if (state.state === "waiting_token") {
             await handleTokenInput(bot, chatId, userId, text.trim());
@@ -663,12 +676,13 @@ const handleTextMessage = async (bot, chatId, userId, text, messageId) => {
         } else if (state.state === "waiting_custom_password_change") {
             await handleCustomPasswordInputChange(bot, chatId, userId, text, messageId);
         } else {
+            console.log(`Unhandled state for chatId ${chatId}: ${state.state}`);
             await bot.sendMessage(chatId, "Please use /start to begin registration or /changepassword to update your password.");
         }
 
     } catch (error) {
-        console.error('Error handling text message:', error);
-        await bot.sendMessage(chatId, "❌ An error occurred. Please try again.");
+        console.error(`Error handling text message for chatId ${chatId}:`, error);
+        await bot.sendMessage(chatId, "❌ An error occurred. Please try /start to begin registration again.");
     }
 };
 
@@ -837,13 +851,29 @@ const handleCustomPasswordInputInitial = async (bot, chatId, userId, password, m
         const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
         
         if (!stateDoc.exists) {
-            await bot.sendMessage(chatId, "❌ Session expired. Please start registration again.");
+            console.error(`User state not found for chatId ${chatId} in handleCustomPasswordInputInitial`);
+            await bot.sendMessage(chatId, "❌ Session expired. Please start registration again with /start.");
             return;
         }
 
         const state = stateDoc.data();
+        
+        // Validate that we're in the correct state
+        if (state.state !== "waiting_custom_password_initial") {
+            console.error(`Invalid state for custom password input: ${state.state} for chatId ${chatId}`);
+            await bot.sendMessage(chatId, "❌ Invalid session state. Please start registration again with /start.");
+            return;
+        }
+
         const studentId = state.studentId;
         const originalMessageId = state.messageIdToEdit;
+
+        // Validate required fields
+        if (!studentId || !originalMessageId) {
+            console.error(`Missing required state fields for chatId ${chatId}: studentId=${studentId}, originalMessageId=${originalMessageId}`);
+            await bot.sendMessage(chatId, "❌ Session data corrupted. Please start registration again with /start.");
+            return;
+        }
 
         const hashedPassword = await hashPassword(password);
 
@@ -877,7 +907,25 @@ const handleCustomPasswordInputInitial = async (bot, chatId, userId, password, m
 
     } catch (error) {
         console.error('Error handling custom password input:', error);
-        await bot.sendMessage(chatId, "❌ Failed to set password. Please try again.");
+        
+        // Try to get the original message ID for better error handling
+        try {
+            const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
+            if (stateDoc.exists && stateDoc.data().messageIdToEdit) {
+                await bot.editMessageText(
+                    "❌ Failed to set password. Please try /start to begin registration again.",
+                    {
+                        chat_id: chatId,
+                        message_id: stateDoc.data().messageIdToEdit
+                    }
+                );
+            } else {
+                await bot.sendMessage(chatId, "❌ Failed to set password. Please try /start to begin registration again.");
+            }
+        } catch (editError) {
+            console.error('Error sending error message:', editError);
+            await bot.sendMessage(chatId, "❌ Failed to set password. Please try /start to begin registration again.");
+        }
     }
 };
 
@@ -1053,9 +1101,7 @@ const handleTokenInput = async (bot, chatId, userId, token) => {
         };
 
         await bot.sendMessage(chatId, 
-            `✅ Registration successful!\n\n` +
             `👋 Welcome ${studentData.fullName || 'Student'}!\n\n` +
-            `� **Next Step: Set Your Password**\n\n` +
             `Choose how you want to create your password for the Student Portal:\n\n` +
             `🔐 **Generate Secure Password** - I'll create a strong 12-character password\n` +
             `✏️ **Create Custom Password** - Set your own password\n\n` +

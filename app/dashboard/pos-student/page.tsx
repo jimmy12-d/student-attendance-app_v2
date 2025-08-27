@@ -39,17 +39,18 @@ import { PrinterManager } from "./components/PrinterManager";
 import { CashDrawerManager, openCashDrawerWithBP003 } from "./components/CashDrawerManager";
 import { TransactionManager } from "./components/TransactionManager";
 import { TransactionHistory } from "./components/TransactionHistory";
+import CashierManager from "./components/CashierManager";
 import { calculateProratedAmount } from "./utils/dateUtils";
 
 // Types
 import { Student, Transaction, Printer } from "./types";
 
-// Helper function to check if payment month is September 2025 or later
+// Helper function to check if payment month is August 2025 or later
 const shouldShowQRCode = (paymentMonth: string): boolean => {
   if (!paymentMonth) return false;
   
   try {
-    // Extract month and year from payment month string (e.g., "September 2025")
+    // Extract month and year from payment month string (e.g., "August 2025")
     const monthMap: { [key: string]: number } = {
       'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
       'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
@@ -64,9 +65,9 @@ const shouldShowQRCode = (paymentMonth: string): boolean => {
     
     if (!month || isNaN(year)) return false;
     
-    // Check if payment is for September 2025 or later
+    // Check if payment is for August 2025 or later
     if (year > 2025) return true;
-    if (year === 2025 && month >= 9) return true;
+    if (year === 2025 && month >= 8) return true;
     
     return false;
   } catch (error) {
@@ -112,6 +113,9 @@ const POSStudentPage = () => {
     const [showLateFeeInput, setShowLateFeeInput] = useState(false);
 
     const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
+    
+    // Cashier management state
+    const [selectedCashier, setSelectedCashier] = useState<string>("");
     
     // Real-time listener for students
     useEffect(() => {
@@ -476,6 +480,7 @@ const POSStudentPage = () => {
         setShowDiscountInput(false);
         setLateFeeOverride(false);
         setShowLateFeeInput(false);
+        setSelectedCashier(''); // Clear cashier selection
     };
     const generateCustomReceiptNumber = async (paymentMonth: string) => {
         try {
@@ -517,6 +522,13 @@ const POSStudentPage = () => {
     const handleCharge = async () => {
         if (!selectedStudent || paymentAmount === null || !classType || !paymentMonth) {
             toast.error("Please select a student and ensure all payment details are loaded and month is set.");
+            return;
+        }
+
+        if (!selectedCashier) {
+            toast.error("🏪 Please select a cashier before processing the transaction", {
+                description: "A cashier must be selected to complete the payment process"
+            });
             return;
         }
 
@@ -583,7 +595,7 @@ const POSStudentPage = () => {
                 paymentMethod: paymentMethod,
                 date: new Date().toISOString(),
                 joinDate: joinDate, // Add join date for reference
-                cashier: "Admin", // Replace with actual user later
+                cashier: selectedCashier || "Unknown", // Use selected cashier name
                 isStudentRegistered: !!(selectedStudent.chatId && selectedStudent.passwordHash) // Check if student is registered for QR code generation
             };
 
@@ -662,7 +674,7 @@ const POSStudentPage = () => {
                     // Don't fail the transaction if token creation fails
                 }
             } else if (!transactionData.isStudentRegistered && !shouldShowQRCode(displayPaymentMonth)) {
-                console.log(`📅 Payment month ${displayPaymentMonth} is before September 2025, skipping token creation`);
+                console.log(`📅 Payment month ${displayPaymentMonth} is before August 2025, skipping token creation`);
             }
             
             // Now, update the student's record with the new last payment month
@@ -1311,10 +1323,20 @@ const POSStudentPage = () => {
                         calculateFinalChargeAmount={calculateFinalChargeAmount}
                     />
 
+                    {/* Cashier Selection Section */}
+                    {selectedStudent && (
+                        <div className="mb-6">
+                            <CashierManager 
+                                onCashierSelected={setSelectedCashier}
+                                disabled={isProcessing}
+                            />
+                        </div>
+                    )}
+
                     {/* Action Buttons Section */}
                     {selectedStudent ? (
-                        <CardBox>
-                            <div className="p-4">
+                            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border border-emerald-100 dark:border-gray-600 shadow-sm">
+                            {/* <div className="px-4 py-2"> */}
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                                         Complete Transaction
@@ -1334,39 +1356,53 @@ const POSStudentPage = () => {
                                 ) : (
                                     <div className="flex items-center space-x-3">
                                         <Button 
+                                        label={
+                                            isProcessing 
+                                                ? "Processing..." 
+                                                : !selectedCashier 
+                                                    ? "Select Cashier First"
+                                                    : `Charge $${calculateFinalChargeAmount().toFixed(2)}`
+                                        } 
+                                        color={!selectedCashier ? "white" : "success"} 
+                                        onClick={() => {
+                                            if (!isProcessing && paymentAmount !== null && paymentMonth && joinDate && selectedCashier) {
+                                                handleCharge();
+                                            } else {
+                                                // More specific error logging
+                                                if (!selectedCashier) {
+                                                    console.log("❌ Charge blocked: No cashier selected");
+                                                } else if (!paymentAmount) {
+                                                    console.log("❌ Charge blocked: No payment amount");
+                                                } else if (!paymentMonth) {
+                                                    console.log("❌ Charge blocked: No payment month");
+                                                } else if (!joinDate) {
+                                                    console.log("❌ Charge blocked: No join date");
+                                                } else if (isProcessing) {
+                                                    console.log("❌ Charge blocked: Already processing");
+                                                }
+                                            }
+                                        }}
+                                        disabled={isProcessing || paymentAmount === null || !paymentMonth || !joinDate || !selectedCashier} 
+                                        className="flex-grow"
+                                        icon={!selectedCashier ? mdiAccount : mdiCashRegister}
+                                        />
+                                        <Button 
                                             label="Clear" 
                                             color="white" 
                                             onClick={handleClear} 
                                             icon={mdiClose}
                                             className="min-w-0"
                                         />
-                                        <Button 
-                                        label={isProcessing ? "Processing..." : `Charge $${calculateFinalChargeAmount().toFixed(2)}`} 
-                                        color="success" 
-                                        onClick={() => {
-
-                                            if (!isProcessing && paymentAmount !== null && paymentMonth && joinDate) {
-                                            handleCharge();
-                                            } else {
-                                            console.log("Button is disabled, check the logs above for details.");
-                                            }
-                                        }}
-                                        disabled={isProcessing || paymentAmount === null || !paymentMonth || !joinDate} 
-                                        className="flex-grow"
-                                        icon={mdiCashRegister}
-                                        />
                                     </div>
                                 )}
                             </div>
-                        </CardBox>
                     ) : (
-                        <CardBox>
-                            <div className="text-center py-12">
-                                <Icon path={mdiAccount} className="mx-auto text-gray-300 dark:text-gray-600" size={3}/>
-                                <p className="mt-4 text-gray-500 text-lg">Select a student to begin a transaction</p>
-                                <p className="text-sm text-gray-400 mt-2">Search for a student above to get started</p>
-                            </div>
-                        </CardBox>
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border border-emerald-100 dark:border-gray-600 shadow-sm">
+                        <div className="text-center">
+                            <p className="text-gray-500 text-lg font-medium">Select a student to begin a transaction</p>
+                            <p className="text-sm text-gray-400 mt-1">Search for a student above to get started</p>
+                        </div>
+                    </div>
                     )}
                 </div>
             </div>

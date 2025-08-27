@@ -197,9 +197,10 @@ export const TransactionManager = ({
 
         return days;
     };
+
     return (
-        <CardBox className="mb-6">
-            <div className="p-6">
+        //  <CardBox className="mb-6">
+            <div className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border border-emerald-100 dark:border-gray-600 shadow-sm">
                 <div className="flex items-center justify-between mb-6 -mt-2">
                     <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 flex items-center">
                         <Icon path={mdiReceiptText} size={24} className="mr-2 text-blue-500" />
@@ -668,6 +669,6 @@ export const TransactionManager = ({
                     </div>
                 )}
             </div>
-        </CardBox>
+        // </CardBox>
     );
 };

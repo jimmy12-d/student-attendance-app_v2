@@ -1,4 +1,9 @@
-# QR Code and Token Registration System
+## QR Code and Token Registration System
+
+## Overview
+The QR code and token registration system allows students to register for Telegram notifications through QR codes that appear on payment receipts. The system is designed to be secure, temporary, and efficient.
+
+**QR codes are displayed for payments from August 2025 onwards.** Code and Token Registration System
 
 ## Overview
 The QR code and token registration system allows students to register for Telegram notifications through QR codes that appear on payment receipts. The system is designed to be secure, temporary, and efficient.

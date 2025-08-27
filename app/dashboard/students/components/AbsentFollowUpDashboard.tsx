@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../../../firebase-config';
 import { collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
-import { getStudentDailyStatus, RawAttendanceRecord } from '../../_lib/attendanceLogic';
+import { getStudentDailyStatus, RawAttendanceRecord, calculateMonthlyAbsencesLogic, getMonthDetailsForLogic } from '../../_lib/attendanceLogic';
 import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
 import { AbsentFollowUp, AbsentStatus, PermissionRecord } from '../../../_interfaces';
 import { AbsentStatusTracker } from './AbsentStatusTracker';
@@ -45,6 +45,7 @@ interface AbsentFollowUpWithDetails extends AbsentFollowUp {
   daysSinceAbsent: number;
   isUrgent: boolean;
   student?: any; // Add student data for priority calculation
+  monthlyAbsentCount?: number; // Add monthly absent count
 }
 
 const getStatusColor = (status: AbsentStatus, isUrgent: boolean = false): string => {
@@ -100,6 +101,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<AbsentStatus | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high'>('all');
+  const [monthlyAbsenceCounts, setMonthlyAbsenceCounts] = useState<{[studentId: string]: number}>({});
 
   useEffect(() => {
     fetchAbsentFollowUpsAndAbsentStudents();
@@ -164,6 +166,36 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
 
       // 6. Use the same logic as TableStudents to determine absent students
       const today = new Date();
+      const currentDate = new Date(selectedDate || today);
+      const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      // Calculate monthly absence counts for all students
+      const monthlyAbsenceCountsMap: {[studentId: string]: number} = {};
+      const [yearStr, monthStr] = currentMonth.split('-');
+      const year = parseInt(yearStr);
+      const monthIndex = parseInt(monthStr) - 1;
+      const { monthStartDateString, monthEndDateStringUsedForQuery } = getMonthDetailsForLogic(year, monthIndex);
+      
+      // Fetch all attendance records for the current month
+      const monthlyAttendanceQuery = query(
+        collection(db, 'attendance'), 
+        where('date', '>=', monthStartDateString),
+        where('date', '<=', monthEndDateStringUsedForQuery)
+      );
+      const monthlyAttendanceSnapshot = await getDocs(monthlyAttendanceQuery);
+      const monthlyAttendanceRecords = monthlyAttendanceSnapshot.docs.map(doc => doc.data());
+
+      allStudents.forEach(student => {
+        const studentAttendanceInMonth = monthlyAttendanceRecords.filter(
+          (att: any) => att.studentId === student.id
+        ) as RawAttendanceRecord[];
+        const studentPermissions = allPermissions.filter(p => p.studentId === student.id);
+        const absenceData = calculateMonthlyAbsencesLogic(student, studentAttendanceInMonth, currentMonth, allClassConfigs, studentPermissions);
+        monthlyAbsenceCountsMap[student.id] = absenceData.count;
+      });
+      
+      setMonthlyAbsenceCounts(monthlyAbsenceCountsMap);
+
       const absentStudents: AbsentFollowUpWithDetails[] = allStudents.map(student => {
         try {
           // Find attendance record for this student on selected date
@@ -201,7 +233,8 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
               daysSinceAbsent,
               isUrgent,
               nameKhmer: student.nameKhmer, // Add Khmer name to the object
-              student: student // Add full student data for priority calculation
+              student: student, // Add full student data for priority calculation
+              monthlyAbsentCount: monthlyAbsenceCountsMap[student.id] || 0
             } : {
               id: undefined,
               studentId: student.id,
@@ -214,7 +247,8 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
               daysSinceAbsent,
               isUrgent,
               nameKhmer: student.nameKhmer, // Add Khmer name to the object
-              student: student // Add full student data for priority calculation
+              student: student, // Add full student data for priority calculation
+              monthlyAbsentCount: monthlyAbsenceCountsMap[student.id] || 0
             };
             
             return studentWithFollowUp;
@@ -239,7 +273,8 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
             ...fu, 
             daysSinceAbsent, 
             isUrgent,
-            student: studentData || {} // Add student data for priority calculation
+            student: studentData || {}, // Add student data for priority calculation
+            monthlyAbsentCount: monthlyAbsenceCountsMap[fu.studentId] || 0
           });
         }
       });
@@ -258,6 +293,28 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
         ? { ...followUp, status: newStatus, updatedAt: new Date() }
         : followUp
     ));
+  };
+
+  // Group by shift function
+  const groupByShift = (followUps: AbsentFollowUpWithDetails[]) => {
+    const grouped = {
+      morning: [] as AbsentFollowUpWithDetails[],
+      afternoon: [] as AbsentFollowUpWithDetails[],
+      evening: [] as AbsentFollowUpWithDetails[]
+    };
+
+    followUps.forEach(followUp => {
+      const shift = followUp.student?.shift?.toLowerCase() || '';
+      if (shift === 'morning') {
+        grouped.morning.push(followUp);
+      } else if (shift === 'afternoon') {
+        grouped.afternoon.push(followUp);
+      } else if (shift === 'evening') {
+        grouped.evening.push(followUp);
+      }
+    });
+
+    return grouped;
   };
 
   // Sort by shift function (Morning -> Afternoon -> Evening)
@@ -294,6 +351,9 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
     // If same shift, sort by student name
     return a.studentName.localeCompare(b.studentName);
   });
+
+  // Group follow-ups by shift
+  const groupedByShift = groupByShift(sortedFollowUps);
 
   // Group by priority for better organization
   const highFollowUps = sortedFollowUps.filter(f => getPriorityLevel(f.student || {}, f.daysSinceAbsent, f.status, f.updatedAt) === 'high');
@@ -525,6 +585,19 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
         </td>
         
         <td className="p-4">
+          <div className="flex items-center">
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+              (followUp.monthlyAbsentCount || 0) >= 10 ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800' :
+              (followUp.monthlyAbsentCount || 0) >= 5 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800' :
+              (followUp.monthlyAbsentCount || 0) >= 3 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800' :
+              'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800'
+            }`}>
+              {followUp.monthlyAbsentCount || 0} days
+            </div>
+          </div>
+        </td>
+        
+        <td className="p-4">
           <AbsentStatusTracker
             studentId={followUp.studentId}
             studentName={followUp.studentName}
@@ -572,6 +645,109 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
     );
   };
 
+  const ShiftSection: React.FC<{ 
+    title: string; 
+    followUps: AbsentFollowUpWithDetails[]; 
+    icon: string; 
+    color: string;
+    shiftName: string;
+  }> = ({ title, followUps, icon, color, shiftName }) => {
+    if (followUps.length === 0) return null;
+    
+    // Separate by priority within the shift
+    const highPriorityInShift = followUps.filter(f => getPriorityLevel(f.student || {}, f.daysSinceAbsent, f.status, f.updatedAt) === 'high');
+    const lowPriorityInShift = followUps.filter(f => getPriorityLevel(f.student || {}, f.daysSinceAbsent, f.status, f.updatedAt) === 'low');
+    
+    return (
+      <div className="mb-8 overflow-visible">
+        <div className={`flex items-center space-x-3 mb-4 px-4 py-3 rounded-xl ${color} shadow-sm`}>
+          <div className="flex-shrink-0">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg">{title}</h3>
+            <p className="text-sm opacity-75">
+              {highPriorityInShift.length > 0 && (
+                <span className="text-red-600 dark:text-red-400 font-medium">
+                  {highPriorityInShift.length} High Priority
+                </span>
+              )}
+              {highPriorityInShift.length > 0 && lowPriorityInShift.length > 0 && ' • '}
+              {lowPriorityInShift.length > 0 && (
+                <span>
+                  {lowPriorityInShift.length} Low Priority
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/20 backdrop-blur-sm">
+              {followUps.length} student{followUps.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </div>
+        
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700">
+          <div className="overflow-visible">
+            <table className="min-w-full">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-600">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Student
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Phone/Telegram
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Message Template
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Absent Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Monthly Absent Count
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Follow-up Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Priority
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Last Updated
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-slate-600">
+                {/* High Priority Students First */}
+                {highPriorityInShift.length > 0 && (
+                  <>
+                    {highPriorityInShift.map((followUp) => (
+                      <FollowUpRow key={`${followUp.studentId}-${followUp.date}`} followUp={followUp} />
+                    ))}
+                    {lowPriorityInShift.length > 0 && (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-2">
+                          <div className="border-t border-gray-300 dark:border-slate-600"></div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                )}
+                {/* Low Priority Students */}
+                {lowPriorityInShift.map((followUp) => (
+                  <FollowUpRow key={`${followUp.studentId}-${followUp.date}`} followUp={followUp} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const PrioritySection: React.FC<{ 
     title: string; 
     followUps: AbsentFollowUpWithDetails[]; 
@@ -614,6 +790,9 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Absent Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Monthly Absent Count
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Follow-up Status
@@ -698,19 +877,29 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
         </div>
       </CardBox>
 
-      {/* Priority Sections */}
-      <PrioritySection
-        title="🚨 High Priority - Warning Students & Delayed Responses"
-        followUps={highFollowUps}
-        icon="M6 18L18 6M6 6l12 12"
-        color="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+      {/* Shift Sections */}
+      <ShiftSection
+        title="🌅 Morning Shift Students"
+        followUps={groupedByShift.morning}
+        icon="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"
+        color="bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
+        shiftName="morning"
       />
       
-      <PrioritySection
-        title=" Low Priority - Regular Follow-up"
-        followUps={lowFollowUps}
-        icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-        color="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+      <ShiftSection
+        title="☀️ Afternoon Shift Students"
+        followUps={groupedByShift.afternoon}
+        icon="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"
+        color="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300"
+        shiftName="afternoon"
+      />
+      
+      <ShiftSection
+        title="🌙 Evening Shift Students"
+        followUps={groupedByShift.evening}
+        icon="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+        color="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300"
+        shiftName="evening"
       />
 
       {sortedFollowUps.length === 0 && (

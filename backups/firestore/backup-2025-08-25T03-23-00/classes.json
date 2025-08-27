@@ -1,0 +1,530 @@
+{
+  "collection": "classes",
+  "totalDocuments": 24,
+  "backupTimestamp": "2025-08-25T03:23:03.600Z",
+  "documents": [
+    {
+      "id": "10E",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:45"
+          }
+        },
+        "name": "Class 10E",
+        "type": "Grade 10",
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "10F",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:45"
+          }
+        },
+        "name": "Class 10F",
+        "type": "Grade 10",
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "11A",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 11A",
+        "type": "Grade 11A",
+        "schedule": "flip-flop"
+      }
+    },
+    {
+      "id": "11E",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:30"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "name": "Class 11E",
+        "type": "Grade 11E",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "11F",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:30"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "name": "Class 11F",
+        "type": "Grade 11E",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "11G",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:30"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "name": "Class 11G",
+        "type": "Grade 11E",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "12A",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 12A",
+        "type": "Grade 12",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "12B",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 12B",
+        "type": "Grade 12",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "12C",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 12C",
+        "type": "Grade 12",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "12E",
+      "data": {
+        "name": "Class 12E",
+        "shifts": {
+          "Evening": {
+            "startTime": "17:30"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "type": "Grade 12E",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "12I",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 12I",
+        "type": "Grade 12",
+        "schedule": "flip-flop"
+      }
+    },
+    {
+      "id": "12J",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 12J",
+        "type": "Grade 12",
+        "schedule": "flip-flop"
+      }
+    },
+    {
+      "id": "12M",
+      "data": {
+        "name": "Class 12M",
+        "shifts": {
+          "Morning": {
+            "startTime": "7:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "type": "Grade 12",
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "schedule": "flip-flop"
+      }
+    },
+    {
+      "id": "12NKGS",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 12NKGS",
+        "type": "Grade 12"
+      }
+    },
+    {
+      "id": "12P",
+      "data": {
+        "name": "Class 12P",
+        "shifts": {
+          "Afternoon": {
+            "startTime": "13:00"
+          },
+          "Morning": {
+            "startTime": "7:00"
+          }
+        },
+        "studyDays": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6"
+        ],
+        "type": "Grade 12",
+        "schedule": "flip-flop"
+      }
+    },
+    {
+      "id": "12R",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 12R",
+        "type": "Grade 12 Social",
+        "schedule": "flip-flop"
+      }
+    },
+    {
+      "id": "12S",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 12S",
+        "type": "Grade 12 Social",
+        "schedule": "flip-flop"
+      }
+    },
+    {
+      "id": "12T",
+      "data": {
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "13:00"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "name": "Class 12T",
+        "type": "Grade 12 Social",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "7E",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:30"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "name": "Class 7E",
+        "type": "Grade 7",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "7F",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:30"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "name": "Class 7F",
+        "type": "Grade 7",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "8E",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:30"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "name": "Class 8E",
+        "type": "Grade 8",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "8F",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:30"
+          }
+        },
+        "studyDays": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "name": "Class 8F",
+        "type": "Grade 8",
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "9E",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:45"
+          }
+        },
+        "name": "Class 9E",
+        "type": "Grade 9",
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "schedule": "fix"
+      }
+    },
+    {
+      "id": "9F",
+      "data": {
+        "shifts": {
+          "Evening": {
+            "startTime": "17:45"
+          }
+        },
+        "name": "Class 9F",
+        "type": "Grade 9",
+        "studyDays": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "schedule": "fix"
+      }
+    }
+  ]
+}

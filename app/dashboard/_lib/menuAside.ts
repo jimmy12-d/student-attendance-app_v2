@@ -15,7 +15,6 @@ import {
   mdiCreditCard,
   mdiCashCheck,
   mdiChartLine,
-  mdiCloudOutline,
   mdiCameraIris,
   mdiViewGrid
 } from "@mdi/js";
@@ -62,13 +61,13 @@ const menuAside: MenuAsideItem[] = [
         icon: mdiViewGrid,
       },
       {
-        href: "/dashboard/face-scan-faceio",
-        label: "FaceIO Scanner",
-        icon: mdiCloudOutline,
+        href: "/dashboard/face-scan-faceapi",
+        label: "Face-API.js Scanner",
+        icon: mdiFaceRecognition,
       },
       {
         href: "/dashboard/face-scan",
-        label: "Legacy Face Scan",
+        label: "TensorFlow Scanner",
         icon: mdiCameraIris,
       },
       {

@@ -45,12 +45,12 @@ function generateQRCodeURL(token: string): string {
   return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(startPayload)}`;
 }
 
-// Helper function to check if payment month is September 2025 or later
+// Helper function to check if payment month is August 2025 or later
 function shouldShowQRCode(paymentMonth: string): boolean {
   if (!paymentMonth) return false;
   
   try {
-    // Extract month and year from payment month string (e.g., "September 2025")
+    // Extract month and year from payment month string (e.g., "August 2025")
     const monthMap: { [key: string]: number } = {
       'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
       'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
@@ -65,9 +65,9 @@ function shouldShowQRCode(paymentMonth: string): boolean {
     
     if (!month || isNaN(year)) return false;
     
-    // Check if payment is for September 2025 or later
+    // Check if payment is for August 2025 or later
     if (year > 2025) return true;
-    if (year === 2025 && month >= 9) return true;
+    if (year === 2025 && month >= 8) return true;
     
     return false;
   } catch (error) {
@@ -290,7 +290,7 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
     } else if (studentId && isStudentRegistered) {
       console.log('Student already registered, skipping QR code display');
     } else if (studentId && !shouldShowQRCode(transaction.paymentMonth)) {
-      console.log(`📅 Payment month ${transaction.paymentMonth} is before September 2025, skipping QR code display`);
+      console.log(`📅 Payment month ${transaction.paymentMonth} is before August 2025, skipping QR code display`);
     }
     
     // --- Logo ---

@@ -6,8 +6,7 @@ import Link from 'next/link';
 import { 
   mdiFaceRecognition, 
   mdiEye, 
-  mdiCameraIris, 
-  mdiCloudOutline,
+  mdiCameraIris,
   mdiSpeedometer,
   mdiShieldCheck
 } from '@mdi/js';
@@ -34,41 +33,13 @@ interface FaceSystemOption {
 const FaceAttendanceSelector = () => {
   const faceSystemOptions: FaceSystemOption[] = [
     {
-      title: "FaceIO Attendance",
-      description: "Advanced cloud-based facial recognition powered by FaceIO",
-      route: "/dashboard/face-scan-faceio",
-      icon: mdiCloudOutline,
-      technology: "FaceIO Cloud SDK",
-      status: "new",
-      recommended: true,
-      features: [
-        "Cloud-based processing",
-        "High accuracy recognition", 
-        "One-time enrollment per student",
-        "Works in various lighting conditions",
-        "Anti-spoofing protection",
-        "Real-time verification"
-      ],
-      pros: [
-        "No local model downloads needed",
-        "Faster recognition speed",
-        "Better accuracy in difficult conditions",
-        "Professional anti-spoofing features",
-        "Automatic updates and improvements"
-      ],
-      cons: [
-        "Requires internet connection",
-        "Third-party dependency", 
-        "May have usage limits/costs"
-      ]
-    },
-    {
-      title: "Legacy Face Recognition",
-      description: "Local TensorFlow-based face detection and recognition system",
+      title: "TensorFlow Face Recognition",
+      description: "Local TensorFlow-based face detection and recognition system using BlazeFace",
       route: "/dashboard/face-scan",
       icon: mdiCameraIris,
       technology: "TensorFlow.js + BlazeFace",
       status: "stable",
+      recommended: false,
       features: [
         "Local face detection",
         "Real-time face tracking",
@@ -89,6 +60,36 @@ const FaceAttendanceSelector = () => {
         "Lower accuracy in poor lighting",
         "More complex setup",
         "Requires custom recognition service"
+      ]
+    },
+    {
+      title: "Face-API.js Recognition",
+      description: "Advanced face recognition using face-api.js with SSD MobileNet V1 model",
+      route: "/dashboard/face-scan-faceapi",
+      icon: mdiFaceRecognition,
+      technology: "Face-API.js + SSD MobileNet V1",
+      status: "new",
+      recommended: true,
+      features: [
+        "High-accuracy face detection",
+        "Face landmark detection",
+        "Automatic enrollment from photos",
+        "Advanced face descriptors",
+        "Built-in face matching",
+        "Real-time recognition"
+      ],
+      pros: [
+        "Higher recognition accuracy",
+        "Can use existing student photos",
+        "More robust face matching",
+        "Built-in anti-spoofing features",
+        "Professional-grade algorithms"
+      ],
+      cons: [
+        "Larger model files",
+        "Slightly higher resource usage",
+        "Requires model downloads",
+        "More complex facial analysis"
       ]
     }
   ];
@@ -127,13 +128,14 @@ const FaceAttendanceSelector = () => {
             Choose Your Face Attendance System
           </h3>
           <p className="text-blue-700 mb-4">
-            Select the facial recognition method that best suits your needs. Both systems are fully functional 
-            and can be used simultaneously.
+            We offer two local face recognition systems for attendance tracking. Both work offline 
+            and provide full data control, but with different strengths and capabilities.
           </p>
           <div className="bg-blue-100 p-4 rounded-lg">
             <p className="text-blue-800 text-sm">
-              <strong>Recommendation:</strong> Use FaceIO for new deployments as it offers superior accuracy 
-              and easier management. The legacy system remains available for offline use or existing setups.
+              <strong>Recommendation:</strong> Try the Face-API.js system first as it offers higher 
+              accuracy and can automatically enroll students using their existing photos. The TensorFlow 
+              system is great for simpler setups or custom integrations.
             </p>
           </div>
         </div>
@@ -242,20 +244,34 @@ const FaceAttendanceSelector = () => {
                     Feature
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    FaceIO
+                    Face-API.js
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Legacy System
+                    TensorFlow/BlazeFace
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 <tr>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    Internet Required
+                    Recognition Accuracy
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">Yes</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">No</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">High</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600">Good</td>
+                </tr>
+                <tr className="bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    Photo Enrollment
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">Automatic</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">Manual Only</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    Model Size
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600">~15MB</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">~2MB</td>
                 </tr>
                 <tr className="bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -266,31 +282,17 @@ const FaceAttendanceSelector = () => {
                 </tr>
                 <tr>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    Recognition Accuracy
+                    Face Landmarks
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">High</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600">Good</td>
-                </tr>
-                <tr className="bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    Anti-Spoofing
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">Advanced</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">68 Points</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600">Basic</td>
                 </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    Data Privacy
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600">Third-party</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">Full Control</td>
-                </tr>
                 <tr className="bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    Maintenance
+                    Internet Required
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">Automatic</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600">Manual</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">No</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">No</td>
                 </tr>
               </tbody>
             </table>
@@ -304,23 +306,23 @@ const FaceAttendanceSelector = () => {
           <h3 className="text-lg font-semibold mb-4">Usage Guidelines</h3>
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <h4 className="font-medium text-green-700 mb-2">Choose FaceIO when:</h4>
+              <h4 className="font-medium text-green-700 mb-2">Choose Face-API.js when:</h4>
               <ul className="text-sm text-gray-600 space-y-1">
-                <li>• You have reliable internet connectivity</li>
                 <li>• You want the highest recognition accuracy</li>
-                <li>• You prefer minimal setup and maintenance</li>
-                <li>• You need professional anti-spoofing features</li>
-                <li>• You're starting a new deployment</li>
+                <li>• Students have existing photos to enroll from</li>
+                <li>• You need professional-grade face analysis</li>
+                <li>• You want easier enrollment process</li>
+                <li>• You need advanced face landmarks</li>
               </ul>
             </div>
             <div>
-              <h4 className="font-medium text-blue-700 mb-2">Choose Legacy System when:</h4>
+              <h4 className="font-medium text-blue-700 mb-2">Choose TensorFlow/BlazeFace when:</h4>
               <ul className="text-sm text-gray-600 space-y-1">
-                <li>• You need offline functionality</li>
-                <li>• You require full data control</li>
-                <li>• You have existing face recognition infrastructure</li>
-                <li>• You want to avoid third-party dependencies</li>
-                <li>• Internet connectivity is unreliable</li>
+                <li>• You need minimal resource usage</li>
+                <li>• You prefer real-time face tracking display</li>
+                <li>• You want faster model loading</li>
+                <li>• You need custom recognition service integration</li>
+                <li>• You have limited storage space</li>
               </ul>
             </div>
           </div>

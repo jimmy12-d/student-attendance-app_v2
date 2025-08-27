@@ -18,6 +18,21 @@ module.exports = {
     ignoreBuildErrors: true,
   },
 
+  webpack: (config, { isServer }) => {
+    // Fix for face-api.js Node.js compatibility
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+        crypto: false,
+      };
+    }
+    
+    return config;
+  },
+
   images: {
     unoptimized: true,
     remotePatterns: [

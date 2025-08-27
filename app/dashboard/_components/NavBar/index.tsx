@@ -6,6 +6,7 @@ import { containerMaxW } from "../../../_lib/config";
 import Icon from "../../../_components/Icon";
 import NavBarItemPlain from "./Item/Plain";
 import NavBarMenuList from "./MenuList";
+import UserDisplay from "./UserDisplay";
 import { MenuNavBarItem } from "../../../_interfaces";
 
 type Props = {
@@ -31,6 +32,8 @@ export default function NavBar({ menu, className = "", children }: Props) {
     >
       <div className={`flex lg:items-stretch ${containerMaxW}`}>
         <div className="flex flex-1 items-stretch h-14">{children}</div>
+        {/* User Display Component - Desktop Only */}
+        <UserDisplay />
         <div className="flex-none items-stretch flex h-14 lg:hidden">
           <NavBarItemPlain onClick={handleMenuNavBarToggleClick}>
             <Icon
@@ -44,6 +47,7 @@ export default function NavBar({ menu, className = "", children }: Props) {
             isMenuNavBarActive ? "block" : "hidden"
           } max-h-screen-menu overflow-y-auto lg:overflow-visible absolute w-screen top-14 left-0 bg-gray-50 shadow-lg lg:w-auto lg:flex lg:static lg:shadow-none dark:bg-slate-800`}
         >
+          <UserDisplay isMobile={true} />
           <NavBarMenuList menu={menu} onRouteChange={handleRouteChange} />
         </div>
       </div>
