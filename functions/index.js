@@ -64,30 +64,6 @@ const normalizePhone = (phoneNumber) => {
 };
 
 // --- Helper functions for password management ---
-const generateRandomPassword = () => {
-    // 12 characters with uppercase, lowercase, numbers, and special characters
-    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-    const lowercase = 'abcdefghkmnpqrstuvwxyz';
-    const numbers = '23456789';
-    const specials = '!@#$%&*';
-    
-    let password = '';
-    
-    // Ensure at least one character from each category
-    password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
-    password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
-    password += numbers.charAt(Math.floor(Math.random() * numbers.length));
-    password += specials.charAt(Math.floor(Math.random() * specials.length));
-    
-    // Fill remaining 8 characters randomly from all categories
-    const allChars = uppercase + lowercase + numbers + specials;
-    for (let i = 4; i < 12; i++) {
-        password += allChars.charAt(Math.floor(Math.random() * allChars.length));
-    }
-    
-    // Shuffle the password to avoid predictable patterns
-    return password.split('').sort(() => Math.random() - 0.5).join('');
-};
 
 const validatePasswordStrength = (password) => {
     if (password.length < 8) {
@@ -96,8 +72,6 @@ const validatePasswordStrength = (password) => {
     
     const hasUppercase = /[A-Z]/.test(password);
     const hasLowercase = /[a-z]/.test(password);
-    const hasNumbers = /[0-9]/.test(password);
-    const hasSpecialChars = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
     
     if (!hasUppercase) {
         return { valid: false, message: "Password must contain at least one uppercase letter." };
@@ -244,8 +218,7 @@ const handleStartCommand = async (bot, chatId, userId) => {
                     reply_markup: {
                         inline_keyboard: [
                             [
-                                { text: "🔐 Generate Password", callback_data: "generate_password" },
-                                { text: "✏️ Custom Password", callback_data: "custom_password" }
+                                { text: "✏️ Set Custom Password", callback_data: "custom_password" }
                             ]
                         ]
                     }
@@ -255,9 +228,7 @@ const handleStartCommand = async (bot, chatId, userId) => {
                     `✅ Account found!\n\n` +
                     `👋 Welcome back ${studentData.fullName || 'Student'}!\n\n` +
                     `🔐 **Complete Your Setup: Set Your Password**\n\n` +
-                    `Choose how you want to create your password for the Student Portal:\n\n` +
-                    `🔐 **Generate Secure Password** - I'll create a strong 12-character password\n` +
-                    `✏️ **Create Custom Password** - Set your own password\n\n` +
+                    `Set your own custom password for the Student Portal:\n\n` +
                     `📱 You'll use your phone (${studentData.phone}) and password to login at:\n` +
                     `🌐 **portal.rodwell.center/login**`,
                     options
@@ -344,7 +315,6 @@ const handleChangePasswordCommand = async (bot, chatId, userId) => {
             reply_markup: {
                 inline_keyboard: [
                     [
-                        { text: "🔐 Generate Secure Password", callback_data: "change_generate_password" },
                         { text: "✏️ Create Custom Password", callback_data: "change_custom_password" }
                     ],
                     [
@@ -356,8 +326,7 @@ const handleChangePasswordCommand = async (bot, chatId, userId) => {
 
         await bot.sendMessage(chatId, 
             "🔐 **Password Change Options**\n\n" +
-            "Choose how you want to change your password:\n\n" +
-            "🔐 **Generate Secure Password** - I'll create a strong 12-character password for you\n" +
+            "Set your own custom password:\n\n" +
             "✏️ **Create Custom Password** - Set your own custom password\n\n" +
             "What would you like to do?",
             options
@@ -429,14 +398,10 @@ const handleCallbackQuery = async (bot, callbackQuery) => {
         // Answer the callback query to remove loading state
         await bot.answerCallbackQuery(callbackQuery.id);
 
-        if (data === "generate_password") {
-            await handleGeneratePassword(bot, chatId, userId, messageId);
-        } else if (data === "custom_password") {
+        if (data === "custom_password") {
             await handleRequestCustomPassword(bot, chatId, userId, messageId);
         } else if (data === "delete_password_message") {
             await handleDeletePasswordMessage(bot, chatId, messageId);
-        } else if (data === "change_generate_password") {
-            await handleChangeGeneratePassword(bot, chatId, userId, messageId);
         } else if (data === "change_custom_password") {
             await handleChangeCustomPassword(bot, chatId, userId, messageId);
         } else if (data === "cancel_password_change") {
@@ -476,76 +441,6 @@ const handleDeletePasswordMessage = async (bot, chatId, messageId) => {
         } catch (editError) {
             console.error('Could not edit message either:', editError);
         }
-    }
-};
-
-/**
- * Handle generate password button
- */
-const handleGeneratePassword = async (bot, chatId, userId, messageId) => {
-    try {
-        // Get user state
-        const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
-        
-        if (!stateDoc.exists || stateDoc.data().state !== "password_setup_menu") {
-            await bot.editMessageText("❌ Session expired. Please start registration again.", {
-                chat_id: chatId,
-                message_id: messageId
-            });
-            return;
-        }
-
-        const state = stateDoc.data();
-        const studentId = state.studentId;
-
-        // Generate and hash password
-        const newPassword = generateRandomPassword();
-        const hashedPassword = await hashPassword(newPassword);
-
-        // Update student with password
-        await db.collection("students").doc(studentId).update({
-            passwordHash: hashedPassword,
-            passwordUpdatedAt: FieldValue.serverTimestamp()
-        });
-
-        // Clean up state
-        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
-
-        // Create inline keyboard with delete button
-        const options = {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "🗑️ Delete This Message", callback_data: "delete_password_message" }]
-                ]
-            }
-        };
-
-        // Edit the original message to show password
-        await bot.editMessageText(
-            `🔐 **Your secure password is:**\n` +
-            `\`${newPassword}\`\n` +
-            `📱 **Login Information:**\n` +
-            `• Website: **portal.rodwell.center/login**\n` +
-            `• Phone: Use your registered phone number\n` +
-            `• Password: Use the password above\n\n` +
-            `⚠️ **Important:** Save this password securely, then delete this message!\n\n` +
-            `🔄 Use /changepassword anytime to change your password.`,
-            {
-                chat_id: chatId,
-                message_id: messageId,
-                parse_mode: 'Markdown',
-                ...options
-            }
-        );
-
-        console.log(`Generated password for student ${studentId} via Telegram`);
-
-    } catch (error) {
-        console.error('Error generating password:', error);
-        await bot.editMessageText("❌ Failed to generate password. Please try again later.", {
-            chat_id: chatId,
-            message_id: messageId
-        });
     }
 };
 
@@ -668,76 +563,6 @@ const handleTextMessage = async (bot, chatId, userId, text, messageId) => {
     } catch (error) {
         console.error(`Error handling text message for chatId ${chatId}:`, error);
         await bot.sendMessage(chatId, "❌ An error occurred. Please try /start to begin registration again.");
-    }
-};
-
-/**
- * Handle generate password for password change
- */
-const handleChangeGeneratePassword = async (bot, chatId, userId, messageId) => {
-    try {
-        // Find the user's document
-        const userDoc = await db.collection("students")
-            .where("chatId", "==", chatId.toString())
-            .limit(1)
-            .get();
-
-        if (userDoc.empty) {
-            await bot.editMessageText("❌ Account not found. Please register first with /start.", {
-                chat_id: chatId,
-                message_id: messageId
-            });
-            return;
-        }
-
-        const studentDoc = userDoc.docs[0];
-        const newPassword = generateRandomPassword();
-        const hashedPassword = await hashPassword(newPassword);
-
-        // Update password in database
-        await studentDoc.ref.update({
-            passwordHash: hashedPassword,
-            passwordUpdatedAt: FieldValue.serverTimestamp()
-        });
-
-        // Clean up state
-        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
-
-        // Create inline keyboard with delete button
-        const options = {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "🗑️ Delete This Message", callback_data: "delete_password_message" }]
-                ]
-            }
-        };
-
-        // Edit message to show new password
-        await bot.editMessageText(
-            `✅ **New Password Generated!**\n\n` +
-            `🔐 **Your new secure password is:**\n` +
-            `\`${newPassword}\`\n\n` +
-            `📱 **Login Information:**\n` +
-            `• Website: **portal.rodwell.center/login**\n` +
-            `• Phone: Use your registered phone number\n` +
-            `• Password: Use the password above\n\n` +
-            `⚠️ **Important:** Save this password securely, then delete this message!`,
-            {
-                chat_id: chatId,
-                message_id: messageId,
-                parse_mode: 'Markdown',
-                ...options
-            }
-        );
-
-        console.log(`Generated new password for student ${studentDoc.id} via Telegram`);
-
-    } catch (error) {
-        console.error('Error generating password for change:', error);
-        await bot.editMessageText("❌ Failed to generate password. Please try again later.", {
-            chat_id: chatId,
-            message_id: messageId
-        });
     }
 };
 
@@ -1075,8 +900,7 @@ const handleTokenInput = async (bot, chatId, userId, token) => {
             reply_markup: {
                 inline_keyboard: [
                     [
-                        { text: "🔐 Generate Password", callback_data: "generate_password" },
-                        { text: "✏️ Custom Password", callback_data: "custom_password" }
+                        { text: "✏️ Set Custom Password", callback_data: "custom_password" }
                     ]
                 ]
             }
@@ -1084,8 +908,7 @@ const handleTokenInput = async (bot, chatId, userId, token) => {
 
         await bot.sendMessage(chatId, 
             `👋 Welcome ${studentData.fullName || 'Student'}!\n\n` +
-            `Choose how you want to create your password for the Student Portal:\n\n` +
-            `🔐 **Generate Secure Password** - I'll create a strong 12-character password\n` +
+            `Set your own custom password for the Student Portal:\n\n` +
             `✏️ **Create Custom Password** - Set your own password\n\n` +
             `📱 You'll use your phone (${studentData.phone}) and password to login at:\n` +
             `🌐 **portal.rodwell.center/login**`,
@@ -1131,29 +954,40 @@ const handleUsernameInput = async (bot, chatId, userId, username) => {
             return;
         }
 
-        // Generate and hash password
-        const newPassword = generateRandomPassword();
-        const hashedPassword = await hashPassword(newPassword);
-
-        // Link the student account
+        // Link the student account without password (user must set custom password)
         await studentDoc.ref.update({
             chatId: chatId.toString(),
             userId: userId,
-            passwordHash: hashedPassword,
             registeredAt: FieldValue.serverTimestamp()
         });
 
-        // Clean up registration state
-        await db.collection("telegramUserStates").doc(chatId.toString()).delete();
+        // Update user state for password setup
+        await db.collection("telegramUserStates").doc(chatId.toString()).set({
+            userId: userId,
+            chatId: chatId,
+            state: "password_setup_menu",
+            studentId: studentDoc.id,
+            timestamp: FieldValue.serverTimestamp()
+        });
+
+        const options = {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        { text: "✏️ Set Custom Password", callback_data: "custom_password" }
+                    ]
+                ]
+            }
+        };
 
         await bot.sendMessage(chatId, 
             `✅ Registration successful!\n\n` +
             `👋 Welcome ${studentData.fullName || username}!\n\n` +
-            `Your login credentials:\n` +
-            `🔑 **Password: ${newPassword}**\n\n` +
-            `Please save this password securely. You can log into the Student Portal at:\n` +
-            `🌐 **portal.rodwell.center/login**\n\n` +
-            `Use /changepassword anytime to generate a new password.`
+            `🔐 **Complete Your Setup: Set Your Password**\n\n` +
+            `Set your own custom password for the Student Portal:\n\n` +
+            `📱 You'll use your phone (${studentData.phone}) and password to login at:\n` +
+            `🌐 **portal.rodwell.center/login**`,
+            options
         );
 
         console.log(`Successfully registered student ${studentDoc.id} with chatId ${chatId}`);
@@ -1171,65 +1005,14 @@ const handlePasswordChangeMenuChoice = async (bot, chatId, userId, text) => {
     try {
         const choice = text.toLowerCase();
         
-        if (choice === '/generate') {
-            // Generate random password with delete button
-            const userDoc = await db.collection("students")
-                .where("chatId", "==", chatId.toString())
-                .limit(1)
-                .get();
-
-            if (userDoc.empty) {
-                await bot.sendMessage(chatId, "❌ Account not found. Please register first with /start.");
-                return;
-            }
-
-            const studentDoc = userDoc.docs[0];
-            const newPassword = generateRandomPassword();
-            const hashedPassword = await hashPassword(newPassword);
-
-            // Update password in database
-            await studentDoc.ref.update({
-                passwordHash: hashedPassword,
-                passwordUpdatedAt: FieldValue.serverTimestamp()
-            });
-
-            // Clean up state
-            await db.collection("telegramUserStates").doc(chatId.toString()).delete();
-
-            // Create inline keyboard with delete button
-            const options = {
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: "🗑️ Delete This Message", callback_data: "delete_password_message" }]
-                    ]
-                }
-            };
-
-            await bot.sendMessage(chatId, 
-                `✅ **New Password Generated!**\n\n` +
-                `� **Your new secure password is:**\n` +
-                `\`${newPassword}\`\n\n` +
-                `📱 **Login Information:**\n` +
-                `• Website: **portal.rodwell.center/login**\n` +
-                `• Phone: Use your registered phone number\n` +
-                `• Password: Use the password above\n\n` +
-                `⚠️ **Important:** Save this password securely, then delete this message!`,
-                {
-                    parse_mode: 'Markdown',
-                    ...options
-                }
-            );
-
-            console.log(`Random password generated for student ${studentDoc.id} via Telegram text command`);
-
-        } else if (choice === '/setpassword') {
+        if (choice === '/setpassword') {
             // Switch to custom password input
             await handleSetCustomPasswordCommand(bot, chatId, userId);
         } else if (choice === '/cancel') {
             await db.collection("telegramUserStates").doc(chatId.toString()).delete();
             await bot.sendMessage(chatId, "❌ Password change cancelled.");
         } else {
-            await bot.sendMessage(chatId, "Please choose an option:\n• `/generate` - Generate random password\n• `/setpassword` - Set custom password\n• `/cancel` - Cancel");
+            await bot.sendMessage(chatId, "Please choose an option:\n• `/setpassword` - Set custom password\n• `/cancel` - Cancel");
         }
 
     } catch (error) {
@@ -2717,5 +2500,177 @@ exports.cleanupExpiredTempTokens = onSchedule('0 0 * * *', async (event) => {
         
     } catch (error) {
         console.error('❌ Error cleaning up expired temporary tokens:', error);
+    }
+});
+
+/**
+ * [Firestore-triggered Function]
+ * Sends FCM push notifications when a new notification is created
+ */
+exports.sendNotificationToStudents = onDocumentCreated({
+    document: "notifications/{docId}",
+    region: "asia-southeast1"
+}, async (event) => {
+    const snapshot = event.data;
+    if (!snapshot) {
+        console.log("No data associated with the notification event");
+        return;
+    }
+
+    const notificationData = snapshot.data();
+    const { title, body, link, targetType, targetValue } = notificationData;
+
+    console.log(`Processing notification: ${title} (${targetType})`);
+
+    try {
+        // Get all FCM tokens for targeted students
+        let targetStudentUids = [];
+
+        if (targetType === 'all') {
+            // Get all students with authUid
+            const allStudentsSnapshot = await db.collection('students')
+                .where('authUid', '!=', null)
+                .get();
+            targetStudentUids = allStudentsSnapshot.docs
+                .map(doc => doc.data().authUid)
+                .filter(uid => uid);
+
+        } else if (targetType === 'class') {
+            // Get students from specific classes
+            const classArray = Array.isArray(targetValue) ? targetValue : [targetValue];
+            const classStudentsSnapshot = await db.collection('students')
+                .where('authUid', '!=', null)
+                .get();
+            
+            targetStudentUids = classStudentsSnapshot.docs
+                .filter(doc => {
+                    const studentClass = doc.data().class;
+                    return studentClass && classArray.includes(studentClass);
+                })
+                .map(doc => doc.data().authUid)
+                .filter(uid => uid);
+
+        } else if (targetType === 'user') {
+            // Direct student UIDs
+            targetStudentUids = Array.isArray(targetValue) ? targetValue : [targetValue];
+        }
+
+        if (targetStudentUids.length === 0) {
+            console.log("No target students found for notification");
+            return;
+        }
+
+        console.log(`Found ${targetStudentUids.length} target students`);
+
+        // Get FCM tokens for target students
+        const tokensSnapshot = await db.collection('fcmTokens')
+            .where('userId', 'in', targetStudentUids.slice(0, 10)) // Firestore 'in' limit is 10
+            .get();
+
+        let fcmTokens = [];
+        
+        // Handle more than 10 students by batching
+        if (targetStudentUids.length > 10) {
+            const batches = [];
+            for (let i = 0; i < targetStudentUids.length; i += 10) {
+                const batch = targetStudentUids.slice(i, i + 10);
+                batches.push(batch);
+            }
+
+            const allTokenQueries = batches.map(batch => 
+                db.collection('fcmTokens').where('userId', 'in', batch).get()
+            );
+
+            const allTokenSnapshots = await Promise.all(allTokenQueries);
+            
+            allTokenSnapshots.forEach(snapshot => {
+                snapshot.docs.forEach(doc => {
+                    const tokenData = doc.data();
+                    if (tokenData.token) {
+                        fcmTokens.push(tokenData.token);
+                    }
+                });
+            });
+        } else {
+            tokensSnapshot.docs.forEach(doc => {
+                const tokenData = doc.data();
+                if (tokenData.token) {
+                    fcmTokens.push(tokenData.token);
+                }
+            });
+        }
+
+        if (fcmTokens.length === 0) {
+            console.log("No FCM tokens found for target students");
+            return;
+        }
+
+        console.log(`Sending notification to ${fcmTokens.length} devices`);
+
+        // Prepare FCM message
+        const message = {
+            notification: {
+                title: title,
+                body: body,
+                icon: '/favicon.png',
+            },
+            data: {
+                click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                url: link || '/student/notifications',
+                notificationId: event.params.docId
+            },
+            tokens: fcmTokens
+        };
+
+        // Send multicast notification
+        const response = await admin.messaging().sendMulticast(message);
+
+        console.log(`Notification sent successfully: ${response.successCount} succeeded, ${response.failureCount} failed`);
+
+        // Handle failed tokens (cleanup invalid tokens)
+        if (response.failureCount > 0) {
+            const failedTokens = [];
+            response.responses.forEach((resp, idx) => {
+                if (!resp.success) {
+                    console.log(`Failed to send to token ${idx}: ${resp.error?.message}`);
+                    // Mark token for cleanup if it's invalid
+                    if (resp.error?.code === 'messaging/invalid-registration-token' ||
+                        resp.error?.code === 'messaging/registration-token-not-registered') {
+                        failedTokens.push(fcmTokens[idx]);
+                    }
+                }
+            });
+
+            // Clean up invalid tokens
+            if (failedTokens.length > 0) {
+                console.log(`Cleaning up ${failedTokens.length} invalid tokens`);
+                const cleanupPromises = failedTokens.map(token =>
+                    db.collection('fcmTokens').where('token', '==', token).get()
+                    .then(snapshot => {
+                        const batch = db.batch();
+                        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                        return batch.commit();
+                    })
+                );
+                await Promise.all(cleanupPromises);
+            }
+        }
+
+        // Update notification with send statistics
+        await db.collection('notifications').doc(event.params.docId).update({
+            sentAt: FieldValue.serverTimestamp(),
+            targetDevices: fcmTokens.length,
+            successCount: response.successCount,
+            failureCount: response.failureCount
+        });
+
+    } catch (error) {
+        console.error("Error sending notification:", error);
+        
+        // Update notification with error status
+        await db.collection('notifications').doc(event.params.docId).update({
+            sendError: error.message,
+            sentAt: FieldValue.serverTimestamp()
+        });
     }
 });

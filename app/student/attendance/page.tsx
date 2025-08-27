@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAppSelector } from '../../_stores/hooks';
 import { db } from '../../../firebase-config';
-import { collection, query, where, onSnapshot, getDocs, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { Student, PermissionRecord } from '../../_interfaces';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord } from '../../dashboard/_lib/attendanceLogic';
@@ -101,157 +101,188 @@ const AttendancePage = () => {
         requestedAt: serverTimestamp(),
       };
 
+      // Use real-time listener to check existing attendance
       const attendanceQuery = query(collection(db, "attendance"), where("authUid", "==", studentUid), where("date", "==", today), limit(1));
-      const attendanceSnap = await getDocs(attendanceQuery);
+      const unsubscribe = onSnapshot(attendanceQuery, async (attendanceSnap) => {
+        try {
+          if (!attendanceSnap.empty) {
+            const docRef = attendanceSnap.docs[0].ref;
+            await updateDoc(docRef, { status: 'pending', requestedAt: serverTimestamp() });
+          } else {
+            await addDoc(collection(db, "attendance"), newRecordData);
+          }
 
-      if (!attendanceSnap.empty) {
-        const docRef = attendanceSnap.docs[0].ref;
-        await updateDoc(docRef, { status: 'pending', requestedAt: serverTimestamp() });
-      } else {
-        await addDoc(collection(db, "attendance"), newRecordData);
-      }
-
-      toast.success("Attendance request sent! You will be notified upon approval.");
-      setIsRequestConfirmOpen(false); // Close confirmation panel on success
+          toast.success("Attendance request sent! You will be notified upon approval.");
+          setIsRequestConfirmOpen(false);
+        } catch (error) {
+          console.error("Error sending attendance request: ", error);
+          toast.error("Failed to send request. Please try again.");
+        }
+        unsubscribe(); // Clean up the listener after single use
+      });
     } catch (error) {
-      console.error("Error sending attendance request: ", error);
+      console.error("Error setting up attendance request: ", error);
       toast.error("Failed to send request. Please try again.");
     }
   };
 
   useEffect(() => {
     if (!studentUid) return;
-    let unsubscribe: () => void;
+    
+    let attendanceUnsubscribe: () => void;
+    let studentUnsubscribe: () => void;
+    let classesUnsubscribe: () => void;
+    let permsUnsubscribe: () => void;
+    
     const fetchSchoolDayAttendance = async () => {
       setLoading(true);
       try {
+        // Real-time listener for student data
         const studentQuery = query(collection(db, "students"), where("authUid", "==", studentUid), limit(1));
-        const studentSnap = await getDocs(studentQuery);
-        if (studentSnap.empty) { setLoading(false); return; }
-        
-        const studentDataFromDb = studentSnap.docs[0].data() as Student;
-        setStudentData(studentDataFromDb);
+        studentUnsubscribe = onSnapshot(studentQuery, (studentSnap) => {
+          if (studentSnap.empty) { 
+            setLoading(false); 
+            return; 
+          }
+          
+          const studentDataFromDb = studentSnap.docs[0].data() as Student;
+          setStudentData(studentDataFromDb);
 
-        const classesSnap = await getDocs(collection(db, "classes"));
-        const classConfigs: { [key: string]: any } = {};
-        classesSnap.forEach(doc => { classConfigs[doc.id] = doc.data(); });
-        const studentClassConfig = studentDataFromDb.class ? classConfigs[studentDataFromDb.class] : null;
-        const studyDays = studentClassConfig?.studyDays;
+          // Real-time listener for classes configuration
+          classesUnsubscribe = onSnapshot(collection(db, "classes"), (classesSnap) => {
+            const classConfigs: { [key: string]: any } = {};
+            classesSnap.forEach(doc => { classConfigs[doc.id] = doc.data(); });
+            const studentClassConfig = studentDataFromDb.class ? classConfigs[studentDataFromDb.class] : null;
+            const studyDays = studentClassConfig?.studyDays;
 
-         const schoolDays: string[] = [];
-         let currentDate = new Date();
-         while (schoolDays.length < 10) {
-           if (isSchoolDay(currentDate, studyDays)) {
-             schoolDays.push(currentDate.toISOString().split('T')[0]);
-           }
-           currentDate.setDate(currentDate.getDate() - 1);
-         }
-         
-         // Fetch approved permissions for the student
-         const permsQuery = query(
-           collection(db, "permissions"),
-           where("authUid", "==", studentUid),
-           where("status", "==", "approved")
-         );
-         const permsSnap = await getDocs(permsQuery);
-         const approvedPermissions = permsSnap.docs.map(doc => doc.data() as PermissionRecord);
-         
-         const attendanceQuery = query(collection(db, "attendance"), where("authUid", "==", studentUid), where("date", "in", schoolDays));
-         unsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
-           const fetchedRecords: { [date: string]: AttendanceRecord } = {};
-           snapshot.docs.forEach(doc => { fetchedRecords[doc.data().date] = { ...doc.data(), id: doc.id } as AttendanceRecord; });
-           
-           const displayRecords = schoolDays.map(dateStr => {
-             // Convert the AttendanceRecord to RawAttendanceRecord format for getStudentDailyStatus
-             const rawAttendanceRecord: RawAttendanceRecord | undefined = fetchedRecords[dateStr] ? {
-               studentId: studentDataFromDb.studentId,
-               date: dateStr,
-               status: fetchedRecords[dateStr].status as 'present' | 'late' | 'pending',
-               timestamp: fetchedRecords[dateStr].timestamp instanceof Date ? 
-                         Timestamp.fromDate(fetchedRecords[dateStr].timestamp as Date) : 
-                         fetchedRecords[dateStr].timestamp as Timestamp,
-               class: studentDataFromDb.class,
-               shift: studentDataFromDb.shift,
-               id: fetchedRecords[dateStr].id
-             } : undefined;
+            const schoolDays: string[] = [];
+            let currentDate = new Date();
+            while (schoolDays.length < 10) {
+              if (isSchoolDay(currentDate, studyDays)) {
+                schoolDays.push(currentDate.toISOString().split('T')[0]);
+              }
+              currentDate.setDate(currentDate.getDate() - 1);
+            }
+            
+            // Real-time listener for approved permissions
+            const permsQuery = query(
+              collection(db, "permissions"),
+              where("authUid", "==", studentUid),
+              where("status", "==", "approved")
+            );
+            permsUnsubscribe = onSnapshot(permsQuery, (permsSnap) => {
+              const approvedPermissions = permsSnap.docs.map(doc => doc.data() as PermissionRecord);
+              
+              // Real-time listener for attendance records
+              const attendanceQuery = query(collection(db, "attendance"), where("authUid", "==", studentUid), where("date", "in", schoolDays));
+              attendanceUnsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
+                const fetchedRecords: { [date: string]: AttendanceRecord } = {};
+                snapshot.docs.forEach(doc => { fetchedRecords[doc.data().date] = { ...doc.data(), id: doc.id } as AttendanceRecord; });
+                
+                const displayRecords = schoolDays.map(dateStr => {
+                  // Convert the AttendanceRecord to RawAttendanceRecord format for getStudentDailyStatus
+                  const rawAttendanceRecord: RawAttendanceRecord | undefined = fetchedRecords[dateStr] ? {
+                    studentId: studentDataFromDb.studentId,
+                    date: dateStr,
+                    status: fetchedRecords[dateStr].status as 'present' | 'late' | 'pending',
+                    timestamp: fetchedRecords[dateStr].timestamp instanceof Date ? 
+                              Timestamp.fromDate(fetchedRecords[dateStr].timestamp as Date) : 
+                              fetchedRecords[dateStr].timestamp as Timestamp,
+                    class: studentDataFromDb.class,
+                    shift: studentDataFromDb.shift,
+                    id: fetchedRecords[dateStr].id
+                  } : undefined;
 
-             // Use the centralized status calculation function
-             const calculatedStatus = getStudentDailyStatus(
-               studentDataFromDb,
-               dateStr,
-               rawAttendanceRecord,
-               classConfigs,
-               approvedPermissions
-             );
+                  // Use the centralized status calculation function
+                  const calculatedStatus = getStudentDailyStatus(
+                    studentDataFromDb,
+                    dateStr,
+                    rawAttendanceRecord,
+                    classConfigs,
+                    approvedPermissions
+                  );
 
-             // Convert back to AttendanceRecord format for display
-             if (fetchedRecords[dateStr]) {
-               return fetchedRecords[dateStr];
-             }
-             
-             // Create a display record based on the calculated status
-             const displayStatus = calculatedStatus.status === "Permission" ? 'permission' :
-                                 calculatedStatus.status === "Not Yet Enrolled" ? 'not-enrolled' :
-                                 calculatedStatus.status === "No School" ? 'no-school' :
-                                 calculatedStatus.status === "Present" ? 'present' :
-                                 calculatedStatus.status === "Late" ? 'late' :
-                                 calculatedStatus.status === "Pending" ? 'pending' : 'absent';
-             
-             return { 
-               id: dateStr, 
-               date: dateStr, 
-               status: displayStatus,
-               calculatedTime: calculatedStatus.time 
-             };
-           }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-           
-           setRecentRecords(displayRecords);
-           
-           // Set today's record using the same logic
-           const today = new Date().toISOString().split('T')[0];
-           const todaysAttendanceRecord = fetchedRecords[today];
-           const rawTodayRecord: RawAttendanceRecord | undefined = todaysAttendanceRecord ? {
-             studentId: studentDataFromDb.studentId,
-             date: today,
-             status: todaysAttendanceRecord.status as 'present' | 'late' | 'pending',
-             timestamp: todaysAttendanceRecord.timestamp instanceof Date ? 
-                       Timestamp.fromDate(todaysAttendanceRecord.timestamp as Date) : 
-                       todaysAttendanceRecord.timestamp as Timestamp,
-             class: studentDataFromDb.class,
-             shift: studentDataFromDb.shift,
-             id: todaysAttendanceRecord.id
-           } : undefined;
+                  // Convert back to AttendanceRecord format for display
+                  if (fetchedRecords[dateStr]) {
+                    return fetchedRecords[dateStr];
+                  }
+                  
+                  // Create a display record based on the calculated status
+                  const displayStatus = calculatedStatus.status === "Permission" ? 'permission' :
+                                      calculatedStatus.status === "Not Yet Enrolled" ? 'not-enrolled' :
+                                      calculatedStatus.status === "No School" ? 'no-school' :
+                                      calculatedStatus.status === "Present" ? 'present' :
+                                      calculatedStatus.status === "Late" ? 'late' :
+                                      calculatedStatus.status === "Pending" ? 'pending' : 'absent';
+                  
+                  return { 
+                    id: dateStr, 
+                    date: dateStr, 
+                    status: displayStatus,
+                    calculatedTime: calculatedStatus.time 
+                  };
+                }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                
+                setRecentRecords(displayRecords);
+                
+                // Set today's record using the same logic
+                const today = new Date().toISOString().split('T')[0];
+                const todaysAttendanceRecord = fetchedRecords[today];
+                const rawTodayRecord: RawAttendanceRecord | undefined = todaysAttendanceRecord ? {
+                  studentId: studentDataFromDb.studentId,
+                  date: today,
+                  status: todaysAttendanceRecord.status as 'present' | 'late' | 'pending',
+                  timestamp: todaysAttendanceRecord.timestamp instanceof Date ? 
+                            Timestamp.fromDate(todaysAttendanceRecord.timestamp as Date) : 
+                            todaysAttendanceRecord.timestamp as Timestamp,
+                  class: studentDataFromDb.class,
+                  shift: studentDataFromDb.shift,
+                  id: todaysAttendanceRecord.id
+                } : undefined;
 
-           const todayCalculatedStatus = getStudentDailyStatus(
-             studentDataFromDb,
-             today,
-             rawTodayRecord,
-             classConfigs,
-             approvedPermissions
-           );
+                const todayCalculatedStatus = getStudentDailyStatus(
+                  studentDataFromDb,
+                  today,
+                  rawTodayRecord,
+                  classConfigs,
+                  approvedPermissions
+                );
 
-           const todayDisplayStatus = todayCalculatedStatus.status === "Permission" ? 'permission' :
-                                    todayCalculatedStatus.status === "Not Yet Enrolled" ? 'not-enrolled' :
-                                    todayCalculatedStatus.status === "No School" ? 'no-school' :
-                                    todayCalculatedStatus.status === "Present" ? 'present' :
-                                    todayCalculatedStatus.status === "Late" ? 'late' :
-                                    todayCalculatedStatus.status === "Pending" ? 'pending' : 'absent';
+                const todayDisplayStatus = todayCalculatedStatus.status === "Permission" ? 'permission' :
+                                         todayCalculatedStatus.status === "Not Yet Enrolled" ? 'not-enrolled' :
+                                         todayCalculatedStatus.status === "No School" ? 'no-school' :
+                                         todayCalculatedStatus.status === "Present" ? 'present' :
+                                         todayCalculatedStatus.status === "Late" ? 'late' :
+                                         todayCalculatedStatus.status === "Pending" ? 'pending' : 'absent';
 
-           const todaysRecord = todaysAttendanceRecord || { 
-             id: today, 
-             date: today, 
-             status: todayDisplayStatus,
-             calculatedTime: todayCalculatedStatus.time 
-           };
-           setTodayRecord(todaysRecord);
-           
-           setLoading(false);
-         });
-       } catch (error) { console.error("Error fetching attendance:", error); setLoading(false); }
-     };
-     fetchSchoolDayAttendance();
-     return () => { if (unsubscribe) unsubscribe(); };
-   }, [studentUid]);
+                const todaysRecord = todaysAttendanceRecord || { 
+                  id: today, 
+                  date: today, 
+                  status: todayDisplayStatus,
+                  calculatedTime: todayCalculatedStatus.time 
+                };
+                setTodayRecord(todaysRecord);
+                
+                setLoading(false);
+              });
+            });
+          });
+        });
+      } catch (error) { 
+        console.error("Error setting up real-time listeners:", error); 
+        setLoading(false); 
+      }
+    };
+    
+    fetchSchoolDayAttendance();
+    
+    return () => { 
+      if (attendanceUnsubscribe) attendanceUnsubscribe();
+      if (studentUnsubscribe) studentUnsubscribe();
+      if (classesUnsubscribe) classesUnsubscribe();
+      if (permsUnsubscribe) permsUnsubscribe();
+    };
+  }, [studentUid]);
   
    // Fetch permission history for the current student (last 30 days)
    useEffect(() => {
@@ -370,8 +401,8 @@ const AttendancePage = () => {
        `}</style>
 
       <SlideInPanel title="Confirm Attendance Request" isOpen={isRequestConfirmOpen} onClose={() => setIsRequestConfirmOpen(false)}>
-        <div className="p-6">
-            <p className="text-gray-700 dark:text-gray-300 mb-8">
+        <div className="">
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
                 You are about to request manual attendance marking. This should only be used if face recognition has failed. Are you sure you want to proceed?
             </p>
             <div className="flex justify-end space-x-3">
@@ -386,7 +417,7 @@ const AttendancePage = () => {
        </SlideInPanel>
 
        <SlideInPanel title="Last 10 Days Activity" isOpen={isDetailsPanelOpen} onClose={() => setIsDetailsPanelOpen(false)}>
-           <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-xl">
+           <div className="bg-white/95 dark:bg-slate-800/95 rounded-2xl p-4 shadow-xl border border-gray-100/50 dark:border-slate-600/50">
              <div className="max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
                {recentRecords.length > 0 ? recentRecords.map(record => {
                const styles = getStatusStyles(record.status);
@@ -400,7 +431,7 @@ const AttendancePage = () => {
                  : null;
 
                return (
-                 <div key={record.id} className="flex items-center justify-between p-4 mb-3 bg-gray-50 dark:bg-slate-800 rounded-xl hover:shadow-md transition-all duration-200 border border-gray-100 dark:border-slate-700">
+                 <div key={record.id} className="flex items-center justify-between p-4 mb-3 bg-gray-50/80 dark:bg-slate-700/80 rounded-xl hover:shadow-md transition-all duration-200 border border-gray-100 dark:border-slate-600">
                    <div className="flex items-center space-x-3">
                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${styles.cardBg}`}>
                        <Icon path={styles.icon} size={20} className="text-white" />
@@ -480,7 +511,7 @@ const AttendancePage = () => {
              <div className="flex items-center space-x-3 px-2">
 
                <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                 Quick Actions_2
+                 Quick Actions
                </h2>
              </div>
              
@@ -492,7 +523,7 @@ const AttendancePage = () => {
                  <button 
                    onClick={() => setIsRequestConfirmOpen(true)}
                    disabled={['present', 'late', 'permission', 'pending'].includes(todayRecord?.status)}
-                   className="relative w-full bg-white dark:bg-slate-800/90 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-700/80 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
+                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
                    <div className="flex items-center w-full space-x-4">
@@ -510,9 +541,9 @@ const AttendancePage = () => {
                      
                      {/* Content Section */}
                      <div className="text-left flex-1 min-w-0">
-                       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
+                       <p className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
                          Request Attendance
-                       </h3>
+                       </p>
                        <div className="flex items-center space-x-2">
                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
@@ -534,7 +565,7 @@ const AttendancePage = () => {
                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-all duration-200"></div>
                  <button 
                    onClick={() => setIsPermissionPanelOpen(true)}
-                   className="relative w-full bg-white dark:bg-slate-800/90 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-700/80 active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
+                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
                    <div className="flex items-center w-full space-x-4">
@@ -553,7 +584,7 @@ const AttendancePage = () => {
                      {/* Content Section */}
                      <div className="text-left flex-1 min-w-0">
                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
-                         Request Permission
+                        Permission Form
                        </h3>
                        <div className="flex items-center space-x-2">
                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>

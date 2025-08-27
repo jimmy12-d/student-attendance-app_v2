@@ -14,9 +14,8 @@ import { usePWANavigation } from '@/app/_hooks/usePWANavigation';
 
 // --- Import components for settings ---
 import NotificationSettings from '../_components/NotificationSettings';
-import { EnrollmentView } from '../_components/FacialEnrollment'; // Import the modal view directly
 import { RootState } from '@/app/_stores/store';
-import { mdiChevronRight, mdiBell, mdiPalette, mdiFaceRecognition, mdiLogout } from '@mdi/js';
+import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
 
 // --- Reusable UI Components for the new design ---
@@ -113,10 +112,8 @@ const AccountPage = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { navigateWithinPWA } = usePWANavigation();
-  const userUid = useAppSelector((state: RootState) => state.main.userUid);
 
   const [isLogoutModalActive, setIsLogoutModalActive] = useState(false);
-  const [isFacialEnrollmentModalOpen, setIsFacialEnrollmentModalOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -137,14 +134,6 @@ const AccountPage = () => {
       >
         <p>Are you sure you want to log out?</p>
       </CardBoxModal>
-      
-      {isFacialEnrollmentModalOpen && userUid && (
-        <EnrollmentView 
-          userUid={userUid} 
-          onCancel={() => setIsFacialEnrollmentModalOpen(false)} 
-          onComplete={() => setIsFacialEnrollmentModalOpen(false)} 
-        />
-      )}
 
       <div className="pb-24 px-1">
         {/* Modern Header */}
@@ -172,7 +161,7 @@ const AccountPage = () => {
               <SettingsListItem
                 iconPath={mdiBell}
                 iconBgColor="bg-gradient-to-br from-red-500 to-pink-600"
-                title="Notifications"
+                title="Notifications_2"
                 subtitle="Manage your alert preferences"
               >
                 <NotificationSettings />
@@ -186,22 +175,6 @@ const AccountPage = () => {
               >
                 <DarkModeToggle />
               </SettingsListItem>
-            </SettingsGroup>
-          </div>
-
-          {/* Security & Features Group */}
-          <div>
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4">
-              Security & Features
-            </h2>
-            <SettingsGroup>
-              <SettingsListItem
-                iconPath={mdiFaceRecognition}
-                iconBgColor="bg-gradient-to-br from-emerald-500 to-teal-600"
-                title="Face Recognition"
-                subtitle="Set up biometric authentication"
-                onClick={() => setIsFacialEnrollmentModalOpen(true)}
-              />
             </SettingsGroup>
           </div>
           

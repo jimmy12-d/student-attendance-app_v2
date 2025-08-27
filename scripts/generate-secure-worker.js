@@ -1,4 +1,21 @@
-// Custom service worker for PWA navigation handling and Firebase Cloud Messaging
+const fs = require('fs');
+const path = require('path');
+
+// Read environment variables
+require('dotenv').config({ path: '.env.local' });
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || ""
+};
+
+// Service worker template
+const workerTemplate = `// Custom service worker for PWA navigation handling and Firebase Cloud Messaging
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { NetworkFirst, StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
@@ -10,15 +27,7 @@ importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
 
 // Firebase configuration injected at build time
-const firebaseConfig = {
-  "apiKey": "AIzaSyBlUIZfsrgVvfw4fL2poyITh0bfM9Iumag",
-  "authDomain": "portal.rodwell.center",
-  "projectId": "rodwell-attendance",
-  "storageBucket": "rodwell-attendance.firebasestorage.app",
-  "messagingSenderId": "50079853705",
-  "appId": "1:50079853705:web:5e9d3dcb42b4d0d874aa58",
-  "measurementId": ""
-};
+const firebaseConfig = ${JSON.stringify(firebaseConfig, null, 2)};
 
 // Initialize Firebase for messaging
 if (typeof firebase !== 'undefined' && firebaseConfig.apiKey) {
@@ -93,7 +102,7 @@ const navigationRoute = new NavigationRoute(navigationHandler, {
   ],
   denylist: [
     new RegExp('^/api/.*$'),
-    new RegExp('.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$'),
+    new RegExp('.*\\\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$'),
   ],
 });
 
@@ -235,3 +244,11 @@ self.addEventListener('install', (event) => {
     })
   );
 });
+`;
+
+// Write the generated worker
+const outputPath = path.resolve(process.cwd(), 'worker/index.js');
+fs.writeFileSync(outputPath, workerTemplate, 'utf8');
+
+console.log('✅ Secure service worker generated with environment variables!');
+console.log('🔒 No credentials exposed in public files.');

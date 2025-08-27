@@ -11,27 +11,25 @@ export const usePWANavigation = () => {
   const router = useRouter();
 
   const navigateWithinPWA = useCallback((url: string, options?: { replace?: boolean }) => {
-    // Check if we're in a PWA context
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                  (window.navigator as any).standalone === true;
+    try {
+      // Check if we're in a PWA context
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                    (window.navigator as any).standalone === true;
 
-    console.log('PWA Navigation:', { url, isPWA, options, currentUrl: window.location.href });
-
-    // Force replace for attendance navigation to maintain PWA context
-    const shouldReplace = options?.replace || url.includes('/student/attendance');
-    
-    // Use a small delay to ensure PWA context is preserved during navigation
-    setTimeout(() => {
-      // Always use Next.js router to maintain SPA navigation
-      // PWA context is maintained through proper routing, not window.location
+      // Force replace for attendance navigation to maintain PWA context
+      const shouldReplace = options?.replace || url.includes('/student/attendance');
+      
+      // Use Next.js router directly without setTimeout to avoid issues
       if (shouldReplace) {
-        console.log('Using router.replace for:', url);
         router.replace(url);
       } else {
-        console.log('Using router.push for:', url);
         router.push(url);
       }
-    }, 100);
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Fallback to push if replace fails
+      router.push(url);
+    }
   }, [router]);
 
   const isStandalone = useCallback(() => {

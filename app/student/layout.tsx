@@ -82,7 +82,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [dispatch, router]);
+  }, [dispatch, navigateWithinPWA]);
 
 
   if (loading) {
@@ -95,7 +95,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900" />
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800" />
       <Toaster richColors position="top-center" />
       <div className="relative min-h-screen md:ml-64 lg:ml-0 xl:ml-0">
         <StudentTopNav />

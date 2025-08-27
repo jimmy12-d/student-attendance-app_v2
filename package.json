@@ -2,8 +2,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node scripts/generate-sw.js",
+    "prebuild": "node scripts/generate-secure-worker.js",
     "build": "next build",
+    "postbuild": "node scripts/secure-worker-postbuild.js",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
     "format": "prettier 'app/**/*.{tsx,ts,js}' --write",
@@ -42,6 +43,7 @@
     "firebase-admin": "^13.4.0",
     "formik": "^2.4.2",
     "framer-motion": "^12.19.2",
+    "glob": "^11.0.3",
     "html-to-image": "^1.11.13",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.525.0",

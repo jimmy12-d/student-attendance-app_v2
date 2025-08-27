@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/app/_stores/hooks';
 import { setNotifications, markNotificationAsRead, markAllNotificationsAsRead, AppNotification } from '@/app/_stores/mainSlice';
 import { db } from '@/firebase-config';
-import { collection, query, where, getDocs, doc, setDoc, writeBatch, QuerySnapshot, DocumentData } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, writeBatch, QuerySnapshot, DocumentData, orderBy, onSnapshot } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { usePWANavigation } from '@/app/_hooks/usePWANavigation';
 import Icon from '@/app/_components/Icon';
@@ -54,7 +54,8 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
             const userQuery = query(
                 collection(db, "notifications"), 
                 where('targetType', '==', 'user'), 
-                where('targetValue', 'array-contains', userUid)
+                where('targetValue', 'array-contains', userUid),
+                orderBy('createdAt', 'desc')
             );
             notificationPromises.push(getDocs(userQuery));
             
@@ -62,7 +63,8 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
             const allUsersQuery = query(
                 collection(db, "notifications"), 
                 where('targetType', '==', 'all'),
-                where('targetValue', '==', 'all_students')
+                where('targetValue', '==', 'all_students'),
+                orderBy('createdAt', 'desc')
             );
             notificationPromises.push(getDocs(allUsersQuery));
 
@@ -71,7 +73,8 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
                 const classQuery = query(
                     collection(db, "notifications"), 
                     where('targetType', '==', 'class'), 
-                    where('targetValue', 'array-contains', studentClassType)
+                    where('targetValue', 'array-contains', studentClassType),
+                    orderBy('createdAt', 'desc')
                 );
                 notificationPromises.push(getDocs(classQuery));
             }
@@ -111,8 +114,54 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
             }
         };
 
-        if (isVisible) {
+        if (isVisible && userUid) {
+            // Set up real-time listener for notifications
+            const notificationQueries = [];
+            
+            // Real-time listener for user-specific notifications
+            notificationQueries.push(
+                query(
+                    collection(db, "notifications"), 
+                    where('targetType', '==', 'user'), 
+                    where('targetValue', 'array-contains', userUid)
+                )
+            );
+            
+            // Real-time listener for all students notifications
+            notificationQueries.push(
+                query(
+                    collection(db, "notifications"), 
+                    where('targetType', '==', 'all'),
+                    where('targetValue', '==', 'all_students')
+                )
+            );
+
+            // Real-time listener for class notifications
+            if (studentClassType) {
+                notificationQueries.push(
+                    query(
+                        collection(db, "notifications"), 
+                        where('targetType', '==', 'class'), 
+                        where('targetValue', 'array-contains', studentClassType)
+                    )
+                );
+            }
+
+            const unsubscribes = notificationQueries.map(q => 
+                onSnapshot(q, () => {
+                    // Refresh notifications when any changes occur
+                    fetchNotifications();
+                }, (error) => {
+                    console.error("Error listening to notifications:", error);
+                })
+            );
+
+            // Initial fetch
             fetchNotifications();
+
+            return () => {
+                unsubscribes.forEach(unsubscribe => unsubscribe());
+            };
         }
     }, [userUid, studentClassType, dispatch, isVisible]);
     
