@@ -11,6 +11,9 @@ import {
   mdiShieldCheck
 } from '@mdi/js';
 
+// Force dynamic rendering to avoid build issues
+export const dynamic = 'force-dynamic';
+
 import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
 import CardBox from "../../_components/CardBox";

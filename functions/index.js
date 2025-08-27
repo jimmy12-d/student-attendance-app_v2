@@ -105,13 +105,6 @@ const validatePasswordStrength = (password) => {
     if (!hasLowercase) {
         return { valid: false, message: "Password must contain at least one lowercase letter." };
     }
-    if (!hasNumbers) {
-        return { valid: false, message: "Password must contain at least one number." };
-    }
-    if (!hasSpecialChars) {
-        return { valid: false, message: "Password must contain at least one special character (!@#$%^&*...)." };
-    }
-    
     return { valid: true, message: "Password is strong." };
 };
 
@@ -405,8 +398,6 @@ const handleSetCustomPasswordCommand = async (bot, chatId, userId) => {
             "• At least 8 characters long\n" +
             "• Contains uppercase letters (A-Z)\n" +
             "• Contains lowercase letters (a-z)\n" +
-            "• Contains numbers (0-9)\n" +
-            "• Contains special characters (!@#$%^&*...)\n\n" +
             "Type `/cancel` to cancel this operation.");
 
         // Store user state for custom password input
@@ -565,11 +556,11 @@ const handleRequestCustomPassword = async (bot, chatId, userId, messageId) => {
     try {
         console.log(`handleRequestCustomPassword called for chatId ${chatId}`);
         
-        // Get current user state to ensure it exists and is in the correct state
+        // Get user state (using same validation pattern as handleGeneratePassword)
         const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
         
-        if (!stateDoc.exists) {
-            console.error(`User state not found for chatId ${chatId}`);
+        if (!stateDoc.exists || stateDoc.data().state !== "password_setup_menu") {
+            console.error(`User state validation failed for chatId ${chatId}. Exists: ${stateDoc.exists}, State: ${stateDoc.exists ? stateDoc.data().state : 'N/A'}`);
             await bot.editMessageText("❌ Session expired. Please start registration again with /start.", {
                 chat_id: chatId,
                 message_id: messageId
@@ -578,40 +569,34 @@ const handleRequestCustomPassword = async (bot, chatId, userId, messageId) => {
         }
 
         const currentState = stateDoc.data();
+        const studentId = currentState.studentId;
         
-        if (currentState.state !== "password_setup_menu") {
-            console.error(`Invalid state for custom password: ${currentState.state} for chatId ${chatId}`);
-            await bot.editMessageText("❌ Invalid session state. Please start registration again with /start.", {
-                chat_id: chatId,
-                message_id: messageId
-            });
-            return;
-        }
+        console.log(`Valid state found for chatId ${chatId}, studentId: ${studentId}`);
         
-        // Update user state for custom password input
-        await db.collection("telegramUserStates").doc(chatId.toString()).set({
-            ...currentState, // Preserve existing fields like studentId
+        // Update user state for custom password input (using simpler approach)
+        await db.collection("telegramUserStates").doc(chatId.toString()).update({
             state: "waiting_custom_password_initial",
             messageIdToEdit: messageId,
             timestamp: FieldValue.serverTimestamp()
-        }, { merge: true });
+        });
+
+        console.log(`State updated for chatId ${chatId} to waiting_custom_password_initial`);
 
         await bot.editMessageText(
-            `✏️ **Create Your Custom Password**\n\n` +
-            `Please enter your new password. It must meet these requirements:\n` +
-            `• At least 8 characters long\n` +
-            `• Contains uppercase letters (A-Z)\n` +
-            `• Contains lowercase letters (a-z)\n` +
-            `• Contains numbers (0-9)\n` +
-            `• Contains special characters (!@#$%^&*...)\n\n` +
-            `Type your password in the next message. The message will be automatically deleted after processing for security.\n\n` +
-            `Type \`/cancel\` to cancel this operation.`,
+            'Create Your Custom Password\n\n' +
+            'Please enter your new password. It must meet these requirements:\n' +
+            '• At least 8 characters long\n' +
+            '• Contains uppercase letters (A-Z)\n' +
+            '• Contains lowercase letters (a-z)\n\n' +
+            'Type your password in the next message. The message will be automatically deleted after processing for security.\n\n' +
+            'Type /cancel to cancel this operation.',
             {
                 chat_id: chatId,
-                message_id: messageId,
-                parse_mode: 'Markdown'
+                message_id: messageId
             }
         );
+
+        console.log(`Message edited successfully for chatId ${chatId}`);
 
     } catch (error) {
         console.error(`Error requesting custom password for chatId ${chatId}:`, error);
@@ -771,19 +756,16 @@ const handleChangeCustomPassword = async (bot, chatId, userId, messageId) => {
         });
 
         await bot.editMessageText(
-            `✏️ **Change to Custom Password**\n\n` +
-            `Please enter your new password. It must meet these requirements:\n` +
-            `• At least 8 characters long\n` +
-            `• Contains uppercase letters (A-Z)\n` +
-            `• Contains lowercase letters (a-z)\n` +
-            `• Contains numbers (0-9)\n` +
-            `• Contains special characters (!@#$%^&*...)\n\n` +
-            `Type your password in the next message. The message will be automatically deleted after processing for security.\n\n` +
-            `Type \`/cancel\` to cancel this operation.`,
+            'Change to Custom Password\n\n' +
+            'Please enter your new password. It must meet these requirements:\n' +
+            '• At least 8 characters long\n' +
+            '• Contains uppercase letters (A-Z)\n' +
+            '• Contains lowercase letters (a-z)\n\n' +
+            'Type your password in the next message. The message will be automatically deleted after processing for security.\n\n' +
+            'Type /cancel to cancel this operation.',
             {
                 chat_id: chatId,
-                message_id: messageId,
-                parse_mode: 'Markdown'
+                message_id: messageId
             }
         );
 
@@ -2503,186 +2485,6 @@ exports.linkStudentByPhone = onCall({
     throw new HttpsError("internal", "An unexpected error occurred while linking your account.");
   }
 });
-
-
-/**
- * [Callable Function]
- * Generates and sends a one-time password (OTP) to a user's Telegram account
- * by calling the official Telegram Gateway API.
- */
-exports.sendTelegramOtp = onCall({
-  region: "asia-southeast1",
-  secrets: ["TELEGRAM_GATEWAY_TOKEN"], // Reference the secret by name
-}, async (request) => {
-    if (!request.data.phoneNumber) {
-        throw new HttpsError("invalid-argument", "The function must be called with a 'phoneNumber' argument in E.164 format.");
-    }
-    const { phoneNumber } = request.data; // e.g., '+85512345678'
-
-    // Access the secret value through the process.env
-    const telegramToken = process.env.TELEGRAM_GATEWAY_TOKEN;
-    if (!telegramToken) {
-        throw new HttpsError("internal", "Telegram Gateway token not configured.");
-    }
-
-    try {
-        const response = await axios.post(`${TELEGRAM_GATEWAY_API_URL}/sendVerificationMessage`, 
-          {
-            phone_number: phoneNumber,
-            code_length: 6, // Let Telegram generate a 6-digit code
-            ttl: 600, // Code is valid for 10 minutes (600 seconds)
-          }, 
-          {
-            headers: { 
-              'Authorization': `Bearer ${telegramToken}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-
-        if (response.data.ok === true) {
-            const requestId = response.data.result.request_id;
-            logger.log(`Successfully requested OTP for ${phoneNumber}. Request ID: ${requestId}`);
-            // Return the request_id to the client, which is needed for verification.
-            return { success: true, requestId: requestId };
-        } else {
-            // The API call was successful but Telegram returned an error.
-            logger.error("Telegram Gateway API returned an error:", response.data);
-            throw new HttpsError("internal", response.data.error || "Failed to send OTP via Telegram Gateway.");
-        }
-
-    } catch (error) {
-        logger.error(`Failed to send OTP to ${phoneNumber} via Telegram Gateway.`, error.response ? error.response.data : error.message);
-        throw new HttpsError("internal", "An error occurred while communicating with the Telegram service.");
-    }
-});
-
-/**
- * [Callable Function]
- * Verifies an OTP with the Telegram Gateway, and if valid, handles the user login/linking logic.
- */
-exports.verifyTelegramOtp = onCall({
-    region: "asia-southeast1",
-    secrets: ["TELEGRAM_GATEWAY_TOKEN"], // Reference the secret by name
-}, async (request) => {
-    const { requestId, otp, phoneNumber } = request.data;
-    if (!requestId || !otp || !phoneNumber) {
-        throw new HttpsError("invalid-argument", "The function must be called with 'requestId', 'otp', and 'phoneNumber'.");
-    }
-
-    // Access the secret value through the process.env
-    const telegramToken = process.env.TELEGRAM_GATEWAY_TOKEN;
-    if (!telegramToken) {
-        throw new HttpsError("internal", "Telegram Gateway token not configured.");
-    }
-
-    // 1. Verify the OTP with the Telegram Gateway
-    try {
-      const response = await axios.post(`${TELEGRAM_GATEWAY_API_URL}/checkVerificationStatus`, 
-        {
-          request_id: requestId,
-          code: otp,
-        }, 
-        {
-          headers: { 
-            'Authorization': `Bearer ${telegramToken}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.data.ok !== true || response.data.result?.verification_status?.status !== 'code_valid') {
-        const errorStatus = response.data.result?.verification_status?.status || 'unknown_error';
-        logger.warn(`OTP verification failed for request ${requestId} with status: ${errorStatus}`);
-        throw new HttpsError("invalid-argument", "The OTP is incorrect or has expired. Please try again.");
-      }
-      logger.log(`OTP for request ${requestId} verified successfully.`);
-
-    } catch (error) {
-       if (error instanceof HttpsError) {
-          throw error;
-       }
-       logger.error(`Failed to verify OTP for request ${requestId}.`, error.response ? error.response.data : error.message);
-       throw new HttpsError("internal", "An error occurred while verifying the OTP with the Telegram service.");
-    }
-    
-    // --- OTP is valid, proceed with student linking and login logic ---
-
-    // 2. Normalize phone number for DB lookup
-    const normalizedPhoneForDB = normalizePhone(phoneNumber);
-    let e164Phone = phoneNumber.replace(/\D/g, '');
-    if (e164Phone.startsWith('0')) {
-        e164Phone = '855' + e164Phone.substring(1);
-    } else if (!e164Phone.startsWith('855')) {
-        e164Phone = '855' + e164Phone;
-    }
-    const e164PhoneWithPlus = `+${e164Phone}`;
-
-
-    // 3. Find the student by phone number
-    const studentQuery = await db.collection("students").where("phone", "==", normalizedPhoneForDB).limit(1).get();
-    if (studentQuery.empty) {
-        throw new HttpsError("not-found", "This phone number is not registered with any student. Please contact an administrator for assistance.");
-    }
-    
-    const studentDoc = studentQuery.docs[0];
-    const studentData = studentDoc.data();
-    let authUid = studentData.authUid;
-
-    // 4. Handle Auth User Linking
-    try {
-        const authUser = await admin.auth().getUserByPhoneNumber(e164PhoneWithPlus);
-        
-        if (authUid && authUid !== authUser.uid) {
-            throw new HttpsError("already-exists", "This student account is already linked with another user.");
-        }
-        
-        if (!authUid) {
-            await studentDoc.ref.update({ authUid: authUser.uid });
-            logger.log(`Linked existing auth user ${authUser.uid} to student ${studentDoc.id}`);
-        }
-        
-        authUid = authUser.uid;
-
-    } catch (error) {
-        if (error.code === "auth/user-not-found") {
-            if (authUid) {
-                throw new HttpsError("internal", "Account data is inconsistent. Please contact an administrator.");
-            }
-            
-            const newUser = await admin.auth().createUser({
-                phoneNumber: e164PhoneWithPlus,
-                displayName: studentData.fullName || "New Student",
-            });
-            authUid = newUser.uid;
-            
-            await studentDoc.ref.update({ authUid: authUid });
-            logger.log(`Created and linked new auth user ${authUid} to student ${studentDoc.id}`);
-
-        } else if (error instanceof HttpsError) {
-            throw error;
-        } else {
-            logger.error("Error fetching auth user:", error);
-            throw new HttpsError("internal", "An unexpected error occurred while verifying your account.");
-        }
-    }
-
-    // 5. Generate a custom token for the client to sign in with
-    const customToken = await admin.auth().createCustomToken(authUid);
-    
-    // 6. Return token and full student data for the client
-    return {
-        success: true,
-        token: customToken,
-        studentData: {
-            ...studentData,
-            id: studentDoc.id,
-            uid: authUid,
-            authUid: authUid,
-        },
-    };
-});
-
 
 // Note: The 'linkStudentProfileWithVerifiedNumber' function that previously existed
 // has been removed and replaced by the two functions above.

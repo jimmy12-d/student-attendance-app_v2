@@ -17,6 +17,7 @@ interface ClassTableProps {
   shift?: 'Morning' | 'Afternoon' | 'Evening';
   isBatchEditMode?: boolean;
   isTakeAttendanceMode?: boolean;
+  isFlipFlopPreviewMode?: boolean;
   onBatchUpdate?: () => void;
   selectedStudents?: Set<string>;
   onStudentSelect?: (studentId: string, isSelected: boolean) => void;
@@ -43,6 +44,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   shift = 'Morning',
   isBatchEditMode = false,
   isTakeAttendanceMode = false,
+  isFlipFlopPreviewMode = false,
   onBatchUpdate,
   selectedStudents = new Set(),
   onStudentSelect,
@@ -62,6 +64,29 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   const classId = `${className}-${shift}`;
   // Use just className for zoom state so all shifts of same class share zoom state
   const isExpanded = expandedClasses.has(className || '');
+
+  // Helper function to get display shift for flip-flop preview
+  const getDisplayShift = (originalShift: string) => {
+    if (!isFlipFlopPreviewMode) return originalShift;
+    
+    // Check if any student in this list has flip-flop schedule type
+    const hasFlipFlopStudents = studentList.some(student => 
+      student.scheduleType?.toLowerCase() === 'flip-flop'
+    );
+    
+    if (!hasFlipFlopStudents) return originalShift;
+    
+    // Toggle the shift for preview
+    if (originalShift.toLowerCase() === 'morning') {
+      return 'Afternoon';
+    } else if (originalShift.toLowerCase() === 'afternoon') {
+      return 'Morning';
+    }
+    return originalShift;
+  };
+
+  // Get the display shift
+  const displayShift = getDisplayShift(shift);
 
   // Three-state system: 0=hidden, 1=normal, 2=zoomed
   const getViewState = () => {
@@ -233,9 +258,10 @@ export const ClassTable: React.FC<ClassTableProps> = ({
     onViewDetails(student, studentList);
   };
 
-  // Determine badge colors based on shift
+  // Determine badge colors based on display shift
   const getBadgeColors = () => {
-    switch (shift) {
+    const currentShift = isFlipFlopPreviewMode ? displayShift : shift;
+    switch (currentShift) {
       case 'Morning':
         return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-800 dark:border-blue-300';
       case 'Afternoon':
@@ -400,6 +426,9 @@ export const ClassTable: React.FC<ClassTableProps> = ({
             {/* Add the Icon component here */}
             <Icon path={mdiAccountSchool} size={18} className="mr-1" />
             {studentCount || studentList.length} Students
+            {isFlipFlopPreviewMode && studentList.some(s => s.scheduleType?.toLowerCase() === 'flip-flop') && (
+              <span className="ml-1 text-xs opacity-75">({displayShift})</span>
+            )}
           </span>
           
 
@@ -452,6 +481,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   onViewDetails={handleViewDetails}
                   isBatchEditMode={isBatchEditMode}
                   isTakeAttendanceMode={isTakeAttendanceMode}
+                  isFlipFlopPreviewMode={isFlipFlopPreviewMode}
                   onBatchUpdate={onBatchUpdate}
                   isSelected={selectedStudents.has(student.id)}
                   onSelect={onStudentSelect}

@@ -68,6 +68,9 @@ export default function StudentsPage() {
   // Take attendance state
   const [isTakeAttendanceMode, setIsTakeAttendanceMode] = useState(false);
 
+  // Flip-flop preview state
+  const [isFlipFlopPreviewMode, setIsFlipFlopPreviewMode] = useState(false);
+
   // Modal state for viewing student details
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -238,6 +241,84 @@ export default function StudentsPage() {
     }
   };
 
+  // Flip-flop preview functions
+  const handleToggleFlipFlopPreview = () => {
+    setIsFlipFlopPreviewMode(!isFlipFlopPreviewMode);
+  };
+
+  // Function to toggle shift for flip-flop students
+  const toggleFlipFlopShift = (shift: string): string => {
+    if (shift.toLowerCase() === 'morning') {
+      return 'Afternoon';
+    } else if (shift.toLowerCase() === 'afternoon') {
+      return 'Morning';
+    }
+    return shift; // Return original shift if not morning/afternoon
+  };
+
+  // Function to automatically change flip-flop students' schedules monthly
+  const handleFlipFlopScheduleChange = async () => {
+    try {
+      const currentMonth = new Date().getMonth(); // 0-based month
+      const flipFlopStudents = students.filter(student => 
+        student.scheduleType?.toLowerCase() === 'flip-flop'
+      );
+
+      if (flipFlopStudents.length === 0) {
+        toast.info('No flip-flop students found to update');
+        return;
+      }
+
+      // Update each flip-flop student's shift
+      const updatePromises = flipFlopStudents.map(async (student) => {
+        const newShift = toggleFlipFlopShift(student.shift);
+        await updateDoc(doc(db, "students", student.id), {
+          shift: newShift,
+          lastFlipFlopUpdate: serverTimestamp()
+        });
+        return { name: student.fullName, oldShift: student.shift, newShift };
+      });
+
+      const results = await Promise.all(updatePromises);
+      
+      toast.success(`Updated ${results.length} flip-flop students for the new month`);
+      console.log('Flip-flop updates:', results);
+    } catch (error) {
+      console.error('Error updating flip-flop schedules:', error);
+      toast.error('Failed to update flip-flop schedules');
+    }
+  };
+
+  // Auto flip-flop check on component mount
+  useEffect(() => {
+    const checkFlipFlopSchedule = () => {
+      const now = new Date();
+      const currentDay = now.getDate();
+      
+      // Check if it's the first day of the month
+      if (currentDay === 1) {
+        // Check if we haven't already updated this month
+        const lastUpdateKey = `flipFlop_${now.getFullYear()}_${now.getMonth()}`;
+        const lastUpdate = localStorage.getItem(lastUpdateKey);
+        
+        if (!lastUpdate) {
+          // Mark as updated for this month
+          localStorage.setItem(lastUpdateKey, 'true');
+          
+          // Ask user if they want to update flip-flop schedules
+          if (window.confirm('It\'s a new month! Would you like to automatically update flip-flop student schedules?')) {
+            handleFlipFlopScheduleChange();
+          }
+        }
+      }
+    };
+
+    // Run check after students are loaded
+    if (students.length > 0) {
+      checkFlipFlopSchedule();
+    }
+  }, [students]);
+
   // Function to restore dropped student
   const handleRestoreStudent = async (student: Student) => {
     try {
@@ -327,7 +408,7 @@ export default function StudentsPage() {
       >
         {!isFormActive && ( // Use isFormActive here
           <>
-          <div className="flex items-center space-x-4"> {/* New flex container for the buttons */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4"> {/* Made responsive with flex-wrap and gap */}
             {/* Batch Edit and Export buttons - only show when expanded */}
             {isButtonsExpanded && (
               <>
@@ -344,6 +425,22 @@ export default function StudentsPage() {
                   icon={mdiDownload}
                   label="Export"
                   color="success"
+                  roundedFull
+                  small
+                />
+                <Button
+                  onClick={handleToggleFlipFlopPreview}
+                  icon={mdiMonitorCellphone}
+                  label={isFlipFlopPreviewMode ? "Exit Flip Preview" : "Flip Preview"}
+                  color={isFlipFlopPreviewMode ? "danger" : "info"}
+                  roundedFull
+                  small
+                />
+                <Button
+                  onClick={handleFlipFlopScheduleChange}
+                  icon={mdiClipboardCheck}
+                  label="Apply Flip-Flop"
+                  color="warning"
                   roundedFull
                   small
                 />
@@ -516,6 +613,7 @@ export default function StudentsPage() {
                 onDelete={handleDeleteStudent}
                 isBatchEditMode={isBatchEditMode}
                 isTakeAttendanceMode={isTakeAttendanceMode}
+                isFlipFlopPreviewMode={isFlipFlopPreviewMode}
                 onBatchUpdate={() => {}} // No need to manually refresh - real-time listener handles updates
                 onExitBatchEdit={() => setIsBatchEditMode(false)}
                 onExitTakeAttendance={() => setIsTakeAttendanceMode(false)}

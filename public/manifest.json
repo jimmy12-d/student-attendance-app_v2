@@ -3,9 +3,14 @@
   "short_name": "Rodwell Portal",
   "description": "Student attendance and portal for Rodwell.",
   "start_url": "/login",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
+  "orientation": "portrait-primary",
+  "background_color": "transparent",
   "theme_color": "#0f172a",
+  "categories": ["education", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -24,6 +29,32 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Student Login",
+      "short_name": "Login",
+      "description": "Quick access to student login",
+      "url": "/login",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Student Dashboard",
+      "short_name": "Dashboard",
+      "description": "Student attendance dashboard",
+      "url": "/student/attendance",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 } 

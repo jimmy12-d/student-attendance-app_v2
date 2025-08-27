@@ -18,10 +18,12 @@ import OtpInput from "@/app/_components/OtpInput";
 import Icon from "@/app/_components/Icon";
 import { navItems } from '@/app/student/_components/StudentBottomNav';
 import LoadingSpinner from "@/app/_components/LoadingSpinner";
+import { usePWANavigation } from "@/app/_hooks/usePWANavigation";
 import { mdiMessageBadge } from "@mdi/js";
 
 const VerifyOtpPage = () => {
     const router = useRouter();
+    const { navigateWithinPWA } = usePWANavigation();
     const searchParams = useSearchParams();
     const dispatch = useAppDispatch();
 
@@ -40,7 +42,7 @@ const VerifyOtpPage = () => {
             setRequestId(requestIdFromUrl);
         } else {
             // If phone or requestId is missing, the user can't proceed.
-            router.replace('/login');
+            navigateWithinPWA('/login');
         }
     }, [searchParams, router]);
 
@@ -81,7 +83,7 @@ const VerifyOtpPage = () => {
                 );
                 
                 // Redirect to the student dashboard
-                router.push(navItems[0].href); 
+                navigateWithinPWA(navItems[0].href); 
 
             } else {
                 throw new Error(resultData.error || "Failed to verify OTP. Please try again.");

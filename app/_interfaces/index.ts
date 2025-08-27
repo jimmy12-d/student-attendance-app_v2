@@ -92,6 +92,7 @@ export interface Student {
   shift: string;
   ay?: string; // Academic Year
   scheduleType?: string; // Schedule Type
+  lastFlipFlopUpdate?: Timestamp | Date; // When flip-flop schedule was last updated
   school?: string; // School
   motherName?: string; // Mother's Name
   motherPhone?: string; // Mother's Phone

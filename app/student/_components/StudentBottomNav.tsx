@@ -11,7 +11,7 @@ import { db } from '../../../firebase-config';
 import { useAppSelector } from '@/app/_stores/hooks';
 
 export const navItems = [
-  { name: 'Home', href: '/student', icon: mdiHome },
+  { name: 'Home', href: '/student/attendance', icon: mdiHome },
   { name: 'Mock Exam', href: '/student/mock-exam', icon: mdiFileDocumentEdit },
   { name: 'Account', href: '/student/account', icon: mdiAccountCircle },
 ];
@@ -53,12 +53,14 @@ export default function StudentBottomNav() {
       animate={{ y: 0 }}
       exit={{ y: 100 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[75%] max-w-sm mx-auto z-40"
+      // Use iOS safe area inset to keep the nav clearly separated from any system UI
+      style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+      className="fixed left-1/2 -translate-x-1/2 w-[75%] max-w-sm mx-auto z-40"
     >
       <div className="relative flex items-center justify-around bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg rounded-full shadow-lg border border-white/20">
         {currentNavItems.map((item) => {
-          // Special handling for Home button since it redirects to attendance
-          const isActive = item.href === '/student' 
+          // Special handling for Home button (attendance page)
+          const isActive = item.href === '/student/attendance' 
             ? (pathname === '/student' || pathname === '/student/attendance')
             : pathname.startsWith(item.href);
           return (

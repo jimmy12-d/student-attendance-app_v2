@@ -39,6 +39,7 @@ interface StudentRowProps {
   onViewDetails: (student: Student) => void;
   isBatchEditMode?: boolean;
   isTakeAttendanceMode?: boolean;
+  isFlipFlopPreviewMode?: boolean;
   onBatchUpdate?: () => void;
   isSelected?: boolean;
   onSelect?: (studentId: string, isSelected: boolean) => void;
@@ -57,6 +58,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   onViewDetails,
   isBatchEditMode = false,
   isTakeAttendanceMode = false,
+  isFlipFlopPreviewMode = false,
   onBatchUpdate,
   isSelected = false,
   onSelect,
@@ -68,6 +70,16 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   // Check if student has warning and is absent today
   const todayStatus = getTodayAttendanceStatus ? getTodayAttendanceStatus(student) : { status: 'Unknown' };
   const isWarningAbsent = student.warning && todayStatus.status === 'Absent';
+  
+  // Helper function to get flipped shift for flip-flop students
+  const getFlippedShift = (originalShift: string) => {
+    if (originalShift.toLowerCase() === 'morning') {
+      return 'Afternoon';
+    } else if (originalShift.toLowerCase() === 'afternoon') {
+      return 'Morning';
+    }
+    return originalShift;
+  };
   
   return (
     <tr className={`group transition-all duration-200 ease-in-out hover:shadow-sm ${
@@ -228,6 +240,11 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                     : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600'
                 }`}>
                   {student.scheduleType || 'N/A'}
+                  {isFlipFlopPreviewMode && student.scheduleType?.toLowerCase() === 'flip-flop' && (
+                    <span className="ml-1 text-xs opacity-75">
+                      ({getFlippedShift(student.shift)} next month)
+                    </span>
+                  )}
                 </span>
               </td>
             );

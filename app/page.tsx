@@ -1,9 +1,9 @@
 "use client";
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePWANavigation } from './_hooks/usePWANavigation';
 
 export default function HomePage() {
-  const router = useRouter();
+  const { navigateWithinPWA } = usePWANavigation();
 
   useEffect(() => {
     // This is a placeholder for your actual auth check.
@@ -11,11 +11,19 @@ export default function HomePage() {
     const isLoggedIn = localStorage.getItem('token'); 
 
     if (isLoggedIn) {
-      router.push('/student/home');
+      // Navigate directly to student attendance (the actual home page)
+      navigateWithinPWA('/student/attendance');
     } else {
-      router.push('/login');
+      navigateWithinPWA('/login');
     }
-  }, [router]);
+  }, [navigateWithinPWA]);
 
-  return null;
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    </div>
+  );
 }

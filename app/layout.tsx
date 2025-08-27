@@ -7,6 +7,7 @@ import StoreProvider from "./_stores/StoreProvider";
 import DarkModeInit from "./_components/DarkModeInit";
 import { Toaster } from 'sonner';
 import ClientLayoutWrapper from './_components/ClientLayoutWrapper';
+import PWAInstaller from './_components/PWAInstaller';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,10 +23,24 @@ const nokora = Nokora({
 export const metadata: Metadata = {
   title: "Rodwell Portal",
   description: "Rodwell Learning Center Student Attendance App",
+  manifest: "/manifest.json",
+  themeColor: "#0f172a",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
     apple: "/favicon.png",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": "Rodwell Portal",
   },
 };
 
@@ -36,11 +51,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
+      <head>
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Rodwell Portal" />
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body id="student-attendance-app" className={`h-full bg-gray-800 text-gray-100 ${inter.variable} ${nokora.variable}`}>
         <StoreProvider>
           <ClientLayoutWrapper>
             <div className="flex flex-col min-h-screen">
               <DarkModeInit />
+              <PWAInstaller />
               <main className="flex-grow">
                 {children}
               </main>

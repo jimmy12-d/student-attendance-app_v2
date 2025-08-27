@@ -7,6 +7,7 @@ import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/fire
 import { useAppSelector, useAppDispatch } from '../_stores/hooks';
 import { setUser } from '../_stores/mainSlice';
 import { auth, db } from '../../firebase-config';
+import { usePWANavigation } from '../_hooks/usePWANavigation';
 
 interface TeacherProtectedRouteProps {
   children: React.ReactNode;
@@ -14,6 +15,7 @@ interface TeacherProtectedRouteProps {
 
 const TeacherProtectedRoute: React.FC<TeacherProtectedRouteProps> = ({ children }) => {
   const router = useRouter();
+  const { navigateWithinPWA } = usePWANavigation();
   const dispatch = useAppDispatch();
   const [authStatus, setAuthStatus] = useState<'loading' | 'teacher' | 'student' | 'unauthorized' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -100,7 +102,7 @@ const TeacherProtectedRoute: React.FC<TeacherProtectedRouteProps> = ({ children 
           setTimeout(() => {
             if (mounted && !((userRole as any) === 'teacher')) {
               console.log("TeacherProtectedRoute: Final redirect to login");
-              router.push('/login');
+              navigateWithinPWA('/login');
             }
           }, 500);
         }
@@ -160,7 +162,7 @@ const TeacherProtectedRoute: React.FC<TeacherProtectedRouteProps> = ({ children 
       if (!studentSnapshot.empty) {
         console.log("TeacherProtectedRoute: User is a student. Redirecting...");
         setAuthStatus('student');
-        router.push('/student/home');
+        navigateWithinPWA('/student/attendance');
         return;
       }
       
@@ -204,7 +206,7 @@ const TeacherProtectedRoute: React.FC<TeacherProtectedRouteProps> = ({ children 
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Access Denied</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{errorMessage}</p>
           <button
-            onClick={() => router.push('/login')}
+            onClick={() => navigateWithinPWA('/login')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Back to Login

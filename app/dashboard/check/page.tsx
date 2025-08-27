@@ -18,6 +18,9 @@ import { collection, getDocs, query, where, orderBy, Timestamp, CollectionRefere
 import { AllClassConfigs, getCurrentYearMonthString, ClassShiftConfigs } from "../_lib/configForAttendanceLogic";
 import { getStudentDailyStatus } from "../_lib/attendanceLogic";
 
+// Force dynamic rendering to avoid build issues
+export const dynamic = 'force-dynamic';
+
 const getTodayDateString = (): string => {
   const today = new Date();
   const year = today.getFullYear();

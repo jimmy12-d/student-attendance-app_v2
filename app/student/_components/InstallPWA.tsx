@@ -79,7 +79,7 @@ const IOSInstallSheet = ({ onClose }: { onClose: () => void }) => {
     );
 };
 
-export const InstallPWA = ({ as_banner = false, as_button = false, as_link = false }) => {
+export const InstallPWA = ({ as_banner = false, as_button = false, as_link = false, showPrompt = false }) => {
   const { canInstallPWA, triggerInstall, isIOS } = usePWAInstall();
   const [showBanner, setShowBanner] = useState(false);
   const [iosSheetOpen, setIosSheetOpen] = useState(false);
@@ -133,6 +133,22 @@ export const InstallPWA = ({ as_banner = false, as_button = false, as_link = fal
   if (as_button) {
     return (
       <>
+        {showPrompt && (
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-blue-100 dark:border-slate-600">
+            <div className="text-center mb-3">
+              <div className="inline-flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 dark:text-blue-400">
+                  <polyline points="8 17 12 21 16 17"></polyline>
+                  <line x1="12" y1="12" x2="12" y2="21"></line>
+                  <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path>
+                </svg>
+              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Install App for Better Experience</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                Get faster access, offline features, and stay logged in after installation
+              </p>
+            </div>
+        
         <button
           onClick={handleInstallClick}
           className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
@@ -141,6 +157,20 @@ export const InstallPWA = ({ as_banner = false, as_button = false, as_link = fal
           <DownloadCloud />
           Install App
         </button>
+          </div>
+        )}
+        
+        {!showPrompt && (
+          <button
+            onClick={handleInstallClick}
+            className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
+          >
+            <DownloadCloud />
+            Install App
+          </button>
+        )}
+        
         <AnimatePresence>
             {iosSheetOpen && <IOSInstallSheet onClose={() => setIosSheetOpen(false)} />}
         </AnimatePresence>

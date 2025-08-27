@@ -6,6 +6,7 @@ import { setNotifications, markNotificationAsRead, markAllNotificationsAsRead, A
 import { db } from '@/firebase-config';
 import { collection, query, where, getDocs, doc, setDoc, writeBatch, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { usePWANavigation } from '@/app/_hooks/usePWANavigation';
 import Icon from '@/app/_components/Icon';
 import { mdiCheckAll } from '@mdi/js';
 import TimeAgo from 'react-timeago';
@@ -29,6 +30,7 @@ const NotificationSkeleton = () => (
 const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClose: () => void }) => {
     const dispatch = useAppDispatch();
     const router = useRouter();
+    const { navigateWithinPWA } = usePWANavigation();
     const { notifications, userUid, unreadNotificationCount, studentClassType } = useAppSelector((state) => ({
         notifications: state.main.notifications,
         userUid: state.main.userUid,
@@ -129,7 +131,7 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
     const handleNotificationClick = async (notification: AppNotification) => {
         await markSingleNotificationAsRead(notification);
         if (notification.link) {
-            router.push(notification.link);
+            navigateWithinPWA(notification.link);
         }
         onClose();
     };

@@ -1,25 +1,24 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePWANavigation } from '../../_hooks/usePWANavigation';
 
 export default function StudentHomePage() {
-  const router = useRouter();
+  const { navigateWithinPWA } = usePWANavigation();
 
   useEffect(() => {
-    router.replace('/student');
-  }, [router]);
+    // Use PWA-aware navigation to go directly to the student attendance page
+    // This prevents breaking out of standalone mode
+    navigateWithinPWA('/student/attendance', { replace: true });
+  }, [navigateWithinPWA]);
 
-  return null;
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    </div>
+  );
 }
-
-const StudentHomePageOld = () => {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/student');
-  }, [router]);
-
-  return null;
-};
  

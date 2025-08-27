@@ -75,7 +75,7 @@ const TeacherLayout: React.FC<TeacherLayoutProps> = ({ children }) => {
         // User is logged in but not a teacher, redirect based on role
         console.log('TeacherLayout: User is not a teacher, redirecting based on role:', userRole);
         if (userRole === 'student') {
-          router.push('/student');
+          router.push('/student/attendance');
         } else if (userRole === 'admin') {
           router.push('/dashboard');
         } else {

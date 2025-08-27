@@ -112,11 +112,17 @@ html, body {
   overflow-y: auto;
   height: auto;
   min-height: 100vh;
+  /* Use iOS safe areas in PWAs */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background-color: #0f172a; /* match themeColor for underlays */
 }
 
 #student-attendance-app {
   min-height: 100vh;
   overflow-y: auto;
+  /* Avoid iOS rubber-band revealing page controls */
+  overscroll-behavior-y: contain;
 }
 
 /* Custom Scrollbar Styles */

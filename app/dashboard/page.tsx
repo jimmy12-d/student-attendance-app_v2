@@ -8,6 +8,9 @@ import {
   mdiSchool, mdiAccountGroup, mdiChartPie, mdiEye, mdiChevronRight, mdiAccount,
   // Add any other icons used by your new section titles
 } from "@mdi/js";
+
+// Force dynamic rendering to avoid build issues
+export const dynamic = 'force-dynamic';
 import Button from "../_components/Button";
 import SectionMain from "../_components/Section/Main";
 import SectionTitleLineWithButton from "../_components/Section/TitleLineWithButton";
@@ -21,11 +24,11 @@ import { Student, PermissionRecord } from "../_interfaces";
 
 // Import the new section components
 // Dynamically import the section components with SSR disabled
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 
-const MonthlyAbsencesSection = dynamic(() => import("./_components/MonthlyAbsencesSection"), { ssr: false, loading: () => <p>Loading monthly absences...</p> });
-const MonthlyLatesSection = dynamic(() => import("./_components/MonthlyLatesSection"), { ssr: false, loading: () => <p>Loading monthly lates...</p> });
-const ConsecutiveAbsencesSection = dynamic(() => import("./_components/ConsecutiveAbsencesSection"), { ssr: false, loading: () => <p>Loading consecutive absences...</p> });
+const MonthlyAbsencesSection = dynamicImport(() => import("./_components/MonthlyAbsencesSection"), { ssr: false, loading: () => <p>Loading monthly absences...</p> });
+const MonthlyLatesSection = dynamicImport(() => import("./_components/MonthlyLatesSection"), { ssr: false, loading: () => <p>Loading monthly lates...</p> });
+const ConsecutiveAbsencesSection = dynamicImport(() => import("./_components/ConsecutiveAbsencesSection"), { ssr: false, loading: () => <p>Loading consecutive absences...</p> });
 
 // Import utils
 import { AllClassConfigs, ClassShiftConfigs, getCurrentYearMonthString,LATE_WINDOW_DURATION_MINUTES } from "./_lib/configForAttendanceLogic";

@@ -28,12 +28,13 @@ type Props = {
   onDelete: (student: Student) => void;
   isBatchEditMode?: boolean;
   isTakeAttendanceMode?: boolean;
+  isFlipFlopPreviewMode?: boolean;
   onBatchUpdate?: () => void;
   onExitBatchEdit?: () => void;
   onExitTakeAttendance?: () => void;
 };
 
-const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance }: Props) => {
+const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, isFlipFlopPreviewMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance }: Props) => {
   // Auth hook
   const { user } = useAuth();
   // Default column configuration
@@ -1076,6 +1077,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   shift="Morning"
                   isBatchEditMode={isBatchEditMode}
                   isTakeAttendanceMode={isTakeAttendanceMode}
+                  isFlipFlopPreviewMode={isFlipFlopPreviewMode}
                   onBatchUpdate={onBatchUpdate}
                   selectedStudents={selectedStudents}
                   onStudentSelect={handleStudentSelect}
@@ -1100,6 +1102,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   shift="Afternoon"
                   isBatchEditMode={isBatchEditMode}
                   isTakeAttendanceMode={isTakeAttendanceMode}
+                  isFlipFlopPreviewMode={isFlipFlopPreviewMode}
                   onBatchUpdate={onBatchUpdate}
                   selectedStudents={selectedStudents}
                   onStudentSelect={handleStudentSelect}
@@ -1158,6 +1161,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 shift="Evening"
                 isBatchEditMode={isBatchEditMode}
                 isTakeAttendanceMode={isTakeAttendanceMode}
+                isFlipFlopPreviewMode={isFlipFlopPreviewMode}
                 onBatchUpdate={onBatchUpdate}
                 selectedStudents={selectedStudents}
                 onStudentSelect={handleStudentSelect}

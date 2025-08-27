@@ -8,6 +8,7 @@ import { auth, db } from '../../firebase-config';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import React, { ReactNode, useEffect, useState } from "react";
 import StudentBottomNav from "./_components/StudentBottomNav";
+import { usePWANavigation } from "@/app/_hooks/usePWANavigation";
 import { Toaster } from 'sonner'
 import { InstallPWA } from './_components/InstallPWA';
 import StudentTopNav from './_components/StudentTopNav';
@@ -15,6 +16,7 @@ import NotificationPermissionPrompt from "./_components/NotificationPermissionPr
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const { navigateWithinPWA } = usePWANavigation();
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                     role: "student",
                   })
                 );
-                router.push('/login');
+                navigateWithinPWA('/login');
             }
         } else {
              // FAILURE: Authenticated, but no student record at all. Force them to link.
@@ -71,11 +73,11 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                   role: "student",
                 })
               );
-             router.push('/login');
+             navigateWithinPWA('/login');
         }
       } else {
         // User is not authenticated at all. Send them to the login page.
-        router.push('/login');
+        navigateWithinPWA('/login');
       }
     });
 

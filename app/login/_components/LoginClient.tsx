@@ -8,9 +8,11 @@ import { auth, db } from '../../../firebase-config';
 import CardBox from '../../_components/CardBox';
 import SectionFullScreen from '../../_components/Section/FullScreen';
 import StudentSignIn from './StudentSignIn';
+import { usePWANavigation } from '../../_hooks/usePWANavigation';
 
 const LoginClient = () => {
   const router = useRouter();
+  const { navigateWithinPWA } = usePWANavigation();
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -28,9 +30,9 @@ const LoginClient = () => {
             const studentData = studentDoc.data();
 
             if (studentData && studentData.class && studentData.class !== 'Unassigned') {
-              // User has a complete profile, redirect them
+              // User has a complete profile, redirect them using PWA navigation
               setIsAuthenticated(true);
-              router.replace('/student/home');
+              navigateWithinPWA('/student/attendance', { replace: true });
               return;
             }
           }

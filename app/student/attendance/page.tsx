@@ -28,6 +28,7 @@ const AttendancePage = () => {
   const [loading, setLoading] = useState(true);
   const [isPermissionPanelOpen, setIsPermissionPanelOpen] = useState(false);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
+
   const [ongoingPermissions, setOngoingPermissions] = useState<PermissionRecord[]>([]);
   const [loadingPermissions, setLoadingPermissions] = useState(true);
   const [todayRecord, setTodayRecord] = useState<any>(null);
@@ -479,7 +480,7 @@ const AttendancePage = () => {
              <div className="flex items-center space-x-3 px-2">
 
                <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                 Quick Actions
+                 Quick Actions_2
                </h2>
              </div>
              

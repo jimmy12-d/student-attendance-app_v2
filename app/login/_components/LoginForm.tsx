@@ -6,6 +6,7 @@ import Button from "../../_components/Button";
 import Buttons from "../../_components/Buttons";
 import { useRouter } from "next/navigation";
 import { auth, db } from "../../../firebase-config"; // Import auth and db directly
+import { usePWANavigation } from "../../_hooks/usePWANavigation";
 
 import {
   GoogleAuthProvider,
@@ -24,6 +25,7 @@ import { setUser } from "../../_stores/mainSlice";
 
 const LoginForm = () => {
   const router = useRouter();
+  const { navigateWithinPWA } = usePWANavigation();
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ const LoginForm = () => {
             role: "admin",
           })
         );
-        router.push("/dashboard");
+        navigateWithinPWA("/dashboard");
       } else {
         console.warn("User is NOT authorized:", firebaseUser.email);
         setError(`Access Denied. Your Google account (${firebaseUser.email}) is not authorized for this application.`);
@@ -235,8 +237,8 @@ const LoginForm = () => {
         // Finally, dispatch user info to Redux store
         dispatch(setUser(userPayload));
 
-        // Redirect to a student-specific dashboard
-        router.push("/student/home");
+        // Redirect to a student-specific dashboard using PWA navigation
+        navigateWithinPWA("/student/attendance");
       }
     } catch (error: any) {
       console.error("OTP Verification or Student Check Error:", error);

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CardBox from "../CardBox";
+import { usePWANavigation } from "@/app/_hooks/usePWANavigation";
 
 type Props = {
   style: string;
@@ -10,6 +11,7 @@ type Props = {
 
 export default function StylePickBox({ style }: Props) {
   const router = useRouter();
+  const { navigateWithinPWA } = usePWANavigation();
 
   const handleStylePick = (e: React.MouseEvent, style: string) => {
     e.preventDefault();
@@ -20,7 +22,7 @@ export default function StylePickBox({ style }: Props) {
       }
     });
 
-    router.push("/dashboard");
+    navigateWithinPWA("/dashboard");
   };
 
   return (

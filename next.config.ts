@@ -1,4 +1,63 @@
-module.exports = {
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: false, // Enable PWA for local testing - warning is normal in dev mode
+  runtimeCaching: [
+    {
+      urlPattern: /^https?:\/\/firestore\.googleapis\.com\/.*$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'firestore-api',
+        networkTimeoutSeconds: 10,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60 * 24, // 24 hours
+        },
+      },
+    },
+    {
+      urlPattern: /^https?:\/\/.*\.googleapis\.com\/.*$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'google-apis',
+        networkTimeoutSeconds: 10,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60 * 24, // 24 hours
+        },
+      },
+    },
+    {
+      urlPattern: /\/(login|student\/attendance|student)$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'app-pages',
+        networkTimeoutSeconds: 10,
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+        },
+      },
+    },
+    {
+      urlPattern: /\/api\/.*$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'api-cache',
+        networkTimeoutSeconds: 10,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 5, // 5 minutes
+        },
+      },
+    },
+  ],
+  buildExcludes: [/middleware-manifest\.json$/],
+  customWorkerDir: 'worker',
+});
+
+module.exports = withPWA({
   async redirects() {
     return [
       {
@@ -42,4 +101,4 @@ module.exports = {
       },
     ],
   },
-};
+});

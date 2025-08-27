@@ -10,6 +10,7 @@ import { setUser } from '@/app/_stores/mainSlice';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/firebase-config';
 import { useRouter } from 'next/navigation';
+import { usePWANavigation } from '@/app/_hooks/usePWANavigation';
 
 // --- Import components for settings ---
 import NotificationSettings from '../_components/NotificationSettings';
@@ -111,6 +112,7 @@ const SettingsGroup = ({ children }: { children: React.ReactNode }) => (
 const AccountPage = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const { navigateWithinPWA } = usePWANavigation();
   const userUid = useAppSelector((state: RootState) => state.main.userUid);
 
   const [isLogoutModalActive, setIsLogoutModalActive] = useState(false);
@@ -119,7 +121,7 @@ const AccountPage = () => {
   const handleLogout = async () => {
     await signOut(auth);
     dispatch(setUser(null));
-    router.push('/login');
+    navigateWithinPWA('/login');
     setIsLogoutModalActive(false);
   };
 
