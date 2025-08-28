@@ -1,9 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { useAppSelector } from '../../_stores/hooks';
 import { db } from '../../../firebase-config';
-import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { Student, PermissionRecord } from '../../_interfaces';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord } from '../../dashboard/_lib/attendanceLogic';
@@ -156,7 +155,7 @@ const AttendancePage = () => {
             const studyDays = studentClassConfig?.studyDays;
 
             const schoolDays: string[] = [];
-            let currentDate = new Date();
+            const currentDate = new Date();
             while (schoolDays.length < 10) {
               if (isSchoolDay(currentDate, studyDays)) {
                 schoolDays.push(currentDate.toISOString().split('T')[0]);

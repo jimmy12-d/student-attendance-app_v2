@@ -1,7 +1,5 @@
 "use client";
 import React from "react";
-import { mdiChartLine } from "@mdi/js";
-import Icon from "../../../_components/Icon";
 
 interface PaymentSummaryHeaderProps {
   isAuthenticated: boolean;

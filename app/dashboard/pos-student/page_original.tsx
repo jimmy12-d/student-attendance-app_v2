@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback } from "react";
 import { toast } from 'sonner';
 import {
   mdiCashRegister,
@@ -11,7 +11,6 @@ import {
   mdiDownload,
   mdiHistory,
   mdiPrinter,
-  mdiClockCheck,
 } from "@mdi/js";
 
 import SectionMain from "../../_components/Section/Main";
@@ -32,12 +31,10 @@ import { PrinterManager } from "./components/PrinterManager";
 import { CashDrawerManager, openCashDrawerWithBP003 } from "./components/CashDrawerManager";
 import { TransactionManager } from "./components/TransactionManager";
 import { TransactionHistory } from "./components/TransactionHistory";
-import StudentList from "./components/StudentList";
 
 // Hooks and Utils
 import { usePOSState } from "./hooks/usePOSState";
 import { useTransactionHandler } from "./hooks/useTransactionHandler";
-import { isLatePayment } from "./utils/paymentUtils";
 
 // Types
 import { Student, Transaction } from "./types";

@@ -23,7 +23,6 @@ import {
 import { db } from '../../../firebase-config';
 import { 
   collection, 
-  onSnapshot, 
   query, 
   orderBy, 
   where, 

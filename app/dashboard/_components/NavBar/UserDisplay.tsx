@@ -5,7 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../../firebase-config";
 import { useAuth } from "../../../_hooks/use-auth";
 import Icon from "../../../_components/Icon";
-import { mdiAccount, mdiAccountCircle } from "@mdi/js";
+import { mdiAccountCircle } from "@mdi/js";
 
 interface AuthorizedUser {
   name?: string;

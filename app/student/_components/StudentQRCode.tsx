@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from "qrcode.react";
 import RodwellLogo from '../../_components/JustboilLogo';
-import Button from '../../_components/Button';
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app as firebaseApp } from "../../../firebase-config";
 

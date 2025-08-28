@@ -19,7 +19,7 @@ export default function AsideMenuLayer({
   className = "",
   ...props
 }: Props) {
-  const darkMode = useAppSelector((state) => state.darkMode.isEnabled);
+  const _darkMode = useAppSelector((state) => state.darkMode.isEnabled);
 
   const logoutItem: MenuAsideItem = {
     label: "Logout",

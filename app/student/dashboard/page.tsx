@@ -5,13 +5,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import ProgressBar from '../_components/ProgressBar';
-import ExamTabs from '../_components/ExamTabs';
-import CircularProgress from '../_components/CircularProgress';
-import ScoreCard from '../_components/ScoreCard';
 
 // Firebase and Data Handling
 import { db } from '../../../firebase-config';
-import { collection, query, where, onSnapshot, getDocs, orderBy, limit, Timestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, limit, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord } from '../../dashboard/_lib/attendanceLogic';
 import { Student, PermissionRecord } from '../../_interfaces';
@@ -20,8 +17,6 @@ import { Student, PermissionRecord } from '../../_interfaces';
 import { useAppSelector } from '../../_stores/hooks';
 
 // UI Components & Icons
-import { mdiChevronRight } from '@mdi/js';
-import Icon from '../../_components/Icon';
 import CardBoxModal from '../../_components/CardBox/Modal';
 import { PermissionRequestForm } from './../_components/PermissionRequestForm';
 import StudentQRPayment from './../_components/StudentQRCode';
@@ -57,16 +52,16 @@ const StudentDashboard = () => {
   const [isProgressLoading, setIsProgressLoading] = useState(true);
 
   // State for student's recent activity
-  const [recentRecords, setRecentRecords] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_, setRecentRecords] = useState<any[]>([]);
+  const [__, setLoading] = useState(true);
 
   // State for the mock exam results
-  const [availableTabs, setAvailableTabs] = useState(['mock1', 'mock2']);
+  const [___, setAvailableTabs] = useState(['mock1', 'mock2']);
   const [selectedTab, setSelectedTab] = useState('mock1');
   const [examSettings, setExamSettings] = useState<ExamSettings>({});
   const [examScores, setExamScores] = useState<ExamScores>({});
   const [isExamLoading, setIsExamLoading] = useState(true);
-  const [studentClassType, setStudentClassType] = useState<string | null>(null);
+  const [____, setStudentClassType] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if Mock 3 results are published
@@ -81,13 +76,6 @@ const StudentDashboard = () => {
     };
     fetchExamControls();
   }, []);
-
-  const handleTabChange = (tab: string) => {
-    // Only allow tab change if not currently loading
-    if (!isExamLoading) {
-      setSelectedTab(tab);
-    }
-  };
 
   // Fetch progress status and seat info
   useEffect(() => {
@@ -157,7 +145,7 @@ const StudentDashboard = () => {
 
         // 3. Calculate the last 10 school days
         const schoolDays: string[] = [];
-        let currentDate = new Date();
+        const currentDate = new Date();
         while (schoolDays.length < 10 && schoolDays.length < 365) { // safety break
           if (isSchoolDay(currentDate, studyDays)) {
             schoolDays.push(currentDate.toISOString().split('T')[0]);
@@ -342,34 +330,6 @@ const StudentDashboard = () => {
 
   const handlePermissionSuccess = () => {
     setIsPermissionModalActive(false);
-  };
-  
-  const formatDate = (timestamp: Timestamp | Date | undefined | null) => {
-    if (!timestamp) return '';
-    const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const formatTime = (timestamp: Timestamp | Date | undefined | null) => {
-    if (!timestamp) return '';
-    const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  };
-
-  const getStatusStyles = (status: string) => {
-    const s = status.toLowerCase();
-    switch (s) {
-      case 'present':
-        return { badge: 'bg-green-200 text-green-800', icon: 'bg-green-500' };
-      case 'late':
-        return { badge: 'bg-yellow-200 text-yellow-800 border border-yellow-300', icon: 'bg-yellow-500' };
-      case 'permission':
-        return { badge: 'bg-purple-200 text-purple-800', icon: 'bg-purple-500' };
-      case 'absent':
-        return { badge: 'bg-red-200 text-red-800', icon: 'bg-red-500' };
-      default:
-        return { badge: 'bg-gray-100 text-gray-800', icon: 'bg-gray-500' };
-    }
   };
 
   // Helper function to calculate grade

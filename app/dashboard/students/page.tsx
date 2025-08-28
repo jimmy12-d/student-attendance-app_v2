@@ -174,12 +174,6 @@ export default function StudentsPage() {
     // No need to manually refresh - real-time listener will handle updates
   };
 
-  // --- Delete Logic ---
-  const openDeleteModal = (student: Student) => {
-    setStudentToDelete(student);
-    setIsDeleteModalActive(true);
-  };
-
   const confirmDeleteStudent = async () => {
     if (studentToDelete) {
       try {

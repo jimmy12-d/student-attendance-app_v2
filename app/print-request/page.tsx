@@ -6,7 +6,6 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'sonner';
 import { mdiPrinter, mdiUploadOutline, mdiFileDocumentOutline, mdiCheck } from '@mdi/js';
-import dynamic from 'next/dynamic';
 
 // Firebase imports
 import { db, storage } from '../../firebase-config';
@@ -16,8 +15,7 @@ import {
   getDocs, 
   serverTimestamp, 
   query, 
-  orderBy, 
-  where 
+  orderBy 
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
@@ -32,7 +30,7 @@ import LoadingSpinner from '../_components/LoadingSpinner';
 import CustomSingleSelectDropdown from '../_components/CustomSingleSelectDropdown';
 
 // Interfaces
-import { Document, PrintRequest, Teacher } from '../_interfaces';
+import { Document, Teacher } from '../_interfaces';
 
 // Validation schema
 const validationSchema = Yup.object().shape({
@@ -120,29 +118,6 @@ export default function PrintRequestPage() {
   const [pdfPageCount, setPdfPageCount] = useState<number | null>(null);
   const [isProcessingPdf, setIsProcessingPdf] = useState(false);
 
-  // Function to get PDF page count
-  const getPdfPageCount = async (file: File): Promise<number> => {
-    try {
-      setIsProcessingPdf(true);
-      
-      // Dynamic import to avoid SSR issues
-      const pdfjsLib = await import('pdfjs-dist');
-      
-      // Set worker source dynamically
-      if (typeof window !== 'undefined') {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdfjs/pdf.worker.min.mjs`;
-      }
-      
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      return pdf.numPages;
-    } catch (error) {
-      console.error('Error reading PDF:', error);
-      throw new Error('Failed to read PDF file');
-    } finally {
-      setIsProcessingPdf(false);
-    }
-  };
   const [successInfo, setSuccessInfo] = useState<{
     fileName: string;
     teacherName: string;
@@ -227,7 +202,7 @@ export default function PrintRequestPage() {
   }, [subjectFilter, chapterFilter, existingDocuments, selectedTeacher]);
 
 
-  const handleSubmit = async (values: FormValues, { setSubmitting, resetForm }: any) => {
+  const handleSubmit = async (values: FormValues, { setSubmitting }: any) => {
     try {
       // Find selected teacher
       const teacher = teachers.find(t => t.id === values.selectedTeacherId);

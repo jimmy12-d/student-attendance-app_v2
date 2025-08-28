@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Student } from '../../../_interfaces';
-import { mdiExport, mdiClose, mdiCheck } from '@mdi/js';
+import { mdiCheck } from '@mdi/js';
 import Icon from '../../../_components/Icon';
 import Button from '../../../_components/Button';
 import CardBoxModal from '../../../_components/CardBox/Modal';

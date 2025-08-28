@@ -9,7 +9,6 @@ import { setUser } from "../../_stores/mainSlice";
 import { auth, db } from "../../../firebase-config";
 import Button from "../../_components/Button";
 import { mdiGoogle } from "@mdi/js";
-import Icon from "../../_components/Icon";
 
 const AdminLoginForm = () => {
   const router = useRouter();

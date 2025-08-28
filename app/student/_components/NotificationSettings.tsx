@@ -3,8 +3,6 @@
 import React from 'react';
 import { useAppSelector } from '@/app/_stores/hooks';
 import { useFirebaseMessaging } from '@/app/_hooks/useFirebaseMessaging';
-import Icon from '@/app/_components/Icon';
-import { mdiBell, mdiBellOff } from '@mdi/js';
 
 const NotificationSettings = () => {
     const userUid = useAppSelector((state) => state.main.userUid);

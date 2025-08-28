@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '../_stores/hooks';
 import { setUser } from '../_stores/mainSlice';
 
@@ -11,7 +11,6 @@ interface TeacherLayoutProps {
 
 const TeacherLayout: React.FC<TeacherLayoutProps> = ({ children }) => {
   const router = useRouter();
-  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(true);
   

@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Button from '@/app/_components/Button';
 import DarkModeToggle from '@/app/student/_components/DarkModeToggle';
 import CardBoxModal from '@/app/_components/CardBox/Modal';
-import { useAppDispatch, useAppSelector } from '@/app/_stores/hooks';
+import { useAppDispatch } from '@/app/_stores/hooks';
 import { setUser } from '@/app/_stores/mainSlice';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/firebase-config';
@@ -14,7 +13,6 @@ import { usePWANavigation } from '@/app/_hooks/usePWANavigation';
 
 // --- Import components for settings ---
 import NotificationSettings from '../_components/NotificationSettings';
-import { RootState } from '@/app/_stores/store';
 import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
 

@@ -3,9 +3,8 @@
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
-  mdiAccountMultiple, mdiChevronDown, mdiClockAlertOutline, mdiAccountOff, mdiTimerSand,
-  mdiCalendarMonth, mdiChartTimelineVariant, mdiAlertOctagonOutline, mdiReload, mdiTrendingUp,
-  mdiSchool, mdiAccountGroup, mdiChartPie, mdiEye, mdiChevronRight, mdiAccount,
+  mdiAccountMultiple, mdiChevronDown, mdiClockAlertOutline, mdiAccountOff, mdiTimerSand, mdiChartTimelineVariant, mdiAlertOctagonOutline, mdiReload, mdiTrendingUp,
+  mdiSchool, mdiAccountGroup, mdiChevronRight, mdiAccount,
   // Add any other icons used by your new section titles
 } from "@mdi/js";
 
@@ -14,12 +13,11 @@ export const dynamic = 'force-dynamic';
 import Button from "../_components/Button";
 import SectionMain from "../_components/Section/Main";
 import SectionTitleLineWithButton from "../_components/Section/TitleLineWithButton";
-import CardBoxWidget from "../_components/CardBox/Widget";
 import NotificationBar from "../_components/NotificationBar";
 import Icon from "../_components/Icon"; 
 
 import { db } from "../../firebase-config";
-import { collection, getDocs, query, orderBy, where, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { Student, PermissionRecord } from "../_interfaces";
 
 // Import the new section components
@@ -31,8 +29,8 @@ const MonthlyLatesSection = dynamicImport(() => import("./_components/MonthlyLat
 const ConsecutiveAbsencesSection = dynamicImport(() => import("./_components/ConsecutiveAbsencesSection"), { ssr: false, loading: () => <p>Loading consecutive absences...</p> });
 
 // Import utils
-import { AllClassConfigs, ClassShiftConfigs, getCurrentYearMonthString,LATE_WINDOW_DURATION_MINUTES } from "./_lib/configForAttendanceLogic";
-import { isSchoolDay, getStudentDailyStatus } from "./_lib/attendanceLogic";
+import { AllClassConfigs, ClassShiftConfigs, getCurrentYearMonthString } from "./_lib/configForAttendanceLogic";
+import { getStudentDailyStatus } from "./_lib/attendanceLogic";
 
 // Interface for processed student warning data - can move to _interfaces or attendanceUtils
 export interface StudentAttendanceWarning {

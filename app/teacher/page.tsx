@@ -8,10 +8,9 @@ import { useRouter } from 'next/navigation';
 import { setUser } from '../_stores/mainSlice';
 import { signOut } from 'firebase/auth';
 import { auth, db } from '../../firebase-config';
-import { mdiLogout, mdiMagnify, mdiContentSave, mdiChevronLeft, mdiChevronRight } from '@mdi/js';
+import { mdiLogout, mdiMagnify, mdiContentSave } from '@mdi/js';
 import { collection, query, where, getDocs, updateDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
-import FormField from '../_components/FormField';
 
 interface Student {
   id: string;
@@ -30,7 +29,6 @@ interface Student {
 }
 
 // Subject mapping for Grade 12 Social Studies
-const SUBJECT_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'english'];
 const SOCIAL_STUDIES_LABELS: { [key: string]: string } = {
   math: 'Khmer',
   khmer: 'Math', 
@@ -46,9 +44,7 @@ const TeacherDashboard = () => {
   const dispatch = useAppDispatch();
   
   const userName = useAppSelector((state) => state.main.userName);
-  const userRole = useAppSelector((state) => state.main.userRole);
   const userSubject = useAppSelector((state) => state.main.userSubject);
-  const user = useAppSelector((state) => state.main);
 
   // Search and result states
   const [searchRoom, setSearchRoom] = useState('');
@@ -59,7 +55,7 @@ const TeacherDashboard = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [sessionStats, setSessionStats] = useState({ studentsFound: 0, scoresEntered: 0 });
-  const [examSettings, setExamSettings] = useState<{ [subject: string]: { maxScore: number } }>({});
+  const [_, setExamSettings] = useState<{ [subject: string]: { maxScore: number } }>({});
   const [currentMaxScore, setCurrentMaxScore] = useState(100);
 
   // Helper function to determine if student is in Grade 12 Social
@@ -312,7 +308,6 @@ const TeacherDashboard = () => {
         
         // Get actual subject for checking existing scores
         const actualSubject = getActualSubject(userSubject || '', studentData.class);
-        const displaySubject = getDisplaySubject(userSubject || '', studentData.class);
         
         // Check if mock_4 already exists for this subject
         if (studentData.mockResults?.mock_4?.[actualSubject]) {
@@ -326,12 +321,6 @@ const TeacherDashboard = () => {
         // If still not found, try a broader search to see what students exist in this room
         const broadQuery = query(mockResultsRef, where('room', '==', roomNumber));
         const broadSnapshot = await getDocs(broadQuery);
-        
-        if (!broadSnapshot.empty) {
-          broadSnapshot.docs.forEach(doc => {
-            const data = doc.data();
-          });
-        }
         
         setMessage({ type: 'error', text: `No student found with Room ${roomNumber} and Seat ${searchSeat}. Please check the room and seat numbers.` });
       }
@@ -384,7 +373,6 @@ const TeacherDashboard = () => {
     try {
       // Get the actual subject to save based on student class and teacher subject
       const actualSubject = getActualSubject(userSubject, foundStudent.class);
-      const displaySubject = getDisplaySubject(userSubject, foundStudent.class);
       
       // Update the mockResults document
       const docRef = doc(db, 'mockResults', foundStudent.id);

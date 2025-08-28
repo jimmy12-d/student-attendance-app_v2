@@ -63,13 +63,13 @@ const PWAInstaller = () => {
     }
 
     // Handle PWA installation prompt
-    let deferredPrompt;
+    let _deferredPrompt;
     
     const handleBeforeInstallPrompt = (e) => {
       // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault();
       // Stash the event so it can be triggered later
-      deferredPrompt = e;
+      _deferredPrompt = e;
       
       // Show install button/prompt (you can customize this)
       console.log('PWA install prompt available');
@@ -77,7 +77,7 @@ const PWAInstaller = () => {
 
     const handleAppInstalled = () => {
       console.log('PWA was installed');
-      deferredPrompt = null;
+      _deferredPrompt = null;
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);

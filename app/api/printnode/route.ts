@@ -4,7 +4,6 @@ import fs from 'fs/promises';
 import path from 'path';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { getFunctions } from 'firebase-admin/functions';
 
 // Initialize Firebase Admin (only if not already initialized)
 let db: any = null;
@@ -560,8 +559,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const requestUrl = request.url;
+  const _isProduction = process.env.NODE_ENV === 'production';
+  const _requestUrl = request.url;
 
   try {
     if (!PRINTNODE_API_KEY || PRINTNODE_API_KEY === 'your_printnode_api_key_here') {
@@ -582,12 +581,12 @@ export async function POST(request: NextRequest) {
       transactionData,
       pageHeight, // New parameter for height
       action = 'print', // 'print', 'generate', or 'openCashDrawer'
-      contentType = 'pdf_base64',
+      contentType: _contentType = 'pdf_base64',
       title, 
       copies = 1, 
-      duplex = false,
-      paperSize = 'A4',
-      customPageRange,
+      duplex: _duplex = false,
+      paperSize: _paperSize = 'A4',
+      customPageRange: _customPageRange,
       requestId 
     } = body;
 

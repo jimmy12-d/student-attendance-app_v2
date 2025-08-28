@@ -7,7 +7,7 @@ import { useAuth } from "../../../_hooks/use-auth";
 import LoadingSpinner from "../../../_components/LoadingSpinner";
 import CustomDropdown from "../../students/components/CustomDropdown";
 import Icon from "../../../_components/Icon";
-import { mdiAccount, mdiAccountCash, mdiAccountCheck} from "@mdi/js";
+import { mdiAccount, mdiAccountCash} from "@mdi/js";
 
 interface CashierManagerProps {
   onCashierSelected: (cashierName: string) => void;

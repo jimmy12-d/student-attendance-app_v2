@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, setPersistence, browserLocalPersistence, User } from 'firebase/auth';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAppSelector, useAppDispatch } from '../_stores/hooks';
 import { setUser } from '../_stores/mainSlice';
 import { auth, db } from '../../firebase-config';

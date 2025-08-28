@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
           
           // Get the image data
           const imageBuffer = await response.arrayBuffer();
-          let contentType = response.headers.get('content-type') || 'image/jpeg';
+          const contentType = response.headers.get('content-type') || 'image/jpeg';
           
           // Check if the image might be HEIC format
           const uint8Array = new Uint8Array(imageBuffer);

@@ -4,7 +4,6 @@
 import React, { useState, useEffect, useRef } from "react"; // <-- Import useRef
 import Button from "../../_components/Button";
 import Buttons from "../../_components/Buttons";
-import { useRouter } from "next/navigation";
 import { auth, db } from "../../../firebase-config"; // Import auth and db directly
 import { usePWANavigation } from "../../_hooks/usePWANavigation";
 
@@ -18,13 +17,11 @@ import {
 // No longer import db/auth directly
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { mdiGoogle, mdiCellphoneMessage } from "@mdi/js";
-import Icon from "../../_components/Icon";
 
 import { useAppDispatch } from "../../_stores/hooks";
 import { setUser } from "../../_stores/mainSlice";
 
 const LoginForm = () => {
-  const router = useRouter();
   const { navigateWithinPWA } = usePWANavigation();
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(false);
@@ -231,7 +228,7 @@ const LoginForm = () => {
           avatar: null,
           uid: firebaseUser.uid,
           studentDocId: studentDocId,
-          role: "student" as "student",
+          role: "student" as const,
         };
 
         // Finally, dispatch user info to Redux store

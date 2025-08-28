@@ -2,21 +2,13 @@ import {
   mdiAccountCircle,
   mdiMonitor,
   mdiClipboardListOutline,
-  mdiMagnify,
   mdiAccountClockOutline,
   mdiFileDocumentCheckOutline,
-  mdiBellOutline,
   mdiNotebookEditOutline,
   mdiCalendarClock,
-  mdiCamera,
   mdiFaceRecognition,
-  mdiPhone,
-  mdiCardAccountDetails,
   mdiCreditCard,
-  mdiCashCheck,
   mdiChartLine,
-  mdiCameraIris,
-  mdiViewGrid,
   mdiAccountPlus
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";

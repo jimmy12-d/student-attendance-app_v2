@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { mdiCashMultiple, mdiLoading, mdiChevronDown, mdiReload } from "@mdi/js";
+import { mdiCashMultiple } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import Button from "../../../_components/Button";
 import { Printer } from '../types';

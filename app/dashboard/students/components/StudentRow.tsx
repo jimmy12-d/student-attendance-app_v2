@@ -37,7 +37,6 @@ interface StudentRowProps {
   onViewDetails: (student: Student) => void;
   isBatchEditMode?: boolean;
   isTakeAttendanceMode?: boolean;
-  isFlipFlopPreviewMode?: boolean;
   onBatchUpdate?: () => void;
   isSelected?: boolean;
   onSelect?: (studentId: string, isSelected: boolean) => void;
@@ -54,7 +53,6 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   onViewDetails,
   isBatchEditMode = false,
   isTakeAttendanceMode = false,
-  isFlipFlopPreviewMode = false,
   isSelected = false,
   onSelect,
   getTodayAttendanceStatus,

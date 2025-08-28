@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, ChangeEvent, KeyboardEvent } from 'react';
+import React, { useRef, useState, KeyboardEvent } from 'react';
 
 type Props = {
   length: number;

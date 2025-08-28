@@ -1,9 +1,8 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
 import { useAppDispatch } from "../_stores/hooks";
 import { setUser } from '../_stores/mainSlice';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../firebase-config';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import React, { ReactNode, useEffect, useState } from "react";
@@ -15,11 +14,9 @@ import StudentTopNav from './_components/StudentTopNav';
 import NotificationPermissionPrompt from "./_components/NotificationPermissionPrompt";
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const { navigateWithinPWA } = usePWANavigation();
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {

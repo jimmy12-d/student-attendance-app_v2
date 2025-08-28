@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { mdiMagnify, mdiReload, mdiClipboardListOutline, mdiChevronLeft, mdiChevronRight } from "@mdi/js";
+import React, { useState, useEffect, useCallback } from "react";
+import { mdiMagnify, mdiClipboardListOutline, mdiChevronLeft, mdiChevronRight } from "@mdi/js";
 import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
 import CardBox from "../../_components/CardBox";
@@ -14,8 +14,8 @@ import DailyStatusDetailsModal from "../_components/DailyStatusDetailsModal";
 import { Student, PermissionRecord } from "../../_interfaces";
 import { RawAttendanceRecord } from "../_lib/attendanceLogic";
 import { db } from "../../../firebase-config";
-import { collection, getDocs, query, where, orderBy, Timestamp, CollectionReference, DocumentData, QuerySnapshot } from "firebase/firestore";
-import { AllClassConfigs, getCurrentYearMonthString, ClassShiftConfigs } from "../_lib/configForAttendanceLogic";
+import { collection, getDocs, query, where, orderBy, CollectionReference, DocumentData, QuerySnapshot } from "firebase/firestore";
+import { AllClassConfigs, getCurrentYearMonthString } from "../_lib/configForAttendanceLogic";
 import { getStudentDailyStatus } from "../_lib/attendanceLogic";
 
 // Force dynamic rendering to avoid build issues
@@ -115,7 +115,7 @@ export default function CheckAttendancePage() {
       const permsCol = collection(db, "permissions") as CollectionReference<DocumentData>;
 
       // 1. Fetch Students based on filters
-        let studentQueryConstraints: import("firebase/firestore").QueryConstraint[] = [
+        const studentQueryConstraints: import("firebase/firestore").QueryConstraint[] = [
           where("ay", "==", "2026") // This is the added filter for the 'ay' field
         ];
       if (selectedClasses.length > 0) {
@@ -126,8 +126,8 @@ export default function CheckAttendancePage() {
       const studentsQuery = query(studentsCol, ...studentQueryConstraints);
       const studentsSnapshot = await getDocs(studentsQuery);
 
-      let fetchedStudents = studentsSnapshot.docs.map(docSnap => ({id: docSnap.id, ...docSnap.data()} as Student));
-      let rosterStudents = (selectedClasses.length > 0 && selectedShifts.length > 0)
+      const fetchedStudents = studentsSnapshot.docs.map(docSnap => ({id: docSnap.id, ...docSnap.data()} as Student));
+      const rosterStudents = (selectedClasses.length > 0 && selectedShifts.length > 0)
           ? fetchedStudents.filter(s => s.shift && selectedShifts.includes(s.shift))
           : fetchedStudents;
       
@@ -140,8 +140,8 @@ export default function CheckAttendancePage() {
       const rosterStudentIds = rosterStudents.map(s => s.id);
 
       // 2. Fetch Attendance and Permissions for the roster concurrently
-      let allFetchedAttendance: RawAttendanceRecord[] = [];
-      let allFetchedPermissions: PermissionRecord[] = [];
+      const allFetchedAttendance: RawAttendanceRecord[] = [];
+      const allFetchedPermissions: PermissionRecord[] = [];
 
       if (rosterStudentIds.length > 0) {
         const sixtyDaysAgo = new Date();

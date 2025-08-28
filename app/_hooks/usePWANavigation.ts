@@ -13,7 +13,7 @@ export const usePWANavigation = () => {
   const navigateWithinPWA = useCallback((url: string, options?: { replace?: boolean }) => {
     try {
       // Check if we're in a PWA context
-      const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+      const _isPWA = window.matchMedia('(display-mode: standalone)').matches ||
                     (window.navigator as any).standalone === true;
 
       // Force replace for attendance navigation to maintain PWA context

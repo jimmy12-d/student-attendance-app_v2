@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { 
   getRedirectResult, 
   User,
-  signInWithCustomToken,
-  signInWithEmailAndPassword
+  signInWithCustomToken
 } from "firebase/auth";
 import { usePWANavigation } from "../../_hooks/usePWANavigation";
 import { getFunctions, httpsCallable } from "firebase/functions";
@@ -41,12 +40,7 @@ const StudentSignIn = () => {
   const [phone, setPhone] = useState("");
   const [userPassword, setUserPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  const isMobileDevice = () => {
-    if (typeof navigator === 'undefined') return false;
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  };
-
+  
   const checkUserAndRedirect = useCallback(async (firebaseUser: User) => {
     const studentsRef = collection(db, "students");
     const q = query(studentsRef, where("authUid", "==", firebaseUser.uid), limit(1));

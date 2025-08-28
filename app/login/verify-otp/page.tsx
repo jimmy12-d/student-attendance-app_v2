@@ -4,8 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { signInWithCustomToken } from "firebase/auth";
-import { useAuth } from "@/app/_hooks/use-auth";
-import { auth, db } from "@/firebase-config";
+import { auth } from "@/firebase-config";
 import { useAppDispatch } from "@/app/_stores/hooks";
 import { setUser } from "@/app/_stores/mainSlice";
 import SectionFullScreen from "@/app/_components/Section/FullScreen";
@@ -15,11 +14,9 @@ import Button from "@/app/_components/Button";
 import Buttons from "@/app/_components/Buttons";
 import Image from 'next/image';
 import OtpInput from "@/app/_components/OtpInput";
-import Icon from "@/app/_components/Icon";
 import { navItems } from '@/app/student/_components/StudentBottomNav';
 import LoadingSpinner from "@/app/_components/LoadingSpinner";
 import { usePWANavigation } from "@/app/_hooks/usePWANavigation";
-import { mdiMessageBadge } from "@mdi/js";
 
 const VerifyOtpPage = () => {
     const router = useRouter();

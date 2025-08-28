@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Nokora } from "next/font/google";

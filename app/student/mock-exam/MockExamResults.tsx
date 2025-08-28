@@ -55,8 +55,6 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
   calculateGrade,
   SUBJECT_ORDER,
   SOCIAL_STUDIES_LABELS,
-  seatInfo,
-  phoneInfo,
   studentName,
 }) => {
   const getGradeDependentStyles = (grade: string) => {

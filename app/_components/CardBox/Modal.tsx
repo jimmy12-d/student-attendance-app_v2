@@ -29,7 +29,7 @@ const CardBoxModal = ({
   modalClassName = "w-11/12 md:w-3/5 lg:w-2/5 xl:w-4/12", // <-- DEFAULT WIDTHS
   onConfirm,
   onCancel,
-  disabled = false,
+  disabled: _disabled = false,
   closeButtonColor,
 }: Props) => {
   if (!isActive) {

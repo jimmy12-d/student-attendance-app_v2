@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../../../firebase-config';
-import { collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { getStudentDailyStatus, RawAttendanceRecord, calculateMonthlyAbsencesLogic, getMonthDetailsForLogic } from '../../_lib/attendanceLogic';
 import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
 import { AbsentFollowUp, AbsentStatus, PermissionRecord } from '../../../_interfaces';
 import { AbsentStatusTracker } from './AbsentStatusTracker';
 import CardBox from '../../../_components/CardBox';
 import SectionTitleLineWithButton from '../../../_components/Section/TitleLineWithButton';
-import { mdiAccountOff, mdiFilter, mdiCalendarRange, mdiPhone, mdiCheckCircle } from '@mdi/js';
+import { mdiAccountOff } from '@mdi/js';
 import { toast } from 'sonner';
 
 // Phone formatting utility (same as StudentRow)
@@ -47,25 +47,6 @@ interface AbsentFollowUpWithDetails extends AbsentFollowUp {
   student?: any; // Add student data for priority calculation
   monthlyAbsentCount?: number; // Add monthly absent count
 }
-
-const getStatusColor = (status: AbsentStatus, isUrgent: boolean = false): string => {
-  if (isUrgent && status === 'Absent') {
-    return 'bg-red-200 dark:bg-red-800/50 text-red-900 dark:text-red-200 border-red-300 dark:border-red-600 animate-pulse shadow-lg font-bold';
-  }
-  
-  switch (status) {
-    case 'Absent':
-      return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800';
-    case 'Contacted':
-      return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-800';
-    case 'Waiting for Response':
-      return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800';
-    case 'Resolved':
-      return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800';
-    default:
-      return 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700';
-  }
-};
 
 const getPriorityLevel = (student: any, daysSinceAbsent: number, status: AbsentStatus, updatedAt?: Date | Timestamp): 'low' | 'high' => {
   if (status === 'Resolved') return 'low';
@@ -131,7 +112,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
       }
 
       // 2. Fetch all attendance records for the selected date
-      let attendanceQuery = query(collection(db, 'attendance'), where('date', '==', selectedDate));
+      const attendanceQuery = query(collection(db, 'attendance'), where('date', '==', selectedDate));
       const attendanceSnapshot = await getDocs(attendanceQuery);
       const attendanceRecords = attendanceSnapshot.docs.map(doc => doc.data());
 
@@ -147,7 +128,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
       });
 
       // 5. Fetch all follow-ups for the selected date
-      let followUpsQuery = query(collection(db, 'absentFollowUps'), where('date', '==', selectedDate));
+      const followUpsQuery = query(collection(db, 'absentFollowUps'), where('date', '==', selectedDate));
       const followUpsSnapshot = await getDocs(followUpsQuery);
       const followUpData: AbsentFollowUp[] = [];
       followUpsSnapshot.forEach((doc) => {
@@ -357,7 +338,6 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
 
   // Group by priority for better organization
   const highFollowUps = sortedFollowUps.filter(f => getPriorityLevel(f.student || {}, f.daysSinceAbsent, f.status, f.updatedAt) === 'high');
-  const lowFollowUps = sortedFollowUps.filter(f => getPriorityLevel(f.student || {}, f.daysSinceAbsent, f.status, f.updatedAt) === 'low');
 
   const FollowUpRow: React.FC<{ followUp: AbsentFollowUpWithDetails }> = ({ followUp }) => {
     const priority = getPriorityLevel(followUp.student || {}, followUp.daysSinceAbsent, followUp.status, followUp.updatedAt);
@@ -651,7 +631,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
     icon: string; 
     color: string;
     shiftName: string;
-  }> = ({ title, followUps, icon, color, shiftName }) => {
+  }> = ({ title, followUps, icon, color }) => {
     if (followUps.length === 0) return null;
     
     // Separate by priority within the shift

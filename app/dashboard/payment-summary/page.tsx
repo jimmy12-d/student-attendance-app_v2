@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase-config";
 import { toast } from "sonner";
 import PaymentSummaryHeader from "./components/PaymentSummaryHeader";
@@ -9,7 +9,6 @@ import ControlsPanel from "./components/ControlsPanel";
 import MetricsCards from "./components/MetricsCards";
 import ClassTypeAnalysis from "./components/ClassTypeAnalysis";
 import PaymentTrends from "./components/PaymentTrends";
-import { Transaction } from "../pos-student/types";
 
 interface DateInterval {
   type: 'interval' | 'monthly';

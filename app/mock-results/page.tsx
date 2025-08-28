@@ -6,18 +6,13 @@ import { db } from "@/firebase-config";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { toast, Toaster } from "sonner";
 import { mdiMagnify } from "@mdi/js";
-import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 
 // Reusable Components
 import CardBox from "@/app/_components/CardBox";
 import Button from "@/app/_components/Button";
-import Icon from "@/app/_components/Icon";
-import CircularProgress from "@/app/student/_components/CircularProgress";
-import ScoreCard from "@/app/student/_components/ScoreCard";
 import MockExamResults from "@/app/student/mock-exam/MockExamResults";
 import PerformanceRadarChartSkeleton from "@/app/student/mock-exam/PerformanceRadarChartSkeleton";
-import ExamTabs from "@/app/student/_components/ExamTabs";
 
 // Hooks
 import useCountUp from "@/app/_hooks/useCountUp";

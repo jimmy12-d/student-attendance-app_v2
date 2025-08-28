@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../../../firebase-config';
-import { doc, updateDoc, addDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { updateDoc, addDoc, collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { AbsentStatus, AbsentFollowUp } from '../../../_interfaces';
 

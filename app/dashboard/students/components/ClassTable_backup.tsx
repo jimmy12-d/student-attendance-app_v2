@@ -3,7 +3,7 @@ import { Student } from '../../../_interfaces';
 import { ColumnConfig } from './ColumnToggle';
 import { StudentRow } from './StudentRow';
 import Icon from '../../../_components/Icon';
-import { mdiChevronDown, mdiChevronUp, mdiChevronRight } from '@mdi/js';
+import { mdiChevronDown, mdiChevronUp } from '@mdi/js';
 
 interface ClassTableProps {
   studentList: Student[];
@@ -49,7 +49,6 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   onZoomToggle
 }) => {
   const [isClassCollapsed, setIsClassCollapsed] = useState(forceCollapsed);
-  const hasMore = studentList.length > initialLimit;
   
   // Get unique identifier for this class (combining className and shift for uniqueness)
   const classId = `${className}-${shift}`;

@@ -102,7 +102,7 @@ const AttendancePage = () => {
         const studyDays = studentClassConfig?.studyDays;
 
         const schoolDays: string[] = [];
-        let currentDate = new Date();
+        const currentDate = new Date();
         while (schoolDays.length < 10) {
           if (isSchoolDay(currentDate, studyDays)) {
             schoolDays.push(currentDate.toISOString().split('T')[0]);

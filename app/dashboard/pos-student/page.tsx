@@ -1,6 +1,6 @@
 
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { toast } from 'sonner';
 import {
   mdiMagnify,
@@ -12,11 +12,6 @@ import {
   mdiDownload,
   mdiHistory,
   mdiPrinter,
-  mdiCashMultiple,
-  mdiLoading,
-  mdiPercent,
-  mdiCurrencyUsd,
-  mdiClockCheck,
 } from "@mdi/js";
 
 import SectionMain from "../../_components/Section/Main";
@@ -32,7 +27,6 @@ import CardBoxModal from "../../_components/CardBox/Modal";
 // Firebase
 import { db } from "../../../firebase-config";
 import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, where, deleteDoc, orderBy, onSnapshot, setDoc } from "firebase/firestore";
-import { getFunctions, httpsCallable } from 'firebase/functions';
 
 // Components
 import { PrinterManager } from "./components/PrinterManager";
@@ -251,40 +245,6 @@ const POSStudentPage = () => {
             unsubscribe();
         };
     }, [selectedStudent?.id, isUserInteractingWithDetails]); // Removed joinDate from dependencies as it's not needed
-    
-    // Backup function for manual refresh (keeping for compatibility)
-    const fetchStudents = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const studentsRef = collection(db, "students");
-            const q = query(
-                studentsRef,
-                where("ay", "==", "2026"),
-                orderBy("createdAt", "desc") // Sort by createdAt in descending order
-            );
-            const querySnapshot = await getDocs(q);
-            const studentsData = querySnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt,
-                } as Student;
-            }).filter(student => {
-                // Filter out dropped, on-break, and waitlisted students
-                console.log(`🔍 Backup fetch - Student: ${student.fullName}, dropped: ${student.dropped}, onBreak: ${student.onBreak}, onWaitlist: ${student.onWaitlist}`);
-                return !student.dropped && !student.onBreak && !student.onWaitlist;
-            }); // Filter out non-active students
-            console.log("📡 Backup fetch: Students data refreshed", studentsData.length, "active students");
-            setStudents(studentsData);
-        } catch (err) {
-            console.error("Error fetching students: ", err);
-            setError("Failed to fetch students. Please try again.");
-            toast.error("Failed to fetch students.");
-        }
-        setLoading(false);
-    }, []);
     
     const fetchPaymentAmount = async (student: Student) => {
         if (!student || !student.class) return;

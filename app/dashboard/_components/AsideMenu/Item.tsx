@@ -4,7 +4,6 @@ import React, { useEffect, useState } from "react";
 import { mdiMinus, mdiPlus } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import Link from "next/link";
-import { getButtonColor } from "../../../_lib/colors";
 import AsideMenuList from "./List";
 import { MenuAsideItem } from "../../../_interfaces";
 import { usePathname } from "next/navigation";
@@ -24,7 +23,7 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
   const [isDropdownActive, setIsDropdownActive] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  const activeClassAddon =
+  const _activeClassAddon =
     !item.color && isLinkActive ? "aside-menu-item-active font-bold" : "";
 
   const pathname = usePathname();

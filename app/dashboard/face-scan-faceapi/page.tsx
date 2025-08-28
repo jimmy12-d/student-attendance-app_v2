@@ -4,23 +4,18 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Webcam from 'react-webcam';
 import { toast } from 'sonner';
-import { getAuth } from 'firebase/auth';
-import { doc, updateDoc, collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
 
-import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiAccount, mdiCheck, mdiAlert, mdiEye, mdiCog, mdiInformation, mdiClock } from '@mdi/js';
-import SectionMain from "../../_components/Section/Main";
-import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
+import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiAlert, mdiEye, mdiCog, mdiInformation, mdiClock } from '@mdi/js';
 import CardBox from "../../_components/CardBox";
 import { getPageTitle } from "../../_lib/config";
-import LoadingSpinner from '../../_components/LoadingSpinner';
 import CustomDropdown from '../students/components/CustomDropdown';
 import Icon from '../../_components/Icon';
 
 // Import utilities
-import { analyzeImageQuality, convertGoogleDriveUrl } from './utils/imageQualityAnalysis';
 import { Student, filterStudentsByShift, markAttendance } from './utils/attendanceLogic';
-import { TrackedFace, initializeFaceApi, generateFaceDescriptor, detectFaces, detectAllFaces, calculateFaceDistance } from './utils/faceDetection';
+import { TrackedFace, initializeFaceApi, detectAllFaces, calculateFaceDistance } from './utils/faceDetection';
 
 const FaceApiAttendanceScanner = () => {
   const webcamRef = useRef<Webcam>(null);

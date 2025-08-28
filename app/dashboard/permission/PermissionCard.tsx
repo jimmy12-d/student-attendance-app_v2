@@ -5,7 +5,6 @@ import { Timestamp } from "firebase/firestore";
 import { mdiCheck, mdiClose, mdiCalendarRange, mdiAccount, mdiBookOpenPageVariant, mdiClockTimeEight } from "@mdi/js";
 import Icon from "../../_components/Icon";
 import Button from "../../_components/Button";
-import Buttons from "../../_components/Buttons";
 import { EnrichedPermissionRecord } from "./page";
 
 type Props = {

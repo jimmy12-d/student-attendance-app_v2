@@ -3,7 +3,7 @@ import { Student } from '../../../_interfaces';
 import { ColumnConfig } from './ColumnToggle';
 import { StudentRow } from './StudentRow';
 import Icon from '../../../_components/Icon';
-import { mdiChevronDown, mdiChevronUp, mdiChevronRight,mdiAccountSchool } from '@mdi/js';
+import { mdiChevronDown, mdiChevronUp,mdiAccountSchool } from '@mdi/js';
 
 interface ClassTableProps {
   studentList: Student[];
@@ -11,7 +11,6 @@ interface ClassTableProps {
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
   onViewDetails: (student: Student, studentList: Student[]) => void;
-  initialLimit?: number;
   className?: string;
   studentCount?: number;
   shift?: 'Morning' | 'Afternoon' | 'Evening';
@@ -38,7 +37,6 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   onEdit, 
   onDelete,
   onViewDetails,
-  initialLimit = 5,
   className,
   studentCount,
   shift = 'Morning',
@@ -490,7 +488,6 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   onViewDetails={handleViewDetails}
                   isBatchEditMode={isBatchEditMode}
                   isTakeAttendanceMode={isTakeAttendanceMode}
-                  isFlipFlopPreviewMode={isFlipFlopPreviewMode}
                   onBatchUpdate={onBatchUpdate}
                   isSelected={selectedStudents.has(student.id)}
                   onSelect={onStudentSelect}

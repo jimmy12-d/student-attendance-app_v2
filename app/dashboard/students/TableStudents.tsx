@@ -4,7 +4,6 @@
 import React, { useState, useEffect } from "react";
 import { Student } from "../../_interfaces";
 import { ColumnToggle, ColumnConfig } from "./components/ColumnToggle";
-import { ShiftSection } from "./components/ShiftSection";
 import { ClassTable } from "./components/ClassTable";
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
 import { QRCodeModal } from "./components/QRCodeModal";
@@ -13,14 +12,12 @@ import { toast } from 'sonner';
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { doc, writeBatch, collection, getDocs, addDoc, setDoc } from "firebase/firestore";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { doc, writeBatch, collection, getDocs, setDoc } from "firebase/firestore";
 
 // Attendance logic imports
-import { getStudentDailyStatus, isSchoolDay } from '../_lib/attendanceLogic';
+import { getStudentDailyStatus } from '../_lib/attendanceLogic';
 import { AllClassConfigs } from '../_lib/configForAttendanceLogic';
 import { PermissionRecord } from '../../_interfaces';
-import { useAuth } from '../../_hooks/use-auth';
 
 type Props = {
   students: Student[];
@@ -35,8 +32,6 @@ type Props = {
 };
 
 const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, isFlipFlopPreviewMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance }: Props) => {
-  // Auth hook
-  const { user } = useAuth();
   // Default column configuration
   const defaultColumns: ColumnConfig[] = [
     { id: 'number', label: '#N', enabled: true },
@@ -224,8 +219,6 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       // Extract class ID by removing "Class " prefix
       const classId = student.class?.replace(/^Class\s+/i, '') || '';
  
-      const classConfig = allClassConfigs ? allClassConfigs[classId] : undefined;
-
       const result = getStudentDailyStatus(
         student,
         todayStr,

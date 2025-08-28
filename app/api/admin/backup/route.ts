@@ -134,7 +134,7 @@ async function createBackup(options: any) {
         console.log('Creating backup with options:', options);
         
         // Use the simple backup script instead of the complex one
-        let command = 'node scripts/simple-backup.js';
+        const command = 'node scripts/simple-backup.js';
 
         console.log('Executing command:', command);
         

@@ -3,10 +3,8 @@ import React, { useState, useEffect } from "react";
 import { toast } from 'sonner';
 import {
     mdiCloudUpload as mdiBackup,
-    mdiDownload,
     mdiDelete,
     mdiRestore,
-    mdiPlay,
     mdiRefresh,
     mdiDatabase,
     mdiClockOutline,

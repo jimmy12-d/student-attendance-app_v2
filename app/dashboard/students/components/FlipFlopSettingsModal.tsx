@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { mdiCog, mdiClose, mdiAutorenew, mdiCalendarCheck } from '@mdi/js';
-import Icon from '../../../_components/Icon';
 import CardBoxModal from '../../../_components/CardBox/Modal';
 
 interface FlipFlopSettingsModalProps {

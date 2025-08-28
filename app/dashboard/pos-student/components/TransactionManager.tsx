@@ -1,23 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
-import { toast } from 'sonner';
 import {
     mdiCashRegister,
     mdiAccount,
     mdiReceiptText,
     mdiCalendar,
-    mdiChevronDown,
     mdiChevronLeft,
     mdiChevronRight,
-    mdiPercent,
     mdiCurrencyUsd,
     mdiClose,
     mdiClockAlert,
 } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import Button from "../../../_components/Button";
-import CardBox from "../../../_components/CardBox";
 import FormField from "../../../_components/FormField";
-import { Student, Transaction } from '../types';
+import { Student } from '../types';
 import { calculateProratedAmount } from '../utils/dateUtils';
 
 interface TransactionManagerProps {

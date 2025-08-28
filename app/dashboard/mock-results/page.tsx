@@ -4,18 +4,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   mdiMagnify, 
   mdiDownload, 
-  mdiFileExcel, 
   mdiChartLine,
   mdiAccountGroup,
   mdiTrophy,
   mdiClipboardListOutline,
-  mdiAccountOff,
   mdiPencilOutline,
   mdiCheckAll,
   mdiClose,
   mdiContentSave,
-  mdiChartBox,
-  mdiPercent
+  mdiChartBox
 } from '@mdi/js';
 import { db } from '../../../firebase-config';
 import { doc, getDoc, collection, getDocs, query, where, orderBy, updateDoc } from 'firebase/firestore';
@@ -39,33 +36,18 @@ import {
   calculateGrade,
   calculateStudentTotals,
   getMaxScores,
-  calculateClassStats,
   
   // Grade styles
   getGradeStyles,
   getGradeHoverColor,
   getGradeColor,
-  getScoreColor,
   
   // Subject configuration
   getCurrentSubjectLabels,
   getOrderedSubjects,
-  shouldShowSubject,
   
   // Data export
-  exportStudentsToCSV,
-  downloadCSV,
-  generateCSVFilename,
-  
-  // Firebase utilities
-  fetchAvailableMocks,
-  fetchExamSettings,
-  fetchStudentsData,
-  
-  // Filter utilities
-  filterStudents,
-  sortStudents,
-  getUniqueValues
+  exportStudentsToCSV
 } from './components';
 
 const MockResultsPage = () => {
