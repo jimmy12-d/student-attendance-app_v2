@@ -58,7 +58,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Rodwell Portal" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body id="student-attendance-app" className={`h-full bg-gray-800 text-gray-100 ${inter.variable} ${nokora.variable}`}>
+      <body id="student-attendance-app" className={`h-full ${inter.variable} ${nokora.variable}`} style={{backgroundColor: '#ffffff', color: '#111827'}}>
         <StoreProvider>
           <ClientLayoutWrapper>
             <div className="flex flex-col min-h-screen">

@@ -16,7 +16,8 @@ import {
   mdiCashCheck,
   mdiChartLine,
   mdiCameraIris,
-  mdiViewGrid
+  mdiViewGrid,
+  mdiAccountPlus
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -50,25 +51,20 @@ const menuAside: MenuAsideItem[] = [
         label: "Attendance Records",
         icon: mdiClipboardListOutline,
       },
-      {
-        href: "/dashboard/check",
-        label: "Check Manually",
-        icon: mdiMagnify,
-      },
-      {
-        href: "/dashboard/face-attendance-selector",
-        label: "Face Attendance",
-        icon: mdiViewGrid,
-      },
+      // {
+      //   href: "/dashboard/check",
+      //   label: "Check Manually",
+      //   icon: mdiMagnify,
+      // },
       {
         href: "/dashboard/face-scan-faceapi",
-        label: "Face-API.js Scanner",
+        label: "Face Scanner",
         icon: mdiFaceRecognition,
       },
       {
-        href: "/dashboard/face-scan",
-        label: "TensorFlow Scanner",
-        icon: mdiCameraIris,
+        href: "/dashboard/face-enrollment",
+        label: "Face Enrollment",
+        icon: mdiAccountPlus,
       },
       {
         href: "/dashboard/permission",
@@ -108,11 +104,11 @@ const menuAside: MenuAsideItem[] = [
   //   label: "Print Approvals",
   //   icon: mdiFileDocumentCheckOutline,
   // },
-  {
-    href: "/dashboard/notification",
-    label: "Notification",
-    icon: mdiBellOutline,
-  },
+  // {
+  //   href: "/dashboard/notification",
+  //   label: "Notification",
+  //   icon: mdiBellOutline,
+  // },
 ];
 
 export default menuAside;

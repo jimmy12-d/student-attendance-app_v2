@@ -2,7 +2,7 @@ const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
-  disable: false, // Enable PWA for unified service worker
+  disable: true, // Enable PWA for unified service worker
   runtimeCaching: [
     {
       urlPattern: /^https?:\/\/firestore\.googleapis\.com\/.*$/,

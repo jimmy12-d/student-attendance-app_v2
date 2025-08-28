@@ -221,7 +221,8 @@ const AttendancePage = () => {
                     status: displayStatus,
                     calculatedTime: calculatedStatus.time 
                   };
-                }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                }).filter(record => !['not-enrolled', 'no-school'].includes(record.status))
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                 
                 setRecentRecords(displayRecords);
                 
@@ -297,8 +298,8 @@ const AttendancePage = () => {
     const permsQuery = query(
       collection(db, "permissions"),
       where("authUid", "==", studentUid),
-      where("requestDate", ">=", thirtyDaysAgo),
-      orderBy("requestDate", "desc")
+      where("requestedAt", ">=", thirtyDaysAgo),
+      orderBy("requestedAt", "desc")
     );
 
     const unsubscribe = onSnapshot(permsQuery, (snapshot) => {
@@ -339,42 +340,42 @@ const AttendancePage = () => {
      switch (s) {
        case 'present':
          return { 
-           badge: 'bg-green-200 text-green-800',
+           badge: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800',
            cardBg: 'bg-gradient-to-br from-green-500 to-emerald-600',
            icon: mdiAccountCheckOutline,
            textColor: 'text-white'
          };
        case 'late':
          return { 
-           badge: 'bg-yellow-200 text-yellow-800 border border-yellow-300',
+           badge: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700',
            cardBg: 'bg-gradient-to-br from-yellow-500 to-orange-500',
            icon: mdiClockAlertOutline,
            textColor: 'text-white'
          };
        case 'permission':
          return { 
-           badge: 'bg-purple-200 text-purple-800',
+           badge: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700',
            cardBg: 'bg-gradient-to-br from-purple-500 to-indigo-600',
            icon: mdiAccountCheckOutline,
            textColor: 'text-white'
          };
        case 'pending':
          return {
-           badge: 'bg-blue-200 text-blue-800',
+           badge: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700',
            cardBg: 'bg-gradient-to-br from-blue-500 to-cyan-600',
            icon: mdiClockTimeThreeOutline,
            textColor: 'text-white'
          };
        case 'absent':
          return { 
-           badge: 'bg-red-200 text-red-800',
+           badge: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800',
            cardBg: 'bg-gradient-to-br from-red-500 to-rose-600',
            icon: mdiAccountOffOutline,
            textColor: 'text-white'
          };
        default:
          return { 
-           badge: 'bg-gray-100 text-gray-800',
+           badge: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700',
            cardBg: 'bg-gradient-to-br from-gray-500 to-slate-600',
            icon: mdiAccountOffOutline,
            textColor: 'text-white'
@@ -407,7 +408,7 @@ const AttendancePage = () => {
             </p>
             <div className="flex justify-end space-x-3">
                 <Button onClick={() => setIsRequestConfirmOpen(false)} color="whiteDark">Cancel</Button>
-                <Button onClick={handleRequestAttendance} color="success">Confirm Request</Button>
+                <Button onClick={handleRequestAttendance} color="company-purple">Confirm Request</Button>
             </div>
         </div>
       </SlideInPanel>
@@ -417,8 +418,8 @@ const AttendancePage = () => {
        </SlideInPanel>
 
        <SlideInPanel title="Last 10 Days Activity" isOpen={isDetailsPanelOpen} onClose={() => setIsDetailsPanelOpen(false)}>
-           <div className="bg-white/95 dark:bg-slate-800/95 rounded-2xl p-4 shadow-xl border border-gray-100/50 dark:border-slate-600/50">
-             <div className="max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
+           <div className="bg-white/95 dark:bg-slate-800/95 rounded-2xl p-3 shadow-xl border border-gray-100/50 dark:border-slate-600/50">
+             <div className="max-h-[50vh] overflow-y-auto pr-2">
                {recentRecords.length > 0 ? recentRecords.map(record => {
                const styles = getStatusStyles(record.status);
                const statusText = record.status.charAt(0).toUpperCase() + record.status.slice(1);
@@ -462,7 +463,7 @@ const AttendancePage = () => {
            </div>
        </SlideInPanel>
 
-       <div className="space-y-6">
+       <div className="space-y-2">
           {/* Header with Date */}
           <div className="text-center">
             <p className="text-gray-600 dark:text-gray-300">
@@ -481,7 +482,7 @@ const AttendancePage = () => {
            ) : (
              <div className="relative overflow-hidden">
                {todayRecord && (
-                 <div className={`${getStatusStyles(todayRecord.status).cardBg} rounded-2xl p-6 shadow-xl`}>
+                 <div className={`${getStatusStyles(todayRecord.status).cardBg} rounded-2xl px-6 py-4 shadow-xl`}>
                    <div className="flex items-center justify-between">
                      <div className="flex items-center space-x-4">
                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
@@ -497,9 +498,6 @@ const AttendancePage = () => {
                          </p>
                        </div>
                      </div>
-                     <div className="text-white/80">
-                       <Icon path={mdiChevronRight} size={24} />
-                     </div>
                    </div>
                  </div>
                )}
@@ -508,13 +506,7 @@ const AttendancePage = () => {
 
            {/* Quick Actions */}
            <div className="space-y-5 px-1">
-             <div className="flex items-center space-x-3 px-2">
-
-               <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-                 Quick Actions
-               </h2>
-             </div>
-             
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
              {/* Mobile-optimized Action Cards */}
              <div className="space-y-4">
                {/* Request Attendance Card - Mobile First */}
@@ -522,7 +514,7 @@ const AttendancePage = () => {
                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-all duration-200"></div>
                  <button 
                    onClick={() => setIsRequestConfirmOpen(true)}
-                   disabled={['present', 'late', 'permission', 'pending'].includes(todayRecord?.status)}
+                   disabled={['present', 'late', 'permission'].includes(todayRecord?.status)}
                    className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
@@ -602,20 +594,6 @@ const AttendancePage = () => {
                  </button>
                </div>
              </div>
-
-             {/* Mobile-optimized Status Indicator */}
-             {todayRecord && ['present', 'late', 'permission', 'pending'].includes(todayRecord.status) && (
-               <div className="mx-2 mt-4">
-                 <div className="flex items-center justify-center bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/10 dark:to-emerald-900/10 px-4 py-3.5 rounded-2xl border border-green-200/50 dark:border-green-700/30">
-                   <div className="flex items-center space-x-3">
-                     <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
-                     <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                       ✓ Attendance recorded for today
-                     </span>
-                   </div>
-                 </div>
-               </div>
-             )}
            </div>
 
            {/* Summary Stats */}

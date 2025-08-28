@@ -40,8 +40,8 @@ const CustomSingleSelectDropdown: React.FC<Props> = ({
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        top: rect.bottom,
+        left: rect.left,
         width: rect.width
       });
     }
@@ -66,7 +66,7 @@ const CustomSingleSelectDropdown: React.FC<Props> = ({
     
     const handleScroll = () => {
       if (isOpen) {
-        updateDropdownPosition();
+        setIsOpen(false); // Close dropdown on scroll to prevent positioning issues
       }
     };
 

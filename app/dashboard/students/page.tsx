@@ -28,6 +28,8 @@ import WaitlistStudentsSection from "./components/WaitlistStudentsSection";
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
 import { ExportStudentsModal } from "./components/ExportStudentsModal";
 import { AbsentFollowUpDashboard } from "./components/AbsentFollowUpDashboard";
+import { FlipFlopStatusIndicator } from "./components/FlipFlopStatusIndicator";
+import { flipFlopService } from "./_services/flipFlopService";
 import { toast } from 'sonner';
 
 // Firebase
@@ -256,10 +258,40 @@ export default function StudentsPage() {
     return shift; // Return original shift if not morning/afternoon
   };
 
+  // Function to get students with flipped shifts for preview
+  const getFlippedStudents = (originalStudents: Student[]): Student[] => {
+    if (!isFlipFlopPreviewMode) return originalStudents;
+    
+    return originalStudents.map(student => {
+      if (student.scheduleType?.toLowerCase() === 'flip-flop') {
+        return {
+          ...student,
+          shift: toggleFlipFlopShift(student.shift),
+          // Add a flag to indicate this is preview data
+          isFlipPreview: true
+        };
+      }
+      return student;
+    });
+  };
+
+  // Get the students to display (either normal or flipped for preview)
+  const displayStudents = getFlippedStudents(students);
+
   // Function to automatically change flip-flop students' schedules monthly
   const handleFlipFlopScheduleChange = async () => {
     try {
-      const currentMonth = new Date().getMonth(); // 0-based month
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      
+      // Check if already applied for this month
+      const isAlreadyApplied = await flipFlopService.isAppliedForMonth(currentYear, currentMonth);
+      if (isAlreadyApplied) {
+        toast.info('Flip-flop schedules have already been updated for this month');
+        return;
+      }
+      
       const flipFlopStudents = students.filter(student => 
         student.scheduleType?.toLowerCase() === 'flip-flop'
       );
@@ -269,54 +301,290 @@ export default function StudentsPage() {
         return;
       }
 
+      // Show loading toast
+      const loadingToast = toast.loading(`Updating ${flipFlopStudents.length} flip-flop students...`);
+
       // Update each flip-flop student's shift
       const updatePromises = flipFlopStudents.map(async (student) => {
         const newShift = toggleFlipFlopShift(student.shift);
         await updateDoc(doc(db, "students", student.id), {
           shift: newShift,
-          lastFlipFlopUpdate: serverTimestamp()
+          lastFlipFlopUpdate: serverTimestamp(),
+          [`flipFlopHistory.${currentYear}_${currentMonth}`]: {
+            previousShift: student.shift,
+            newShift: newShift,
+            updatedAt: serverTimestamp(),
+            updatedBy: 'manual-apply' // You can pass user email here if available
+          }
         });
-        return { name: student.fullName, oldShift: student.shift, newShift };
+        return { 
+          id: student.id,
+          name: student.fullName, 
+          oldShift: student.shift, 
+          newShift,
+          class: student.class
+        };
       });
 
       const results = await Promise.all(updatePromises);
       
-      toast.success(`Updated ${results.length} flip-flop students for the new month`);
-      console.log('Flip-flop updates:', results);
+      // Create tracking record in Firestore
+      await flipFlopService.createTrackingRecord(
+        currentYear,
+        currentMonth,
+        students,
+        'manual-apply', // You can pass user email here if available
+        false // Not baseline
+      );
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Mark as applied for this month in localStorage (for faster client-side checks)
+      const monthKey = `flipFlop_${currentYear}_${currentMonth}`;
+      localStorage.setItem(monthKey, 'applied');
+      localStorage.setItem('flipFlop_lastApplied', currentDate.toISOString());
+      
+      // Group results by class for better reporting
+      const resultsByClass = results.reduce((acc, result) => {
+        if (!acc[result.class]) acc[result.class] = [];
+        acc[result.class].push(result);
+        return acc;
+      }, {} as Record<string, typeof results>);
+
+      // Show detailed success message
+      const summaryLines = Object.entries(resultsByClass).map(([className, classResults]) => 
+        `${className}: ${classResults.length} students`
+      ).join(', ');
+
+      toast.success(
+        <div className="space-y-2">
+          <div className="font-semibold">✅ Flip-flop schedules updated successfully!</div>
+          <div className="text-sm">{summaryLines}</div>
+          <div className="text-xs text-gray-600">
+            Updated on {currentDate.toLocaleDateString()} - Tracked in Firestore
+          </div>
+        </div>,
+        { duration: 8000 }
+      );
+      
     } catch (error) {
       console.error('Error updating flip-flop schedules:', error);
-      toast.error('Failed to update flip-flop schedules');
+      toast.error(
+        <div className="space-y-1">
+          <div className="font-semibold">❌ Failed to update flip-flop schedules</div>
+          <div className="text-sm">Please try again or contact support</div>
+        </div>,
+        { duration: 6000 }
+      );
+      throw error; // Re-throw for caller to handle
     }
   };
 
-  // Auto flip-flop check on component mount
+  // Auto flip-flop check system
   useEffect(() => {
-    const checkFlipFlopSchedule = () => {
+    const checkAndApplyFlipFlopSchedule = async () => {
+      // Load user settings
+      const settingsStr = localStorage.getItem('flipFlopSettings');
+      const settings = settingsStr ? JSON.parse(settingsStr) : {
+        autoApplyEnabled: true,
+        autoApplyDelay: 10,
+        gracePeriodDays: 7,
+        notificationEnabled: true
+      };
+
+      if (!settings.notificationEnabled) return; // Skip if notifications disabled
+
       const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth(); // 0-based (0 = January, 11 = December)
       const currentDay = now.getDate();
       
-      // Check if it's the first day of the month
-      if (currentDay === 1) {
-        // Check if we haven't already updated this month
-        const lastUpdateKey = `flipFlop_${now.getFullYear()}_${now.getMonth()}`;
-        const lastUpdate = localStorage.getItem(lastUpdateKey);
+      // Check if already applied for this month using Firestore
+      try {
+        const isAlreadyApplied = await flipFlopService.isAppliedForMonth(currentYear, currentMonth);
         
-        if (!lastUpdate) {
-          // Mark as updated for this month
-          localStorage.setItem(lastUpdateKey, 'true');
-          
-          // Ask user if they want to update flip-flop schedules
-          if (window.confirm('It\'s a new month! Would you like to automatically update flip-flop student schedules?')) {
-            handleFlipFlopScheduleChange();
+        // Also check localStorage for faster client-side detection
+        const currentMonthKey = `flipFlop_${currentYear}_${currentMonth}`;
+        const lastCheckKey = 'flipFlop_lastCheck';
+        
+        const lastAppliedMonth = localStorage.getItem(currentMonthKey);
+        const lastCheckDate = localStorage.getItem(lastCheckKey);
+        
+        // Parse last check date
+        const lastCheck = lastCheckDate ? new Date(lastCheckDate) : null;
+        const isNewMonth = !lastCheck || 
+                          lastCheck.getMonth() !== currentMonth || 
+                          lastCheck.getFullYear() !== currentYear;
+        
+        // Update last check date
+        localStorage.setItem(lastCheckKey, now.toISOString());
+        
+        // Auto-apply conditions:
+        // 1. It's a new month and we haven't applied for this month yet (check both Firestore and localStorage)
+        // 2. It's within the grace period
+        // 3. There are flip-flop students to update
+        // 4. Auto-apply is enabled
+        if (isNewMonth && !isAlreadyApplied && !lastAppliedMonth && currentDay <= settings.gracePeriodDays) {
+          const flipFlopStudents = students.filter(student => 
+            student.scheduleType?.toLowerCase() === 'flip-flop'
+          );
+
+          if (flipFlopStudents.length > 0) {
+            if (settings.autoApplyEnabled) {
+              // Show notification with auto-apply countdown
+              const shouldAutoApply = await showAutoFlipFlopNotification(flipFlopStudents.length, settings.autoApplyDelay);
+              
+              if (shouldAutoApply) {
+                try {
+                  await handleFlipFlopScheduleChange();
+                  
+                  // Show success notification
+                  toast.success(`🔄 Flip-flop schedules automatically updated for ${flipFlopStudents.length} students!`, {
+                    duration: 5000,
+                  });
+                } catch (error) {
+                  console.error('Auto flip-flop failed:', error);
+                  toast.error('Auto flip-flop update failed. Please apply manually.');
+                }
+              } else {
+                // User declined, mark as declined for this month
+                localStorage.setItem(currentMonthKey, 'declined');
+              }
+            } else {
+              // Auto-apply disabled, just show reminder
+              toast.info(`📅 New month detected! ${flipFlopStudents.length} flip-flop students need schedule updates.`, {
+                duration: 7000,
+                action: {
+                  label: 'Update Now',
+                  onClick: () => handleFlipFlopScheduleChange()
+                }
+              });
+            }
           }
+        }
+        
+        // Manual check for users who want to force apply
+        if (currentDay === 1 && lastAppliedMonth === 'declined' && !isAlreadyApplied) {
+          toast.info('💡 Reminder: Flip-flop schedules can be updated manually using the "Apply Flip-Flop" button.', {
+            duration: 7000,
+          });
+        }
+      } catch (error) {
+        console.error('Error checking flip-flop status:', error);
+        // Fallback to localStorage-only mode if Firestore fails
+        const currentMonthKey = `flipFlop_${currentYear}_${currentMonth}`;
+        const lastAppliedMonth = localStorage.getItem(currentMonthKey);
+        
+        if (!lastAppliedMonth && currentDay <= settings.gracePeriodDays) {
+          toast.warning('Could not verify flip-flop status. Please check manually.', {
+            duration: 5000,
+          });
         }
       }
     };
 
-    // Run check after students are loaded
+    // Function to show auto-apply notification with countdown
+    const showAutoFlipFlopNotification = (studentCount: number, delaySeconds: number): Promise<boolean> => {
+      return new Promise((resolve) => {
+        let countdown = delaySeconds;
+        
+        const updateToast = (timeLeft: number) => {
+          const toastId = toast.info(
+            <div className="flex flex-col space-y-2">
+              <div className="font-semibold">🗓️ New Month Detected!</div>
+              <div>Auto-updating flip-flop schedules for {studentCount} students...</div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Auto-applying in {timeLeft}s</span>
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={() => {
+                      toast.dismiss(toastId);
+                      resolve(true);
+                    }}
+                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                  >
+                    Apply Now
+                  </button>
+                  <button 
+                    onClick={() => {
+                      toast.dismiss(toastId);
+                      resolve(false);
+                    }}
+                    className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            </div>,
+            {
+              duration: 1000,
+              id: 'auto-flip-flop',
+            }
+          );
+        };
+
+        // Start countdown
+        const countdownInterval = setInterval(() => {
+          countdown--;
+          if (countdown > 0) {
+            updateToast(countdown);
+          } else {
+            clearInterval(countdownInterval);
+            toast.dismiss('auto-flip-flop');
+            resolve(true); // Auto-apply after countdown
+          }
+        }, 1000);
+
+        // Initial toast
+        updateToast(countdown);
+      });
+    };
+
+    // Run check after students are loaded and on component mount
     if (students.length > 0) {
-      checkFlipFlopSchedule();
+      checkAndApplyFlipFlopSchedule();
     }
+  }, [students]);
+
+  // Additional effect to check on app focus (when user returns to the app)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Load settings
+      const settingsStr = localStorage.getItem('flipFlopSettings');
+      const settings = settingsStr ? JSON.parse(settingsStr) : { gracePeriodDays: 7, notificationEnabled: true };
+      
+      if (!settings.notificationEnabled) return;
+
+      // Re-check when user returns to the app (in case they missed the new month)
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      const currentDay = now.getDate();
+      const currentMonthKey = `flipFlop_${currentYear}_${currentMonth}`;
+      const lastAppliedMonth = localStorage.getItem(currentMonthKey);
+      
+      // If it's within the grace period and nothing was applied yet
+      if (currentDay <= settings.gracePeriodDays && !lastAppliedMonth && students.length > 0) {
+        const flipFlopStudents = students.filter(student => 
+          student.scheduleType?.toLowerCase() === 'flip-flop'
+        );
+        
+        if (flipFlopStudents.length > 0) {
+          toast.info(`📅 Don't forget to update flip-flop schedules for the new month! (${flipFlopStudents.length} students)`, {
+            duration: 5000,
+            action: {
+              label: 'Update Now',
+              onClick: () => handleFlipFlopScheduleChange()
+            }
+          });
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [students]);
 
   // Function to restore dropped student
@@ -408,10 +676,47 @@ export default function StudentsPage() {
       >
         {!isFormActive && ( // Use isFormActive here
           <>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4"> {/* Made responsive with flex-wrap and gap */}
-            {/* Batch Edit and Export buttons - only show when expanded */}
+          {/* Mobile-first responsive layout */}
+          <div className="w-full">
+            {/* Primary actions row - always visible */}
+            <div className="flex flex-wrap items-center justify-end gap-2 mb-2 sm:mb-0">
+              <Button
+                onClick={handleToggleTakeAttendance}
+                icon={mdiClipboardCheck}
+                label={isTakeAttendanceMode ? "Exit Take Attendance" : "Take Attendance"}
+                color={isTakeAttendanceMode ? "danger" : "company-purple"}
+                roundedFull
+                small
+              />
+              <Button
+                onClick={handleShowCreateForm}
+                icon={mdiAccountPlus}
+                label="Create Student"
+                color="white"
+                roundedFull
+                small
+              />
+              <Button
+                onClick={() => setIsButtonsExpanded(!isButtonsExpanded)}
+                icon={isButtonsExpanded ? mdiChevronUp : mdiChevronDown}
+                label={isButtonsExpanded ? "Less" : "More"}
+                color={isButtonsExpanded ? "white" : "void"}
+                roundedFull
+                small
+              />
+            </div>
+            
+            {/* Secondary actions row - toggleable */}
             {isButtonsExpanded && (
-              <>
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-4">
+                <Button
+                  onClick={() => setShowAbsentFollowUp(!showAbsentFollowUp)}
+                  icon={mdiAccountOff}
+                  label={showAbsentFollowUp ? "Hide Follow-ups" : "Absent Follow-ups"}
+                  color={showAbsentFollowUp ? "danger" : "info"}
+                  roundedFull
+                  small
+                />
                 <Button
                   onClick={handleToggleBatchEdit}
                   icon={mdiPencilBox}
@@ -444,45 +749,9 @@ export default function StudentsPage() {
                   roundedFull
                   small
                 />
-              </>
+              </div>
             )}
-            
-            {/* Main action buttons - always visible */}
-            <Button
-              onClick={() => setShowAbsentFollowUp(!showAbsentFollowUp)}
-              icon={mdiAccountOff}
-              label={showAbsentFollowUp ? "Hide Follow-ups" : "Absent Follow-ups"}
-              color={showAbsentFollowUp ? "danger" : "info"}
-              roundedFull
-              small
-            />
-            <Button
-              onClick={handleToggleTakeAttendance}
-              icon={mdiClipboardCheck}
-              label={isTakeAttendanceMode ? "Exit Take Attendance" : "Take Attendance"}
-              color={isTakeAttendanceMode ? "danger" : "company-purple"}
-              roundedFull
-              small
-            />
-            <Button
-              onClick={handleShowCreateForm} // Changed to show create form
-              icon={mdiAccountPlus}
-              label="Create Student"
-              color="white"
-              roundedFull
-              small
-            />
-            
-            {/* Expand/Collapse button */}
-            <Button
-              onClick={() => setIsButtonsExpanded(!isButtonsExpanded)}
-              icon={isButtonsExpanded ? mdiChevronUp : mdiChevronDown}
-              label={isButtonsExpanded ? "Less" : "More"}
-              color={isButtonsExpanded ? "white" : "void"}
-              roundedFull
-              small
-            />
-             </div>
+          </div>
           </>
         )}
       </SectionTitleLineWithButton>
@@ -491,6 +760,33 @@ export default function StudentsPage() {
         <NotificationBar color="danger" icon={mdiMonitorCellphone} className="mb-4">
           {error}
         </NotificationBar>
+      )}
+
+      {isFlipFlopPreviewMode && (
+        <NotificationBar color="info" icon={mdiMonitorCellphone} className="mb-4">
+          <div className="flex items-center justify-between">
+            <span>
+              <strong>Flip-Flop Preview Mode:</strong> Showing how students will be scheduled next month. 
+              Flip-flop students have their shifts toggled (Morning ↔ Afternoon).
+            </span>
+            <button 
+              onClick={handleToggleFlipFlopPreview}
+              className="ml-4 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+            >
+              Exit Preview
+            </button>
+          </div>
+        </NotificationBar>
+      )}
+
+      {/* Flip-flop status indicator */}
+      {students.filter(s => s.scheduleType?.toLowerCase() === 'flip-flop').length > 0 && !isFormActive && (
+        <div className="mb-4">
+          <FlipFlopStatusIndicator 
+            students={students}
+            onApplyFlipFlop={handleFlipFlopScheduleChange}
+          />
+        </div>
       )}
       
       {isFormActive && ( 
@@ -608,7 +904,7 @@ export default function StudentsPage() {
           ) : !showAbsentFollowUp ? (
             <CardBox className="mb-6" hasTable>
               <TableStudents
-                students={students}
+                students={displayStudents}
                 onEdit={handleEditStudent} // Pass the updated handler
                 onDelete={handleDeleteStudent}
                 isBatchEditMode={isBatchEditMode}

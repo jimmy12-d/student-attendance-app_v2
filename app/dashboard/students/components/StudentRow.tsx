@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Student } from '../../../_interfaces';
 import { ColumnConfig } from './ColumnToggle';
-import { db } from '../../../../firebase-config';
-import { doc, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { AbsentStatusTracker } from './AbsentStatusTracker';
 
@@ -53,16 +51,12 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   student, 
   index, 
   enabledColumns, 
-  onEdit, 
-  onDelete,
   onViewDetails,
   isBatchEditMode = false,
   isTakeAttendanceMode = false,
   isFlipFlopPreviewMode = false,
-  onBatchUpdate,
   isSelected = false,
   onSelect,
-  getAttendanceStatus,
   getTodayAttendanceStatus,
   isStudentCurrentlyPresent,
   onAttendanceChange
@@ -87,7 +81,9 @@ export const StudentRow: React.FC<StudentRowProps> = ({
         ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 shadow-md animate-pulse' 
         : isBatchEditMode && isSelected 
         ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' 
-        : 'hover:bg-blue-50 dark:hover:bg-slate-700/50'
+        : student.isFlipPreview && student.scheduleType?.toLowerCase() === 'flip-flop'
+        ? 'bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 shadow-sm' 
+        : 'hover:bg-gray-50 dark:hover:bg-slate-700/50'
     }`}>
         {enabledColumns.map((column) => {
           switch (column.id) {
@@ -236,13 +232,15 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                   student.scheduleType === 'Fix' 
                     ? 'bg-fuchsia-100 dark:bg-fuchsia-900/30 text-fuchsia-800 dark:text-fuchsia-300 group-hover:bg-fuchsia-200 dark:group-hover:bg-fuchsia-800/50'
                     : student.scheduleType === 'Flip-Flop'
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/50'
+                    ? student.isFlipPreview 
+                      ? 'bg-orange-200 dark:bg-orange-800/50 text-orange-900 dark:text-orange-200 group-hover:bg-orange-300 dark:group-hover:bg-orange-700/70 border border-orange-300 dark:border-orange-600'
+                      : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/50'
                     : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600'
                 }`}>
                   {student.scheduleType || 'N/A'}
-                  {isFlipFlopPreviewMode && student.scheduleType?.toLowerCase() === 'flip-flop' && (
-                    <span className="ml-1 text-xs opacity-75">
-                      ({getFlippedShift(student.shift)} next month)
+                  {student.isFlipPreview && student.scheduleType?.toLowerCase() === 'flip-flop' && (
+                    <span className="ml-1 text-xs font-semibold bg-orange-300 dark:bg-orange-700 px-1.5 py-0.5 rounded-full">
+                      PREVIEW
                     </span>
                   )}
                 </span>
@@ -320,17 +318,16 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               <td key="todayAttendance" className="p-3 whitespace-nowrap">
                 <div className="flex items-center justify-center">
                   {todayStatus.status === 'Present' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                       Present
-
                     </span>
                   ) : todayStatus.status === 'Late' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                       </svg>
                       Late
                       {todayStatus.time && (
@@ -346,9 +343,10 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                       currentStatus="Absent"
                     />
                   ) : todayStatus.status === 'Permission' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM4 7h12v9a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" clipRule="evenodd" />
+                        <path d="M9 12a1 1 0 102 0V9a1 1 0 10-2 0v3z" />
                       </svg>
                       Permission
                     </span>

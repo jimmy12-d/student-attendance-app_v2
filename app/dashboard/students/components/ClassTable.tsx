@@ -76,12 +76,19 @@ export const ClassTable: React.FC<ClassTableProps> = ({
     
     if (!hasFlipFlopStudents) return originalShift;
     
-    // Toggle the shift for preview
-    if (originalShift.toLowerCase() === 'morning') {
-      return 'Afternoon';
-    } else if (originalShift.toLowerCase() === 'afternoon') {
-      return 'Morning';
+    // For flip-flop preview, show what the flipped students will have
+    // If this section has flip-flop students, they will be flipped
+    const flipFlopStudentsInSection = studentList.filter(student => 
+      student.scheduleType?.toLowerCase() === 'flip-flop'
+    );
+    
+    if (flipFlopStudentsInSection.length > 0) {
+      // Return the flipped version of what flip-flop students had originally
+      const firstFlipFlopStudent = flipFlopStudentsInSection[0];
+      // Since the student data is already flipped, we show their current (flipped) shift
+      return firstFlipFlopStudent.shift;
     }
+    
     return originalShift;
   };
 
@@ -427,7 +434,9 @@ export const ClassTable: React.FC<ClassTableProps> = ({
             <Icon path={mdiAccountSchool} size={18} className="mr-1" />
             {studentCount || studentList.length} Students
             {isFlipFlopPreviewMode && studentList.some(s => s.scheduleType?.toLowerCase() === 'flip-flop') && (
-              <span className="ml-1 text-xs opacity-75">({displayShift})</span>
+              <span className="ml-1 text-xs font-semibold bg-white/30 dark:bg-black/30 px-1.5 py-0.5 rounded-full">
+                {displayShift} PREVIEW
+              </span>
             )}
           </span>
           

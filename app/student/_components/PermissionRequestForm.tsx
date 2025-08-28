@@ -66,7 +66,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
       permissionEndDate: endDate.toISOString().split('T')[0],
       duration: duration,
       status: 'pending',
-      requestDate: serverTimestamp(),
+      requestedAt: serverTimestamp(),
     };
 
     const submissionPromise = addDoc(collection(db, 'permissions'), newPermissionRequest);

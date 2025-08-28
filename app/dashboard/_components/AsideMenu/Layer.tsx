@@ -35,7 +35,7 @@ export default function AsideMenuLayer({
 
   return (
     <aside
-      className={`${className} lg:py-2 lg:pl-2 w-60 fixed flex z-40 top-0 h-screen transition-all duration-300 ease-in-out overflow-hidden`}
+      className={`${className} lg:py-2 lg:pl-2 w-60 fixed flex z-110 top-0 h-screen transition-all duration-300 ease-in-out overflow-hidden`}
     >
       <div className="aside lg:rounded-2xl flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border-r border-gray-200 dark:border-gray-700">
         {/* Enhanced Header with gradient and glow effects */}

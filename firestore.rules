@@ -183,5 +183,22 @@ service cloud.firestore {
       // WRITE: Authenticated users (teachers/admins) can update mock results
       allow write: if request.auth != null;
     }
+    
+    // --- FLIP-FLOP SYSTEM RULES ---
+    match /flipFlopTracking/{trackingId} {
+      // READ: Only admins can read flip-flop tracking records
+      allow read: if isAuthorizedUser();
+      
+      // WRITE: Only admins can create/update flip-flop tracking records
+      allow write: if isAuthorizedUser();
+    }
+    
+    match /systemSettings/{settingId} {
+      // READ: Only admins can read system settings
+      allow read: if isAuthorizedUser();
+      
+      // WRITE: Only admins can modify system settings
+      allow write: if isAuthorizedUser();
+    }
   }
 }

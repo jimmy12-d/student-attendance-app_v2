@@ -128,6 +128,15 @@ export interface Student {
   lastLoginAt?: Timestamp | Date; // Last login timestamp
   passwordUpdatedAt?: Timestamp | Date; // When password was last changed
   migratedToPhoneAuth?: Timestamp | Date; // When migrated from username to phone auth
+  // Flip-flop tracking
+  flipFlopHistory?: Record<string, {
+    previousShift: string;
+    newShift: string;
+    updatedAt: Timestamp | Date;
+    updatedBy: string;
+  }>; // History of flip-flop changes by month (key: "YYYY_MM")
+  // Flip preview flag for UI (not stored in database)
+  isFlipPreview?: boolean;
 }
 
 export interface PermissionRecord {

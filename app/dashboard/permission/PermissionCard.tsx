@@ -155,8 +155,7 @@ const PermissionCard: React.FC<Props> = ({ permission, onUpdateRequest }) => {
       {/* Request Info */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-slate-700">
         <div className="text-xs text-gray-500 dark:text-slate-500">
-          <div>Requested by: {permission.requestedBy || 'N/A'}</div>
-          <div>On: {formatTimestamp(permission.requestedAt)}</div>
+          <div className="pr-2">Request On: {formatTimestamp(permission.requestedAt)}</div>
           {permission.reviewedAt && (
             <div>Reviewed: {formatTimestamp(permission.reviewedAt)}</div>
           )}

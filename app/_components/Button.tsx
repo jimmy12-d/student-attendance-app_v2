@@ -62,6 +62,7 @@ export default function Button({
       <button className={buttonClasses} onClick={onClick} disabled={disabled}>
         {icon && <Icon path={icon} size={iconSize} />}
         {label && <span className={icon ? "ml-2" : ""}>{label}</span>}
+        {children && !label && <span className={icon ? "ml-2" : ""}>{children}</span>}
       </button>
     );
   }

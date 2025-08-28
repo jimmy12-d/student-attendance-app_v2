@@ -55,29 +55,29 @@ const StudentTopNav = () => {
     }, []);
 
     return (
-        <nav className="bg-slate-800/90 backdrop-blur-lg shadow-lg border-b border-slate-700/50 relative z-30">
+        <nav className="bg-white/95 dark:bg-slate-800/90 backdrop-blur-lg shadow-lg border-b border-gray-200/70 dark:border-slate-700/50 relative z-30">
             <div className="max-w-3xl mx-auto px-4">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center space-x-2">
                         <Image src="/rodwell_logo.png" alt="Logo" width={46} height={46} />
-                        <span className="text-lg font-bold text-white">Student Portal</span>
+                        <span className="text-lg font-bold text-gray-800 dark:text-white">Student Portal</span>
                     </div>
                     
                     <div className="flex items-center space-x-2">
                         <div className="flex flex-col items-end">
                             {fullName && (
-                                <span className="text-base font-semibold text-slate-100 truncate">
+                                <span className="text-base font-semibold text-gray-800 dark:text-slate-100 truncate">
                                     {fullName}
                                 </span>
                             )}
                             {userClass && (
-                                <span className="text-xs text-slate-400 truncate">
+                                <span className="text-xs text-gray-500 dark:text-slate-400 truncate">
                                     {userClass}
                                 </span>
                             )}
                         </div>
                         <div ref={panelRef} className="relative">
-                            <button onClick={() => setIsPanelVisible(!isPanelVisible)} className="relative text-white">
+                            <button onClick={() => setIsPanelVisible(!isPanelVisible)} className="relative text-gray-600 dark:text-white hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
                                 <Icon path={mdiBell} size={24} />
                                 {unreadNotificationCount > 0 && (
                                     <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">

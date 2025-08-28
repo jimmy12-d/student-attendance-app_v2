@@ -55,9 +55,9 @@ export default function StudentBottomNav() {
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       // Use iOS safe area inset to keep the nav clearly separated from any system UI
       style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
-      className="fixed left-1/2 -translate-x-1/2 w-[75%] max-w-sm mx-auto z-40"
+      className="fixed left-1/2 -translate-x-1/2 w-[280px] sm:w-[320px] mx-auto z-40"
     >
-      <div className="relative flex items-center justify-around bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg rounded-full shadow-lg border border-white/20">
+      <div className="relative flex items-center justify-around bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg rounded-full shadow-lg border border-white/20 px-2">
         {currentNavItems.map((item) => {
           // Special handling for Home button (attendance page)
           const isActive = item.href === '/student/attendance' 
@@ -67,7 +67,7 @@ export default function StudentBottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="relative z-10 flex flex-col items-center justify-center w-1/3 h-14 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
+              className="relative z-10 flex flex-col items-center justify-center flex-1 h-14 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
             >
                 {isActive && (
                     <motion.div

@@ -32,17 +32,9 @@ const FaceApiAttendanceScanner = () => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [trackedFaces, setTrackedFaces] = useState<TrackedFace[]>([]);
-  const [isEnrolling, setIsEnrolling] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<string>('');
-  const [showEnrollment, setShowEnrollment] = useState(false);
   
-  // New photo capture enrollment states
-  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
-  const [selectedStudentForPhoto, setSelectedStudentForPhoto] = useState<string>('');
-  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
-  
-  const [recognitionThreshold, setRecognitionThreshold] = useState(0.6); // Default 60%
+  const [recognitionThreshold, setRecognitionThreshold] = useState(60); // Default 60%
+  const [showRecognitionControls, setShowRecognitionControls] = useState(false); // Collapsible Recognition Controls
   const [minFaceSize, setMinFaceSize] = useState(80); // Minimum face width/height in pixels
   const [maxFaceSize, setMaxFaceSize] = useState(300); // Maximum face width/height in pixels
   const [selectedShift, setSelectedShift] = useState<string>(''); // Selected shift/session
@@ -61,9 +53,6 @@ const FaceApiAttendanceScanner = () => {
   const RECOGNITION_COOLDOWN = 30000; // 30 seconds
   const DETECTION_INTERVAL = 1000; // 1 second
   
-  // Use the configurable threshold
-  const RECOGNITION_THRESHOLD = recognitionThreshold;
-
   const enrolledStudents = students.filter(s => s.faceDescriptor);
   const unenrolledStudents = students.filter(s => !s.faceDescriptor);
 
@@ -165,308 +154,59 @@ const FaceApiAttendanceScanner = () => {
 
   // Initialize success sound
   useEffect(() => {
-    audioRef.current = new Audio('/success_sound_2.mp3');
+    const audio = new Audio('/success_sound_2.mp3');
+    audio.preload = 'auto';
+    audio.volume = 0.8;
+    audioRef.current = audio;
+    
+    // Test if audio can be played
+    const testAudio = () => {
+      if (audioRef.current) {
+        audioRef.current.play().then(() => {
+          console.log('✅ Audio test successful');
+          audioRef.current?.pause();
+          audioRef.current!.currentTime = 0;
+        }).catch(e => {
+          console.log('❌ Audio test failed:', e.message);
+        });
+      }
+    };
+    
+    // Test audio on first user interaction
+    const enableAudio = () => {
+      testAudio();
+      document.removeEventListener('click', enableAudio);
+      document.removeEventListener('touchstart', enableAudio);
+    };
+    
+    document.addEventListener('click', enableAudio);
+    document.addEventListener('touchstart', enableAudio);
+    
+    return () => {
+      document.removeEventListener('click', enableAudio);
+      document.removeEventListener('touchstart', enableAudio);
+    };
   }, []);
 
   const playSuccessSound = () => {
     if (audioRef.current) {
-      audioRef.current.play().catch(e => console.error("Error playing sound:", e));
-    }
-  };
-
-  // Enroll student with face descriptor
-  const handleEnrollment = async () => {
-    if (!selectedStudent) {
-      toast.error('Please select a student');
-      return;
-    }
-
-    setIsEnrolling(true);
-    
-    try {
-      const student = students.find(s => s.id === selectedStudent);
-      if (!student) {
-        throw new Error('Selected student not found');
-      }
-
-      if (student.photoUrl) {
-        // Convert Google Drive URL to proper format
-        const convertedPhotoUrl = convertGoogleDriveUrl(student.photoUrl);
-        
-        // Use existing photo URL
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        
-        img.onload = async () => {
-          try {
-            // First, analyze image quality
-            const qualityAnalysis = await analyzeImageQuality(img);
-            
-            if (!qualityAnalysis.pass) {
-              throw new Error(`Image quality check failed: ${qualityAnalysis.reason}`);
-            }
-            
-            // Show quality score if there are minor issues
-            if (qualityAnalysis.reason && qualityAnalysis.score < 90) {
-              toast.warning(`Image quality: ${qualityAnalysis.score}% - ${qualityAnalysis.reason}`, {
-                duration: 5000
-              });
-            }
-
-            const descriptor = await generateFaceDescriptor(img);
-            if (!descriptor) {
-              throw new Error('Could not generate face descriptor from photo');
-            }
-
-            // Store descriptor AND corrected photoUrl in Firestore
-            const studentRef = doc(db, 'students', student.id);
-            const updateData: any = {
-              faceDescriptor: Array.from(descriptor),
-              faceApiEnrolledAt: new Date(),
-              imageQualityScore: qualityAnalysis.score
-            };
-            
-            // Update photoUrl if it was converted
-            if (convertedPhotoUrl !== student.photoUrl) {
-              updateData.photoUrl = convertedPhotoUrl;
-              console.log(`📝 Updated photoUrl for ${student.fullName}`);
-            }
-            
-            await updateDoc(studentRef, updateData);
-
-            // Update local state with both descriptor and corrected photoUrl
-            setStudents(prev => prev.map(s => 
-              s.id === student.id 
-                ? { 
-                    ...s, 
-                    faceDescriptor: Array.from(descriptor),
-                    photoUrl: convertedPhotoUrl
-                  }
-                : s
-            ));
-
-            toast.success(`${student.fullName} enrolled successfully (Quality: ${qualityAnalysis.score}%)`);
-            setSelectedStudent('');
-            setShowEnrollment(false);
-          } catch (error: any) {
-            console.error('Enrollment error:', error);
-            
-            // Provide specific error messages for common issues
-            let errorMessage = 'Failed to enroll student';
-            if (error.message?.includes('CORS')) {
-              errorMessage = 'Image access blocked. Please ensure the photo is publicly accessible.';
-            } else if (error.message?.includes('fetch')) {
-              errorMessage = 'Failed to load image. Please check the photo URL.';
-            } else if (error.message?.includes('face')) {
-              errorMessage = 'Could not detect a clear face in the photo. Please use a different image.';
-            } else if (error.message) {
-              errorMessage = error.message;
-            }
-            
-            toast.error(errorMessage);
-          } finally {
-            setIsEnrolling(false);
-          }
-        };
-
-        img.onerror = () => {
-          toast.error('Failed to load student photo');
-          setIsEnrolling(false);
-        };
-
-        // Use image proxy for Google Drive URLs to avoid CORS issues
-        let imageUrl = convertedPhotoUrl;
-        if (imageUrl.includes('drive.google.com')) {
-          imageUrl = `/api/image-proxy?url=${encodeURIComponent(convertedPhotoUrl)}`;
-        }
-
-        img.crossOrigin = 'anonymous';
-        img.src = imageUrl;
-      } else {
-        // Capture from webcam
-        if (!webcamRef.current) {
-          throw new Error('Camera not available');
-        }
-
-        const imageSrc = webcamRef.current.getScreenshot();
-        if (!imageSrc) {
-          throw new Error('Failed to capture image');
-        }
-
-        const img = new Image();
-        img.onload = async () => {
-          try {
-            // Analyze image quality for webcam capture
-            const qualityAnalysis = await analyzeImageQuality(img);
-            
-            if (!qualityAnalysis.pass) {
-              throw new Error(`Image quality check failed: ${qualityAnalysis.reason}`);
-            }
-
-            const descriptor = await generateFaceDescriptor(img);
-            if (!descriptor) {
-              throw new Error('Could not detect face in captured image');
-            }
-
-            // Store descriptor in Firestore
-            const studentRef = doc(db, 'students', student.id);
-            await updateDoc(studentRef, {
-              faceDescriptor: Array.from(descriptor),
-              faceApiEnrolledAt: new Date(),
-              imageQualityScore: qualityAnalysis.score,
-              enrollmentMethod: 'webcam'
-            });
-
-            // Update local state
-            setStudents(prev => prev.map(s => 
-              s.id === student.id 
-                ? { ...s, faceDescriptor: Array.from(descriptor) }
-                : s
-            ));
-
-            toast.success(`${student.fullName} enrolled successfully using camera (Quality: ${qualityAnalysis.score}%)`);
-            setSelectedStudent('');
-            setShowEnrollment(false);
-          } catch (error: any) {
-            console.error('Enrollment error:', error);
-            toast.error(error.message || 'Failed to enroll student');
-          } finally {
-            setIsEnrolling(false);
-          }
-        };
-
-        img.src = imageSrc;
-      }
-    } catch (error: any) {
-      console.error('Enrollment failed:', error);
-      toast.error(error.message || 'Enrollment failed');
-      setIsEnrolling(false);
-    }
-  };
-
-  // Start photo capture enrollment
-  const startPhotoCapture = () => {
-    if (!selectedStudentForPhoto) {
-      toast.error('Please select a student first');
-      return;
-    }
-
-    setShowPhotoCapture(true);
-    setCapturedPhoto(null);
-    
-    // Start camera if not already active
-    if (!isCameraActive) {
-      setIsCameraActive(true);
-    }
-  };
-
-  // Capture photo for enrollment
-  const capturePhotoForEnrollment = () => {
-    if (!webcamRef.current) {
-      toast.error('Camera not available');
-      return;
-    }
-
-    try {
-      setIsCapturingPhoto(true);
-      const imageSrc = webcamRef.current.getScreenshot();
-      
-      if (!imageSrc) {
-        toast.error('Failed to capture photo');
-        return;
-      }
-
-      setCapturedPhoto(imageSrc);
-      toast.success('Photo captured! Review and confirm to enroll.');
-    } catch (error) {
-      console.error('Photo capture error:', error);
-      toast.error('Failed to capture photo');
-    } finally {
-      setIsCapturingPhoto(false);
-    }
-  };
-
-  // Confirm photo and enroll student
-  const confirmPhotoEnrollment = async () => {
-    if (!capturedPhoto || !selectedStudentForPhoto) {
-      toast.error('No photo captured or student selected');
-      return;
-    }
-
-    setIsEnrolling(true);
-
-    try {
-      const student = students.find(s => s.id === selectedStudentForPhoto);
-      if (!student) {
-        throw new Error('Selected student not found');
-      }
-
-      const img = new Image();
-      img.onload = async () => {
+      console.log('🔊 Playing success sound for student recognition');
+      // Reset audio to beginning
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(e => {
+        console.error("❌ Error playing sound:", e);
+        // Fallback: try to create a new audio instance
         try {
-          // Analyze image quality
-          const qualityAnalysis = await analyzeImageQuality(img);
-          
-          if (!qualityAnalysis.pass) {
-            throw new Error(`Image quality check failed: ${qualityAnalysis.reason}`);
-          }
-
-          // Show quality score if there are minor issues
-          if (qualityAnalysis.reason && qualityAnalysis.score < 90) {
-            toast.warning(`Image quality: ${qualityAnalysis.score}% - ${qualityAnalysis.reason}`, {
-              duration: 5000
-            });
-          }
-
-          const descriptor = await generateFaceDescriptor(img);
-          if (!descriptor) {
-            throw new Error('Could not detect face in captured photo');
-          }
-
-          // Store descriptor in Firestore
-          const studentRef = doc(db, 'students', student.id);
-          await updateDoc(studentRef, {
-            faceDescriptor: Array.from(descriptor),
-            faceApiEnrolledAt: new Date(),
-            imageQualityScore: qualityAnalysis.score,
-            enrollmentMethod: 'photo_capture'
-          });
-
-          // Update local state
-          setStudents(prev => prev.map(s => 
-            s.id === student.id 
-              ? { ...s, faceDescriptor: Array.from(descriptor) }
-              : s
-          ));
-
-          toast.success(`${student.fullName} enrolled successfully using captured photo (Quality: ${qualityAnalysis.score}%)`);
-          
-          // Reset photo capture state
-          setShowPhotoCapture(false);
-          setSelectedStudentForPhoto('');
-          setCapturedPhoto(null);
-          
-        } catch (error: any) {
-          console.error('Photo enrollment error:', error);
-          toast.error(error.message || 'Failed to enroll student with captured photo');
-        } finally {
-          setIsEnrolling(false);
+          const fallbackAudio = new Audio('/success_sound_2.mp3');
+          fallbackAudio.volume = 0.8;
+          fallbackAudio.play();
+        } catch (fallbackError) {
+          console.error("❌ Fallback audio also failed:", fallbackError);
         }
-      };
-
-      img.src = capturedPhoto;
-    } catch (error: any) {
-      console.error('Photo enrollment failed:', error);
-      toast.error(error.message || 'Photo enrollment failed');
-      setIsEnrolling(false);
+      });
+    } else {
+      console.warn('⚠️ Audio reference not available');
     }
-  };
-
-  // Cancel photo capture
-  const cancelPhotoCapture = () => {
-    setShowPhotoCapture(false);
-    setSelectedStudentForPhoto('');
-    setCapturedPhoto(null);
   };
 
   // Face detection and recognition
@@ -590,26 +330,37 @@ const FaceApiAttendanceScanner = () => {
               const storedDescriptor = new Float32Array(student.faceDescriptor);
               const distance = calculateFaceDistance(face.descriptor, storedDescriptor);
               const confidence = (1 - distance) * 100;
-              const requiredConfidence = (1 - RECOGNITION_THRESHOLD) * 100;
+              const requiredConfidence = recognitionThreshold;
               
-              console.log(`Comparing with ${student.fullName}: distance=${distance.toFixed(3)}, confidence=${confidence.toFixed(1)}%, required=${requiredConfidence.toFixed(0)}%`);
+              console.log(`🔍 Recognition Debug for ${student.fullName}:`);
+              console.log(`   - Distance: ${distance.toFixed(4)}`);
+              console.log(`   - Confidence: ${confidence.toFixed(2)}%`);
+              console.log(`   - Required: ${requiredConfidence}%`);
+              console.log(`   - Pass: ${confidence >= requiredConfidence ? 'YES' : 'NO'}`);
               
               // Check if confidence meets the threshold
               if (confidence >= requiredConfidence && (!bestMatch || distance < bestMatch.distance)) {
-                console.log(`✅ Valid match: ${student.fullName} with ${confidence.toFixed(1)}% confidence (need ${requiredConfidence.toFixed(0)}%+)`);
+                console.log(`✅ VALID MATCH: ${student.fullName} - ${confidence.toFixed(1)}% confidence (≥${requiredConfidence}%)`);
                 bestMatch = { student, distance };
               } else if (confidence < requiredConfidence) {
-                console.log(`❌ Below threshold: ${student.fullName} with ${confidence.toFixed(1)}% confidence (need ${requiredConfidence.toFixed(0)}%+)`);
+                console.log(`❌ BELOW THRESHOLD: ${student.fullName} - ${confidence.toFixed(1)}% confidence (<${requiredConfidence}%)`);
               }
             }
 
             if (bestMatch) {
               const finalConfidence = (1 - bestMatch.distance) * 100;
-              const requiredConfidence = (1 - RECOGNITION_THRESHOLD) * 100;
-              console.log(`🎯 Final recognition: ${bestMatch.student.fullName} with ${finalConfidence.toFixed(1)}% confidence`);
+              const requiredConfidence = recognitionThreshold;
+              console.log(`🎯 FINAL RECOGNITION CHECK:`);
+              console.log(`   - Student: ${bestMatch.student.fullName}`);
+              console.log(`   - Final Confidence: ${finalConfidence.toFixed(2)}%`);
+              console.log(`   - Required Threshold: ${requiredConfidence}%`);
+              console.log(`   - Decision: ${finalConfidence >= requiredConfidence ? 'RECOGNIZE' : 'REJECT'}`);
               
               // Double-check confidence threshold before marking attendance
               if (finalConfidence >= requiredConfidence) {
+                // Play success sound immediately
+                playSuccessSound();
+                
                 // Mark attendance for the recognized student
                 markAttendance(bestMatch.student, selectedShift || '', {}, playSuccessSound);
                 
@@ -778,7 +529,7 @@ const FaceApiAttendanceScanner = () => {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Face-API.js Attendance System</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-6">
             Advanced facial recognition using SSD MobileNet V1 model with automatic photo enrollment capabilities
           </p>
         </div>
@@ -786,7 +537,7 @@ const FaceApiAttendanceScanner = () => {
         {/* Status Cards */}
         {!isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-4 px-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Enrolled Students</p>
@@ -798,7 +549,7 @@ const FaceApiAttendanceScanner = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-4 px-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Enrollment</p>
@@ -810,7 +561,7 @@ const FaceApiAttendanceScanner = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-4 px-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Faces Tracked</p>
@@ -822,18 +573,41 @@ const FaceApiAttendanceScanner = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">System Status</p>
-                  <p className="text-lg font-semibold text-green-600 dark:text-green-400">
-                    {isCameraActive ? 'Active' : 'Inactive'}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-4 px-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
+              
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-white flex items-center space-x-2">
+                  <Icon path={mdiClock} className="w-4 h-4 text-blue-500" />
+                  <span>Select Shift/Session</span>
+                </h3>
+                <button
+                  onClick={autoSelectShift}
+                  className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                  title="Auto-select shift based on current time"
+                >
+                  Auto
+                </button>
+              </div>
+              
+              <CustomDropdown
+                id="shift-selection-header"
+                label=""
+                value={selectedShift}
+                onChange={setSelectedShift}
+                options={availableShifts}
+                placeholder="Choose shift/session..."
+                searchable={false}
+                className="w-full"
+              />
+              
+              
+              {!selectedShift && (
+                <div className="mt-3 p-2 bg-orange-50 dark:bg-orange-900/30 rounded text-center">
+                  <p className="text-xs text-orange-700 dark:text-orange-300">
+                    ⚠️ Please select a shift before starting camera
                   </p>
                 </div>
-                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                  <Icon path={isCameraActive ? mdiCamera : mdiCameraOff} className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}
@@ -856,115 +630,175 @@ const FaceApiAttendanceScanner = () => {
           </CardBox>
         )}
 
-        {/* Shift Selector and Controls */}
+        {/* Recognition Controls - Full Width & Collapsible */}
         {!isLoading && (
           <div className="mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Shift Selector */}
-              <CardBox className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-                    Select Shift/Session
-                  </h3>
-                  <div className="flex items-center space-x-2">
-                    <Icon path={mdiClock} className="w-6 h-6 text-blue-500" />
-                    <button
-                      onClick={autoSelectShift}
-                      className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-                      title="Auto-select shift based on current time"
-                    >
-                      Auto
-                    </button>
+            <CardBox className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-700">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                    <Icon path={mdiCog} className="w-6 h-6 text-white" />
                   </div>
-                </div>
-                
-                <CustomDropdown
-                  id="shift-selection"
-                  label=""
-                  value={selectedShift}
-                  onChange={setSelectedShift}
-                  options={availableShifts}
-                  placeholder="Choose shift/session..."
-                  searchable={false}
-                  className="w-full"
-                />
-                
-                {selectedShift && (
-                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                      📍 Recognition will be limited to students in {selectedShift === 'All' ? 'all shifts' : `${selectedShift} shift only`}
-                    </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      {selectedShift !== 'All' ? `Auto-selected based on current time: ${new Date().toLocaleTimeString()}` : 'Manually selected: All shifts'}
-                    </p>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      Students in this shift: {filterStudentsByShift(students, selectedShift).length} ({filterStudentsByShift(students, selectedShift, true).length} enrolled)
-                    </p>
-                  </div>
-                )}
-                
-                {!selectedShift && (
-                  <div className="mt-3 p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
-                    <p className="text-sm text-orange-700 dark:text-orange-300">
-                      ⚠️ Please select a shift before starting camera
-                    </p>
-                  </div>
-                )}
-              </CardBox>
-
-              {/* Recognition Controls */}
-              <CardBox className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
-                    Recognition Controls
-                  </h3>
-                  <Icon path={mdiCog} className="w-6 h-6 text-gray-500" />
-                </div>
-                
-                <div className="space-y-4">
-                  {/* Recognition Threshold */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Recognition Threshold: {recognitionThreshold}%
-                    </label>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xs text-gray-500">Strict</span>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                      Recognition Controls
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {showRecognitionControls 
+                        ? 'Fine-tune detection parameters' 
+                        : `Current threshold: ${recognitionThreshold}% • Face size: ${minFaceSize}-${maxFaceSize}px`
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {!showRecognitionControls && (
+                    <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-bold">
+                      {recognitionThreshold}%
+                    </div>
+                  )}
+                  <div className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold">
+                    AI Powered
+                  </div>
+                  <button
+                    onClick={() => setShowRecognitionControls(!showRecognitionControls)}
+                    className="px-4 py-2 text-sm bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+                  >
+                    {showRecognitionControls ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              
+              {showRecognitionControls && (
+                <div className="space-y-6">
+                  {/* Recognition Threshold */}
+                  <div className="bg-white dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="text-lg font-semibold text-gray-800 dark:text-white">
+                        Recognition Threshold
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-bold">
+                          {recognitionThreshold}%
+                        </div>
+                        <button
+                          onClick={() => setRecognitionThreshold(60)}
+                          className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                          title="Reset to default (60%)"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4 mb-3">
+                      <div className="flex items-center space-x-2 text-sm">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="text-gray-600 dark:text-gray-400">Lenient (50%)</span>
+                      </div>
                       <input
                         type="range"
                         min="50"
-                        max="95"
+                        max="70"
                         step="5"
                         value={recognitionThreshold}
                         onChange={(e) => setRecognitionThreshold(Number(e.target.value))}
-                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        className="flex-1 h-3 bg-gradient-to-r from-green-200 via-yellow-200 to-red-200 dark:from-green-800 dark:via-yellow-800 dark:to-red-800 rounded-lg appearance-none cursor-pointer slider"
+                        style={{
+                          background: `linear-gradient(to right, 
+                            #86efac 0%, 
+                            #fcd34d ${((recognitionThreshold - 50) / 20) * 50}%, 
+                            #fca5a5 ${((recognitionThreshold - 50) / 20) * 100}%)`
+                        }}
                       />
-                      <span className="text-xs text-gray-500">Lenient</span>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">Strict (70%)</span>
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Higher values = more accurate but may miss some valid students
-                    </p>
+                    
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="text-lg font-bold text-green-600 dark:text-green-400">50%</div>
+                        <div className="text-xs text-green-600 dark:text-green-400">Lenient</div>
+                        <div className="text-xs text-gray-500 mt-1">Fast recognition</div>
+                      </div>
+                      <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">60%</div>
+                        <div className="text-xs text-yellow-600 dark:text-yellow-400">Recommended</div>
+                        <div className="text-xs text-gray-500 mt-1">Balanced</div>
+                      </div>
+                      <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="text-lg font-bold text-red-600 dark:text-red-400">70%</div>
+                        <div className="text-xs text-red-600 dark:text-red-400">Strict</div>
+                        <div className="text-xs text-gray-500 mt-1">High accuracy</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-blue-800 dark:text-blue-300">
+                        <strong>Current Setting:</strong> {recognitionThreshold}% confidence required for recognition
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        🔍 <strong>Debug:</strong> Recognition threshold = {recognitionThreshold}% (faces must score ≥{recognitionThreshold}% to be recognized)
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        {recognitionThreshold >= 70 ? '🛡️ Strict mode - highest accuracy' :
+                         recognitionThreshold >= 60 ? '⚖️ Balanced mode - recommended for most use cases' :
+                         '🚀 Lenient mode - faster recognition'}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Face Size Range */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Face Size Range: {minFaceSize}px - {maxFaceSize}px
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="text-lg font-semibold text-gray-800 dark:text-white">
+                        Distance Control
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <div className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-sm font-bold">
+                          {minFaceSize}px - {maxFaceSize}px
+                        </div>
+                        <button
+                          onClick={() => {
+                            setMinFaceSize(80);
+                            setMaxFaceSize(300);
+                          }}
+                          className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                          title="Reset to default"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Min Size</label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Minimum Size (Far Distance)</label>
+                          <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{minFaceSize}px</span>
+                        </div>
                         <input
                           type="range"
                           min="50"
-                          max="200"
+                          max="140"
                           step="10"
                           value={minFaceSize}
                           onChange={(e) => setMinFaceSize(Number(e.target.value))}
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                          className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 dark:from-blue-800 dark:to-blue-500 rounded-lg appearance-none cursor-pointer"
                         />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>50px (Very Far)</span>
+                          <span>140px (Close)</span>
+                        </div>
                       </div>
+                      
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Max Size</label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Size (Near Distance)</label>
+                          <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{maxFaceSize}px</span>
+                        </div>
                         <input
                           type="range"
                           min="150"
@@ -972,17 +806,50 @@ const FaceApiAttendanceScanner = () => {
                           step="10"
                           value={maxFaceSize}
                           onChange={(e) => setMaxFaceSize(Number(e.target.value))}
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                          className="w-full h-2 bg-gradient-to-r from-orange-200 to-red-500 dark:from-orange-800 dark:to-red-500 rounded-lg appearance-none cursor-pointer"
                         />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>150px (Far)</span>
+                          <span>400px (Very Close)</span>
+                        </div>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Adjust based on camera distance - smaller for closer, larger for farther
-                    </p>
+                    
+                    <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <p className="text-sm text-purple-800 dark:text-purple-300">
+                        <strong>💡 Distance Guide:</strong> Smaller values = farther distance, larger values = closer distance
+                      </p>
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                        Optimal range: 2-4 feet from camera for best recognition results
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Performance Indicators */}
+                  <div className="bg-white dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Performance Indicators</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Detection Rate: Active</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Model: SSD MobileNet V1</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Processing: Real-time</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Accuracy: High</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </CardBox>
-            </div>
+              )}
+            </CardBox>
           </div>
         )}
 
@@ -1024,6 +891,8 @@ const FaceApiAttendanceScanner = () => {
                     >
                       {isCameraActive ? 'Stop Camera' : 'Start Camera'}
                     </button>
+                    
+                    {/* test sound removed */}
                   </div>
                 </div>
 
@@ -1069,11 +938,11 @@ const FaceApiAttendanceScanner = () => {
                               {face.message || 'Detecting...'}
                               {face.confidence && (
                                 <span className={`ml-2 ${
-                                  face.confidence >= ((1 - recognitionThreshold) * 100) 
+                                  face.confidence >= recognitionThreshold 
                                     ? 'text-green-600 dark:text-green-400' 
                                     : 'text-red-500 dark:text-red-400'
                                 }`}>
-                                  ({face.confidence.toFixed(1)}% / {((1 - recognitionThreshold) * 100).toFixed(0)}% req)
+                                  ({face.confidence.toFixed(1)}% / {recognitionThreshold.toFixed(0)}% req)
                                 </span>
                               )}
                             </span>
@@ -1089,247 +958,7 @@ const FaceApiAttendanceScanner = () => {
             {/* Control Panel */}
             <div className="space-y-6">
               
-              {/* Enrollment Section */}
-              <CardBox className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                        <Icon path={mdiAccount} className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Student Enrollment</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Enroll students for recognition</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowEnrollment(!showEnrollment)}
-                      className="px-4 py-2 text-sm bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
-                    >
-                      {showEnrollment ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                </div>
 
-                {showEnrollment && (
-                  <div className="p-6 space-y-4">
-                    <CustomDropdown
-                      id="student-selection"
-                      label="Select Student to Enroll"
-                      value={selectedStudent}
-                      onChange={setSelectedStudent}
-                      options={unenrolledStudents.map(student => ({
-                        value: student.id,
-                        label: `${student.fullName} (${student.studentId})${student.photoUrl ? ' - Has Photo' : ' - No Photo'}`
-                      }))}
-                      placeholder="Choose a student..."
-                      searchable={true}
-                      disabled={isEnrolling}
-                      className="w-full"
-                    />
-
-                    <button
-                      onClick={handleEnrollment}
-                      disabled={!selectedStudent || isEnrolling}
-                      className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 dark:hover:from-blue-700 dark:hover:to-indigo-800 disabled:from-gray-400 disabled:to-gray-500 dark:disabled:from-gray-600 dark:disabled:to-gray-700 disabled:cursor-not-allowed font-semibold transition-all duration-200 transform hover:scale-105 shadow-md disabled:transform-none disabled:shadow-none"
-                    >
-                      {isEnrolling ? (
-                        <div className="flex items-center justify-center space-x-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Enrolling...</span>
-                        </div>
-                      ) : (
-                        'Enroll Student'
-                      )}
-                    </button>
-
-                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <p className="text-sm text-blue-800 dark:text-blue-300">
-                        <strong>Auto-enrollment:</strong> Students with photos will be enrolled automatically. 
-                        Students without photos will use the current camera view.
-                      </p>
-                    </div>
-
-                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                      <div className="flex items-start space-x-2">
-                        <Icon path={mdiInformation} className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">Image Quality Requirements:</p>
-                          <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                            <li>• <strong>Face Position:</strong> Frontal view, looking directly at camera</li>
-                            <li>• <strong>Expression:</strong> Neutral expression, eyes open</li>
-                            <li>• <strong>Lighting:</strong> Good, even lighting without harsh shadows</li>
-                            <li>• <strong>Background:</strong> Simple, uncluttered background preferred</li>
-                            <li>• <strong>Obstructions:</strong> No hands, hair, or objects covering face</li>
-                            <li>• <strong>Size:</strong> Face should be clearly visible and well-centered</li>
-                            <li>• <strong>Focus:</strong> Image should be sharp and in focus</li>
-                          </ul>
-                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                            Images will be automatically analyzed for quality before enrollment.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardBox>
-
-              {/* Photo Capture Enrollment Section */}
-              <CardBox className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                        <Icon path={mdiCamera} className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Photo Capture Enrollment</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Take a fresh photo for enrollment</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowPhotoCapture(!showPhotoCapture)}
-                      className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-md"
-                    >
-                      {showPhotoCapture ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                </div>
-
-                {showPhotoCapture && (
-                  <div className="p-6 space-y-4">
-                    
-                    {!capturedPhoto ? (
-                      // Step 1: Select student and capture photo
-                      <>
-                        <CustomDropdown
-                          id="student-selection-photo"
-                          label="Select Student for Photo Enrollment"
-                          value={selectedStudentForPhoto}
-                          onChange={setSelectedStudentForPhoto}
-                          options={unenrolledStudents.map(student => ({
-                            value: student.id,
-                            label: `${student.fullName} (${student.studentId})`
-                          }))}
-                          placeholder="Choose a student..."
-                          searchable={true}
-                          disabled={isCapturingPhoto || isEnrolling}
-                          className="w-full"
-                        />
-
-                        <div className="flex space-x-3">
-                          <button
-                            onClick={startPhotoCapture}
-                            disabled={!selectedStudentForPhoto || isCapturingPhoto}
-                            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 dark:from-blue-600 dark:to-indigo-700 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 dark:hover:from-blue-700 dark:hover:to-indigo-800 disabled:from-gray-400 disabled:to-gray-500 dark:disabled:from-gray-600 dark:disabled:to-gray-700 disabled:cursor-not-allowed font-semibold transition-all duration-200 transform hover:scale-105 shadow-md disabled:transform-none disabled:shadow-none"
-                          >
-                            Start Camera
-                          </button>
-                          
-                          <button
-                            onClick={capturePhotoForEnrollment}
-                            disabled={!selectedStudentForPhoto || !isCameraActive || isCapturingPhoto}
-                            className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 dark:hover:from-green-700 dark:hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 dark:disabled:from-gray-600 dark:disabled:to-gray-700 disabled:cursor-not-allowed font-semibold transition-all duration-200 transform hover:scale-105 shadow-md disabled:transform-none disabled:shadow-none"
-                          >
-                            {isCapturingPhoto ? (
-                              <div className="flex items-center justify-center space-x-2">
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span>Capturing...</span>
-                              </div>
-                            ) : (
-                              'Capture Photo'
-                            )}
-                          </button>
-                        </div>
-
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                          <p className="text-sm text-blue-800 dark:text-blue-300">
-                            <strong>Instructions:</strong> 
-                            <br />1. Select a student from the dropdown
-                            <br />2. Position the student in front of the camera
-                            <br />3. Click "Capture Photo" when ready
-                            <br />4. Review and confirm the captured photo
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      // Step 2: Review captured photo and confirm enrollment
-                      <>
-                        <div className="space-y-4">
-                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Review Captured Photo</h4>
-                          
-                          <div className="relative bg-gray-100 dark:bg-gray-700 rounded-lg p-4">
-                            <img 
-                              src={capturedPhoto} 
-                              alt="Captured for enrollment" 
-                              className="w-full max-w-md mx-auto rounded-lg shadow-md"
-                            />
-                          </div>
-
-                          <div className="text-center space-y-2">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                              Student: <strong>{students.find(s => s.id === selectedStudentForPhoto)?.fullName}</strong>
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-500">
-                              Review the photo quality and confirm enrollment or retake if needed.
-                            </p>
-                          </div>
-
-                          <div className="flex space-x-3">
-                            <button
-                              onClick={cancelPhotoCapture}
-                              disabled={isEnrolling}
-                              className="flex-1 px-6 py-3 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:from-gray-600 hover:to-gray-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-semibold transition-all duration-200 transform hover:scale-105 shadow-md disabled:transform-none disabled:shadow-none"
-                            >
-                              Cancel
-                            </button>
-                            
-                            <button
-                              onClick={() => setCapturedPhoto(null)}
-                              disabled={isEnrolling}
-                              className="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-lg hover:from-yellow-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-semibold transition-all duration-200 transform hover:scale-105 shadow-md disabled:transform-none disabled:shadow-none"
-                            >
-                              Retake Photo
-                            </button>
-
-                            <button
-                              onClick={confirmPhotoEnrollment}
-                              disabled={isEnrolling}
-                              className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-semibold transition-all duration-200 transform hover:scale-105 shadow-md disabled:transform-none disabled:shadow-none"
-                            >
-                              {isEnrolling ? (
-                                <div className="flex items-center justify-center space-x-2">
-                                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                  <span>Enrolling...</span>
-                                </div>
-                              ) : (
-                                'Confirm & Enroll'
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                      <div className="flex items-start space-x-2">
-                        <Icon path={mdiInformation} className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">Photo Capture Tips:</p>
-                          <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                            <li>• <strong>Position:</strong> Student should face the camera directly</li>
-                            <li>• <strong>Distance:</strong> Stand 2-3 feet away from the camera</li>
-                            <li>• <strong>Lighting:</strong> Ensure good lighting on the face</li>
-                            <li>• <strong>Expression:</strong> Neutral expression, eyes open and visible</li>
-                            <li>• <strong>Background:</strong> Simple background works best</li>
-                            <li>• <strong>Stability:</strong> Hold still when capturing</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardBox>
 
               {/* Student Information */}
               <CardBox className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -1398,49 +1027,6 @@ const FaceApiAttendanceScanner = () => {
               </CardBox>
             </div>
           </div>
-        )}
-
-        {/* Enrolled Students Grid */}
-        {!isLoading && enrolledStudents.length > 0 && (
-          <CardBox className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                  <Icon path={mdiCheck} className="w-5 h-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Enrolled Students ({enrolledStudents.length})
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Students ready for recognition</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {enrolledStudents.map(student => (
-                  <div key={student.id} className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-green-900 dark:text-green-100 truncate">{student.fullName}</h4>
-                        <p className="text-sm text-green-700 dark:text-green-300 mb-2">ID: {student.studentId}</p>
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-green-500 dark:bg-green-400 rounded-full"></div>
-                          <span className="text-xs text-green-600 dark:text-green-400">
-                            {student.photoUrl ? 'Photo enrollment' : 'Camera enrollment'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="p-1 bg-green-200 dark:bg-green-800 rounded-full">
-                        <Icon path={mdiCheck} className="w-4 h-4 text-green-700 dark:text-green-300" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardBox>
         )}
       </div>
     </div>

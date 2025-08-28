@@ -1,0 +1,112 @@
+{
+  "collection": "tempRegistrationTokens",
+  "totalDocuments": 7,
+  "backupTimestamp": "2025-08-28T04:53:01.320Z",
+  "documents": [
+    {
+      "id": "6CC5VRM5X2NJX7FK",
+      "data": {
+        "studentId": "pDStLz4iTuSOfZjlOYsg",
+        "token": "6CC5VRM5X2NJX7FK",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-26T01:49:49.395Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-29T01:49:49.395Z"
+        }
+      }
+    },
+    {
+      "id": "7TAX3LH87BC5W4H4",
+      "data": {
+        "studentId": "IB5e5LrUPDqjAl2jIaG4",
+        "token": "7TAX3LH87BC5W4H4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-27T05:55:52.608Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-30T05:55:52.607Z"
+        }
+      }
+    },
+    {
+      "id": "HC8MASE72RPKEBU5",
+      "data": {
+        "studentId": "Djl3Eh16NgaoiDF9bG4w",
+        "token": "HC8MASE72RPKEBU5",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-26T06:59:39.112Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-29T06:59:39.112Z"
+        }
+      }
+    },
+    {
+      "id": "JRJ8E2XRHFHFNZHQ",
+      "data": {
+        "studentId": "gEjMKyok7FgRr9sdpGQI",
+        "token": "JRJ8E2XRHFHFNZHQ",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-27T06:08:32.422Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-30T06:08:32.422Z"
+        }
+      }
+    },
+    {
+      "id": "KKRPY4PQ76WAQD4N",
+      "data": {
+        "studentId": "3MMmd2V5LMSLRTFzQYCe",
+        "token": "KKRPY4PQ76WAQD4N",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-27T06:44:46.753Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-30T06:44:46.753Z"
+        }
+      }
+    },
+    {
+      "id": "QLLRC85P4LWNQFSX",
+      "data": {
+        "studentId": "zraoypaabQKuAo7W6kwI",
+        "token": "QLLRC85P4LWNQFSX",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-27T06:05:42.380Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-30T06:05:42.380Z"
+        }
+      }
+    },
+    {
+      "id": "YBNUSE8MP2JD38PE",
+      "data": {
+        "studentId": "MYYNqUKY20s5tFF9Z0lS",
+        "token": "YBNUSE8MP2JD38PE",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-26T06:58:07.589Z"
+        },
+        "expiresAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-29T06:58:07.588Z"
+        }
+      }
+    }
+  ]
+}
