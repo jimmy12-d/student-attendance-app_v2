@@ -52,17 +52,17 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <head>
+        <DarkModeInit />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Rodwell Portal" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body id="student-attendance-app" className={`h-full ${inter.variable} ${nokora.variable}`} style={{backgroundColor: '#ffffff', color: '#111827'}}>
+      <body id="student-attendance-app" className={`h-full bg-white dark:bg-slate-800 text-gray-900 dark:text-white ${inter.variable} ${nokora.variable}`}>
         <StoreProvider>
           <ClientLayoutWrapper>
             <div className="flex flex-col min-h-screen">
-              <DarkModeInit />
               <PWAInstaller />
               <main className="flex-grow">
                 {children}

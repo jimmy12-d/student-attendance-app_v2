@@ -13,8 +13,8 @@ const DarkModeToggle = () => {
         const stored = localStorage.getItem('darkMode');
         console.log('DarkModeToggle: stored value:', stored);
         
-        // Default to light mode (false) if nothing is stored
-        let initialIsDark = false;
+        // Default to dark mode (true) if nothing is stored
+        let initialIsDark = true;
         
         if (stored !== null && stored !== undefined) {
           if (stored === '1' || stored === 'true') {
@@ -25,7 +25,7 @@ const DarkModeToggle = () => {
             try {
               initialIsDark = JSON.parse(stored) === true;
             } catch (e) {
-              initialIsDark = false; // Default to light on parse error
+              initialIsDark = true; // Default to dark on parse error
             }
           }
         }

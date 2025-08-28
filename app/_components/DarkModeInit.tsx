@@ -8,8 +8,8 @@ const DarkModeInit = () => {
         const stored = localStorage.getItem('darkMode');
         console.log('DarkModeInit: stored value:', stored);
         
-        // Default to light mode (false) if nothing is stored
-        let isDark = false;
+        // Default to dark mode (true) if nothing is stored
+        let isDark = true;
         
         if (stored !== null && stored !== undefined) {
           // Handle different storage formats
@@ -21,7 +21,7 @@ const DarkModeInit = () => {
             try {
               isDark = JSON.parse(stored) === true;
             } catch (e) {
-              isDark = false; // Default to light on parse error
+              isDark = true; // Default to dark on parse error
             }
           }
         }
@@ -38,8 +38,8 @@ const DarkModeInit = () => {
         console.log('DarkModeInit: classes applied, dark class present:', document.documentElement.classList.contains('dark'));
       } catch (e) {
         console.error('DarkModeInit error:', e);
-        // On error, default to light mode
-        document.documentElement.classList.remove('dark', 'dark-scrollbars-compat');
+        // On error, default to dark mode
+        document.documentElement.classList.add('dark', 'dark-scrollbars-compat');
       }
     })();
   `;

@@ -1,0 +1,64 @@
+import createMiddleware from 'next-intl/middleware';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+const intlMiddleware = createMiddleware({
+  // A list of all locales that are supported
+  locales: ['en', 'kh'],
+  
+  // Used when no locale matches
+  defaultLocale: 'en',
+  
+  // The locale prefix is always shown for all locales
+  localePrefix: 'always'
+});
+
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // Handle API routes and static files first
+  if (
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon.ico') ||
+    pathname.startsWith('/sw.js') ||
+    pathname.startsWith('/workbox-') ||
+    pathname.startsWith('/manifest.json') ||
+    pathname.startsWith('/rodwell_logo.png')
+  ) {
+    return NextResponse.next();
+  }
+
+  // Redirect root locale paths to login
+  if (pathname === '/en' || pathname === '/kh') {
+    return NextResponse.redirect(new URL(`${pathname}/login`, request.url));
+  }
+  
+  // Apply i18n middleware to all routes that should be localized
+  // This includes: root (/), any path starting with locale (/en/, /kh/), student routes, and login
+  if (pathname === '/' || 
+      pathname.match(/^\/[a-z]{2}\//) ||
+      pathname.startsWith('/student') || 
+      pathname.startsWith('/login')) {
+    return intlMiddleware(request);
+  }
+  
+  // For all other routes (admin/teacher), don't apply i18n
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - sw.js (service worker)
+     * - workbox-* (workbox files)
+     * - manifest.json (PWA manifest)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|sw.js|workbox-.*|manifest.json).*)',
+  ],
+};

@@ -72,18 +72,22 @@ const FaceEnrollmentPage = () => {
       const studentsData: FaceEnrollmentStudent[] = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        studentsData.push({
-          id: doc.id,
-          studentId: data.studentId || '',
-          fullName: data.fullName || '',
-          class: data.class || '',
-          photoUrl: data.photoUrl,
-          faceDescriptor: data.faceDescriptor,
-          shift: data.shift,
-          imageQualityScore: data.imageQualityScore,
-          faceApiEnrolledAt: data.faceApiEnrolledAt,
-          enrollmentMethod: data.enrollmentMethod
-        } as FaceEnrollmentStudent);
+        
+        // Only include active students (exclude dropped, break, and waitlist students)
+        if (!data.dropped && !data.onBreak && !data.onWaitlist) {
+          studentsData.push({
+            id: doc.id,
+            studentId: data.studentId || '',
+            fullName: data.fullName || '',
+            class: data.class || '',
+            photoUrl: data.photoUrl,
+            faceDescriptor: data.faceDescriptor,
+            shift: data.shift,
+            imageQualityScore: data.imageQualityScore,
+            faceApiEnrolledAt: data.faceApiEnrolledAt,
+            enrollmentMethod: data.enrollmentMethod
+          } as FaceEnrollmentStudent);
+        }
       });
       
       // Sort students by name

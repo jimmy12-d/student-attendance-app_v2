@@ -372,7 +372,13 @@ const classStats = useMemo((): ClassStats[] => {
   }, [students, attendance, permissions, allClassConfigs, todayStrForWidgets]);
 
   if ((loading && students.length === 0) || loadingConfigs) { // Show full page loader only on initial load
-    return <SectionMain><p className="text-center p-6">Loading dashboard data...</p></SectionMain>;
+    return (
+      <SectionMain>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8">
+          <p className="text-center text-gray-900 dark:text-white">Loading dashboard data...</p>
+        </div>
+      </SectionMain>
+    );
   }
 
   return (

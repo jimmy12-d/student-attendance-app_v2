@@ -161,7 +161,7 @@ const AccountPage = () => {
               <SettingsListItem
                 iconPath={mdiBell}
                 iconBgColor="bg-gradient-to-br from-red-500 to-pink-600"
-                title="Notifications_2"
+                title="Notifications"
                 subtitle="Manage your alert preferences"
               >
                 <NotificationSettings />

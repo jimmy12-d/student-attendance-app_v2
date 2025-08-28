@@ -115,7 +115,15 @@ html, body {
   /* Use iOS safe areas in PWAs */
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background-color: #0f172a; /* match themeColor for underlays */
+}
+
+/* Underlay color (beneath the app body). Keep on html so body utility classes can control page bg */
+html {
+  background-color: #ffffff; /* light mode underlay */
+}
+
+html.dark {
+  background-color: #1E293B; /* dark mode underlay to match themeColor */
 }
 
 #student-attendance-app {

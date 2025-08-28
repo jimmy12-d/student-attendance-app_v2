@@ -1,0 +1,119 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "next": "Next",
+    "previous": "Previous",
+    "home": "Home",
+    "back": "Back",
+    "close": "Close",
+    "open": "Open",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "navigation": {
+    "home": "Home",
+    "attendance": "Attendance",
+    "mockExam": "Mock Exam",
+    "account": "Account",
+    "dashboard": "Dashboard"
+  },
+  "languageSelector": {
+    "title": "Select Language",
+    "description": "Choose your preferred language",
+    "english": "English",
+    "khmer": "ខ្មែរ (Khmer)",
+    "continue": "Continue",
+    "selectLanguage": "Please select a language to continue"
+  },
+  "onboarding": {
+    "welcome": "Welcome to Student Portal",
+    "chooseLanguage": "Choose Your Language",
+    "description": "Select your preferred language to get started with the student portal.",
+    "getStarted": "Get Started"
+  },
+  "student": {
+    "dashboard": {
+      "title": "Student Dashboard",
+      "welcomeMessage": "Welcome back!",
+      "todaySchedule": "Today's Schedule",
+      "upcomingExams": "Upcoming Exams",
+      "recentScores": "Recent Scores"
+    },
+    "attendance": {
+      "title": "Attendance",
+      "scanQR": "Scan QR Code",
+      "manualEntry": "Manual Entry",
+      "attendanceHistory": "Attendance History",
+      "markPresent": "Request Attendance",
+      "status": "Today's Status",
+      "present": "Present",
+      "absent": "Absent",
+      "late": "Late",
+      "permission": "Permission",
+      "permissionForm": "Permission Form"
+    },
+    "mockExam": {
+      "title": "Mock Exam",
+      "results": "Results",
+      "upcomingExams": "Upcoming Exams",
+      "pastResults": "Past Results",
+      "score": "Score",
+      "grade": "Grade",
+      "subject": "Subject",
+      "date": "Date",
+      "duration": "Duration",
+      "startExam": "Start Exam",
+      "viewResults": "View Results"
+    },
+    "account": {
+      "title": "Account",
+      "profile": "Profile",
+      "settings": "Settings",
+      "language": "Language",
+      "notifications": "Notifications",
+      "privacy": "Privacy",
+      "logout": "Logout",
+      "personalInfo": "Personal Information",
+      "name": "Name",
+      "email": "Email",
+      "studentId": "Student ID",
+      "class": "Class",
+      "phoneNumber": "Phone Number"
+    }
+  },
+  "settings": {
+    "darkMode": "Dark Mode",
+    "notifications": "Notifications",
+    "language": "Language",
+    "about": "About"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "No notifications",
+    "markAllRead": "Mark all as read",
+    "permission": {
+      "title": "Enable Notifications",
+      "description": "Allow notifications to stay updated with attendance reminders and exam announcements.",
+      "enable": "Enable Notifications",
+      "denied": "Notification permission denied",
+      "granted": "Notifications enabled successfully"
+    }
+  },
+  "errors": {
+    "genericError": "Something went wrong",
+    "networkError": "Network connection error",
+    "permissionDenied": "Permission denied",
+    "cameraError": "Camera access error",
+    "qrCodeError": "QR code scanning error",
+    "invalidQRCode": "Invalid QR code",
+    "sessionExpired": "Session expired. Please login again."
+  }
+}

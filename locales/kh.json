@@ -1,0 +1,119 @@
+{
+  "common": {
+    "loading": "កំពុងផ្ទុក...",
+    "error": "កំហុស",
+    "success": "ជោគជ័យ",
+    "cancel": "បោះបង់",
+    "confirm": "បញ្ជាក់",
+    "save": "រក្សាទុក",
+    "delete": "លុប",
+    "edit": "កែប្រែ",
+    "add": "បន្ថែម",
+    "next": "បន្ទាប់",
+    "previous": "មុន",
+    "home": "ទំព័រដើម",
+    "back": "ត្រលប់",
+    "close": "បិទ",
+    "open": "បើក",
+    "yes": "បាទ/ចាស",
+    "no": "ទេ"
+  },
+  "navigation": {
+    "home": "ទំព័រដើម",
+    "attendance": "វត្តមាន",
+    "mockExam": "តេស្តសាកល្បង",
+    "account": "គណនី",
+    "dashboard": "ផ្ទាំងបញ្ជា"
+  },
+  "languageSelector": {
+    "title": "ជ្រើសរើសភាសា",
+    "description": "ជ្រើសរើសភាសាដែលអ្នកចង់បាន",
+    "english": "English (អង់គ្លេស)",
+    "khmer": "ខ្មែរ",
+    "continue": "បន្ត",
+    "selectLanguage": "សូមជ្រើសរើសភាសាដើម្បីបន្ត"
+  },
+  "onboarding": {
+    "welcome": "សូមស្វាគមន៍មកកាន់ក្របខណ្ឌសិស្ស",
+    "chooseLanguage": "ជ្រើសរើសភាសារបស់អ្នក",
+    "description": "ជ្រើសរើសភាសាដែលអ្នកចង់បានដើម្បីចាប់ផ្តើមប្រើប្រាស់ក្របខណ្ឌសិស្ស។",
+    "getStarted": "ចាប់ផ្តើម"
+  },
+  "student": {
+    "dashboard": {
+      "title": "ផ្ទាំងបញ្ជាសិស្ស",
+      "welcomeMessage": "សូមស្វាគមន៍ការត្រលប់មកវិញ!",
+      "todaySchedule": "កាលវិភាគថ្ងៃនេះ",
+      "upcomingExams": "ការប្រឡងនាពេលខាងមុខ",
+      "recentScores": "ពិន្ទុថ្មីៗ"
+    },
+    "attendance": {
+      "title": "វត្តមាន",
+      "scanQR": "ស្កេន QR កូដ",
+      "manualEntry": "បញ្ចូលដោយដៃ",
+      "attendanceHistory": "ប្រវត្តិវត្តមាន",
+      "markPresent": "ស្នើសុំវត្តមាន",
+      "status": "ស្ថានភាពថ្ងៃនេះ",
+      "present": "មាន",
+      "absent": "អវត្តមាន",
+      "late": "មកយឺត",
+      "permission": "ការអនុញ្ញាត",
+      "permissionForm": "ទម្រង់ការអនុញ្ញាត"
+    },
+    "mockExam": {
+      "title": "តេស្តសាកល្បង",
+      "results": "លទ្ធផល",
+      "upcomingExams": "ការប្រឡងនាពេលខាងមុខ",
+      "pastResults": "លទ្ធផលពីមុន",
+      "score": "ពិន្ទុ",
+      "grade": "ដាក់ពិន្ទុ",
+      "subject": "មុខវិជ្ជា",
+      "date": "កាលបរិច្ឆេទ",
+      "duration": "រយៈពេល",
+      "startExam": "ចាប់ផ្តើមប្រឡង",
+      "viewResults": "មើលលទ្ធផល"
+    },
+    "account": {
+      "title": "គណនី",
+      "profile": "ប្រវត្តិរូប",
+      "settings": "ការកំណត់",
+      "language": "ភាសា",
+      "notifications": "ការជូនដំណឹង",
+      "privacy": "ភាពឯកជន",
+      "logout": "ចាកចេញ",
+      "personalInfo": "ព័ត៌មានផ្ទាល់ខ្លួន",
+      "name": "ឈ្មោះ",
+      "email": "អ៊ីមែល",
+      "studentId": "លេខសិស្ស",
+      "class": "ថ្នាក់",
+      "phoneNumber": "លេខទូរស័ព្ទ"
+    }
+  },
+  "settings": {
+    "darkMode": "មុខងារងងឹត",
+    "notifications": "ការជូនដំណឹង",
+    "language": "ភាសា",
+    "about": "អំពី"
+  },
+  "notifications": {
+    "title": "ការជូនដំណឹង",
+    "noNotifications": "គ្មានការជូនដំណឹង",
+    "markAllRead": "កត់ត្រាទាំងអស់ថាបានអាន",
+    "permission": {
+      "title": "បើកការជូនដំណឹង",
+      "description": "អនុញ្ញាតការជូនដំណឹងដើម្បីទទួលបានការរំលឹកវត្តមាន និងការប្រកាសប្រឡង។",
+      "enable": "បើកការជូនដំណឹង",
+      "denied": "ការអនុញ្ញាតការជូនដំណឹងត្រូវបានបដិសេធ",
+      "granted": "បានបើកការជូនដំណឹងដោយជោគជ័យ"
+    }
+  },
+  "errors": {
+    "genericError": "មានបញ្ហាកើតឡើង",
+    "networkError": "កំហុសការតភ្ជាប់បណ្តាញ",
+    "permissionDenied": "ការអនុញ្ញាតត្រូវបានបដិសេធ",
+    "cameraError": "កំហុសក្នុងការចូលប្រើកាមេរ៉ា",
+    "qrCodeError": "កំហុសក្នុងការស្កេន QR កូដ",
+    "invalidQRCode": "QR កូដមិនត្រឹមត្រូវ",
+    "sessionExpired": "ការចូលប្រើបានផុតកំណត់។ សូមចូលម្តងទៀត។"
+  }
+}
