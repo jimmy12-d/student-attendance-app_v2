@@ -9,6 +9,7 @@ export interface Student {
   photoUrl?: string;
   faceDescriptor?: number[];
   shift?: string;
+  class?: string; // Add class property for late calculation
 }
 
 // Helper function to filter students by shift
@@ -134,7 +135,7 @@ export const determineAttendanceStatus = (student: any, selectedShift: string, c
 };
 
 // Mark attendance for recognized student
-export const markAttendance = async (student: Student, selectedShift: string, classConfigs: any, playSuccessSound: () => void) => {
+export const markAttendance = async (student: Student, selectedShift: string, classConfigs: any, playSuccessSound: () => void): Promise<string> => {
   try {
     // Check if already marked today for this shift
     const today = new Date().toDateString();
@@ -151,7 +152,7 @@ export const markAttendance = async (student: Student, selectedShift: string, cl
     if (!attendanceSnapshot.empty) {
       const existingRecord = attendanceSnapshot.docs[0].data();
       toast.warning(`${student.fullName} already marked ${existingRecord.status} for ${selectedShift} shift today`);
-      return;
+      return existingRecord.status; // Return the existing status
     }
 
     // Use advanced late marking logic
@@ -193,8 +194,10 @@ export const markAttendance = async (student: Student, selectedShift: string, cl
     }
     
     playSuccessSound();
+    return status; // Return the attendance status
   } catch (error) {
     console.error('Failed to mark attendance:', error);
     toast.error('Failed to mark attendance');
+    return 'present'; // Default fallback
   }
 };

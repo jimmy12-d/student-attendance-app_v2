@@ -3,6 +3,8 @@ import { Student } from '../../../_interfaces';
 import { ColumnConfig } from './ColumnToggle';
 import { toast } from 'sonner';
 import { AbsentStatusTracker } from './AbsentStatusTracker';
+import { getStatusStyles } from '../../_lib/statusStyles';
+import Icon from '../../../_components/Icon';
 
 // Phone formatting utility
 const formatPhoneNumber = (phone: string | undefined | null): string => {
@@ -62,6 +64,36 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   // Check if student has warning and is absent today
   const todayStatus = getTodayAttendanceStatus ? getTodayAttendanceStatus(student) : { status: 'Unknown' };
   const isWarningAbsent = student.warning && todayStatus.status === 'Absent';
+  
+  // Helper function to render status badge with optional SVG
+  const renderStatusBadge = (status: string, displayText?: string, showTime?: string) => {
+    const styles = getStatusStyles(status, true);
+    const text = displayText || status;
+    
+    return (
+      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${styles.badge}`}>
+        {styles.svg && (
+          <svg 
+            className="w-3 h-3 mr-1" 
+            fill={status.toLowerCase() === 'pending' ? "none" : "currentColor"} 
+            stroke={status.toLowerCase() === 'pending' ? "currentColor" : "none"} 
+            viewBox="0 0 20 20"
+          >
+            <path 
+              fillRule={status.toLowerCase() === 'pending' ? undefined : "evenodd"} 
+              clipRule={status.toLowerCase() === 'pending' ? undefined : "evenodd"}
+              strokeLinecap={status.toLowerCase() === 'pending' ? "round" : undefined}
+              strokeLinejoin={status.toLowerCase() === 'pending' ? "round" : undefined}
+              strokeWidth={status.toLowerCase() === 'pending' ? 2 : undefined}
+              d={styles.svg} 
+            />
+          </svg>
+        )}
+        {text}
+        {showTime && <span className="ml-1 text-xs opacity-75">({showTime})</span>}
+      </span>
+    );
+  };
   
   // Helper function to get flipped shift for flip-flop students
   const getFlippedShift = (originalShift: string) => {
@@ -315,24 +347,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
             return (
               <td key="todayAttendance" className="p-3 whitespace-nowrap">
                 <div className="flex items-center justify-center">
-                  {todayStatus.status === 'Present' ? (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      Present
-                    </span>
-                  ) : todayStatus.status === 'Late' ? (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                      </svg>
-                      Late
-                      {todayStatus.time && (
-                        <span className="ml-1 text-xs opacity-75">({todayStatus.time})</span>
-                      )}
-                    </span>
-                  ) : todayStatus.status === 'Absent' ? (
+                  {todayStatus.status === 'Absent' ? (
                     // Use AbsentStatusTracker for absent students
                     <AbsentStatusTracker
                       studentId={student.id}
@@ -340,43 +355,16 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                       date={todayDate}
                       currentStatus="Absent"
                     />
-                  ) : todayStatus.status === 'Permission' ? (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700">
-                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zM4 7h12v9a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" clipRule="evenodd" />
-                        <path d="M9 12a1 1 0 102 0V9a1 1 0 10-2 0v3z" />
-                      </svg>
-                      Permission
-                    </span>
-                  ) : todayStatus.status === 'Pending' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Pending
-                    </span>
-                  ) : todayStatus.status === 'No School' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      No School
-                    </span>
-                  ) : 
-                  todayStatus.status === 'Not Yet Enrolled' ? (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Join Today
-                    </span>
+                  ) : todayStatus.status === 'Not Yet Enrolled' ? (
+                    renderStatusBadge(todayStatus.status, 'Join Today')
+                  ) : todayStatus.status === 'Late' ? (
+                    renderStatusBadge(todayStatus.status, 'Late', todayStatus.time)
                   ) : (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {todayStatus.status || 'Unknown'}
-                    </span>
+                    renderStatusBadge(
+                      todayStatus.status || 'Unknown', 
+                      todayStatus.status === 'No School' ? 'No School' : 
+                      todayStatus.status || 'Unknown'
+                    )
                   )}
                 </div>
               </td>

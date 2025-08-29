@@ -16,39 +16,70 @@ export interface TrackedFace {
   message?: string;
   firstSeen: number;
   lastSeen: number;
+  lastRecognized?: number; // Track when attendance was last marked
+  attendanceStatus?: string; // Track the attendance status (present, late, etc.)
 }
 
 // Initialize face-api.js models
 export const initializeFaceApi = async (): Promise<boolean> => {
   try {
     // Ensure we're in the browser and face-api is available
-    if (typeof window === 'undefined' || !faceapi) {
-      throw new Error('Face-api.js not available in browser context');
+    if (typeof window === 'undefined') {
+      console.error('❌ Not in browser context');
+      return false;
+    }
+    
+    if (!faceapi) {
+      console.error('❌ Face-api.js not loaded');
+      return false;
     }
 
-    console.log('Loading face detection models...');
+    console.log('🚀 Loading face detection models...');
+    console.log('📍 Available faceapi methods:', Object.keys(faceapi));
     
     // Load models from CDN
     const MODEL_URL = '/models';
     
+    console.log('📦 Loading SSD MobileNet V1...');
     await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    console.log('✅ SSD MobileNet V1 loaded');
     
-    console.log('Face-api.js models loaded successfully');
+    console.log('📦 Loading Face Landmark 68 Net...');
+    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+    console.log('✅ Face Landmark 68 Net loaded');
+    
+    console.log('📦 Loading Face Recognition Net...');
+    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    console.log('✅ Face Recognition Net loaded');
+    
+    console.log('🎉 All face-api.js models loaded successfully');
     return true;
   } catch (error) {
-    console.error('Failed to load face-api.js models:', error);
+    console.error('❌ Failed to load face-api.js models:', error);
     return false;
   }
 };
 
 // Detect all faces in video/image
 export const detectAllFaces = async (video: HTMLVideoElement) => {
-  return await faceapi
-    .detectAllFaces(video)
-    .withFaceLandmarks()
-    .withFaceDescriptors();
+  try {
+    if (!faceapi) {
+      throw new Error('Face-api.js not initialized');
+    }
+    
+    console.log('🔍 Calling faceapi.detectAllFaces...');
+    
+    const result = await faceapi
+      .detectAllFaces(video)
+      .withFaceLandmarks()
+      .withFaceDescriptors();
+    
+    console.log('✅ Face detection completed, found:', result.length, 'faces');
+    return result;
+  } catch (error) {
+    console.error('❌ Error in detectAllFaces:', error);
+    return [];
+  }
 };
 
 // Calculate distance between face descriptors

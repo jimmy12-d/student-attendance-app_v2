@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
 
-import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiAlert, mdiEye, mdiCog, mdiInformation, mdiClock } from '@mdi/js';
+import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiAlert, mdiEye, mdiCog, mdiInformation, mdiClock, mdiFullscreen, mdiFullscreenExit, mdiClose } from '@mdi/js';
 import CardBox from "../../_components/CardBox";
 import { getPageTitle } from "../../_lib/config";
 import CustomDropdown from '../students/components/CustomDropdown';
@@ -27,11 +27,14 @@ const FaceApiAttendanceScanner = () => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [trackedFaces, setTrackedFaces] = useState<TrackedFace[]>([]);
+  const [isZoomMode, setIsZoomMode] = useState(false);
+  const [availableCameras, setAvailableCameras] = useState<{ value: string, label: string }[]>([]);
+  const [selectedCamera, setSelectedCamera] = useState<string>('');
   
   const [recognitionThreshold, setRecognitionThreshold] = useState(60); // Default 60%
   const [showRecognitionControls, setShowRecognitionControls] = useState(false); // Collapsible Recognition Controls
-  const [minFaceSize, setMinFaceSize] = useState(80); // Minimum face width/height in pixels
-  const [maxFaceSize, setMaxFaceSize] = useState(300); // Maximum face width/height in pixels
+  const [minFaceSize, setMinFaceSize] = useState(30); // Minimum face width/height in pixels - made more permissive
+  const [maxFaceSize, setMaxFaceSize] = useState(500); // Maximum face width/height in pixels - made more permissive
   const [selectedShift, setSelectedShift] = useState<string>(''); // Selected shift/session
   const [availableShifts] = useState([
     { value: 'All', label: 'All Shifts' },
@@ -43,6 +46,7 @@ const FaceApiAttendanceScanner = () => {
   
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isDetectingRef = useRef(false);
+  const recentlyMarkedStudents = useRef<Map<string, number>>(new Map()); // Track recently marked students
 
   const DWELL_TIME_BEFORE_RECOGNIZE = 2000; // 2 seconds
   const RECOGNITION_COOLDOWN = 30000; // 30 seconds
@@ -67,13 +71,13 @@ const FaceApiAttendanceScanner = () => {
           fullName: data.fullName || '',
           photoUrl: data.photoUrl,
           faceDescriptor: data.faceDescriptor,
-          // Only include shift data
-          shift: data.shift
+          // Include shift and class data
+          shift: data.shift,
+          class: data.class
         } as any);
       });
       
       setStudents(studentsData);
-      console.log(`Loaded ${studentsData.length} students`);
     } catch (error) {
       console.error('Failed to load students:', error);
       toast.error('Failed to load students');
@@ -93,7 +97,6 @@ const FaceApiAttendanceScanner = () => {
       });
       
       setClassConfigs(configs);
-      console.log('Loaded class configurations:', configs);
     } catch (error) {
       console.error('Failed to load class configurations:', error);
       toast.error('Failed to load class configurations');
@@ -122,30 +125,59 @@ const FaceApiAttendanceScanner = () => {
     }
 
     setSelectedShift(autoShift);
-    console.log(`Auto-selected shift: ${autoShift} based on current time ${now.toLocaleTimeString()}`);
   }, []);
+
+  // Load available cameras
+  const loadCameras = useCallback(async () => {
+    try {
+      setLoadingMessage('Loading available cameras...');
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      const cameraOptions = videoDevices.map((device, index) => ({
+        value: device.deviceId,
+        label: device.label || `Camera ${index + 1}`
+      }));
+
+      setAvailableCameras(cameraOptions);
+      
+      // Auto-select first camera if none selected
+      if (cameraOptions.length > 0 && !selectedCamera) {
+        setSelectedCamera(cameraOptions[0].value);
+      }
+    } catch (error) {
+      console.error('Failed to load cameras:', error);
+      toast.error('Failed to load available cameras');
+    }
+  }, [selectedCamera]);
 
   // Initialize everything
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true);
       setLoadingMessage('Loading face detection models...');
+      
       const modelsLoaded = await initializeFaceApi();
+      
       if (modelsLoaded) {
         setLoadingMessage('Models loaded successfully');
+        
         await Promise.all([
           loadStudents(),
-          loadClassConfigs()
+          loadClassConfigs(),
+          loadCameras()
         ]);
         
         // Auto-select shift after loading configs
         autoSelectShift();
+      } else {
+        setLoadingMessage('Failed to load face detection models');
       }
       setIsLoading(false);
     };
 
     initialize();
-  }, [loadStudents, loadClassConfigs, autoSelectShift]);
+  }, [loadStudents, loadClassConfigs, autoSelectShift, loadCameras]);
 
   // Initialize success sound
   useEffect(() => {
@@ -158,11 +190,10 @@ const FaceApiAttendanceScanner = () => {
     const testAudio = () => {
       if (audioRef.current) {
         audioRef.current.play().then(() => {
-          console.log('✅ Audio test successful');
           audioRef.current?.pause();
           audioRef.current!.currentTime = 0;
         }).catch(e => {
-          console.log('❌ Audio test failed:', e.message);
+          // Audio test failed silently
         });
       }
     };
@@ -185,7 +216,6 @@ const FaceApiAttendanceScanner = () => {
 
   const playSuccessSound = () => {
     if (audioRef.current) {
-      console.log('🔊 Playing success sound for student recognition');
       // Reset audio to beginning
       audioRef.current.currentTime = 0;
       audioRef.current.play().catch(e => {
@@ -199,10 +229,52 @@ const FaceApiAttendanceScanner = () => {
           console.error("❌ Fallback audio also failed:", fallbackError);
         }
       });
-    } else {
-      console.warn('⚠️ Audio reference not available');
     }
   };
+
+  // Handle zoom mode toggle
+  const toggleZoomMode = () => {
+    if (!isCameraActive) {
+      toast.error('Please start the camera first');
+      return;
+    }
+    
+    const newZoomMode = !isZoomMode;
+    setIsZoomMode(newZoomMode);
+    
+    if (newZoomMode) {
+      toast.success('Zoom mode activated - Press ESC to exit');
+      // Prevent body scrolling
+      document.body.style.overflow = 'hidden';
+    } else {
+      toast.info('Zoom mode deactivated');
+      // Restore body scrolling
+      document.body.style.overflow = 'unset';
+    }
+  };
+
+  // Handle escape key to exit zoom mode
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isZoomMode) {
+        setIsZoomMode(false);
+        toast.info('Zoom mode deactivated');
+      }
+    };
+
+    if (isZoomMode) {
+      // Prevent scrolling when zoom mode is active
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', handleEscape);
+      return () => {
+        document.body.style.overflow = 'unset';
+        document.removeEventListener('keydown', handleEscape);
+      };
+    } else {
+      // Restore scrolling when zoom mode is deactivated
+      document.body.style.overflow = 'unset';
+    }
+  }, [isZoomMode]);
 
   // Face detection and recognition
   const detectFaces = useCallback(async () => {
@@ -214,21 +286,17 @@ const FaceApiAttendanceScanner = () => {
     try {
       const detections = await detectAllFaces(video);
 
+      if (detections.length === 0) {
+        setTrackedFaces([]);
+        return;
+      }
+
       // Filter detections by face size (distance approximation)
       const filteredDetections = detections.filter(detection => {
         const { width, height } = detection.detection.box;
         const faceSize = Math.max(width, height);
-        
-        const isValidSize = faceSize >= minFaceSize && faceSize <= maxFaceSize;
-        
-        if (!isValidSize) {
-          console.log(`👁️ Face filtered out: size=${faceSize.toFixed(0)}px (range: ${minFaceSize}-${maxFaceSize}px)`);
-        }
-        
-        return isValidSize;
+        return faceSize >= minFaceSize && faceSize <= maxFaceSize;
       });
-
-      console.log(`📊 Face detection: ${detections.length} total, ${filteredDetections.length} within size range`);
 
       const now = Date.now();
       
@@ -306,7 +374,7 @@ const FaceApiAttendanceScanner = () => {
           }
 
           // Skip if already recognized recently
-          if (face.status === 'recognized' && now - face.firstSeen < RECOGNITION_COOLDOWN) {
+          if (face.status === 'recognized' && face.lastRecognized && now - face.lastRecognized < RECOGNITION_COOLDOWN) {
             return face;
           }
 
@@ -314,8 +382,6 @@ const FaceApiAttendanceScanner = () => {
           if (face.descriptor && face.status !== 'recognized') {
             // Filter students by shift using helper function
             const targetStudents = filterStudentsByShift(students.filter(s => s.faceDescriptor), selectedShift || 'All');
-
-            console.log(`🔍 Recognition pool: ${targetStudents.length} students for shift "${selectedShift || 'All'}"`);
 
             let bestMatch: { student: Student, distance: number } | null = null;
 
@@ -327,47 +393,62 @@ const FaceApiAttendanceScanner = () => {
               const confidence = (1 - distance) * 100;
               const requiredConfidence = recognitionThreshold;
               
-              console.log(`🔍 Recognition Debug for ${student.fullName}:`);
-              console.log(`   - Distance: ${distance.toFixed(4)}`);
-              console.log(`   - Confidence: ${confidence.toFixed(2)}%`);
-              console.log(`   - Required: ${requiredConfidence}%`);
-              console.log(`   - Pass: ${confidence >= requiredConfidence ? 'YES' : 'NO'}`);
-              
               // Check if confidence meets the threshold
               if (confidence >= requiredConfidence && (!bestMatch || distance < bestMatch.distance)) {
-                console.log(`✅ VALID MATCH: ${student.fullName} - ${confidence.toFixed(1)}% confidence (≥${requiredConfidence}%)`);
                 bestMatch = { student, distance };
-              } else if (confidence < requiredConfidence) {
-                console.log(`❌ BELOW THRESHOLD: ${student.fullName} - ${confidence.toFixed(1)}% confidence (<${requiredConfidence}%)`);
               }
             }
 
             if (bestMatch) {
               const finalConfidence = (1 - bestMatch.distance) * 100;
               const requiredConfidence = recognitionThreshold;
-              console.log(`🎯 FINAL RECOGNITION CHECK:`);
-              console.log(`   - Student: ${bestMatch.student.fullName}`);
-              console.log(`   - Final Confidence: ${finalConfidence.toFixed(2)}%`);
-              console.log(`   - Required Threshold: ${requiredConfidence}%`);
-              console.log(`   - Decision: ${finalConfidence >= requiredConfidence ? 'RECOGNIZE' : 'REJECT'}`);
               
               // Double-check confidence threshold before marking attendance
               if (finalConfidence >= requiredConfidence) {
+                // Check if this student was recently marked (global cooldown)
+                const studentKey = `${bestMatch.student.id}_${selectedShift || 'All'}_${new Date().toDateString()}`;
+                const lastMarked = recentlyMarkedStudents.current.get(studentKey);
+                const now = Date.now();
+                
+                if (lastMarked && now - lastMarked < RECOGNITION_COOLDOWN) {
+                  return {
+                    ...face,
+                    status: 'recognized',
+                    name: bestMatch.student.fullName,
+                    confidence: finalConfidence,
+                    lastRecognized: lastMarked, // Use the original mark time
+                    message: `Already marked: ${bestMatch.student.fullName} (${finalConfidence.toFixed(1)}%)`
+                  };
+                }
+                
+                // Mark the student as recently processed
+                recentlyMarkedStudents.current.set(studentKey, now);
+                
                 // Play success sound immediately
                 playSuccessSound();
                 
                 // Mark attendance for the recognized student
-                markAttendance(bestMatch.student, selectedShift || '', {}, playSuccessSound);
+                markAttendance(bestMatch.student, selectedShift || '', classConfigs || {}, playSuccessSound)
+                  .then(attendanceStatus => {
+                    // Update the face with the attendance status after marking
+                    setTrackedFaces(prevFaces => 
+                      prevFaces.map(f => 
+                        f.id === face.id 
+                          ? { ...f, attendanceStatus } 
+                          : f
+                      )
+                    );
+                  });
                 
                 return {
                   ...face,
                   status: 'recognized',
                   name: bestMatch.student.fullName,
                   confidence: finalConfidence,
+                  lastRecognized: now, // Track when attendance was marked
                   message: `Recognized: ${bestMatch.student.fullName} (${finalConfidence.toFixed(1)}%)`
                 };
               } else {
-                console.log(`⚠️ Best match still below threshold, marking as unknown`);
                 return {
                   ...face,
                   status: 'unknown',
@@ -375,7 +456,6 @@ const FaceApiAttendanceScanner = () => {
                 };
               }
             } else {
-              console.log('❌ No valid matches found above threshold');
               return {
                 ...face,
                 status: 'unknown',
@@ -390,24 +470,41 @@ const FaceApiAttendanceScanner = () => {
     } catch (error) {
       console.error('Face detection error:', error);
     }
-  }, [isCameraActive, students, minFaceSize, maxFaceSize]);
+  }, [isCameraActive, minFaceSize, maxFaceSize, recognitionThreshold, selectedShift, students]);
 
   // Start detection loop
   const startDetection = useCallback(() => {
     if (isDetectingRef.current) return;
+    
     isDetectingRef.current = true;
     
-    detectionIntervalRef.current = setInterval(detectFaces, DETECTION_INTERVAL);
+    detectionIntervalRef.current = setInterval(() => {
+      detectFaces();
+      
+      // Clean up old entries from recently marked students (every 10 detection cycles)
+      if (Math.random() < 0.1) { // 10% chance each cycle
+        const now = Date.now();
+        const cutoffTime = now - RECOGNITION_COOLDOWN;
+        for (const [key, timestamp] of recentlyMarkedStudents.current.entries()) {
+          if (timestamp < cutoffTime) {
+            recentlyMarkedStudents.current.delete(key);
+          }
+        }
+      }
+    }, DETECTION_INTERVAL);
   }, [detectFaces]);
 
   // Stop detection
-  const stopDetection = () => {
+  const stopDetection = useCallback(() => {
     isDetectingRef.current = false;
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
     }
     setTrackedFaces([]);
-  };
+    // Clear recently marked students when stopping detection
+    recentlyMarkedStudents.current.clear();
+  }, []);
 
   useEffect(() => {
     if (isCameraActive && !isLoading) {
@@ -415,8 +512,17 @@ const FaceApiAttendanceScanner = () => {
     } else {
       stopDetection();
     }
-    return () => stopDetection();
-  }, [isCameraActive, isLoading, startDetection]);
+    return () => {
+      stopDetection();
+    };
+  }, [isCameraActive, isLoading, startDetection, stopDetection]);
+
+  // Cleanup effect to reset body overflow on component unmount
+  useEffect(() => {
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   // Canvas drawing
   useEffect(() => {
@@ -471,7 +577,12 @@ const FaceApiAttendanceScanner = () => {
         borderColor = '#3b82f6'; // Blue
         label = 'Recognizing...';
       } else if (face.status === 'recognized') {
-        borderColor = '#10b981'; // Green
+        // Check attendance status for color
+        if (face.attendanceStatus === 'late') {
+          borderColor = '#f59e0b'; // Yellow/Orange for late
+        } else {
+          borderColor = '#10b981'; // Green for present/on-time
+        }
         label = face.name || 'Recognized';
       } else if (face.status === 'unknown') {
         borderColor = '#ef4444'; // Red
@@ -513,8 +624,106 @@ const FaceApiAttendanceScanner = () => {
   }, [trackedFaces, isCameraActive, minFaceSize, maxFaceSize]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-800 dark:via-gray-800 dark:to-blue-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <>
+      {/* Zoom Mode Overlay */}
+      {isZoomMode && (
+        <div className="fixed inset-0 z-[9999] bg-black">
+          {/* Exit Button */}
+          <button
+            onClick={() => setIsZoomMode(false)}
+            className="absolute top-6 right-6 z-[10000] p-3 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+            title="Exit Zoom Mode (ESC)"
+          >
+            <Icon path={mdiClose} className="w-6 h-6" />
+          </button>
+
+          {/* Dynamic Instructions */}
+          <div className="absolute top-6 left-6 z-[10000] bg-black/70 backdrop-blur-sm rounded-xl p-4 max-w-md">
+            <div className="text-white">
+              <h3 className="text-xl font-bold mb-2 flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span>Zoom Mode Active</span>
+              </h3>
+              <div className="space-y-2 text-sm">
+                <p className="flex items-center space-x-2">
+                  <Icon path={mdiEye} className="w-4 h-4 text-blue-400" />
+                  <span>Look directly at the camera</span>
+                </p>
+                <p className="flex items-center space-x-2">
+                  <Icon path={mdiFaceRecognition} className="w-4 h-4 text-green-400" />
+                  <span>Position your face in the center</span>
+                </p>
+                <p className="flex items-center space-x-2">
+                  <Icon path={mdiClock} className="w-4 h-4 text-yellow-400" />
+                  <span>Hold position for 2 seconds</span>
+                </p>
+                <p className="text-xs text-gray-300 mt-3">
+                  Press <kbd className="px-2 py-1 bg-gray-700 rounded text-white">ESC</kbd> or click ✕ to exit
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Recognition Status */}
+          {trackedFaces.length > 0 && (
+            <div className="absolute bottom-6 left-6 z-[10000] bg-black/70 backdrop-blur-sm rounded-xl p-4">
+              <div className="text-white space-y-2">
+                {trackedFaces.map(face => (
+                  <div key={face.id} className="flex items-center space-x-3">
+                    <div className={`w-4 h-4 rounded-full ${
+                      face.status === 'recognized' ? 'bg-green-500' :
+                      face.status === 'recognizing' ? 'bg-blue-500 animate-pulse' :
+                      face.status === 'unknown' ? 'bg-red-500' : 'bg-gray-500'
+                    }`}></div>
+                    <span className="text-sm font-medium">
+                      {face.message || 'Detecting...'}
+                    </span>
+                    {face.confidence && (
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        face.confidence >= recognitionThreshold 
+                          ? 'bg-green-600 text-white' 
+                          : 'bg-red-600 text-white'
+                      }`}>
+                        {face.confidence.toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Full Screen Camera */}
+          <div className="w-full h-full relative">
+            {isCameraActive ? (
+              <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                className="w-full h-full object-cover"
+                videoConstraints={{ facingMode: 'user' }}
+                style={{ transform: "scaleX(-1)" }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center text-white">
+                  <Icon path={mdiCameraOff} className="w-24 h-24 mx-auto mb-4 text-gray-400" />
+                  <p className="text-2xl font-medium">Camera is off</p>
+                  <p className="text-gray-400 text-lg mt-2">Start camera to use zoom mode</p>
+                </div>
+              </div>
+            )}
+            <canvas
+              ref={canvasRef}
+              className="absolute top-0 left-0 w-full h-full pointer-events-none"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Main Application */}
+      <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-800 dark:via-gray-800 dark:to-blue-900 ${isZoomMode ? 'hidden' : ''}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
         {/* Header Section */}
         <div className="text-center">
@@ -556,19 +765,7 @@ const FaceApiAttendanceScanner = () => {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-4 px-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Faces Tracked</p>
-                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{trackedFaces.length}</p>
-                </div>
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                  <Icon path={mdiEye} className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-4 px-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
+            <div className="col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-4 px-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
               
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-800 dark:text-white flex items-center space-x-2">
@@ -866,32 +1063,80 @@ const FaceApiAttendanceScanner = () => {
                         <p className="text-sm text-gray-600 dark:text-gray-400">Real-time face detection and recognition</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        // Only start camera if shift is selected
-                        if (!selectedShift && !isCameraActive) {
-                          toast.error('Please select a shift before starting camera');
-                          return;
-                        }
-                        setIsCameraActive(!isCameraActive);
-                      }}
-                      disabled={!selectedShift && !isCameraActive}
-                      className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-md ${
-                        !selectedShift && !isCameraActive
-                          ? 'bg-gray-400 text-white cursor-not-allowed'
-                          : isCameraActive
-                          ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
-                          : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
-                      }`}
-                    >
-                      {isCameraActive ? 'Stop Camera' : 'Start Camera'}
-                    </button>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={toggleZoomMode}
+                        disabled={!isCameraActive}
+                        className={`px-4 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-md flex items-center space-x-2 ${
+                          !isCameraActive
+                            ? 'bg-gray-400 text-white cursor-not-allowed'
+                            : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white'
+                        }`}
+                        title={!isCameraActive ? 'Start camera first' : 'Enter full-screen zoom mode'}
+                      >
+                        <Icon path={mdiFullscreen} className="w-5 h-5" />
+                        <span>Zoom</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          // Only start camera if shift is selected
+                          if (!selectedShift && !isCameraActive) {
+                            toast.error('Please select a shift before starting camera');
+                            return;
+                          }
+                          setIsCameraActive(!isCameraActive);
+                        }}
+                        disabled={!selectedShift && !isCameraActive}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-md ${
+                          !selectedShift && !isCameraActive
+                            ? 'bg-gray-400 text-white cursor-not-allowed'
+                            : isCameraActive
+                            ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                            : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                        }`}
+                      >
+                        {isCameraActive ? 'Stop Camera' : 'Start Camera'}
+                      </button>
+                    </div>
                     
                     {/* test sound removed */}
                   </div>
                 </div>
 
                 <div className="p-6">
+                  {/* Camera Selection */}
+                  <div className="mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <CustomDropdown
+                        id="camera-selection"
+                        label="Select Camera"
+                        value={selectedCamera}
+                        onChange={setSelectedCamera}
+                        options={availableCameras}
+                        placeholder="Choose camera..."
+                        searchable={false}
+                        className="w-full"
+                        disabled={isCameraActive}
+                      />
+                      
+                      <div className="flex items-end">
+                        <button
+                          onClick={loadCameras}
+                          disabled={isCameraActive}
+                          className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 text-sm flex items-center space-x-2 ${
+                            isCameraActive
+                              ? 'bg-gray-400 text-white cursor-not-allowed'
+                              : 'bg-blue-500 hover:bg-blue-600 text-white'
+                          }`}
+                          title="Refresh camera list"
+                        >
+                          <span>Refresh Cameras</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="relative bg-gray-900 dark:bg-black rounded-lg overflow-hidden aspect-video">
                     {isCameraActive ? (
                       <Webcam
@@ -899,7 +1144,10 @@ const FaceApiAttendanceScanner = () => {
                         ref={webcamRef}
                         screenshotFormat="image/jpeg"
                         className="w-full h-full object-cover"
-                        videoConstraints={{ facingMode: 'user' }}
+                        videoConstraints={{ 
+                          facingMode: 'user',
+                          deviceId: selectedCamera ? { exact: selectedCamera } : undefined
+                        }}
                         style={{ transform: "scaleX(-1)" }}
                       />
                     ) : (
@@ -953,7 +1201,6 @@ const FaceApiAttendanceScanner = () => {
             {/* Control Panel */}
             <div className="space-y-6">
               
-
 
               {/* Student Information */}
               <CardBox className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
@@ -1023,8 +1270,9 @@ const FaceApiAttendanceScanner = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

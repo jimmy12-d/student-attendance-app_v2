@@ -37,13 +37,16 @@ service cloud.firestore {
 //       allow read: if isAuthorizedUser() || (request.auth.uid == resource.data.authUid);
 //     }
     match /attendance/{attendanceId} {
-      // Only admins can create or update attendance records.
-      allow write: if isAuthorizedUser();
-      
-      // An admin can read any record.
-      // A student can read their OWN attendance records.
-      // IMPORTANT: This requires your 'attendance' documents to have an 'authUid' field.
-      allow read: if true;
+      // Admins can do everything with attendance records
+      allow read, write: if isAuthorizedUser();
+
+      // Students can create or update their own attendance requests (with status 'requested')
+      allow create, update: if request.auth != null &&
+        request.resource.data.authUid == request.auth.uid &&
+        request.resource.data.status == 'requested';
+
+      // Students can read their own attendance records
+      allow read: if request.auth != null && request.auth.uid == resource.data.authUid;
     }
 
     match /classes/{classId} {

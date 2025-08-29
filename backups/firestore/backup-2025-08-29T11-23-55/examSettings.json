@@ -1,7 +1,7 @@
 {
   "collection": "examSettings",
-  "totalDocuments": 117,
-  "backupTimestamp": "2025-08-19T07:13:38.155Z",
+  "totalDocuments": 131,
+  "backupTimestamp": "2025-08-29T11:23:59.966Z",
   "documents": [
     {
       "id": "mock1_Grade 10_chemistry",
@@ -1045,6 +1045,246 @@
         "subject": "physics",
         "maxScore": 35,
         "mock": "mock3"
+      }
+    },
+    {
+      "id": "mock4_Grade_12_Social_biology",
+      "data": {
+        "type": "Grade 12 Social",
+        "subject": "biology",
+        "maxScore": 75,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.752Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.752Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_Social_chemistry",
+      "data": {
+        "type": "Grade 12 Social",
+        "subject": "chemistry",
+        "maxScore": 75,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.514Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.514Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_Social_english",
+      "data": {
+        "type": "Grade 12 Social",
+        "subject": "english",
+        "maxScore": 50,
+        "mock": "mock4",
+        "optional": true,
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.962Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.962Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_Social_history",
+      "data": {
+        "type": "Grade 12 Social",
+        "subject": "history",
+        "maxScore": 50,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.854Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.854Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_Social_khmer",
+      "data": {
+        "type": "Grade 12 Social",
+        "subject": "khmer",
+        "maxScore": 75,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.397Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.397Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_Social_math",
+      "data": {
+        "type": "Grade 12 Social",
+        "subject": "math",
+        "maxScore": 125,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.283Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.283Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_Social_physics",
+      "data": {
+        "type": "Grade 12 Social",
+        "subject": "physics",
+        "maxScore": 75,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.632Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.632Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_biology",
+      "data": {
+        "type": "Grade 12",
+        "subject": "biology",
+        "maxScore": 75,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.922Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.922Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_chemistry",
+      "data": {
+        "type": "Grade 12",
+        "subject": "chemistry",
+        "maxScore": 75,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.595Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.595Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_english",
+      "data": {
+        "type": "Grade 12",
+        "subject": "english",
+        "maxScore": 50,
+        "mock": "mock4",
+        "optional": true,
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.173Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.173Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_history",
+      "data": {
+        "type": "Grade 12",
+        "subject": "history",
+        "maxScore": 50,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.055Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:25.055Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_khmer",
+      "data": {
+        "type": "Grade 12",
+        "subject": "khmer",
+        "maxScore": 75,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.409Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.409Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_math",
+      "data": {
+        "type": "Grade 12",
+        "subject": "math",
+        "maxScore": 125,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.268Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.268Z"
+        }
+      }
+    },
+    {
+      "id": "mock4_Grade_12_physics",
+      "data": {
+        "type": "Grade 12",
+        "subject": "physics",
+        "maxScore": 75,
+        "mock": "mock4",
+        "createdAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.739Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-20T11:43:24.739Z"
+        }
       }
     },
     {

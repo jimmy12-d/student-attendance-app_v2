@@ -1,7 +1,7 @@
 {
   "collection": "authorizedUsers",
-  "totalDocuments": 2,
-  "backupTimestamp": "2025-08-19T07:13:37.380Z",
+  "totalDocuments": 3,
+  "backupTimestamp": "2025-08-29T11:23:59.233Z",
   "documents": [
     {
       "id": "chhorngjasper@gmail.com",
@@ -10,7 +10,15 @@
           "_type": "timestamp",
           "_value": "2025-08-06T03:16:42.000Z"
         },
-        "role": "admin"
+        "role": "admin",
+        "name": "Jasper"
+      }
+    },
+    {
+      "id": "kemhoutlem@gmail.com",
+      "data": {
+        "role": "admin",
+        "name": "Jimmy"
       }
     },
     {

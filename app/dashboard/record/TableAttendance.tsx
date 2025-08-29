@@ -5,6 +5,7 @@ import { Timestamp } from "firebase/firestore";
 import Button from "../../_components/Button"; // Adjust path as needed
 import Buttons from "../../_components/Buttons"; // Adjust path as needed
 import { mdiTrashCan, mdiCheck, mdiClose } from "@mdi/js";
+import { getStatusStyles } from "../_lib/statusStyles";
 
 const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined): string => {
     if (!dateInput) return 'N/A';
@@ -55,7 +56,7 @@ type Props = {
 };
 
 
-const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 10 }: Props) => {
+const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 20 }: Props) => {
   const [currentPage, setCurrentPage] = useState(0);
   const recordsPaginated = records.slice(
     perPage * currentPage,
@@ -68,82 +69,163 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 1
     pagesList.push(i);
   }
 
+  // Helper function to render status badge with SVG
+  const renderStatusBadge = (status: string) => {
+    const styles = getStatusStyles(status, true);
+    
+    return (
+      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${styles.badge}${status.toLowerCase() === 'pending' ? ' animate-pulse' : ''}`}>
+        {styles.svg && (
+          <svg 
+            className="w-3 h-3 mr-1 mt-1" 
+            fill={status.toLowerCase() === 'pending' ? "none" : "currentColor"} 
+            stroke={status.toLowerCase() === 'pending' ? "currentColor" : "none"} 
+            viewBox="0 0 20 20"
+          >
+            <path 
+              fillRule={status.toLowerCase() === 'pending' ? undefined : "evenodd"} 
+              clipRule={status.toLowerCase() === 'pending' ? undefined : "evenodd"}
+              strokeLinecap={status.toLowerCase() === 'pending' ? "round" : undefined}
+              strokeLinejoin={status.toLowerCase() === 'pending' ? "round" : undefined}
+              strokeWidth={status.toLowerCase() === 'pending' ? 2 : undefined}
+              d={styles.svg} 
+            />
+          </svg>
+        )}
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+    );
+  };
+
   return (
     <>
       <div className="overflow-x-auto">
-        <table>
-          <thead>
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="dark:text-white">Student Name</th>
-              <th className="dark:text-white">Class</th>
-              <th className="dark:text-white">Shift</th>
-              <th className="dark:text-white">Status</th>
-              <th className="dark:text-white">Date</th>
-              <th className="dark:text-white">
-                Time
-                <span title="Ordered by time" className="ml-1 align-middle text-xs text-gray-400 dark:text-gray-500">▼</span>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Student Name
               </th>
-              <th className="dark:text-white">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Class
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Shift
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <div className="flex items-center">
+                  Time
+                  <span title="Ordered by time" className="ml-1 text-xs text-gray-400 dark:text-gray-500">▼</span>
+                </div>
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody>
-            {recordsPaginated.map((record: AttendanceRecord) => (
-              <tr key={record.id}>
-                <td data-label="Student Name" className="dark:text-white">{record.studentName}</td>
-                <td data-label="Class" className="dark:text-white">{record.class || 'N/A'}</td>
-                <td data-label="Shift" className="dark:text-white">{record.shift || 'N/A'}</td>
-                <td data-label="Status">
-                  <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    record.status.toLowerCase() === 'present' ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200' :
-                    record.status.toLowerCase() === 'late' ? 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 border border-yellow-300 dark:border-yellow-600' :
-                    record.status.toLowerCase() === 'absent' ? 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200' :
-                    record.status.toLowerCase() === 'permission' ? 'bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200' :
-                    record.status.toLowerCase() === 'pending' ? 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 animate-pulse' :
-                    'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200' // Default for other statuses
-                  }`}>
-                    {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            {recordsPaginated.map((record: AttendanceRecord, index) => (
+              <tr key={record.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 ${
+                record.status === 'pending' ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
+              }`}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-10 w-10">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                        {record.studentName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {record.studentName}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        ID: {record.studentId}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
+                    {record.class || 'N/A'}
                   </span>
                 </td>
-                <td data-label="Date" className="whitespace-nowrap dark:text-white">
-                {/* Use the formatting function on record.date */}
-                {formatDateToDDMMYYYY(record.date)}
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                    record.shift?.toLowerCase() === 'morning' 
+                      ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                      : record.shift?.toLowerCase() === 'afternoon'
+                      ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'
+                      : record.shift?.toLowerCase() === 'evening'
+                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                  }`}>
+                    {record.shift || 'N/A'}
+                  </span>
                 </td>
-                <td data-label="Time" className="whitespace-nowrap dark:text-white">
-                    {/* Your existing time formatting logic using record.timestamp */}
-                    {record.timestamp instanceof Timestamp
-                    ? record.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-                    : record.timestamp instanceof Date
-                    ? record.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-                    : 'N/A'}
+                <td className="px-6 py-4 whitespace-nowrap text-center">
+                  {renderStatusBadge(record.status)}
                 </td>
-                <td className="text-center align-middle before:hidden lg:w-1 whitespace-nowrap">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{formatDateToDDMMYYYY(record.date)}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {new Date(record.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="font-medium">
+                      {record.timestamp instanceof Timestamp
+                      ? record.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+                      : record.timestamp instanceof Date
+                      ? record.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+                      : 'N/A'}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center">
                   {record.status === 'pending' ? (
-                    <Buttons type="justify-center" noWrap>
-                      <Button
-                        color="success"
-                        icon={mdiCheck}
+                    <div className="flex items-center justify-center space-x-2">
+                      <button
                         onClick={() => onApproveRecord(record)}
-                        small
-                        isGrouped
-                      />
-                      <Button
-                        color="danger"
-                        icon={mdiClose}
+                        className="inline-flex items-center p-2 rounded-full bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-800/50 transition-colors duration-200"
+                        title="Approve"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      <button
                         onClick={() => onDeleteRecord(record, 'rejected')}
-                        small
-                        isGrouped
-                      />
-                    </Buttons>
+                        className="inline-flex items-center p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-800/50 transition-colors duration-200"
+                        title="Reject"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   ) : (
-                    <Buttons type="justify-center" noWrap>
-                        <Button
-                        color="danger"
-                        icon={mdiTrashCan}
-                        onClick={() => onDeleteRecord(record, 'deleted')}
-                        small
-                        isGrouped
-                        />
-                    </Buttons>
+                    <button
+                      onClick={() => onDeleteRecord(record, 'deleted')}
+                      className="inline-flex items-center p-2 rounded-full bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-800/50 transition-colors duration-200"
+                      title="Delete"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   )}
                 </td>
               </tr>
@@ -153,26 +235,111 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 1
       </div>
 
       {/* Pagination */}
-      <div className="p-3 lg:px-6 border-t border-gray-100 dark:border-slate-800">
-        <div className="flex flex-col md:flex-row items-center justify-between py-3 md:py-0">
-          <Buttons>
-            {pagesList.map((page) => (
-              <Button
-                key={page}
-                active={page === currentPage}
-                label={(page + 1).toString()}
-                color={page === currentPage ? "lightDark" : "whiteDark"}
-                small
-                onClick={() => setCurrentPage(page)}
-                isGrouped
-              />
-            ))}
-          </Buttons>
-          <small className="mt-6 md:mt-0 dark:text-white">
-            Page {currentPage + 1} of {numPages} (Total: {records.length} records)
-          </small>
+      {numPages > 1 && (
+        <div className="bg-white dark:bg-gray-900 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                disabled={currentPage === 0}
+                className={`relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md ${
+                  currentPage === 0 
+                    ? 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed' 
+                    : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.min(numPages - 1, currentPage + 1))}
+                disabled={currentPage === numPages - 1}
+                className={`ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md ${
+                  currentPage === numPages - 1 
+                    ? 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed' 
+                    : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  Showing{' '}
+                  <span className="font-medium">{currentPage * perPage + 1}</span>
+                  {' '}to{' '}
+                  <span className="font-medium">
+                    {Math.min((currentPage + 1) * perPage, records.length)}
+                  </span>
+                  {' '}of{' '}
+                  <span className="font-medium">{records.length}</span>
+                  {' '}results
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                    disabled={currentPage === 0}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+                      currentPage === 0 
+                        ? 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed' 
+                        : 'text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {Array.from({ length: Math.min(5, numPages) }, (_, i) => {
+                    let pageNum = i;
+                    if (numPages > 5) {
+                      if (currentPage <= 2) {
+                        pageNum = i;
+                      } else if (currentPage >= numPages - 3) {
+                        pageNum = numPages - 5 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          currentPage === pageNum
+                            ? 'z-10 bg-blue-600 border-blue-600 text-white'
+                            : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {pageNum + 1}
+                      </button>
+                    );
+                  })}
+                  
+                  <button
+                    onClick={() => setCurrentPage(Math.min(numPages - 1, currentPage + 1))}
+                    disabled={currentPage === numPages - 1}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 text-sm font-medium ${
+                      currentPage === numPages - 1 
+                        ? 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 cursor-not-allowed' 
+                        : 'text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                    >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 };

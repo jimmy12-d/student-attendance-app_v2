@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAppSelector } from '../../_stores/hooks';
 import { db } from '../../../firebase-config';
-import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Student, PermissionRecord } from '../../_interfaces';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord } from '../../dashboard/_lib/attendanceLogic';
+import { getStatusStyles } from '../../dashboard/_lib/statusStyles';
 import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
@@ -76,51 +77,49 @@ const AttendancePage = () => {
     }
 
     if (todayRecord) {
-      if (['present', 'late', 'permission'].includes(todayRecord.status)) {
+      if (["present", "late", "permission"].includes(todayRecord.status)) {
         toast.info(`Attendance already marked as ${todayRecord.status}.`);
         return;
       }
-      if (todayRecord.status === 'pending') {
+      if (todayRecord.status === "requested") {
         toast.info("Your attendance request is already pending approval.");
         return;
       }
     }
 
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const newRecordData = {
-        authUid: studentUid,
-        studentName: studentData.fullName,
-        studentId: studentDocId,
-        class: studentData.class,
-        shift: studentData.shift || null,
-        date: today,
-        status: 'pending',
-        timestamp: serverTimestamp(),
-        requestedAt: serverTimestamp(),
-      };
+      const today = new Date().toISOString().split("T")[0];
+      const attendanceQuery = query(
+        collection(db, "attendance"),
+        where("authUid", "==", studentUid),
+        where("date", "==", today),
+        limit(1)
+      );
 
-      // Use real-time listener to check existing attendance
-      const attendanceQuery = query(collection(db, "attendance"), where("authUid", "==", studentUid), where("date", "==", today), limit(1));
-      const unsubscribe = onSnapshot(attendanceQuery, async (attendanceSnap) => {
-        try {
-          if (!attendanceSnap.empty) {
-            const docRef = attendanceSnap.docs[0].ref;
-            await updateDoc(docRef, { status: 'pending', requestedAt: serverTimestamp() });
-          } else {
-            await addDoc(collection(db, "attendance"), newRecordData);
-          }
+      const attendanceSnap = await getDocs(attendanceQuery);
 
-          toast.success("Attendance request sent! You will be notified upon approval.");
-          setIsRequestConfirmOpen(false);
-        } catch (error) {
-          console.error("Error sending attendance request: ", error);
-          toast.error("Failed to send request. Please try again.");
-        }
-        unsubscribe(); // Clean up the listener after single use
-      });
+      if (!attendanceSnap.empty) {
+        const docRef = attendanceSnap.docs[0].ref;
+        await updateDoc(docRef, { status: "requested", requestedAt: serverTimestamp() });
+      } else {
+        const newRecordData = {
+          authUid: studentUid,
+          studentName: studentData.fullName,
+          studentId: studentDocId,
+          class: studentData.class,
+          shift: studentData.shift || null,
+          date: today,
+          status: "requested",
+          timestamp: serverTimestamp(),
+          requestedAt: serverTimestamp(),
+        };
+        await addDoc(collection(db, "attendance"), newRecordData);
+      }
+
+      toast.success("Attendance request sent! You will be notified upon approval.");
+      setIsRequestConfirmOpen(false);
     } catch (error) {
-      console.error("Error setting up attendance request: ", error);
+      console.error("Error sending attendance request: ", error);
       toast.error("Failed to send request. Please try again.");
     }
   };
@@ -183,7 +182,7 @@ const AttendancePage = () => {
                   const rawAttendanceRecord: RawAttendanceRecord | undefined = fetchedRecords[dateStr] ? {
                     studentId: studentDataFromDb.studentId,
                     date: dateStr,
-                    status: fetchedRecords[dateStr].status as 'present' | 'late' | 'pending',
+                    status: fetchedRecords[dateStr].status as 'present' | 'late' | 'requested',
                     timestamp: fetchedRecords[dateStr].timestamp instanceof Date ? 
                               Timestamp.fromDate(fetchedRecords[dateStr].timestamp as Date) : 
                               fetchedRecords[dateStr].timestamp as Timestamp,
@@ -212,7 +211,7 @@ const AttendancePage = () => {
                                       calculatedStatus.status === "No School" ? 'no-school' :
                                       calculatedStatus.status === "Present" ? 'present' :
                                       calculatedStatus.status === "Late" ? 'late' :
-                                      calculatedStatus.status === "Pending" ? 'pending' : 'absent';
+                                      calculatedStatus.status === "Pending" ? 'requested' : 'absent';
                   
                   return { 
                     id: dateStr, 
@@ -231,7 +230,7 @@ const AttendancePage = () => {
                 const rawTodayRecord: RawAttendanceRecord | undefined = todaysAttendanceRecord ? {
                   studentId: studentDataFromDb.studentId,
                   date: today,
-                  status: todaysAttendanceRecord.status as 'present' | 'late' | 'pending',
+                  status: todaysAttendanceRecord.status as 'present' | 'late' | 'requested',
                   timestamp: todaysAttendanceRecord.timestamp instanceof Date ? 
                             Timestamp.fromDate(todaysAttendanceRecord.timestamp as Date) : 
                             todaysAttendanceRecord.timestamp as Timestamp,
@@ -253,7 +252,7 @@ const AttendancePage = () => {
                                          todayCalculatedStatus.status === "No School" ? 'no-school' :
                                          todayCalculatedStatus.status === "Present" ? 'present' :
                                          todayCalculatedStatus.status === "Late" ? 'late' :
-                                         todayCalculatedStatus.status === "Pending" ? 'pending' : 'absent';
+                                         todayCalculatedStatus.status === "Pending" ? 'requested' : 'absent';
 
                 const todaysRecord = todaysAttendanceRecord || { 
                   id: today, 
@@ -333,54 +332,6 @@ const AttendancePage = () => {
     const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
-
-     const getStatusStyles = (status: string) => {
-     const s = status.toLowerCase();
-     switch (s) {
-       case 'present':
-         return { 
-           badge: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800',
-           cardBg: 'bg-gradient-to-br from-green-500 to-emerald-600',
-           icon: mdiAccountCheckOutline,
-           textColor: 'text-white'
-         };
-       case 'late':
-         return { 
-           badge: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700',
-           cardBg: 'bg-gradient-to-br from-yellow-500 to-orange-500',
-           icon: mdiClockAlertOutline,
-           textColor: 'text-white'
-         };
-       case 'permission':
-         return { 
-           badge: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700',
-           cardBg: 'bg-gradient-to-br from-purple-500 to-indigo-600',
-           icon: mdiAccountCheckOutline,
-           textColor: 'text-white'
-         };
-       case 'pending':
-         return {
-           badge: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700',
-           cardBg: 'bg-gradient-to-br from-blue-500 to-cyan-600',
-           icon: mdiClockTimeThreeOutline,
-           textColor: 'text-white'
-         };
-       case 'absent':
-         return { 
-           badge: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800',
-           cardBg: 'bg-gradient-to-br from-red-500 to-rose-600',
-           icon: mdiAccountOffOutline,
-           textColor: 'text-white'
-         };
-       default:
-         return { 
-           badge: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700',
-           cardBg: 'bg-gradient-to-br from-gray-500 to-slate-600',
-           icon: mdiAccountOffOutline,
-           textColor: 'text-white'
-         };
-     }
-   };
 
    const getTodayGreeting = () => {
      const hour = new Date().getHours();
@@ -513,7 +464,7 @@ const AttendancePage = () => {
                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-all duration-200"></div>
                  <button 
                    onClick={() => setIsRequestConfirmOpen(true)}
-                   disabled={['present', 'late', 'permission'].includes(todayRecord?.status)}
+                   disabled={['present', 'late', 'permission', 'requested'].includes(todayRecord?.status)}
                    className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
@@ -690,4 +641,4 @@ const AttendancePage = () => {
    );
 };
 
-export default AttendancePage; 
+export default AttendancePage;
