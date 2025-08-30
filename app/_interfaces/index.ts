@@ -99,6 +99,7 @@ export interface Student {
   fatherName?: string; // Father's Name
   fatherPhone?: string; // Father's Phone
   photoUrl?: string; // Photo URL
+  faceDescriptor?: number[]; // Stored as array of numbers (Float32Array serialized)
   lastPaymentMonth?: string; // e.g., "YYYY-MM"
   discount?: number; // Discount amount in dollars
   note?: string; // Admin note for the student
@@ -123,11 +124,13 @@ export interface Student {
   tokenExpiresAt?: Timestamp | Date; // When the token expires (7 days from generation)
   chatId?: string; // Telegram chat ID (filled when student registers)
   passwordHash?: string; // bcrypt hashed password (filled when student registers)
+  authUid?: string; // Firebase Auth UID for legitimate authentication
   telegramAuthEnabled?: boolean; // Flag indicating Telegram auth is set up
   registeredAt?: Timestamp | Date; // When student registered via Telegram
   lastLoginAt?: Timestamp | Date; // Last login timestamp
   passwordUpdatedAt?: Timestamp | Date; // When password was last changed
   migratedToPhoneAuth?: Timestamp | Date; // When migrated from username to phone auth
+  
   // Flip-flop tracking
   flipFlopHistory?: Record<string, {
     previousShift: string;
@@ -210,6 +213,38 @@ export interface PrintRequest {
   approvedAt?: Timestamp;
   errorMessage?: string;
   rejectionReason?: string;
+}
+
+// Star Management System Interfaces
+export interface StarReward {
+  id: string; // Firestore document ID
+  name: string; // e.g., "Early Bird Star"
+  color: 'white' | 'pink' | 'orange' | 'blue'; // Color options
+  amount: number; // Number of stars awarded
+  setLimit: number; // Maximum times this reward can be claimed
+  isActive: boolean; // Whether the reward is currently active
+  createdAt: Timestamp;
+  createdBy: string; // Admin who created it
+  updatedAt?: Timestamp;
+  updatedBy?: string;
+}
+
+// Claimed Star Interface (sub-collection under students)
+export interface ClaimedStar {
+  id: string; // Firestore document ID
+  starRewardId: string; // Reference to starRewards collection
+  starRewardName: string; // For easy display
+  starRewardColor: 'white' | 'pink' | 'orange' | 'blue';
+  amount: number; // Stars earned
+  claimedAt: Timestamp;
+  claimedBy: string; // Admin who granted it
+  reason?: string; // Optional reason for granting
+}
+
+// Student with star totals (for UI display)
+export interface StudentWithStars extends Student {
+  totalStars: number; // Calculated from claimedStars sub-collection
+  claimedStars?: ClaimedStar[]; // Array of claimed stars
 }
 
 // Keep these interfaces here as they are specific to this component's view model

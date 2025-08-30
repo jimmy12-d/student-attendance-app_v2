@@ -37,6 +37,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
     { id: 'number', label: '#N', enabled: true },
     { id: 'name', label: 'Name', enabled: true },
     { id: 'phone', label: 'Phone', enabled: true },
+  { id: 'faceEnrollment', label: 'Face Enrollment', enabled: false },
     { id: 'registerQR', label: 'Register QR', enabled: false },
     { id: 'paymentStatus', label: 'Payment', enabled: false },
     { id: 'scheduleType', label: 'Type', enabled: false },

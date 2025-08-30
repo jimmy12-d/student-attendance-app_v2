@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Student } from '../../../_interfaces';
 import DailyStatusDetailsModal from '../../_components/DailyStatusDetailsModal';
-import { Timestamp, collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import StarManagementSection from './StarManagementSection';
+import ClaimedStarsHistory from './ClaimedStarsHistory';
+import { Timestamp, collection, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../../firebase-config';
 import { RawAttendanceRecord } from '../../_lib/attendanceLogic';
-import { PermissionRecord } from '../../../_interfaces';
+import { PermissionRecord, ClaimedStar } from '../../../_interfaces';
 import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
 import { toast } from 'sonner';
 
@@ -72,6 +74,10 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs>({});
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+
+  // Star management state
+  const [claimedStars, setClaimedStars] = useState<ClaimedStar[]>([]);
+  const [totalStars, setTotalStars] = useState(0);
 
   // Navigation logic
   const canNavigatePrev = students.length > 1 && currentIndex > 0;
@@ -189,6 +195,38 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     if (student?.id && isOpen) {
       fetchAttendanceData(student.id);
     }
+  }, [student?.id, isOpen]);
+
+  // Fetch claimed stars when student changes
+  useEffect(() => {
+    if (!student?.id || !isOpen) return;
+
+    const claimedStarsQuery = query(
+      collection(db, 'students', student.id, 'claimedStars')
+    );
+
+    const unsubscribe = onSnapshot(claimedStarsQuery, (snapshot) => {
+      const claimed = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as ClaimedStar));
+      
+      // Sort in memory to avoid orderBy issues
+      claimed.sort((a, b) => {
+        const aTime = a.claimedAt?.toDate?.() || new Date(0);
+        const bTime = b.claimedAt?.toDate?.() || new Date(0);
+        return bTime.getTime() - aTime.getTime();
+      });
+      
+      setClaimedStars(claimed);
+      setTotalStars(claimed.reduce((sum, claim) => sum + claim.amount, 0));
+    }, (error) => {
+      console.error('Error fetching claimed stars:', error);
+      setClaimedStars([]);
+      setTotalStars(0);
+    });
+
+    return () => unsubscribe();
   }, [student?.id, isOpen]);
 
   // Handle keyboard navigation
@@ -654,6 +692,13 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                       </div>
                     </div>
                   )}
+
+                  {/* Compact Claimed Stars History - Below Copy Permission Link */}
+                  <ClaimedStarsHistory 
+                    claimedStars={claimedStars}
+                    totalStars={totalStars}
+                    isCompact={true}
+                  />
                 </div>
 
                 {/* Academic Information */}
@@ -754,6 +799,19 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* Star Management Section */}
+                <div className="border-t border-gray-200 dark:border-slate-600 pt-4">
+                  <StarManagementSection 
+                    student={student}
+                    onStarUpdate={() => {
+                      // Optional: refresh any data if needed
+                      if (onBreak) {
+                        onBreak();
+                      }
+                    }}
+                  />
+                </div>
 
                 {/* Break Information Section - Only show if student is on break */}
                 {student.onBreak && (

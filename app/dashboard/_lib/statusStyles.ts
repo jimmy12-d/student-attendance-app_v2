@@ -4,7 +4,9 @@ import {
   mdiClockAlertOutline, 
   mdiAccountOffOutline, 
   mdiClockTimeThreeOutline,
-  mdiFileDocumentEditOutline
+  mdiFileDocumentEditOutline,
+  mdiFaceRecognition, 
+  mdiAccountQuestionOutline
 } from "@mdi/js";
 
 export interface StatusStyles {
@@ -104,6 +106,24 @@ export const getStatusStyles = (status: string, useSvg: boolean = false): Status
         textColor: 'text-white',
         tableCell: 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
         svg: useSvg ? 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' : undefined
+      };
+    case 'done':
+      return {
+        badge: 'bg-green-100 dark:bg-green-900/40 text-green-900 dark:text-green-200 border border-green-200 dark:border-green-800',
+        cardBg: 'bg-gradient-to-br from-green-500 to-emerald-600',
+        icon: mdiAccountCheckOutline,
+        textColor: 'text-white',
+        tableCell: 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200',
+        svg: useSvg ? 'M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' : undefined
+      };
+    case 'not yet':
+      return {
+        badge: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800',
+        cardBg: 'bg-gradient-to-br from-red-500 to-rose-600',
+        icon: mdiAccountQuestionOutline,
+        textColor: 'text-white',
+        tableCell: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
+        svg: useSvg ? 'M6 18L18 6M6 6l12 12' : undefined
       };
     default:
       return { 

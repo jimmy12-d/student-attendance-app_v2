@@ -203,5 +203,25 @@ service cloud.firestore {
       // WRITE: Only admins can modify system settings
       allow write: if isAuthorizedUser();
     }
+
+    // --- STAR MANAGEMENT SYSTEM RULES ---
+    match /starRewards/{rewardId} {
+      // READ: Everyone can read star rewards to see available rewards
+      allow read: if request.auth != null;
+      
+      // WRITE: Only admins can create/update/delete star rewards
+      allow write: if isAuthorizedUser();
+    }
+    
+    // Sub-collection for claimed stars under students
+    match /students/{studentId}/claimedStars/{claimedStarId} {
+      // READ: Admins can read all, students can read their own
+      allow read: if isAuthorizedUser() || 
+                     (request.auth != null && 
+                      request.auth.uid == get(/databases/$(database)/documents/students/$(studentId)).data.authUid);
+      
+      // WRITE: Only admins can award stars
+      allow write: if isAuthorizedUser();
+    }
   }
 }

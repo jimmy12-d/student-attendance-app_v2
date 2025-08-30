@@ -60,6 +60,7 @@ const FaceEnrollmentPage = () => {
   
   // Filter states
   const [enrollmentFilter, setEnrollmentFilter] = useState<'all' | 'enrolled' | 'unenrolled'>('unenrolled');
+  const [shiftFilter, setShiftFilter] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Load students from Firestore
@@ -149,17 +150,20 @@ const FaceEnrollmentPage = () => {
     initialize();
   }, [loadStudents, getAvailableCameras]);
 
-  // Filter students based on enrollment status and search term
+  // Filter students based on enrollment status, shift, and search term
   const filteredStudents = students.filter(student => {
     const matchesFilter = enrollmentFilter === 'all' || 
       (enrollmentFilter === 'enrolled' && student.faceDescriptor) ||
       (enrollmentFilter === 'unenrolled' && !student.faceDescriptor);
     
+    const matchesShift = shiftFilter === 'all' || 
+      (student.shift && student.shift.toLowerCase() === shiftFilter);
+    
     const matchesSearch = student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (student.class && student.class.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesShift && matchesSearch;
   });
 
   // Enroll student using existing photo URL
@@ -631,6 +635,20 @@ const FaceEnrollmentPage = () => {
                     <option value="all">All Students</option>
                     <option value="enrolled">Enrolled Only</option>
                     <option value="unenrolled">Not Enrolled</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Shift:</label>
+                  <select
+                    value={shiftFilter}
+                    onChange={(e) => setShiftFilter(e.target.value as any)}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  >
+                    <option value="all">All Shifts</option>
+                    <option value="morning">Morning</option>
+                    <option value="afternoon">Afternoon</option>
+                    <option value="evening">Evening</option>
                   </select>
                 </div>
                 

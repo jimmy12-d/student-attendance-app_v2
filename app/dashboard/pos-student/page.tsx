@@ -73,7 +73,7 @@ const shouldShowQRCode = (paymentMonth: string): boolean => {
 const POSStudentPage = () => {
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [_, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [showTransactionHistory, setShowTransactionHistory] = useState(false);
     const [studentTransactions, setStudentTransactions] = useState<Transaction[]>([]);
@@ -643,7 +643,6 @@ const POSStudentPage = () => {
             });
 
             // The student data will be updated automatically via real-time listener
-            console.log("📡 Student lastPaymentMonth updated in Firestore - real-time listener will handle UI updates");
 
             const finalTransaction = { ...transactionData, transactionId: docRef.id };
             
@@ -717,7 +716,7 @@ const POSStudentPage = () => {
                     title: `Receipt for ${lastTransaction.studentName}`,
                     transactionData: {
                         ...lastTransaction,
-                        isStudentRegistered: !!(selectedStudent?.chatId && selectedStudent?.passwordHash)
+                        isStudentRegistered: lastTransaction.isStudentRegistered
                     },
                    // pageHeight: 540, // Height for printing
                     pageHeight: 540, // Height for printing
@@ -770,7 +769,8 @@ const POSStudentPage = () => {
         setIsDownloading(true);
 
         try {
-            const isStudentRegistered = !!(selectedStudent?.chatId && selectedStudent?.passwordHash);
+            // Use the registration status from the transaction data, not current student status
+            const isStudentRegistered = lastTransaction.isStudentRegistered;
             // Only show QR if student is not registered AND payment month qualifies
             const shouldShowQR = !isStudentRegistered && shouldShowQRCode(lastTransaction.paymentMonth);
             const pageHeight = shouldShowQR ? 480 : 350; // 480 if QR needed, 350 if no QR
@@ -842,17 +842,8 @@ const POSStudentPage = () => {
 
         setReprintingTransactionId(transaction.transactionId);
         try {
-            // Try to get current student registration status if possible
-            let isStudentRegistered = transaction.isStudentRegistered; // Use stored value as fallback
-            try {
-                const studentDoc = await getDoc(doc(db, "students", transaction.studentId));
-                if (studentDoc.exists()) {
-                    const studentData = studentDoc.data() as Student;
-                    isStudentRegistered = !!(studentData.chatId && studentData.passwordHash);
-                }
-            } catch (error) {
-                console.warn("Could not fetch current student data, using stored registration status");
-            }
+            // Use the registration status from the transaction data (stored at time of payment)
+            const isStudentRegistered = transaction.isStudentRegistered;
 
             const response = await fetch('/api/printnode', {
                 method: 'POST',
@@ -906,17 +897,8 @@ const POSStudentPage = () => {
     const handleDownloadTransaction = async (transaction: Transaction) => {
         setDownloadingTransactionId(transaction.transactionId);
         try {
-            // Try to get current student registration status if possible
-            let isStudentRegistered = transaction.isStudentRegistered; // Use stored value as fallback
-            try {
-                const studentDoc = await getDoc(doc(db, "students", transaction.studentId));
-                if (studentDoc.exists()) {
-                    const studentData = studentDoc.data() as Student;
-                    isStudentRegistered = !!(studentData.chatId && studentData.passwordHash);
-                }
-            } catch (error) {
-                console.warn("Could not fetch current student data, using stored registration status");
-            }
+            // Use the registration status from the transaction data (stored at time of payment)
+            const isStudentRegistered = transaction.isStudentRegistered;
 
             // Only show QR if student is not registered AND payment month qualifies
             const shouldShowQR = !isStudentRegistered && shouldShowQRCode(transaction.paymentMonth);
@@ -1082,11 +1064,23 @@ const POSStudentPage = () => {
             const studentSnap = await getDoc(studentDoc);
             if (studentSnap.exists()) {
                 const currentLastPayment = studentSnap.data().lastPaymentMonth;
-                // Only decrement if this is the most recent transaction
-                if (currentLastPayment) {
+                // Check remaining transactions for this student after deletion
+                const transactionsRef = collection(db, "transactions");
+                const q = query(transactionsRef, where("studentId", "==", transaction.studentId));
+                const remainingSnapshot = await getDocs(q);
+
+                if (remainingSnapshot.empty) {
+                    // No remaining transactions: clear lastPaymentMonth
                     await updateDoc(studentDoc, {
-                        lastPaymentMonth: decrementMonth(currentLastPayment)
+                        lastPaymentMonth: ""
                     });
+                } else {
+                    // There are still transactions - keep existing behavior (decrement if present)
+                    if (currentLastPayment) {
+                        await updateDoc(studentDoc, {
+                            lastPaymentMonth: decrementMonth(currentLastPayment)
+                        });
+                    }
                 }
             }
 

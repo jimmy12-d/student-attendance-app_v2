@@ -9,7 +9,8 @@ import {
   mdiFaceRecognition,
   mdiCreditCard,
   mdiChartLine,
-  mdiAccountPlus
+  mdiAccountPlus,
+  mdiStar
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -23,6 +24,11 @@ const menuAside: MenuAsideItem[] = [
     href: "/dashboard/students",
     icon: mdiAccountCircle,
     label: "Student",
+  },
+  {
+    href: "/dashboard/stars",
+    icon: mdiStar,
+    label: "Star Management",
   },
   {
     href: "/dashboard/pos-student",

@@ -4,7 +4,6 @@ import { ColumnConfig } from './ColumnToggle';
 import { toast } from 'sonner';
 import { AbsentStatusTracker } from './AbsentStatusTracker';
 import { getStatusStyles } from '../../_lib/statusStyles';
-import Icon from '../../../_components/Icon';
 
 // Phone formatting utility
 const formatPhoneNumber = (phone: string | undefined | null): string => {
@@ -77,7 +76,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
             className="w-3 h-3 mr-1" 
             fill={status.toLowerCase() === 'pending' ? "none" : "currentColor"} 
             stroke={status.toLowerCase() === 'pending' ? "currentColor" : "none"} 
-            viewBox="0 0 20 20"
+            viewBox={status.toLowerCase() === 'pending' ? "0 0 22 22" : "0 0 20 20"}
           >
             <path 
               fillRule={status.toLowerCase() === 'pending' ? undefined : "evenodd"} 
@@ -94,16 +93,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
       </span>
     );
   };
-  
-  // Helper function to get flipped shift for flip-flop students
-  const getFlippedShift = (originalShift: string) => {
-    if (originalShift.toLowerCase() === 'morning') {
-      return 'Afternoon';
-    } else if (originalShift.toLowerCase() === 'afternoon') {
-      return 'Morning';
-    }
-    return originalShift;
-  };
+
   
   return (
     <tr className={`group transition-all duration-200 ease-in-out hover:shadow-sm ${
@@ -370,6 +360,29 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               </td>
             );
 
+            case 'faceEnrollment':
+              // Show whether a face descriptor is present for the student
+              const sd: any = student as any;
+              const isEnrolledFace = !!sd.faceDescriptor && Array.isArray(sd.faceDescriptor) && sd.faceDescriptor.length > 0;
+              // Use getStatusStyles to keep consistent styling (lowercase keys)
+              const faceStatus = isEnrolledFace ? 'done' : 'not yet';
+              const faceStyles = getStatusStyles(faceStatus, true);
+
+              return (
+                <td key="faceEnrollment" className="p-3 whitespace-nowrap">
+                  <div className="flex items-center justify-center">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${faceStyles.badge}`}>
+                      {faceStyles.svg && (
+                        <svg className="w-3 h-3 mr-1" fill={faceStatus === 'not yet' ? 'none' : 'currentColor'} stroke={faceStatus === 'not yet' ? 'currentColor' : 'none'} viewBox="0 0 20 20">
+                          <path d={faceStyles.svg} />
+                        </svg>
+                      )}
+                      {faceStatus.charAt(0).toUpperCase() + faceStatus.slice(1)}
+                    </span>
+                  </div>
+                </td>
+              );
+
           case 'registerQR':
             // Show different states based on registration and payment status
             const getDateFromTimestamp = (timestamp: any): Date | null => {
@@ -383,7 +396,8 @@ export const StudentRow: React.FC<StudentRowProps> = ({
 
             const tokenExpiryDate = getDateFromTimestamp(student.tokenExpiresAt);
             const hasActiveToken = student.registrationToken && tokenExpiryDate && tokenExpiryDate > new Date();
-            const isLoggedIn = student.chatId && student.passwordHash; // Fully registered
+            const isLoggedIn = student.authUid && student.authUid.trim() !== ""; // Has legitimate auth UID
+            const hasUsedQR = student.chatId && student.passwordHash && (!student.authUid || student.authUid.trim() === ""); // Used QR but not fully logged in
             const hasExpiredToken = student.registrationToken && tokenExpiryDate && tokenExpiryDate <= new Date();
             const hasNeverPaid = !student.lastPaymentMonth; // Never made a payment
             const hasRecentPayment = student.lastPaymentMonth && student.lastPaymentMonth >= "2025-09"; // QR available from September 2025 onwards
@@ -392,15 +406,23 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               <td key="registerQR" className="p-3 whitespace-nowrap">
                 <div className="flex items-center justify-center">
                   {isLoggedIn ? (
-                    // 1. Logged In - Student is fully registered
+                    // 1. Logged In - Student is fully registered with legitimate auth UID
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       Logged In
                     </span>
+                  ) : hasUsedQR ? (
+                    // 2. Used QR - Has chatId and passwordHash but no legitimate auth UID
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Used QR
+                    </span>
                   ) : hasActiveToken ? (
-                    // 2. Unused QR - Has active token but not registered yet (PRIORITY over payment status)
+                    // 3. Unused QR - Has active token but not registered yet
                     <button
                       onClick={() => window.dispatchEvent(new CustomEvent('openQRModal', { detail: student }))}
                       className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 animate-pulse hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors cursor-pointer"
@@ -413,7 +435,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                       Unused QR
                     </button>
                   ) : hasExpiredToken ? (
-                    // 3. Expired - Had token but it expired, admin can generate new one
+                    // 4. Expired - Had token but it expired, admin can generate new one
                     <button
                       onClick={() => window.dispatchEvent(new CustomEvent('generateQR', { detail: student }))}
                       className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800 hover:bg-orange-200 dark:hover:bg-orange-800/50 transition-colors cursor-pointer"
@@ -425,7 +447,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                       Expired
                     </button>
                   ) : hasNeverPaid ? (
-                    // 4. Unpaid - Never made a sale, no QR available
+                    // 5. Unpaid - Never made a sale, no QR available
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -433,7 +455,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                       Unpaid
                     </span>
                   ) : hasRecentPayment ? (
-                    // 5. QR on Receipt - Student has paid from September 2025 onwards and has no active/expired tokens
+                    // 6. QR on Receipt - Student has paid from September 2025 onwards and has no active/expired tokens
                     <div className="flex items-center space-x-2">
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
                         <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -452,7 +474,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                       </button>
                     </div>
                   ) : (
-                    // 6. Unpaid - Student has old payment (before September 2025), treated as unpaid for QR purposes
+                    // 7. Unpaid - Student has old payment (before September 2025), treated as unpaid for QR purposes
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800">
                       <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2 0 1.105 1.343 2 3 2s3-.895 3-2c0-1.105-1.343-2-3-2z" />

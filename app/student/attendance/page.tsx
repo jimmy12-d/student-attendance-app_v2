@@ -10,6 +10,7 @@ import { getStatusStyles } from '../../dashboard/_lib/statusStyles';
 import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
+import StarDisplay from '../_components/StarDisplay';
 import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
 import { toast } from 'sonner';
@@ -369,7 +370,7 @@ const AttendancePage = () => {
 
        <SlideInPanel title="Last 10 Days Activity" isOpen={isDetailsPanelOpen} onClose={() => setIsDetailsPanelOpen(false)}>
            <div className="bg-white/95 dark:bg-slate-800/95 rounded-2xl p-3 shadow-xl border border-gray-100/50 dark:border-slate-600/50">
-             <div className="max-h-[50vh] overflow-y-auto pr-2">
+             <div className="max-h-[50vh] overflow-y-auto">
                {recentRecords.length > 0 ? recentRecords.map(record => {
                const styles = getStatusStyles(record.status);
                const statusText = record.status.charAt(0).toUpperCase() + record.status.slice(1);
@@ -455,7 +456,7 @@ const AttendancePage = () => {
            )}
 
            {/* Quick Actions */}
-           <div className="space-y-5 px-1">
+           <div className="space-y-5 px-1 pt-2">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
              {/* Mobile-optimized Action Cards */}
              <div className="space-y-4">
@@ -547,7 +548,7 @@ const AttendancePage = () => {
            </div>
 
            {/* Summary Stats */}
-           <div className="space-y-4">
+           <div className="space-y-4 pt-2">
              <div className="flex items-center justify-between">
                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Last 10 Days Summary</h2>
                <button 
@@ -630,12 +631,23 @@ const AttendancePage = () => {
            </div>
 
            {/* Permissions History */}
-           <div className="space-y-4">
+           <div className="space-y-4 pt-2">
              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Permissions</h2>
              <div className="overflow-hidden">
                <OngoingPermissions permissions={ongoingPermissions} isLoading={loadingPermissions} />
              </div>
            </div>
+
+           {/* Star Display */}
+           {studentDocId && (
+             <div className="space-y-4 pt-2">
+               <StarDisplay 
+                 studentId={studentDocId}
+                 showHistory={true}
+                 limit={5}
+               />
+             </div>
+           )}
        </div>
      </>
    );

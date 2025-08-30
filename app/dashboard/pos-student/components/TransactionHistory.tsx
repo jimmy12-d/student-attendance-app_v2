@@ -4,7 +4,7 @@ import LoadingSpinner from '../../../_components/LoadingSpinner';
 import CardBoxModal from '../../../_components/CardBox/Modal';
 import Icon from '../../../_components/Icon';
 import { Transaction } from '../types';
-import { mdiDownload, mdiPrinter, mdiDelete, mdiCalendarMonth, mdiCash, mdiAlertCircle } from '@mdi/js';
+import { mdiDownload, mdiPrinter, mdiDelete, mdiCalendarMonth, mdiCash, mdiAlertCircle, mdiAccountCircle } from '@mdi/js';
 
 interface TransactionHistoryProps {
     isOpen: boolean;
@@ -106,8 +106,15 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
                                                     </div>
                                                 </div>
                                             </div>
+                                            <div className="flex items-center">
+                                                <Icon path={mdiAccountCircle} size={20} className="text-purple-600 dark:text-purple-400" />
+                                                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Cashier:</span>
+                                                <p className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                                                    {transaction.cashier || 'N/A'}
+                                                </p>
+                                            </div>
                                         </div>
-                                        
+
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-100 dark:border-gray-600">
                                                 <div className="flex items-center space-x-2 mb-1">
