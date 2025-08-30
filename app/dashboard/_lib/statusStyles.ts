@@ -3,7 +3,8 @@ import {
   mdiAccountCheckOutline, 
   mdiClockAlertOutline, 
   mdiAccountOffOutline, 
-  mdiClockTimeThreeOutline 
+  mdiClockTimeThreeOutline,
+  mdiFileDocumentEditOutline
 } from "@mdi/js";
 
 export interface StatusStyles {
@@ -72,10 +73,10 @@ export const getStatusStyles = (status: string, useSvg: boolean = false): Status
       return {
         badge: 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-700',
         cardBg: 'bg-gradient-to-br from-orange-500 to-amber-600',
-        icon: mdiClockTimeThreeOutline,
+        icon: mdiFileDocumentEditOutline,
         textColor: 'text-white',
         tableCell: 'bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200',
-        svg: useSvg ? 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' : undefined
+        svg: useSvg ? 'M9.5 3h4.12l4.38 4.375V19.5a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 012 19.5v-15A1.5 1.5 0 013.5 3H9.5z M11 11v2h2v-2h-2z M9 11v2h2v-2H9z M11 14v2h2v-2h-2z M9 14v2h2v-2H9z' : undefined
       };
     case 'absent':
       return { 

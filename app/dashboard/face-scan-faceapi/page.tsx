@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
 
-import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiAlert, mdiEye, mdiCog, mdiInformation, mdiClock, mdiFullscreen, mdiFullscreenExit, mdiClose } from '@mdi/js';
+import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiAlert, mdiEye, mdiCog, mdiInformation, mdiClock, mdiFullscreen, mdiClose } from '@mdi/js';
 import CardBox from "../../_components/CardBox";
 import { getPageTitle } from "../../_lib/config";
 import CustomDropdown from '../students/components/CustomDropdown';

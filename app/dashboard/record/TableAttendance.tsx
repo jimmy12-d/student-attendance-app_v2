@@ -2,9 +2,6 @@
 
 import React, { useState } from "react";
 import { Timestamp } from "firebase/firestore";
-import Button from "../../_components/Button"; // Adjust path as needed
-import Buttons from "../../_components/Buttons"; // Adjust path as needed
-import { mdiTrashCan, mdiCheck, mdiClose } from "@mdi/js";
 import { getStatusStyles } from "../_lib/statusStyles";
 
 const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined): string => {
@@ -74,20 +71,20 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
     const styles = getStatusStyles(status, true);
     
     return (
-      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${styles.badge}${status.toLowerCase() === 'pending' ? ' animate-pulse' : ''}`}>
+      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${styles.badge}${status.toLowerCase() === 'requested' ? ' animate-pulse' : ''}`}>
         {styles.svg && (
           <svg 
             className="w-3 h-3 mr-1 mt-1" 
-            fill={status.toLowerCase() === 'pending' ? "none" : "currentColor"} 
-            stroke={status.toLowerCase() === 'pending' ? "currentColor" : "none"} 
-            viewBox="0 0 20 20"
+            fill={status.toLowerCase() === 'requested' ? "none" : "currentColor"} 
+            stroke={status.toLowerCase() === 'requested' ? "currentColor" : "none"} 
+            viewBox="0 0 22 22"
           >
             <path 
-              fillRule={status.toLowerCase() === 'pending' ? undefined : "evenodd"} 
-              clipRule={status.toLowerCase() === 'pending' ? undefined : "evenodd"}
-              strokeLinecap={status.toLowerCase() === 'pending' ? "round" : undefined}
-              strokeLinejoin={status.toLowerCase() === 'pending' ? "round" : undefined}
-              strokeWidth={status.toLowerCase() === 'pending' ? 2 : undefined}
+              fillRule={status.toLowerCase() === 'requested' ? undefined : "evenodd"} 
+              clipRule={status.toLowerCase() === 'requested' ? undefined : "evenodd"}
+              strokeLinecap={status.toLowerCase() === 'requested' ? "round" : undefined}
+              strokeLinejoin={status.toLowerCase() === 'requested' ? "round" : undefined}
+              strokeWidth={status.toLowerCase() === 'requested' ? 2 : undefined}
               d={styles.svg} 
             />
           </svg>
@@ -132,7 +129,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {recordsPaginated.map((record: AttendanceRecord, index) => (
               <tr key={record.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 ${
-                record.status === 'pending' ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
+                record.status === 'requested' ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
               }`}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
@@ -195,7 +192,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                  {record.status === 'pending' ? (
+                  {record.status === 'requested' ? (
                     <div className="flex items-center justify-center space-x-2">
                       <button
                         onClick={() => onApproveRecord(record)}

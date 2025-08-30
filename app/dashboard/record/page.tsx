@@ -9,13 +9,14 @@ import {
   mdiAccountCheck,
   mdiAccountClock,
   mdiAccountRemove,
-  mdiRefresh,
   mdiChartPie,
   mdiChartBar,
   mdiCalendar,
   mdiChevronLeft,
   mdiChevronRight,
-  mdiClose
+  mdiCheckCircle,
+  mdiClockAlert,
+  mdiAccountMultiple
 } from "@mdi/js";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
@@ -60,15 +61,30 @@ interface AttendanceStats {
   present: number;
   late: number;
   absent: number;
+  pending: number;
   requested: number;
+  permission: number;
+  expectedStudents: number; // New field for shift-specific expected students
 }
 
-interface DailyAttendanceData {
-  date: string;
-  present: number;
-  late: number;
-  absent: number;
-}
+// Define typical shift time ranges
+const morningStart = 6 * 60; // 6:00 AM
+const morningEnd = 11 * 60; // 11:00 AM
+const afternoonEnd = 16 * 60; // 4:00 PM
+
+// Helper function to determine current shift based on time
+const getCurrentShift = (): 'Morning' | 'Afternoon' | 'Evening' => {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  
+  if (currentMinutes >= morningStart && currentMinutes < morningEnd) {
+    return 'Morning';
+  } else if (currentMinutes >= morningEnd && currentMinutes < afternoonEnd) {
+    return 'Afternoon';
+  } else {
+    return 'Evening';
+  }
+};
 
 export default function AttendanceRecordPage() {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
@@ -87,6 +103,9 @@ export default function AttendanceRecordPage() {
 
   // Chart view toggle
   const [chartView, setChartView] = useState<'pie' | 'bar'>('pie');
+
+  // Current shift state
+  const [currentShift, setCurrentShift] = useState<'Morning' | 'Afternoon' | 'Evening'>(getCurrentShift());
 
   // Date filter state
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -217,25 +236,48 @@ export default function AttendanceRecordPage() {
   const attendanceStats = useMemo((): AttendanceStats => {
     if (!allClassConfigs || students.length === 0) {
       // Return basic counts if configs not loaded yet
+      // Note: This fallback doesn't exclude "No School" students since configs aren't available yet
       const selectedDateRecords = attendanceRecords.filter(record => {
         if (!record.date) return false;
         const recordDate = record.date.split('T')[0];
         return recordDate === selectedDate;
       });
 
-      const present = selectedDateRecords.filter(r => r.status === 'present').length;
-      const late = selectedDateRecords.filter(r => r.status === 'late').length;
-      const requested = selectedDateRecords.filter(r => r.status === 'requested').length;
+      // Filter students by current shift
+      const shiftStudents = students.filter(student => student.shift === currentShift);
+      const shiftStudentIds = new Set(shiftStudents.map(student => student.id));
+
+      // Debug logging
+      console.log('Shift calculation debug:', {
+        currentShift,
+        totalStudents: students.length,
+        shiftStudents: shiftStudents.length,
+        selectedDate,
+        totalRecords: selectedDateRecords.length,
+        shiftRecords: selectedDateRecords.filter(record => shiftStudentIds.has(record.studentId)).length
+      });
+
+      // Filter attendance records for students in the current shift
+      const shiftAttendanceRecords = selectedDateRecords.filter(record => 
+        shiftStudentIds.has(record.studentId)
+      );
+
+      const present = shiftAttendanceRecords.filter(r => r.status === 'present').length;
+      const late = shiftAttendanceRecords.filter(r => r.status === 'late').length;
+      const requested = shiftAttendanceRecords.filter(r => r.status === 'requested').length;
       const checkedIn = present + late;
-      const absent = Math.max(0, students.length - checkedIn - requested);
+      const absent = Math.max(0, shiftStudents.length - checkedIn - requested);
 
       return {
         totalStudents: students.length,
+        expectedStudents: shiftStudents.length,
         checkedIn,
         present,
         late,
         absent,
-        requested
+        pending: 0, // No complex logic available without configs
+        requested,
+        permission: 0
       };
     }
 
@@ -243,9 +285,30 @@ export default function AttendanceRecordPage() {
     let presentCount = 0;
     let lateCount = 0;
     let absentCount = 0;
+    let pendingCount = 0;
     let requestedCount = 0;
+    let permissionCount = 0;
+
+    // Filter students by current shift for expected count, excluding "No School" students
+    const shiftStudents = students.filter(student => {
+      if (student.shift !== currentShift) return false;
+      
+      // Check if student has "No School" status for this date
+      const result = getStudentDailyStatus(
+        student,
+        selectedDate,
+        undefined, // We're just checking for "No School" status
+        allClassConfigs,
+        []
+      );
+      
+      return result.status !== "No School";
+    });
 
     students.forEach(student => {
+      // Only process students for the current shift
+      if (student.shift !== currentShift) return;
+
       // Find this student's attendance record for selected date
       const attendanceRecord = attendanceRecords.find(
         att => att.studentId === student.id && att.date.split('T')[0] === selectedDate
@@ -255,6 +318,12 @@ export default function AttendanceRecordPage() {
       const approvedPermissionsForStudent = permissions.filter(
         p => p.studentId === student.id && p.status === 'approved'
       );
+
+      // If student has a 'requested' status, count it separately from system pending
+      if (attendanceRecord?.status === 'requested') {
+        requestedCount++;
+        return;
+      }
 
       // Get the definitive status using the centralized logic
       const result = getStudentDailyStatus(
@@ -285,9 +354,11 @@ export default function AttendanceRecordPage() {
           absentCount++;
           break;
         case "Pending":
-          requestedCount++;
+          pendingCount++;
           break;
         case "Permission":
+          permissionCount++;
+          break;
         case "No School":
           // Don't count these in any category for attendance stats
           break;
@@ -298,51 +369,54 @@ export default function AttendanceRecordPage() {
 
     return {
       totalStudents: students.length,
+      expectedStudents: shiftStudents.length,
       checkedIn,
       present: presentCount,
       late: lateCount,
       absent: absentCount,
-      requested: requestedCount
+      pending: pendingCount,
+      requested: requestedCount,
+      permission: permissionCount
     };
-  }, [attendanceRecords, students, permissions, allClassConfigs, selectedDate]);
+  }, [attendanceRecords, students, permissions, allClassConfigs, selectedDate, currentShift]);
 
   // Prepare chart data
   const pieChartData = {
-    labels: ['Present', 'Late', 'Absent', 'Requested'],
+    labels: ['Present', 'Late', 'Absent', 'Permission'],
     datasets: [{
-      data: [attendanceStats.present, attendanceStats.late, attendanceStats.absent, attendanceStats.requested],
+      data: [attendanceStats.present, attendanceStats.late, attendanceStats.absent, attendanceStats.permission],
       backgroundColor: [
         '#10B981', // green for present
         '#F59E0B', // yellow for late  
         '#EF4444', // red for absent
-        '#F97316'  // orange for requested
+        '#8B5CF6', // purple for permission
       ],
       borderColor: [
         '#059669',
         '#D97706', 
         '#DC2626',
-        '#4B5563'
+        '#7C3AED',
       ],
       borderWidth: 2
     }]
   };
 
   const barChartData = {
-    labels: ['Present', 'Late', 'Absent', 'Requested'],
+    labels: ['Present', 'Late', 'Absent', 'Permission'],
     datasets: [{
       label: 'Number of Students',
-      data: [attendanceStats.present, attendanceStats.late, attendanceStats.absent, attendanceStats.requested],
+      data: [attendanceStats.present, attendanceStats.late, attendanceStats.absent, attendanceStats.permission],
       backgroundColor: [
         '#10B981',
         '#F59E0B',
         '#EF4444', 
-        '#F97316',
+        '#8B5CF6',
       ],
       borderColor: [
         '#059669',
         '#D97706',
         '#DC2626',
-        '#EA580C'
+        '#7C3AED',
       ],
       borderWidth: 2
     }]
@@ -357,7 +431,7 @@ export default function AttendanceRecordPage() {
       },
       title: {
         display: true,
-        text: `Attendance - Active Students (${selectedDate})`,
+        text: `Attendance - Students (${selectedDate})`,
         font: {
           size: 16,
           weight: 'bold' as const
@@ -409,7 +483,7 @@ export default function AttendanceRecordPage() {
           } as Student));
         
         setStudents(activeStudentsData);
-        console.log(`Dashboard: Filtered to ${activeStudentsData.length} active students (excluded dropped, on break, and waitlisted)`);
+        console.log(`Dashboard: Filtered to ${activeStudentsData.length} students (excluded dropped, on break, and waitlisted)`);
 
         // Fetch permissions and class configs in parallel
         const [permissionsSnapshot, classesSnapshot] = await Promise.all([
@@ -524,13 +598,8 @@ export default function AttendanceRecordPage() {
         });
         toast.success(`Approved attendance for ${recordInModal.studentName}.`);
       } else if (modalAction === 'reject') {
-        const recordRef = doc(db, "attendance", recordId);
-        await updateDoc(recordRef, {
-          status: 'rejected',
-          rejectedAt: serverTimestamp(),
-          rejectedBy: 'Admin'
-        });
-        toast.warning(`Rejected attendance for ${recordInModal.studentName}.`);
+        await deleteDoc(doc(db, "attendance", recordId));
+        toast.warning(`Rejected and deleted attendance request for ${recordInModal.studentName}.`);
       } else if (modalAction === 'delete') {
         await deleteDoc(doc(db, "attendance", recordId));
         toast.success("Record deleted successfully.");
@@ -561,8 +630,8 @@ export default function AttendanceRecordPage() {
         return {
           title: "Confirm Rejection",
           buttonColor: 'danger' as ColorButtonKey,
-          buttonLabel: "Reject",
-          content: `Are you sure you want to reject the attendance request for ${recordInModal.studentName}?`
+          buttonLabel: "Reject & Delete",
+          content: `Are you sure you want to reject and delete the attendance request for ${recordInModal.studentName}? This action cannot be undone.`
         };
       case 'delete':
         return {
@@ -587,23 +656,43 @@ export default function AttendanceRecordPage() {
     <SectionMain>
       <SectionTitleLineWithButton
         icon={mdiClipboardListOutline}
-        title="Real-Time Attendance Dashboard (Active Students)"
+        title={`Attendance Records`}
         main
       >
         <div className="flex items-center gap-4">
-          {/* Date Filter */}
+     
+          {/* Shift Selector */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4 ml-2">
+            <div className="flex items-center space-x-2 bg-white/60 dark:bg-gray-800/60 backdrop-blur-lg border border-white/20 dark:border-gray-700/50 rounded-xl p-1 shadow-lg">
+              {(['Morning', 'Afternoon', 'Evening'] as const).map((shift) => (
+                <button
+                  key={shift}
+                  onClick={() => setCurrentShift(shift)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    currentShift === shift
+                      ? 'bg-white/80 dark:bg-gray-700/80 text-blue-600 dark:text-blue-400 shadow-md backdrop-blur-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-white/40 dark:hover:bg-gray-700/40'
+                  }`}
+                >
+                  {shift}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
           <div className="relative" ref={datePickerRef}>
             <button
               type="button"
               onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-white/20 dark:border-gray-700/50 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
             >
               <Icon path={mdiCalendar} size={20} className="text-blue-600 dark:text-blue-400" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {formatDisplayDate(selectedDate)}
               </span>
             </button>
-
+             {/* Date Filter */}
             {showDatePicker && (
               <div className="absolute top-full right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-2xl z-50 p-4 min-w-[320px]">
                 {/* Calendar Header */}
@@ -661,24 +750,6 @@ export default function AttendanceRecordPage() {
               </div>
             )}
           </div>
-
-          {/* Refresh and Status */}
-          <div className="flex items-center gap-2">
-            {isUpdating && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <LoadingSpinner size="sm" />
-                <span>Updating...</span>
-              </div>
-            )}
-            <button
-              onClick={refreshData}
-              disabled={isUpdating}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors disabled:opacity-50"
-            >
-              <Icon path={mdiRefresh} size={20} className={isUpdating ? 'animate-spin' : ''} />
-              Refresh
-            </button>
-          </div>
         </div>
       </SectionTitleLineWithButton>
 
@@ -688,115 +759,102 @@ export default function AttendanceRecordPage() {
         </NotificationBar>
       )}
 
-      {/* Enhanced Statistics Cards - Matching Main Dashboard Style */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        {/* Total Students Card */}
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border-l-4 border-blue-500 rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiAccountGroup} size={20} className="text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Active Students</span>
+      {/* Modern Shift-Based Statistics Cards */}
+      <div className="mb-8">
+        {/* Modern Minimal Cards Grid */}
+      
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {/* Expected Students Card */}
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-white/20 dark:border-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-700/80 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-blue-50/80 dark:bg-blue-900/30 backdrop-blur-sm rounded-xl border border-blue-100/50 dark:border-blue-800/50">
+                <Icon path={mdiAccountMultiple} size={24} className="text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{attendanceStats.totalStudents}</div>
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Expected
+              </div>
             </div>
-            <div className="bg-blue-100 dark:bg-blue-800/50 p-3 rounded-full">
-              <Icon path={mdiAccountGroup} size={20} className="text-blue-600 dark:text-blue-400" />
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              {attendanceStats.expectedStudents}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Students for this shift
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
-            <div className="text-xs text-blue-600 dark:text-blue-400">
-              Excludes dropped, break & waitlist
-            </div>
-          </div>
-        </div>
 
-        {/* Checked In Card */}
-        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border-l-4 border-green-500 rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiAccountCheck} size={20} className="text-green-600 dark:text-green-400" />
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">Checked In</span>
+          {/* Present Card */}
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-white/20 dark:border-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-800/80 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-green-50/80 dark:bg-green-900/30 backdrop-blur-sm rounded-xl border border-green-100/50 dark:border-green-800/50">
+                <Icon path={mdiCheckCircle} size={24} className="text-green-600 dark:text-green-400" />
               </div>
-              <div className="text-3xl font-bold text-green-900 dark:text-green-100">{attendanceStats.checkedIn}</div>
-            </div>
-            <div className="bg-green-100 dark:bg-green-800/50 p-3 rounded-full">
-              <Icon path={mdiAccountCheck} size={20} className="text-green-600 dark:text-green-400" />
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-700">
-            <div className="text-xs text-green-600 dark:text-green-400">
-              {attendanceStats.totalStudents > 0 
-                ? Math.round((attendanceStats.checkedIn / attendanceStats.totalStudents) * 100) 
-                : 0}% of total
-            </div>
-          </div>
-        </div>
-
-        {/* Present Card */}
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 border-l-4 border-emerald-500 rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiAccountCheck} size={20} className="text-emerald-600 dark:text-emerald-400" />
-                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Present</span>
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Present
               </div>
-              <div className="text-3xl font-bold text-emerald-900 dark:text-emerald-100">{attendanceStats.present}</div>
             </div>
-            <div className="bg-emerald-100 dark:bg-emerald-800/50 p-3 rounded-full">
-              <Icon path={mdiAccountCheck} size={20} className="text-emerald-600 dark:text-emerald-400" />
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              {attendanceStats.present}
             </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-emerald-200 dark:border-emerald-700">
-            <div className="text-xs text-emerald-600 dark:text-emerald-400">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
               On time arrivals
             </div>
           </div>
-        </div>
 
-        {/* Late Card */}
-        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border-l-4 border-yellow-500 rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiAccountClock} size={20} className="text-yellow-600 dark:text-yellow-400" />
-                <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Late</span>
+          {/* Late Card */}
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-white/20 dark:border-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-800/80 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-amber-50/80 dark:bg-amber-900/30 backdrop-blur-sm rounded-xl border border-amber-100/50 dark:border-amber-800/50">
+                <Icon path={mdiClockAlert} size={24} className="text-amber-600 dark:text-amber-400" />
               </div>
-              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{attendanceStats.late}</div>
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Late
+              </div>
             </div>
-            <div className="bg-yellow-100 dark:bg-yellow-800/50 p-3 rounded-full">
-              <Icon path={mdiAccountClock} size={20} className="text-yellow-600 dark:text-yellow-400" />
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              {attendanceStats.late}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {attendanceStats.expectedStudents > 0 
+                ? Math.round((attendanceStats.late / attendanceStats.expectedStudents) * 100) 
+                : 0}% of expected
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-yellow-200 dark:border-yellow-700">
-            <div className="text-xs text-yellow-600 dark:text-yellow-400">
-              {attendanceStats.totalStudents > 0 
-                ? Math.round((attendanceStats.late / attendanceStats.totalStudents) * 100) 
-                : 0}% of total
-            </div>
-          </div>
-        </div>
 
-        {/* Absent Card */}
-        <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-l-4 border-red-500 rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-2 mb-2">
-                <Icon path={mdiAccountRemove} size={20} className="text-red-600 dark:text-red-400" />
-                <span className="text-sm font-medium text-red-700 dark:text-red-300">Absent</span>
+          {/* Absent Card */}
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-white/20 dark:border-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-800/80 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-red-50/80 dark:bg-red-900/30 backdrop-blur-sm rounded-xl border border-red-100/50 dark:border-red-800/50">
+                <Icon path={mdiAccountRemove} size={24} className="text-red-600 dark:text-red-400" />
               </div>
-              <div className="text-3xl font-bold text-red-900 dark:text-red-100">{attendanceStats.absent}</div>
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Absent
+              </div>
             </div>
-            <div className="bg-red-100 dark:bg-red-800/50 p-3 rounded-full">
-              <Icon path={mdiAccountRemove} size={20} className="text-red-600 dark:text-red-400" />
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              {attendanceStats.absent}
             </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-red-200 dark:border-red-700">
-            <div className="text-xs text-red-600 dark:text-red-400">
-              {attendanceStats.totalStudents > 0 
-                ? Math.round((attendanceStats.absent / attendanceStats.totalStudents) * 100) 
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {attendanceStats.expectedStudents > 0 
+                ? Math.round((attendanceStats.absent / attendanceStats.expectedStudents) * 100) 
                 : 0}% absence rate
+            </div>
+          </div>
+
+          {/* Permission Card */}
+          <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-6 border border-white/20 dark:border-gray-700/50 hover:bg-white/80 dark:hover:bg-gray-800/80 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 bg-purple-50/80 dark:bg-purple-900/30 backdrop-blur-sm rounded-xl border border-purple-100/50 dark:border-purple-800/50">
+                <Icon path={mdiAccountCheck} size={24} className="text-purple-600 dark:text-purple-400" />
+              </div>
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Permission
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              {attendanceStats.permission}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Approved absences
             </div>
           </div>
         </div>
@@ -835,7 +893,7 @@ export default function AttendanceRecordPage() {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <CardBox className="!p-6">
+        <CardBox className="py-2 px-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Today's Attendance Overview</h3>
             <div className="flex gap-2">
@@ -871,7 +929,7 @@ export default function AttendanceRecordPage() {
           </div>
         </CardBox>
 
-        <CardBox className="!p-6">
+        <CardBox className="py-4 px-4">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-3">
               <div className="bg-blue-100 dark:bg-blue-900 p-2 rounded-lg">
@@ -914,32 +972,6 @@ export default function AttendanceRecordPage() {
             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Student Filter</span>
-                </div>
-                <span className="text-sm text-purple-600 dark:text-purple-400 font-medium">Active Only</span>
-              </div>
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                Excluding dropped, break & waitlist students
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Attendance Logic</span>
-                </div>
-                <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Advanced</span>
-              </div>
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                Using shift schedules & permission system
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
                   <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
                   <span className="font-medium text-gray-700 dark:text-gray-300">Selected Date</span>
                 </div>
@@ -947,7 +979,7 @@ export default function AttendanceRecordPage() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+            <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="bg-blue-100 dark:bg-blue-800/50 p-2 rounded-lg">
@@ -1004,7 +1036,7 @@ export default function AttendanceRecordPage() {
                   {isUpdating && <LoadingSpinner size="sm" />}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 flex items-center gap-2">
-                  Real-time attendance data for active students only • {attendanceRecords.length} total records
+                  Real-time attendance data
                   {selectedDate !== today && (
                     <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded-full text-xs font-medium">
                       Filtered by {selectedDate}
@@ -1027,34 +1059,7 @@ export default function AttendanceRecordPage() {
             </div>
           </div>
           
-          {/* Quick Stats Row */}
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-700 rounded-lg p-3 text-center">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Selected Date Records</div>
-              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                {attendanceRecords.filter(record => {
-                  const recordDate = record.date.split('T')[0];
-                  return recordDate === selectedDate;
-                }).length}
-              </div>
-            </div>
-            <div className="bg-white dark:bg-gray-700 rounded-lg p-3 text-center">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Requested</div>
-              <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">{attendanceStats.requested}</div>
-            </div>
-            <div className="bg-white dark:bg-gray-700 rounded-lg p-3 text-center">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Approved</div>
-              <div className="text-lg font-bold text-green-600 dark:text-green-400">{attendanceStats.present + attendanceStats.late}</div>
-            </div>
-            <div className="bg-white dark:bg-gray-700 rounded-lg p-3 text-center">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Attendance Rate</div>
-              <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-                {attendanceStats.totalStudents > 0 
-                  ? Math.round(((attendanceStats.present + attendanceStats.late) / attendanceStats.totalStudents) * 100) 
-                  : 0}%
-              </div>
-            </div>
-          </div>
+   
         </div>
         
         {loading ? (

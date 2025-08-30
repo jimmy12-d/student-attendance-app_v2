@@ -11,7 +11,7 @@ import {
 export interface RawAttendanceRecord {
   studentId: string;
   date: string; // YYYY-MM-DD
-  status?: 'present' | 'late' | 'pending' | string; // Make status optional since some records might not have it
+  status?: 'present' | 'late' | 'requested' | string; // Make status optional since some records might not have it
   timestamp?: Timestamp;
   class?: string;
   shift?: string;
@@ -82,7 +82,7 @@ export const getStudentDailyStatus = (
         }
         
         const status = attendanceRecord.status === 'present' ? "Present" :
-                       attendanceRecord.status === 'late'   ? "Late"    : "Unknown";
+                       attendanceRecord.status === 'late'    ? "Late"    : "Unknown";
         let time;
         if (attendanceRecord.timestamp) {
             const recordTime = attendanceRecord.timestamp instanceof Timestamp ? attendanceRecord.timestamp.toDate() : attendanceRecord.timestamp as Date;
