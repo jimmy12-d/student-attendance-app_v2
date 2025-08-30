@@ -12,6 +12,13 @@ import {
   mdiDownload,
   mdiHistory,
   mdiPrinter,
+  mdiContentCopy,
+  mdiClipboardText,
+  mdiAndroid,
+  mdiApple,
+  mdiPhone,
+  mdiRobot,
+  mdiStar,
 } from "@mdi/js";
 
 import SectionMain from "../../_components/Section/Main";
@@ -110,6 +117,9 @@ const POSStudentPage = () => {
     
     // Cashier management state
     const [selectedCashier, setSelectedCashier] = useState<string>("");
+    
+    // Portal instruction modal state
+    const [showPortalInstructionModal, setShowPortalInstructionModal] = useState(false);
     
     // Real-time listener for students
     useEffect(() => {
@@ -561,6 +571,9 @@ const POSStudentPage = () => {
 
             const docRef = await addDoc(collection(db, "transactions"), transactionData);
             
+            // Variable to store the registration token
+            let registrationToken: string | null = null;
+            
             // Create registration token immediately for unregistered students (only for September 2025 or later)
             if (!transactionData.isStudentRegistered && shouldShowQRCode(displayPaymentMonth)) {
                 try {
@@ -583,6 +596,7 @@ const POSStudentPage = () => {
                         };
 
                         const token = generateToken();
+                        registrationToken = token;
                         const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
                         
                         // Store token in tempRegistrationTokens collection with token as document ID
@@ -613,6 +627,7 @@ const POSStudentPage = () => {
                             };
 
                             const newToken = generateToken();
+                            registrationToken = newToken;
                             const newExpiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
                             
                             // Delete old token and create new one
@@ -626,6 +641,7 @@ const POSStudentPage = () => {
                             
                             console.log(`✅ Expired token replaced for student ${selectedStudent.id}: ${newToken}`);
                         } else {
+                            registrationToken = tokenData.token;
                             console.log(`📱 Valid token already exists for student ${selectedStudent.id}: ${tokenData.token}`);
                         }
                     }
@@ -642,9 +658,26 @@ const POSStudentPage = () => {
                 lastPaymentMonth: paymentMonth 
             });
 
+            // Update the transaction document with the registration token if one was created
+            if (registrationToken) {
+                try {
+                    await updateDoc(doc(db, "transactions", docRef.id), {
+                        registrationToken: registrationToken
+                    });
+                    console.log(`✅ Transaction updated with registration token: ${registrationToken}`);
+                } catch (updateError) {
+                    console.error(`❌ Failed to update transaction with token:`, updateError);
+                    // Don't fail the entire transaction if token update fails
+                }
+            }
+
             // The student data will be updated automatically via real-time listener
 
-            const finalTransaction = { ...transactionData, transactionId: docRef.id };
+            const finalTransaction = { 
+                ...transactionData, 
+                transactionId: docRef.id,
+                registrationToken: registrationToken // Add token to transaction data
+            };
             
             setLastTransaction(finalTransaction);
             
@@ -820,7 +853,19 @@ const POSStudentPage = () => {
             window.URL.revokeObjectURL(url);
             
             toast.success("Receipt downloaded.");
-            closePostTransactionModal();
+            
+            // Check if QR code token was created for this transaction
+            // Only show portal instruction modal if student is not registered AND payment month qualifies for QR code
+            const tokenWasCreated = !isStudentRegistered && shouldShowQR;
+            
+            if (tokenWasCreated) {
+                // Close the transaction modal first to prevent overlay stacking
+                setIsPostTransactionModalActive(false);
+                // Show portal instruction modal
+                setShowPortalInstructionModal(true);
+            } else {
+                closePostTransactionModal();
+            }
         } catch (error) {
             console.error(error);
             toast.error(error instanceof Error ? error.message : "Failed to download receipt.");
@@ -832,6 +877,36 @@ const POSStudentPage = () => {
     const closePostTransactionModal = () => {
         setIsPostTransactionModalActive(false);
         handleClear();
+    };
+
+    const closePortalInstructionModal = () => {
+        setShowPortalInstructionModal(false);
+        closePostTransactionModal();
+    };
+
+    const copyInstructionsToClipboard = async () => {
+        if (!lastTransaction) return;
+        
+        const instructions = `Portal Account Setup Instructions:
+
+INSTRUCTIONS:
+1. Click on this link: https://t.me/rodwell_portal_password_bot?start=token_${lastTransaction.registrationToken || 'TOKEN'}
+
+2. After creating password, go to: portal.rodwell.center/login
+
+3. Download the app:
+   • Android: Download the app from browser
+   • iOS: Add to Home Screen from Safari
+
+4. Login with: Your phone number + new password`;
+
+        try {
+            await navigator.clipboard.writeText(instructions);
+            toast.success("Instructions copied to clipboard!");
+        } catch (error) {
+            console.error('Failed to copy instructions:', error);
+            toast.error("Failed to copy instructions");
+        }
     };
 
     const handleReprintTransaction = async (transaction: Transaction) => {
@@ -1498,6 +1573,151 @@ const POSStudentPage = () => {
                                 </span>
                             </div>
                         )}
+                    </div>
+                </CardBoxModal>
+            )}
+
+            {/* Portal Account Instruction Modal */}
+            {showPortalInstructionModal && lastTransaction && (
+                <CardBoxModal
+                    title="📱 Portal Account Setup Required"
+                    isActive={true}
+                    onConfirm={closePortalInstructionModal}
+                    onCancel={closePortalInstructionModal}
+                    buttonLabel="Got it!"
+                    closeButtonColor="success"
+                >
+                    <div className="space-y-6 py-2 pr-4 max-h-[70vh] overflow-y-auto">
+                        {/* Instruction Header */}
+                        <div className="text-center">
+                            <div className="w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                                <Icon path={mdiAccount} className="text-blue-600 dark:text-blue-400" size={24} />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                Student Portal Setup Needed
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400">
+                                A QR registration token has been created for <span className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.studentName}</span>
+                            </p>
+                        </div>
+
+                        {/* Student Info Card */}
+                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                            <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Student Information for Portal Account:</h4>
+                            <div className="grid grid-cols-1 gap-2 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500 dark:text-gray-400">Full Name:</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.studentName}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500 dark:text-gray-400">Class:</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.className}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500 dark:text-gray-400">Receipt #:</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.receiptNumber}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500 dark:text-gray-400">Payment Month:</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">{lastTransaction.paymentMonth}</span>
+                                </div>
+                                {selectedStudent?.phone && (
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500 dark:text-gray-400">Phone:</span>
+                                        <span className="font-medium text-gray-900 dark:text-gray-100">{selectedStudent.phone}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3 flex items-center">
+                                <Icon path={mdiAlertCircle} className="mr-2" size={20} />
+                                Send to Student via Telegram:
+                            </h4>
+                            <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
+                                {/* Student Instructions */}
+                                <div className="bg-white dark:bg-blue-900/30 rounded-lg p-3 border border-blue-300 dark:border-blue-600">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="font-medium flex items-center">
+                                            <Icon path={mdiClipboardText} className="mr-2" size={16} />
+                                            Instructions for Student:
+                                        </p>
+                                        <Button
+                                            color="info"
+                                            label="Copy All"
+                                            icon={mdiContentCopy}
+                                            onClick={copyInstructionsToClipboard}
+                                            className="!text-xs !px-2 !py-1"
+                                            outline
+                                        />
+                                    </div>
+                                    <ol className="list-decimal list-inside space-y-1 text-xs">
+                                        <li className="flex items-start">
+                                            <span className="mr-2">1.</span>
+                                            <div className="flex-1">
+                                                <strong className="flex items-center">
+                                                    <Icon path={mdiRobot} className="mr-1" size={12} />
+                                                    Click on this link:
+                                                </strong> 
+                                                <br />
+                                                <a 
+                                                    href={`https://t.me/rodwell_portal_password_bot?start=token_${lastTransaction.registrationToken || 'TOKEN'}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-block mt-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors duration-200"
+                                                >
+                                                    t.me/rodwell_portal_password_bot?start=token_{lastTransaction.registrationToken || 'TOKEN'}
+                                                </a>
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="mr-2">2.</span>
+                                            <div className="flex-1">
+                                                <strong>After creating password,</strong> go to: <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">portal.rodwell.center/login</code>
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="mr-2">3.</span>
+                                            <div className="flex-1">
+                                                <strong>Download the app:</strong>
+                                                <ul className="ml-4 mt-1 space-y-1">
+                                                    <li className="flex items-center">
+                                                        <Icon path={mdiAndroid} className="mr-1" size={12} />
+                                                        <strong>Android:</strong> Download the app from browser
+                                                    </li>
+                                                    <li className="flex items-center">
+                                                        <Icon path={mdiApple} className="mr-1" size={12} />
+                                                        <strong>iOS:</strong> Add to Home Screen from Safari
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </li>
+                                        <li className="flex items-start">
+                                            <span className="mr-2">4.</span>
+                                            <div className="flex-1">
+                                                <strong className="flex items-center">
+                                                    <Icon path={mdiPhone} className="mr-1" size={12} />
+                                                    Login with:
+                                                </strong> Your phone number + new password
+                                            </div>
+                                        </li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action Button */}
+                        <div className="text-center">
+                            <Button 
+                                label="Understood - Continue" 
+                                color="success" 
+                                onClick={closePortalInstructionModal}
+                                icon={mdiCheckCircle}
+                                className="px-6 py-2"
+                            />
+                        </div>
                     </div>
                 </CardBoxModal>
             )}

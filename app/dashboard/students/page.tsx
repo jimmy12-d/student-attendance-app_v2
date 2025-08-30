@@ -278,11 +278,38 @@ export default function StudentsPage() {
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth();
       const currentYear = currentDate.getFullYear();
+      const currentDay = currentDate.getDate();
       
-      // Check if already applied for this month
-      const isAlreadyApplied = await flipFlopService.isAppliedForMonth(currentYear, currentMonth);
+      // Load settings for early application period
+      const settingsStr = localStorage.getItem('flipFlopSettings');
+      const settings = settingsStr ? JSON.parse(settingsStr) : {
+        earlyApplicationDays: 2
+      };
+      
+      // Calculate if we're in early application period
+      const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const isInEarlyApplicationPeriod = currentDay > (daysInCurrentMonth - (settings.earlyApplicationDays || 2));
+      
+      // Determine target month for flip-flop application
+      let targetYear = currentYear;
+      let targetMonth = currentMonth;
+      
+      if (isInEarlyApplicationPeriod) {
+        if (currentMonth === 11) { // December
+          targetYear = currentYear + 1;
+          targetMonth = 0; // January
+        } else {
+          targetMonth = currentMonth + 1;
+        }
+      }
+      
+      // Check if already applied for the target month
+      const isAlreadyApplied = await flipFlopService.isAppliedForMonth(targetYear, targetMonth);
       if (isAlreadyApplied) {
-        toast.info('Flip-flop schedules have already been updated for this month');
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        const targetMonthName = monthNames[targetMonth];
+        toast.info(`Flip-flop schedules have already been updated for ${targetMonthName} ${targetYear}`);
         return;
       }
       
@@ -304,7 +331,7 @@ export default function StudentsPage() {
         await updateDoc(doc(db, "students", student.id), {
           shift: newShift,
           lastFlipFlopUpdate: serverTimestamp(),
-          [`flipFlopHistory.${currentYear}_${currentMonth}`]: {
+          [`flipFlopHistory.${targetYear}_${targetMonth}`]: {
             previousShift: student.shift,
             newShift: newShift,
             updatedAt: serverTimestamp(),
@@ -324,8 +351,8 @@ export default function StudentsPage() {
       
       // Create tracking record in Firestore
       await flipFlopService.createTrackingRecord(
-        currentYear,
-        currentMonth,
+        targetYear,
+        targetMonth,
         students,
         'manual-apply', // You can pass user email here if available
         false // Not baseline
@@ -334,8 +361,8 @@ export default function StudentsPage() {
       // Dismiss loading toast
       toast.dismiss(loadingToast);
       
-      // Mark as applied for this month in localStorage (for faster client-side checks)
-      const monthKey = `flipFlop_${currentYear}_${currentMonth}`;
+      // Mark as applied for the target month in localStorage (for faster client-side checks)
+      const monthKey = `flipFlop_${targetYear}_${targetMonth}`;
       localStorage.setItem(monthKey, 'applied');
       localStorage.setItem('flipFlop_lastApplied', currentDate.toISOString());
       
@@ -384,6 +411,7 @@ export default function StudentsPage() {
         autoApplyEnabled: true,
         autoApplyDelay: 10,
         gracePeriodDays: 7,
+        earlyApplicationDays: 2, // Allow application 2 days before month ends
         notificationEnabled: true
       };
 
@@ -394,15 +422,33 @@ export default function StudentsPage() {
       const currentMonth = now.getMonth(); // 0-based (0 = January, 11 = December)
       const currentDay = now.getDate();
       
-      // Check if already applied for this month using Firestore
+      // Calculate if we're in early application period (last 2 days of previous month)
+      const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const isInEarlyApplicationPeriod = currentDay > (daysInCurrentMonth - (settings.earlyApplicationDays || 2));
+      
+      // Determine target month for flip-flop application
+      let targetYear = currentYear;
+      let targetMonth = currentMonth;
+      
+      // If in early application period, target next month
+      if (isInEarlyApplicationPeriod) {
+        if (currentMonth === 11) { // December
+          targetYear = currentYear + 1;
+          targetMonth = 0; // January
+        } else {
+          targetMonth = currentMonth + 1;
+        }
+      }
+      
+      // Check if already applied for the target month using Firestore
       try {
-        const isAlreadyApplied = await flipFlopService.isAppliedForMonth(currentYear, currentMonth);
+        const isAlreadyApplied = await flipFlopService.isAppliedForMonth(targetYear, targetMonth);
         
         // Also check localStorage for faster client-side detection
-        const currentMonthKey = `flipFlop_${currentYear}_${currentMonth}`;
+        const targetMonthKey = `flipFlop_${targetYear}_${targetMonth}`;
         const lastCheckKey = 'flipFlop_lastCheck';
         
-        const lastAppliedMonth = localStorage.getItem(currentMonthKey);
+        const lastAppliedMonth = localStorage.getItem(targetMonthKey);
         const lastCheckDate = localStorage.getItem(lastCheckKey);
         
         // Parse last check date
@@ -415,11 +461,15 @@ export default function StudentsPage() {
         localStorage.setItem(lastCheckKey, now.toISOString());
         
         // Auto-apply conditions:
-        // 1. It's a new month and we haven't applied for this month yet (check both Firestore and localStorage)
-        // 2. It's within the grace period
+        // 1. It's a new month and we haven't applied for the target month yet
+        // 2. It's within the grace period OR early application period
         // 3. There are flip-flop students to update
         // 4. Auto-apply is enabled
-        if (isNewMonth && !isAlreadyApplied && !lastAppliedMonth && currentDay <= settings.gracePeriodDays) {
+        const isInGracePeriod = currentDay <= settings.gracePeriodDays && targetMonth === currentMonth;
+        const canApply = (isNewMonth && !isAlreadyApplied && !lastAppliedMonth) && 
+                        (isInGracePeriod || isInEarlyApplicationPeriod);
+        
+        if (canApply) {
           const flipFlopStudents = students.filter(student => 
             student.scheduleType?.toLowerCase() === 'flip-flop'
           );
@@ -443,7 +493,7 @@ export default function StudentsPage() {
                 }
               } else {
                 // User declined, mark as declined for this month
-                localStorage.setItem(currentMonthKey, 'declined');
+                localStorage.setItem(targetMonthKey, 'declined');
               }
             } else {
               // Auto-apply disabled, just show reminder
@@ -459,18 +509,21 @@ export default function StudentsPage() {
         }
         
         // Manual check for users who want to force apply
-        if (currentDay === 1 && lastAppliedMonth === 'declined' && !isAlreadyApplied) {
-          toast.info('💡 Reminder: Flip-flop schedules can be updated manually using the "Apply Flip-Flop" button.', {
+        const checkDay = isInEarlyApplicationPeriod ? currentDay : 1;
+        if ((currentDay === 1 || isInEarlyApplicationPeriod) && lastAppliedMonth === 'declined' && !isAlreadyApplied) {
+          const periodText = isInEarlyApplicationPeriod ? 'early application period' : 'new month';
+          toast.info(`💡 Reminder: Flip-flop schedules can be updated manually during ${periodText} using the "Apply Flip-Flop" button.`, {
             duration: 7000,
           });
         }
       } catch (error) {
         console.error('Error checking flip-flop status:', error);
         // Fallback to localStorage-only mode if Firestore fails
-        const currentMonthKey = `flipFlop_${currentYear}_${currentMonth}`;
-        const lastAppliedMonth = localStorage.getItem(currentMonthKey);
+        const fallbackMonthKey = `flipFlop_${targetYear}_${targetMonth}`;
+        const lastAppliedMonth = localStorage.getItem(fallbackMonthKey);
         
-        if (!lastAppliedMonth && currentDay <= settings.gracePeriodDays) {
+        const isInGracePeriod = currentDay <= settings.gracePeriodDays && targetMonth === currentMonth;
+        if (!lastAppliedMonth && (isInGracePeriod || isInEarlyApplicationPeriod)) {
           toast.warning('Could not verify flip-flop status. Please check manually.', {
             duration: 5000,
           });
@@ -547,7 +600,11 @@ export default function StudentsPage() {
     const handleFocus = () => {
       // Load settings
       const settingsStr = localStorage.getItem('flipFlopSettings');
-      const settings = settingsStr ? JSON.parse(settingsStr) : { gracePeriodDays: 7, notificationEnabled: true };
+      const settings = settingsStr ? JSON.parse(settingsStr) : { 
+        gracePeriodDays: 7, 
+        earlyApplicationDays: 2,
+        notificationEnabled: true 
+      };
       
       if (!settings.notificationEnabled) return;
 
@@ -556,17 +613,41 @@ export default function StudentsPage() {
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth();
       const currentDay = now.getDate();
-      const currentMonthKey = `flipFlop_${currentYear}_${currentMonth}`;
-      const lastAppliedMonth = localStorage.getItem(currentMonthKey);
       
-      // If it's within the grace period and nothing was applied yet
-      if (currentDay <= settings.gracePeriodDays && !lastAppliedMonth && students.length > 0) {
+      // Calculate if we're in early application period
+      const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const isInEarlyApplicationPeriod = currentDay > (daysInCurrentMonth - (settings.earlyApplicationDays || 2));
+      
+      // Determine target month
+      let targetYear = currentYear;
+      let targetMonth = currentMonth;
+      
+      if (isInEarlyApplicationPeriod) {
+        if (currentMonth === 11) { // December
+          targetYear = currentYear + 1;
+          targetMonth = 0; // January
+        } else {
+          targetMonth = currentMonth + 1;
+        }
+      }
+      
+      const targetMonthKey = `flipFlop_${targetYear}_${targetMonth}`;
+      const lastAppliedMonth = localStorage.getItem(targetMonthKey);
+      
+      // If it's within the grace period or early application period and nothing was applied yet
+      const isInGracePeriod = currentDay <= settings.gracePeriodDays && targetMonth === currentMonth;
+      if ((isInGracePeriod || isInEarlyApplicationPeriod) && !lastAppliedMonth && students.length > 0) {
         const flipFlopStudents = students.filter(student => 
           student.scheduleType?.toLowerCase() === 'flip-flop'
         );
         
         if (flipFlopStudents.length > 0) {
-          toast.info(`📅 Don't forget to update flip-flop schedules for the new month! (${flipFlopStudents.length} students)`, {
+          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                             'July', 'August', 'September', 'October', 'November', 'December'];
+          const targetMonthName = monthNames[targetMonth];
+          const periodText = isInEarlyApplicationPeriod ? `early for ${targetMonthName}` : 'for the new month';
+          
+          toast.info(`📅 Don't forget to update flip-flop schedules ${periodText}! (${flipFlopStudents.length} students)`, {
             duration: 5000,
             action: {
               label: 'Update Now',

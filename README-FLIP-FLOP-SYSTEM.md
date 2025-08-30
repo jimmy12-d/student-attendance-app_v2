@@ -145,11 +145,13 @@ The system automatically:
 - **Created:** August 28, 2025
 
 ### September 2025 (First Flip)
+- **Early Application:** August 29-30 (2 days before month ends)
 - **Trigger:** September 1-7 (grace period)
 - **Action:** All flip-flop students switch shifts
 - **Example:** Morning → Afternoon, Afternoon → Morning
 
 ### October 2025 (Second Flip)
+- **Early Application:** September 28-29 (2 days before month ends)
 - **Trigger:** October 1-7 (grace period)
 - **Action:** Students flip back to original shifts
 - **Example:** Back to August 2025 configuration
@@ -162,6 +164,7 @@ The system automatically:
   autoApplyEnabled: true,     // Enable automatic application
   autoApplyDelay: 10,         // Countdown seconds (5-30)
   gracePeriodDays: 7,         // Days to show reminders (1-15)
+  earlyApplicationDays: 2,    // Allow early application N days before month ends (1-5)
   notificationEnabled: true   // Show notifications
 }
 ```
@@ -176,7 +179,7 @@ The system automatically:
 ### 1. Status Indicator
 Shows current flip-flop status:
 - ✅ **Green:** Applied for current month
-- ⚠️ **Yellow:** Available to apply (grace period)
+- ⚠️ **Yellow:** Available to apply (grace period or early application)
 - ❌ **Red:** Overdue for application
 
 ### 2. Preview Mode
@@ -189,6 +192,13 @@ Shows current flip-flop status:
 - **Apply Flip-Flop:** Manual execution
 - **Flip Preview:** Toggle preview mode
 - **Flip-Flop Settings:** Configure behavior
+
+### 4. Early Application Feature
+- **Purpose:** Apply flip-flop changes 2 days before month ends
+- **Benefit:** Reduces workload at month boundaries
+- **Settings:** Configurable from 1-5 days early
+- **Indicator:** Shows "Early Flip-Flop Update Available" status
+- **Example:** Apply September changes on August 29-30
 
 ## 🔄 Automatic Detection Logic
 
@@ -208,9 +218,17 @@ const isNewMonth = !lastCheck ||
 ```javascript
 // Shows notifications during:
 const gracePeriod = settings.gracePeriodDays; // Default: 7 days
+const earlyApplicationDays = settings.earlyApplicationDays; // Default: 2 days
 const currentDay = now.getDate();
+const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-if (currentDay <= gracePeriod && !alreadyApplied) {
+// Allow updates in first N days of new month
+const isInGracePeriod = currentDay <= gracePeriod;
+
+// Allow updates in last N days of previous month (early application)
+const isInEarlyApplicationPeriod = currentDay > (daysInMonth - earlyApplicationDays);
+
+if ((isInGracePeriod || isInEarlyApplicationPeriod) && !alreadyApplied) {
   showNotification();
 }
 ```
@@ -310,6 +328,13 @@ For issues or questions:
 4. Contact system administrator
 
 ## 📝 Changelog
+
+### Version 1.1.0 (August 2025)
+- **NEW:** Early application feature - apply flip-flop changes 2 days before month ends
+- **NEW:** Configurable early application period (1-5 days)
+- **IMPROVED:** Enhanced status indicators for early application period
+- **IMPROVED:** Better timing flexibility for administrators
+- **IMPROVED:** Updated notifications to show early application opportunities
 
 ### Version 1.0.0 (August 2025)
 - Initial system implementation

@@ -67,8 +67,19 @@ export const FlipFlopStatusIndicator: React.FC<FlipFlopStatusIndicatorProps> = (
 
   if (flipFlopStudents.length === 0) return null;
 
+  // Load settings for early application
+  const settingsStr = localStorage.getItem('flipFlopSettings');
+  const settings = settingsStr ? JSON.parse(settingsStr) : {
+    gracePeriodDays: 7,
+    earlyApplicationDays: 2
+  };
+
   // Check if we're in the grace period (first 7 days of month)
-  const isGracePeriod = currentDate.getDate() <= 7;
+  const isGracePeriod = currentDate.getDate() <= settings.gracePeriodDays;
+  
+  // Check if we're in early application period (last 2 days of previous month)
+  const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const isInEarlyApplicationPeriod = currentDate.getDate() > (daysInCurrentMonth - (settings.earlyApplicationDays || 2));
   
   // Get month name
   const monthNames = [
@@ -82,8 +93,8 @@ export const FlipFlopStatusIndicator: React.FC<FlipFlopStatusIndicatorProps> = (
     return null;
   }
 
-  // Hide if everything is up to date and not in grace period
-  if (hasBeenAppliedThisMonth && !isBaseline && !isGracePeriod) {
+  // Hide if everything is up to date and not in grace period or early application period
+  if (hasBeenAppliedThisMonth && !isBaseline && !isGracePeriod && !isInEarlyApplicationPeriod) {
     return null;
   }
 
@@ -101,7 +112,7 @@ export const FlipFlopStatusIndicator: React.FC<FlipFlopStatusIndicatorProps> = (
         ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
         : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800';
     }
-    if (isGracePeriod) return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
+    if (isGracePeriod || isInEarlyApplicationPeriod) return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800';
     return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800';
   };
 
@@ -110,7 +121,7 @@ export const FlipFlopStatusIndicator: React.FC<FlipFlopStatusIndicatorProps> = (
     if (hasBeenAppliedThisMonth) {
       return isBaseline ? mdiHistory : mdiCheckCircle;
     }
-    if (isGracePeriod) return mdiSwapHorizontal;
+    if (isGracePeriod || isInEarlyApplicationPeriod) return mdiSwapHorizontal;
     return mdiAlertCircle;
   };
 
@@ -135,6 +146,18 @@ export const FlipFlopStatusIndicator: React.FC<FlipFlopStatusIndicatorProps> = (
         title: 'Flip-Flop Schedules Updated',
         subtitle: `Already updated for ${currentMonthName} ${currentYear} (Tracked in Firestore)`,
         color: 'text-green-800 dark:text-green-200'
+      };
+    }
+    
+    if (isInEarlyApplicationPeriod) {
+      const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+      const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+      const nextMonthName = monthNames[nextMonth];
+      
+      return {
+        title: 'Early Flip-Flop Update Available',
+        subtitle: `Can apply early for ${nextMonthName} ${nextYear} (${settings.earlyApplicationDays || 2} days early)`,
+        color: 'text-yellow-800 dark:text-yellow-200'
       };
     }
     

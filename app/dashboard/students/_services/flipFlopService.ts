@@ -126,6 +126,7 @@ export class FlipFlopService {
       const userSettings = settingsStr ? JSON.parse(settingsStr) : {
         autoApplyEnabled: true,
         gracePeriodDays: 7,
+        earlyApplicationDays: 2,
         notificationEnabled: true
       };
 
@@ -268,6 +269,26 @@ export class FlipFlopService {
   static isInGracePeriod(gracePeriodDays: number = 7): boolean {
     const now = new Date();
     return now.getDate() <= gracePeriodDays;
+  }
+
+  /**
+   * Check if we're in early application period (last N days of month)
+   */
+  static isInEarlyApplicationPeriod(earlyApplicationDays: number = 2): boolean {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentDay = now.getDate();
+    
+    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    return currentDay > (daysInCurrentMonth - earlyApplicationDays);
+  }
+
+  /**
+   * Check if flip-flop application is currently allowed (grace period or early application)
+   */
+  static isApplicationAllowed(gracePeriodDays: number = 7, earlyApplicationDays: number = 2): boolean {
+    return this.isInGracePeriod(gracePeriodDays) || this.isInEarlyApplicationPeriod(earlyApplicationDays);
   }
 
   /**

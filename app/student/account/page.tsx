@@ -10,10 +10,11 @@ import { signOut } from 'firebase/auth';
 import { auth } from '@/firebase-config';
 import { useRouter } from 'next/navigation';
 import { usePWANavigation } from '@/app/_hooks/usePWANavigation';
+import { usePWAInstall } from '@/app/_hooks/usePWAInstall';
 
 // --- Import components for settings ---
 import NotificationSettings from '../_components/NotificationSettings';
-import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout } from '@mdi/js';
+import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
 
 // --- Reusable UI Components for the new design ---
@@ -110,8 +111,18 @@ const AccountPage = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { navigateWithinPWA } = usePWANavigation();
+  const { canInstallPWA, isStandalone, isIOS, triggerInstall } = usePWAInstall();
 
   const [isLogoutModalActive, setIsLogoutModalActive] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+
+  const handlePWAInstall = () => {
+    if (isIOS) {
+      setShowIOSInstructions(true);
+    } else {
+      triggerInstall();
+    }
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -131,6 +142,24 @@ const AccountPage = () => {
         onCancel={() => setIsLogoutModalActive(false)}
       >
         <p>Are you sure you want to log out?</p>
+      </CardBoxModal>
+
+      <CardBoxModal
+        title="Install App on iOS"
+        buttonColor="info"
+        buttonLabel="Got it"
+        isActive={showIOSInstructions}
+        onConfirm={() => setShowIOSInstructions(false)}
+        onCancel={() => setShowIOSInstructions(false)}
+      >
+        <div className="space-y-3 text-sm">
+          <p>To install this app on your iOS device:</p>
+          <ol className="list-decimal list-inside space-y-2 text-gray-600 dark:text-gray-300">
+            <li>Tap the <strong>Share</strong> button in Safari's toolbar</li>
+            <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+            <li>Tap <strong>"Add"</strong> to install the app</li>
+          </ol>
+        </div>
       </CardBoxModal>
 
       <div className="pb-24 px-1">
@@ -173,6 +202,50 @@ const AccountPage = () => {
               >
                 <DarkModeToggle />
               </SettingsListItem>
+            </SettingsGroup>
+          </div>
+          
+          {/* App Installation Group */}
+          <div>
+            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4">
+              App Installation
+            </h2>
+            <SettingsGroup>
+              {isStandalone ? (
+                <SettingsListItem
+                  iconPath={mdiCheckCircle}
+                  iconBgColor="bg-gradient-to-br from-green-500 to-emerald-600"
+                  title="App Installed"
+                  subtitle="You're using the installed app version"
+                >
+                  <div className="text-green-600 dark:text-green-400 text-sm font-medium">
+                    ✓ Installed
+                  </div>
+                </SettingsListItem>
+              ) : canInstallPWA ? (
+                <SettingsListItem
+                  iconPath={mdiDownload}
+                  iconBgColor="bg-gradient-to-br from-blue-500 to-cyan-600"
+                  title="Install App"
+                  subtitle={isIOS ? "Add to home screen for better experience" : "Install for offline access and notifications"}
+                  onClick={handlePWAInstall}
+                >
+                  <div className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+                    Install
+                  </div>
+                </SettingsListItem>
+              ) : (
+                <SettingsListItem
+                  iconPath={mdiDownload}
+                  iconBgColor="bg-gradient-to-br from-gray-400 to-gray-500"
+                  title="App Installation"
+                  subtitle="Not available in your current browser"
+                >
+                  <div className="text-gray-500 dark:text-gray-400 text-sm">
+                    Unavailable
+                  </div>
+                </SettingsListItem>
+              )}
             </SettingsGroup>
           </div>
           

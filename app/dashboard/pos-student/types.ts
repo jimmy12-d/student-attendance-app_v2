@@ -40,6 +40,7 @@ export interface Transaction {
     joinDate: string;
     cashier?: string;
     isStudentRegistered?: boolean; // Whether student is registered with Telegram
+    registrationToken?: string; // Token for student portal registration
 }
 
 export interface Printer {

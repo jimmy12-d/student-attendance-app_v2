@@ -13,6 +13,7 @@ export const FlipFlopSettingsModal: React.FC<FlipFlopSettingsModalProps> = ({
   const [autoApplyEnabled, setAutoApplyEnabled] = useState(true);
   const [autoApplyDelay, setAutoApplyDelay] = useState(10);
   const [gracePeriodDays, setGracePeriodDays] = useState(7);
+  const [earlyApplicationDays, setEarlyApplicationDays] = useState(2);
   const [notificationEnabled, setNotificationEnabled] = useState(true);
 
   // Load settings from localStorage
@@ -24,6 +25,7 @@ export const FlipFlopSettingsModal: React.FC<FlipFlopSettingsModalProps> = ({
         setAutoApplyEnabled(parsed.autoApplyEnabled ?? true);
         setAutoApplyDelay(parsed.autoApplyDelay ?? 10);
         setGracePeriodDays(parsed.gracePeriodDays ?? 7);
+        setEarlyApplicationDays(parsed.earlyApplicationDays ?? 2);
         setNotificationEnabled(parsed.notificationEnabled ?? true);
       } catch (error) {
         console.warn('Failed to load flip-flop settings:', error);
@@ -36,6 +38,7 @@ export const FlipFlopSettingsModal: React.FC<FlipFlopSettingsModalProps> = ({
       autoApplyEnabled,
       autoApplyDelay,
       gracePeriodDays,
+      earlyApplicationDays,
       notificationEnabled,
       lastUpdated: new Date().toISOString()
     };
@@ -48,6 +51,7 @@ export const FlipFlopSettingsModal: React.FC<FlipFlopSettingsModalProps> = ({
     setAutoApplyEnabled(true);
     setAutoApplyDelay(10);
     setGracePeriodDays(7);
+    setEarlyApplicationDays(2);
     setNotificationEnabled(true);
   };
 
@@ -127,6 +131,29 @@ export const FlipFlopSettingsModal: React.FC<FlipFlopSettingsModalProps> = ({
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             Number of days in the new month to show update reminders
+          </p>
+        </div>
+
+        {/* Early Application Period */}
+        <div>
+          <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+            Early Application Period
+          </label>
+          <div className="flex items-center space-x-2">
+            <input
+              type="range"
+              min="1"
+              max="5"
+              value={earlyApplicationDays}
+              onChange={(e) => setEarlyApplicationDays(Number(e.target.value))}
+              className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+            />
+            <span className="text-sm text-gray-600 dark:text-gray-400 min-w-[4rem]">
+              {earlyApplicationDays} days
+            </span>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Allow flip-flop updates this many days before the month ends
           </p>
         </div>
 
