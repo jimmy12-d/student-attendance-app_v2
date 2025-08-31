@@ -1,4 +1,5 @@
 import React from 'react';
+import { toast } from 'sonner';
 import { Student } from '../../../_interfaces';
 
 interface QRCodeModalProps {
@@ -39,7 +40,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ student, isOpen, onClo
   const handleCopyToken = async () => {
     try {
       await navigator.clipboard.writeText(student.registrationToken || '');
-      // You might want to add a toast notification here
+  toast.success('Registration token copied to clipboard!');
     } catch (error) {
       console.error('Failed to copy token:', error);
     }
@@ -140,13 +141,56 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ student, isOpen, onClo
 
           {/* Instructions */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 dark:text-blue-300 mb-2">Instructions for Student:</h4>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-medium text-blue-900 dark:text-blue-300">Instructions for Student:</h4>
+              <button
+                onClick={() => {
+                  const instructions = `Portal Setup Instructions for ${student.fullName}:
+
+1. Click on this link to create your password: https://t.me/rodwell_portal_password_bot?start=${student.registrationToken}
+2. After creating password, go to: portal.rodwell.center/login
+3. Download the app:
+   • Android: Download the app from browser
+   • iOS: Add to Home Screen from Safari
+4. Login with: Your phone number + new password`;
+                  navigator.clipboard.writeText(instructions);
+                  toast.success('Instructions copied to clipboard!');
+                }}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                aria-label="Copy instructions"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
             <ol className="text-sm text-blue-800 dark:text-blue-400 space-y-1 list-decimal list-inside">
-              <li>Scan this QR code with your phone camera</li>
-              <li>It will open the Telegram bot automatically</li>
-              <li>Tap "START" or send /start command</li>
-              <li>The bot will give you a password for login</li>
-              <li>Use your phone number + password to login at portal.rodwell.center/login</li>
+              <li>
+                Click on this link to create your password: 
+                <span className="flex items-center">
+                  <a href={`https://t.me/rodwell_portal_password_bot?start=${student.registrationToken}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    https://t.me/rodwell_portal_password_bot?start={student.registrationToken}
+                  </a>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://t.me/rodwell_portal_password_bot?start=token_${student.registrationToken}`);
+                      toast.success('Telegram link copied to clipboard!');
+                    }}
+                    className="ml-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    aria-label="Copy link"
+                  >
+
+                  </button>
+                </span>
+              </li>
+              <li>After creating password, go to: portal.rodwell.center/login</li>
+              <li>Download the app:
+                <ul className="ml-4 mt-1 space-y-1">
+                  <li>• Android: Download the app from browser</li>
+                  <li>• iOS: Add to Home Screen from Safari</li>
+                </ul>
+              </li>
+              <li>Login with: Your phone number + new password</li>
             </ol>
           </div>
 
@@ -161,6 +205,8 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ student, isOpen, onClo
           </div>
         </div>
       </div>
+
+      {/* sonner Toaster is managed at app layout; using toast.success for copy feedback */}
     </div>
   );
 };

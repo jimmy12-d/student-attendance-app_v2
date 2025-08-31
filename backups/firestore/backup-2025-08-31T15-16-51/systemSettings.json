@@ -1,0 +1,34 @@
+{
+  "collection": "systemSettings",
+  "totalDocuments": 1,
+  "backupTimestamp": "2025-08-31T15:17:00.355Z",
+  "documents": [
+    {
+      "id": "flipFlopConfig",
+      "data": {
+        "enabled": true,
+        "autoApplyEnabled": true,
+        "defaultCountdownSeconds": 10,
+        "defaultGracePeriodDays": 7,
+        "notificationsEnabled": true,
+        "systemVersion": "1.0.0",
+        "features": {
+          "previewMode": true,
+          "batchProcessing": true,
+          "historyTracking": true,
+          "autoDetection": true
+        },
+        "schedule": {
+          "targetDay": 1,
+          "maxGracePeriod": 15,
+          "minCountdown": 5,
+          "maxCountdown": 30
+        },
+        "lastUpdated": {
+          "_type": "timestamp",
+          "_value": "2025-08-28T06:45:29.407Z"
+        }
+      }
+    }
+  ]
+}

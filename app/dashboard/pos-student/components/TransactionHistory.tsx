@@ -125,7 +125,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
         const instructions = `Portal Account Setup Instructions:
 
 INSTRUCTIONS:
-1. Click on this link: https://t.me/rodwell_portal_password_bot?start=token_${selectedTransactionForInstructions.registrationToken}
+1. Click on this link: https://t.me/rodwell_portal_password_bot?start=${selectedTransactionForInstructions.registrationToken}
 
 2. After creating password, go to: portal.rodwell.center/login
 
@@ -356,7 +356,7 @@ INSTRUCTIONS:
                         <div className="flex items-center space-x-2 mb-3">
                             <Icon path={mdiInformation} size={20} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
                             <h3 className="font-semibold text-blue-800 dark:text-blue-300 text-sm sm:text-base">
-                                Student Portal Setup Instructions
+                                Portal Instructions
                             </h3>
                         </div>
                         <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-400 mb-4">
@@ -373,7 +373,7 @@ INSTRUCTIONS:
                                     </p>
                                     <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded border text-xs break-all overflow-hidden">
                                         <code className="text-purple-600 dark:text-purple-300 block">
-                                            https://t.me/rodwell_portal_password_bot?start=token_{selectedTransactionForInstructions?.registrationToken || 'TOKEN'}
+                                            https://t.me/rodwell_portal_password_bot?start={selectedTransactionForInstructions?.registrationToken || 'TOKEN'}
                                         </code>
                                     </div>
                                 </div>

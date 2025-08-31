@@ -406,6 +406,10 @@ const handleCallbackQuery = async (bot, callbackQuery) => {
             await handleChangeCustomPassword(bot, chatId, userId, messageId);
         } else if (data === "cancel_password_change") {
             await handleCancelPasswordChange(bot, chatId, messageId);
+        } else if (data === "manual_token_entry") {
+            await handleManualTokenEntry(bot, chatId, userId, messageId);
+        } else if (data === "scan_qr_again") {
+            await handleScanQRAgain(bot, chatId, userId, messageId);
         }
 
     } catch (error) {
@@ -547,6 +551,8 @@ const handleTextMessage = async (bot, chatId, userId, text, messageId) => {
 
         if (state.state === "waiting_token") {
             await handleTokenInput(bot, chatId, userId, text.trim());
+        } else if (state.state === "waiting_manual_token") {
+            await handleManualTokenInput(bot, chatId, userId, text.trim(), messageId);
         } else if (state.state === "password_change_menu") {
             await handlePasswordChangeMenuChoice(bot, chatId, userId, text.trim());
         } else if (state.state === "waiting_custom_password") {
@@ -627,6 +633,165 @@ const handleCancelPasswordChange = async (bot, chatId, messageId) => {
             chat_id: chatId,
             message_id: messageId
         });
+    }
+};
+
+/**
+ * Handle manual token entry button
+ */
+const handleManualTokenEntry = async (bot, chatId, userId, messageId) => {
+    try {
+        // Update user state for manual token input
+        await db.collection("telegramUserStates").doc(chatId.toString()).set({
+            userId: userId,
+            chatId: chatId,
+            state: "waiting_manual_token",
+            messageIdToEdit: messageId,
+            timestamp: FieldValue.serverTimestamp()
+        });
+
+        await bot.editMessageText(
+            `✏️ **Manual Token Entry**\n\n` +
+            `Please type your 16-character registration token.\n\n` +
+            `**Format:** XXXXXXXXXXXXXXXX\n` +
+            `**Example:** N2LAAV2BU2YTWNXQ\n\n` +
+            `The token should be exactly 16 characters long and contain only uppercase letters and numbers.\n\n` +
+            `Type /cancel to cancel this operation.`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown'
+            }
+        );
+
+    } catch (error) {
+        console.error('Error setting up manual token entry:', error);
+        await bot.editMessageText("❌ Failed to set up manual entry. Please try again.", {
+            chat_id: chatId,
+            message_id: messageId
+        });
+    }
+};
+
+/**
+ * Handle scan QR again button
+ */
+const handleScanQRAgain = async (bot, chatId, userId, messageId) => {
+    try {
+        // Reset user state to waiting for token
+        await db.collection("telegramUserStates").doc(chatId.toString()).set({
+            userId: userId,
+            chatId: chatId,
+            state: "waiting_token",
+            timestamp: FieldValue.serverTimestamp()
+        });
+
+        await bot.editMessageText(
+            `🔄 **Scan QR Code Again**\n\n` +
+            `Please:\n` +
+            `1. Get a new receipt with QR code from your teacher\n` +
+            `2. Scan the QR code with your phone camera\n` +
+            `3. Send the token here\n\n` +
+            `**Or type your token directly if you have it.**\n\n` +
+            `Type /cancel to cancel registration.`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown'
+            }
+        );
+
+    } catch (error) {
+        console.error('Error setting up QR scan again:', error);
+        await bot.editMessageText("❌ Failed to reset. Please try /start again.", {
+            chat_id: chatId,
+            message_id: messageId
+        });
+    }
+};
+
+/**
+ * Handle manual token input from user
+ */
+const handleManualTokenInput = async (bot, chatId, userId, token, messageId) => {
+    try {
+        // Delete the message containing the token immediately for security
+        try {
+            await bot.deleteMessage(chatId, messageId);
+        } catch (deleteError) {
+            console.warn('Could not delete token message:', deleteError.message);
+        }
+
+        // Validate token format
+        const cleanToken = token.trim().toUpperCase();
+        
+        if (!cleanToken || cleanToken.length !== 16) {
+            await bot.sendMessage(chatId, 
+                `❌ **Invalid token format.**\n\n` +
+                `The token must be exactly 16 characters long.\n\n` +
+                `**Your token:** "${token}" (${token.length} characters)\n\n` +
+                `Please try again with the correct format, or type /cancel to cancel.`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+
+        // Validate token contains only allowed characters
+        const allowedChars = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]+$/;
+        if (!allowedChars.test(cleanToken)) {
+            await bot.sendMessage(chatId, 
+                `❌ **Invalid token characters.**\n\n` +
+                `The token can only contain uppercase letters and numbers.\n\n` +
+                `**Allowed:** A-Z (except I, O) and 2-9\n` +
+                `**Your token:** "${cleanToken}"\n\n` +
+                `Please check and try again, or type /cancel to cancel.`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+
+        // Get the original message ID to edit
+        const stateDoc = await db.collection("telegramUserStates").doc(chatId.toString()).get();
+        const originalMessageId = stateDoc.exists ? stateDoc.data().messageIdToEdit : null;
+
+        // Send processing message
+        const processingMsg = await bot.sendMessage(chatId, 
+            `🔍 **Processing Token...**\n\n` +
+            `Token: \`${cleanToken}\`\n\n` +
+            `Please wait while we verify your token.`,
+            { parse_mode: 'Markdown' }
+        );
+
+        // Process the token (reuse existing logic)
+        await handleTokenInput(bot, chatId, userId, cleanToken);
+
+        // Clean up the processing message
+        try {
+            await bot.deleteMessage(chatId, processingMsg.message_id);
+        } catch (deleteError) {
+            console.warn('Could not delete processing message:', deleteError.message);
+        }
+
+        // If we have the original message ID, try to clean it up too
+        if (originalMessageId) {
+            try {
+                await bot.editMessageText(
+                    `✅ **Token Processed**\n\n` +
+                    `Your token has been submitted for processing.`,
+                    {
+                        chat_id: chatId,
+                        message_id: originalMessageId,
+                        parse_mode: 'Markdown'
+                    }
+                );
+            } catch (editError) {
+                console.warn('Could not edit original message:', editError.message);
+            }
+        }
+
+    } catch (error) {
+        console.error('Error handling manual token input:', error);
+        await bot.sendMessage(chatId, "❌ Failed to process token. Please try again or use /start to restart.");
     }
 };
 
@@ -832,13 +997,27 @@ const handleTokenInput = async (bot, chatId, userId, token) => {
             .get();
 
         if (!tempTokenDoc.exists) {
+            const options = {
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: "✏️ Type Token Manually", callback_data: "manual_token_entry" }
+                        ],
+                        [
+                            { text: "🔄 Scan QR Again", callback_data: "scan_qr_again" }
+                        ]
+                    ]
+                }
+            };
+
             await bot.sendMessage(chatId, 
-                `❌ Invalid or expired token.\n\n` +
-                `Please:\n` +
-                `• Check that you scanned the correct QR code\n` +
-                `• Make sure the token hasn't been used already\n` +
-                `• Get a new receipt with QR code if needed\n\n` +
-                `Try sending the token again:`
+                `❌ Invalid token.\n\n` +
+                `This token was not found in our system.\n\n` +
+                `**What would you like to do?**\n\n` +
+                `✏️ **Type Token Manually** - Enter your 16-character token\n` +
+                `🔄 **Scan QR Again** - Get a new QR code from teacher\n\n` +
+                `**Or simply send your token directly:**`,
+                options
             );
             return;
         }
@@ -850,7 +1029,8 @@ const handleTokenInput = async (bot, chatId, userId, token) => {
             // Clean up expired token
             await tempTokenDoc.ref.delete();
             await bot.sendMessage(chatId, 
-                `❌ This token has expired.\n\n` +
+                `❌ Token expired.\n\n` +
+                `This token has passed its expiration date.\n\n` +
                 `Please get a new receipt with QR code from your teacher.`
             );
             return;
@@ -1227,6 +1407,15 @@ exports.authenticateStudentWithPhone = onCall({
                     authUid: authUid,
                     lastLoginAt: FieldValue.serverTimestamp()
                 });
+                
+                // Perform data migration for manual attendance records (first-time authUid creation)
+                try {
+                    const migrationResult = await migrateManualAttendanceRecords(studentData.fullName, authUid);
+                    console.log(`Migration result for student ${studentDoc.id} (phone auth):`, migrationResult);
+                } catch (migrationError) {
+                    console.error(`Migration failed for student ${studentDoc.id} (phone auth):`, migrationError);
+                    // Migration failure shouldn't prevent authentication
+                }
             } catch (authError) {
                 console.error("Error creating Firebase Auth user:", authError);
                 // If user already exists with this email, try to find them
@@ -1239,6 +1428,15 @@ exports.authenticateStudentWithPhone = onCall({
                         authUid: authUid,
                         lastLoginAt: FieldValue.serverTimestamp()
                     });
+                    
+                    // Perform data migration for manual attendance records (existing user found)
+                    try {
+                        const migrationResult = await migrateManualAttendanceRecords(studentData.fullName, authUid);
+                        console.log(`Migration result for student ${studentDoc.id} (phone auth - existing user):`, migrationResult);
+                    } catch (migrationError) {
+                        console.error(`Migration failed for student ${studentDoc.id} (phone auth - existing user):`, migrationError);
+                        // Migration failure shouldn't prevent authentication
+                    }
                 } catch (findError) {
                     console.error("Error finding existing Firebase Auth user:", findError);
                     throw new HttpsError("internal", "Authentication service error. Please try again.");
@@ -1334,6 +1532,15 @@ exports.authenticateStudentWithUsername = onCall({
                     authUid: authUid,
                     lastLoginAt: FieldValue.serverTimestamp()
                 });
+                
+                // Perform data migration for manual attendance records (first-time authUid creation)
+                try {
+                    const migrationResult = await migrateManualAttendanceRecords(studentData.fullName, authUid);
+                    console.log(`Migration result for student ${studentDoc.id} (username auth):`, migrationResult);
+                } catch (migrationError) {
+                    console.error(`Migration failed for student ${studentDoc.id} (username auth):`, migrationError);
+                    // Migration failure shouldn't prevent authentication
+                }
             } catch (authError) {
                 console.error("Error creating Firebase Auth user:", authError);
                 // If user already exists with this email, try to find them
@@ -1346,6 +1553,15 @@ exports.authenticateStudentWithUsername = onCall({
                         authUid: authUid,
                         lastLoginAt: FieldValue.serverTimestamp()
                     });
+                    
+                    // Perform data migration for manual attendance records (existing user found)
+                    try {
+                        const migrationResult = await migrateManualAttendanceRecords(studentData.fullName, authUid);
+                        console.log(`Migration result for student ${studentDoc.id} (existing user):`, migrationResult);
+                    } catch (migrationError) {
+                        console.error(`Migration failed for student ${studentDoc.id} (existing user):`, migrationError);
+                        // Migration failure shouldn't prevent authentication
+                    }
                 } catch (findError) {
                     console.error("Error finding existing user:", findError);
                     throw new HttpsError("internal", "Failed to create or find user account.");
@@ -1643,6 +1859,238 @@ exports.handleEnrollmentQueue = onDocumentCreated({
     }
 });
 
+/**
+ * [Callable Function] 
+ * Manually trigger migration of attendance records for a specific student
+ * This is an admin-only function for testing or handling edge cases
+ */
+exports.manuallyMigrateAttendanceRecords = onCall({
+    region: "asia-southeast1",
+    cors: true
+}, async (request) => {
+    // Check admin authentication
+    if (!request.auth || !request.auth.token.isAdmin) {
+        throw new HttpsError("unauthenticated", "Admin authentication is required.");
+    }
+    
+    const { studentId, studentName } = request.data;
+    
+    if (!studentId && !studentName) {
+        throw new HttpsError("invalid-argument", "Either studentId or studentName is required.");
+    }
+    
+    try {
+        let studentData;
+        let studentDocId;
+        
+        if (studentId) {
+            // Find student by ID
+            const studentDoc = await db.collection("students").doc(studentId).get();
+            if (!studentDoc.exists) {
+                throw new HttpsError("not-found", `Student with ID ${studentId} not found.`);
+            }
+            studentData = studentDoc.data();
+            studentDocId = studentDoc.id;
+        } else {
+            // Find student by name
+            const studentQuery = await db.collection("students")
+                .where("fullName", "==", studentName)
+                .limit(1)
+                .get();
+            
+            if (studentQuery.empty) {
+                throw new HttpsError("not-found", `Student with name ${studentName} not found.`);
+            }
+            
+            const studentDoc = studentQuery.docs[0];
+            studentData = studentDoc.data();
+            studentDocId = studentDoc.id;
+        }
+        
+        if (!studentData.authUid) {
+            throw new HttpsError("failed-precondition", `Student ${studentData.fullName} does not have an authUid. They need to sign up first.`);
+        }
+        
+        // Perform migration
+        const migrationResult = await migrateManualAttendanceRecords(studentData.fullName, studentData.authUid);
+        
+        return {
+            success: true,
+            studentId: studentDocId,
+            studentName: studentData.fullName,
+            authUid: studentData.authUid,
+            migrationResult: migrationResult
+        };
+        
+    } catch (error) {
+        if (error instanceof HttpsError) {
+            throw error;
+        }
+        console.error("Error in manual migration:", error);
+        throw new HttpsError("internal", `Migration failed: ${error.message}`);
+    }
+});
+
+/**
+ * [Callable Function] 
+ * Check migration status for manual attendance records
+ * This helps admins see what records need migration and what has been migrated
+ */
+exports.checkAttendanceMigrationStatus = onCall({
+    region: "asia-southeast1",
+    cors: true
+}, async (request) => {
+    // Check admin authentication
+    if (!request.auth || !request.auth.token.isAdmin) {
+        throw new HttpsError("unauthenticated", "Admin authentication is required.");
+    }
+    
+    const { studentName } = request.data;
+    
+    try {
+        let results = {};
+        
+        if (studentName) {
+            // Check for specific student
+            const manualRecords = await db.collection("attendance")
+                .where("authUid", "==", "manual-entry")
+                .where("studentName", "==", studentName)
+                .get();
+            
+            const migratedRecords = await db.collection("attendance")
+                .where("studentName", "==", studentName)
+                .where("migratedBy", "==", "automatic-migration")
+                .get();
+            
+            results[studentName] = {
+                manualRecordsCount: manualRecords.size,
+                migratedRecordsCount: migratedRecords.size,
+                manualRecords: manualRecords.docs.map(doc => ({
+                    id: doc.id,
+                    date: doc.data().date,
+                    status: doc.data().status,
+                    class: doc.data().class
+                })),
+                migratedRecords: migratedRecords.docs.map(doc => ({
+                    id: doc.id,
+                    date: doc.data().date,
+                    status: doc.data().status,
+                    migratedAt: doc.data().migratedAt,
+                    originalAuthUid: doc.data().originalAuthUid
+                }))
+            };
+        } else {
+            // Get all manual entry records grouped by student name
+            const allManualRecords = await db.collection("attendance")
+                .where("authUid", "==", "manual-entry")
+                .get();
+            
+            const studentStats = {};
+            
+            allManualRecords.docs.forEach(doc => {
+                const data = doc.data();
+                const name = data.studentName;
+                
+                if (!studentStats[name]) {
+                    studentStats[name] = {
+                        manualRecordsCount: 0,
+                        dates: []
+                    };
+                }
+                
+                studentStats[name].manualRecordsCount++;
+                studentStats[name].dates.push({
+                    date: data.date,
+                    status: data.status,
+                    class: data.class
+                });
+            });
+            
+            results = {
+                totalManualRecords: allManualRecords.size,
+                studentsWithManualRecords: Object.keys(studentStats).length,
+                studentBreakdown: studentStats
+            };
+        }
+        
+        return {
+            success: true,
+            results: results,
+            timestamp: new Date().toISOString()
+        };
+        
+    } catch (error) {
+        console.error("Error checking migration status:", error);
+        throw new HttpsError("internal", `Failed to check migration status: ${error.message}`);
+    }
+});
+
+/**
+ * Migrates manual attendance records from "manual-entry" authUid to the student's actual authUid
+ * This function is called when a student successfully links their account for the first time
+ * @param {string} studentName - The full name of the student to search for
+ * @param {string} newAuthUid - The new authUid to update the records with
+ * @returns {Object} Migration results with counts of updated records
+ */
+async function migrateManualAttendanceRecords(studentName, newAuthUid) {
+    try {
+        console.log(`Starting migration for student: ${studentName} with new authUid: ${newAuthUid}`);
+        
+        // Query for attendance records with manual-entry authUid and matching student name
+        const manualAttendanceQuery = await db.collection("attendance")
+            .where("authUid", "==", "manual-entry")
+            .where("studentName", "==", studentName)
+            .get();
+        
+        if (manualAttendanceQuery.empty) {
+            console.log(`No manual attendance records found for student: ${studentName}`);
+            return { 
+                success: true, 
+                recordsFound: 0, 
+                recordsUpdated: 0,
+                message: "No manual attendance records found to migrate"
+            };
+        }
+        
+        console.log(`Found ${manualAttendanceQuery.docs.length} manual attendance records for ${studentName}`);
+        
+        // Use batch writes for better performance and atomicity
+        const batch = db.batch();
+        let updateCount = 0;
+        
+        manualAttendanceQuery.docs.forEach((doc) => {
+            const attendanceData = doc.data();
+            console.log(`Migrating attendance record from ${attendanceData.date} for ${studentName}`);
+            
+            // Update the authUid and add migration metadata
+            batch.update(doc.ref, {
+                authUid: newAuthUid,
+                migratedAt: FieldValue.serverTimestamp(),
+                originalAuthUid: "manual-entry",
+                migratedBy: "automatic-migration"
+            });
+            
+            updateCount++;
+        });
+        
+        // Commit the batch update
+        await batch.commit();
+        
+        console.log(`Successfully migrated ${updateCount} attendance records for ${studentName}`);
+        
+        return {
+            success: true,
+            recordsFound: manualAttendanceQuery.docs.length,
+            recordsUpdated: updateCount,
+            message: `Successfully migrated ${updateCount} manual attendance records`
+        };
+        
+    } catch (error) {
+        console.error(`Error during attendance migration for ${studentName}:`, error);
+        throw new Error(`Migration failed: ${error.message}`);
+    }
+}
+
 // This function is now the single point of truth for linking a profile.
 // It assumes the user has ALREADY verified they own the phone number on the client-side.
 exports.linkStudentProfileWithVerifiedNumber = onCall({
@@ -1683,6 +2131,15 @@ exports.linkStudentProfileWithVerifiedNumber = onCall({
     }); 
 
     console.log(`Successfully linked authUid ${uid} to student ${studentDoc.id}`);
+    
+    // Perform data migration for manual attendance records
+    try {
+        const migrationResult = await migrateManualAttendanceRecords(studentData.fullName, uid);
+        console.log(`Migration result for student ${studentDoc.id}:`, migrationResult);
+    } catch (migrationError) {
+        console.error(`Migration failed for student ${studentDoc.id}:`, migrationError);
+        // Migration failure shouldn't prevent account linking
+    }
     
     // Return the full student data object on success
     return { 

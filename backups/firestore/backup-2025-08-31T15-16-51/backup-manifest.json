@@ -1,0 +1,178 @@
+{
+  "backupId": "backup-2025-08-31T15-16-51",
+  "timestamp": "2025-08-31T15:17:01.030Z",
+  "projectId": "rodwell-attendance",
+  "totalCollections": 28,
+  "totalDocuments": 4569,
+  "collections": [
+    {
+      "collection": "absentFollowUps",
+      "documentCount": 24,
+      "filePath": "absentFollowUps.json",
+      "size": 8902
+    },
+    {
+      "collection": "appSettings",
+      "documentCount": 1,
+      "filePath": "appSettings.json",
+      "size": 337
+    },
+    {
+      "collection": "attendance",
+      "documentCount": 3386,
+      "filePath": "attendance.json",
+      "size": 1619541
+    },
+    {
+      "collection": "attendancePasscodes",
+      "documentCount": 123,
+      "filePath": "attendancePasscodes.json",
+      "size": 30857
+    },
+    {
+      "collection": "authorizedUsers",
+      "documentCount": 3,
+      "filePath": "authorizedUsers.json",
+      "size": 694
+    },
+    {
+      "collection": "claimedStars",
+      "documentCount": 1,
+      "filePath": "claimedStars.json",
+      "size": 220
+    },
+    {
+      "collection": "classTypes",
+      "documentCount": 9,
+      "filePath": "classTypes.json",
+      "size": 2000
+    },
+    {
+      "collection": "classes",
+      "documentCount": 24,
+      "filePath": "classes.json",
+      "size": 9182
+    },
+    {
+      "collection": "cleanupLogs",
+      "documentCount": 2,
+      "filePath": "cleanupLogs.json",
+      "size": 828
+    },
+    {
+      "collection": "counters",
+      "documentCount": 1,
+      "filePath": "counters.json",
+      "size": 218
+    },
+    {
+      "collection": "examControls",
+      "documentCount": 4,
+      "filePath": "examControls.json",
+      "size": 624
+    },
+    {
+      "collection": "examSettings",
+      "documentCount": 131,
+      "filePath": "examSettings.json",
+      "size": 27120
+    },
+    {
+      "collection": "faceEnrollmentQueue",
+      "documentCount": 14,
+      "filePath": "faceEnrollmentQueue.json",
+      "size": 2253267
+    },
+    {
+      "collection": "financePW",
+      "documentCount": 2,
+      "filePath": "financePW.json",
+      "size": 602
+    },
+    {
+      "collection": "flipFlopTracking",
+      "documentCount": 2,
+      "filePath": "flipFlopTracking.json",
+      "size": 214893
+    },
+    {
+      "collection": "mockExam3",
+      "documentCount": 139,
+      "filePath": "mockExam3.json",
+      "size": 36520
+    },
+    {
+      "collection": "mockResults",
+      "documentCount": 106,
+      "filePath": "mockResults.json",
+      "size": 273370
+    },
+    {
+      "collection": "notifications",
+      "documentCount": 2,
+      "filePath": "notifications.json",
+      "size": 958
+    },
+    {
+      "collection": "permissions",
+      "documentCount": 92,
+      "filePath": "permissions.json",
+      "size": 70086
+    },
+    {
+      "collection": "processedAbaTransactions",
+      "documentCount": 5,
+      "filePath": "processedAbaTransactions.json",
+      "size": 1572
+    },
+    {
+      "collection": "starRewards",
+      "documentCount": 1,
+      "filePath": "starRewards.json",
+      "size": 471
+    },
+    {
+      "collection": "students",
+      "documentCount": 236,
+      "filePath": "students.json",
+      "size": 1067013
+    },
+    {
+      "collection": "systemSettings",
+      "documentCount": 1,
+      "filePath": "systemSettings.json",
+      "size": 832
+    },
+    {
+      "collection": "teachers",
+      "documentCount": 26,
+      "filePath": "teachers.json",
+      "size": 14960
+    },
+    {
+      "collection": "telegramUserStates",
+      "documentCount": 4,
+      "filePath": "telegramUserStates.json",
+      "size": 1051
+    },
+    {
+      "collection": "tempRegistrationTokens",
+      "documentCount": 15,
+      "filePath": "tempRegistrationTokens.json",
+      "size": 5778
+    },
+    {
+      "collection": "transactions",
+      "documentCount": 215,
+      "filePath": "transactions.json",
+      "size": 153235
+    },
+    {
+      "collection": "users",
+      "documentCount": 0,
+      "filePath": "users.json",
+      "size": 118
+    }
+  ],
+  "version": "1.0.0"
+}

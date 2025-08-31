@@ -68,7 +68,6 @@ async function initializeFlipFlopSystem() {
       description: 'Initial baseline setup for flip-flop system - no schedule changes applied',
       students: flipFlopStudents,
       settings: {
-        autoApplyEnabled: true,
         gracePeriodDays: 7,
         notificationEnabled: true
       },
@@ -83,8 +82,6 @@ async function initializeFlipFlopSystem() {
     const systemSettingsRef = db.collection('systemSettings').doc('flipFlopConfig');
     await systemSettingsRef.set({
       enabled: true,
-      autoApplyEnabled: true,
-      defaultCountdownSeconds: 10,
       defaultGracePeriodDays: 7,
       notificationsEnabled: true,
       systemVersion: '1.0.0',
@@ -97,9 +94,7 @@ async function initializeFlipFlopSystem() {
       },
       schedule: {
         targetDay: 1,
-        maxGracePeriod: 15,
-        minCountdown: 5,
-        maxCountdown: 30
+        maxGracePeriod: 15
       }
     });    console.log('✅ Flip-flop tracking system initialized successfully!');
     console.log(`📅 Baseline set for August 2025 with ${flipFlopStudents.length} students`);
@@ -132,8 +127,6 @@ async function createFlipFlopSettings() {
     
     const settingsData = {
       enabled: true,
-      autoApplyEnabled: true,
-      defaultCountdownSeconds: 10,
       defaultGracePeriodDays: 7,
       notificationsEnabled: true,
       systemVersion: '1.0.0',
@@ -146,9 +139,7 @@ async function createFlipFlopSettings() {
       },
       schedule: {
         targetDay: 1, // First day of each month
-        maxGracePeriod: 15, // Maximum grace period allowed
-        minCountdown: 5, // Minimum countdown seconds
-        maxCountdown: 30 // Maximum countdown seconds
+        maxGracePeriod: 15 // Maximum grace period allowed
       }
     };
     

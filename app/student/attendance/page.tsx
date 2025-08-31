@@ -10,7 +10,6 @@ import { getStatusStyles } from '../../dashboard/_lib/statusStyles';
 import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
-import StarDisplay from '../_components/StarDisplay';
 import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
 import { toast } from 'sonner';
@@ -637,17 +636,6 @@ const AttendancePage = () => {
                <OngoingPermissions permissions={ongoingPermissions} isLoading={loadingPermissions} />
              </div>
            </div>
-
-           {/* Star Display */}
-           {studentDocId && (
-             <div className="space-y-4 pt-2">
-               <StarDisplay 
-                 studentId={studentDocId}
-                 showHistory={true}
-                 limit={5}
-               />
-             </div>
-           )}
        </div>
      </>
    );

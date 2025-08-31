@@ -31,7 +31,6 @@ export interface FlipFlopTrackingRecord {
     wasFlipped: boolean;
   }[];
   settings: {
-    autoApplyEnabled: boolean;
     gracePeriodDays: number;
     notificationEnabled: boolean;
   };
@@ -44,8 +43,6 @@ export interface FlipFlopTrackingRecord {
 
 export interface FlipFlopSettings {
   enabled: boolean;
-  autoApplyEnabled: boolean;
-  defaultCountdownSeconds: number;
   defaultGracePeriodDays: number;
   notificationsEnabled: boolean;
   systemVersion: string;
@@ -59,8 +56,6 @@ export interface FlipFlopSettings {
   schedule: {
     targetDay: number;
     maxGracePeriod: number;
-    minCountdown: number;
-    maxCountdown: number;
   };
 }
 
@@ -124,7 +119,6 @@ export class FlipFlopService {
       // Get current settings from localStorage
       const settingsStr = localStorage.getItem('flipFlopSettings');
       const userSettings = settingsStr ? JSON.parse(settingsStr) : {
-        autoApplyEnabled: true,
         gracePeriodDays: 7,
         earlyApplicationDays: 2,
         notificationEnabled: true
@@ -159,7 +153,6 @@ export class FlipFlopService {
           };
         }),
         settings: {
-          autoApplyEnabled: userSettings.autoApplyEnabled,
           gracePeriodDays: userSettings.gracePeriodDays,
           notificationEnabled: userSettings.notificationEnabled
         },

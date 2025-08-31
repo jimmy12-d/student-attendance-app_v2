@@ -85,7 +85,6 @@ async function createAugust2025Baseline() {
         wasFlipped: false
       })),
       settings: {
-        autoApplyEnabled: true,
         gracePeriodDays: 7,
         notificationEnabled: true
       },
@@ -128,8 +127,6 @@ async function createAugust2025Baseline() {
       
       const systemSettings = {
         enabled: true,
-        autoApplyEnabled: true,
-        defaultCountdownSeconds: 10,
         defaultGracePeriodDays: 7,
         notificationsEnabled: true,
         systemVersion: '1.0.0',
