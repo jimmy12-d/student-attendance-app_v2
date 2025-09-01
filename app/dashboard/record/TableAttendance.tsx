@@ -11,9 +11,10 @@ const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined):
     if (typeof dateInput === 'string') {
         const parts = dateInput.split('-');
         if (parts.length === 3 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1])) && !isNaN(parseInt(parts[2]))) {
-        dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            // Create date with explicit time to avoid timezone issues
+            dateObj = new Date(`${parts[0]}-${parts[1]}-${parts[2]}T00:00:00`);
         } else {
-        dateObj = new Date(dateInput); // Fallback
+            dateObj = new Date(dateInput); // Fallback
         }
     } else if (dateInput instanceof Timestamp) {
         dateObj = dateInput.toDate();
@@ -27,12 +28,26 @@ const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined):
         return 'Invalid Date';
     }
 
-    const day = String(dateObj.getDate()).padStart(2, '0');
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
-    const year = dateObj.getFullYear();
-
-    return `${day}-${month}-${year}`; // This should produce a plain string like "29-05-2025"
-  };
+    // Use Phnom Penh timezone for consistent date formatting
+    try {
+        const phnomPenhFormatter = new Intl.DateTimeFormat('en-CA', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            timeZone: 'Asia/Phnom_Penh'
+        });
+        
+        const formatted = phnomPenhFormatter.format(dateObj); // This will produce YYYY-MM-DD
+        const [year, month, day] = formatted.split('-');
+        return `${day}-${month}-${year}`; // Convert to DD-MM-YYYY format
+    } catch (error) {
+        // Fallback to manual formatting if timezone fails
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const year = dateObj.getFullYear();
+        return `${day}-${month}-${year}`;
+    }
+};
 // Define an interface for your attendance records
 export interface AttendanceRecord {
   id: string; // Firestore document ID

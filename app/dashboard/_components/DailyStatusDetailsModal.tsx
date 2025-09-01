@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useMemo } from "react"; // Ensure useMemo is imported if used for displayMonthLabel
 import { Student, DailyStatusInfo } from "../../_interfaces";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, collection, query, where, getDocs, orderBy } from "firebase/firestore";
 import CardBoxModal from "../../_components/CardBox/Modal";
 import {getStudentDailyStatus} from "../_lib/attendanceLogic";
 import {
@@ -14,6 +14,8 @@ import { RawAttendanceRecord } from "../_lib/attendanceLogic";
 import { PermissionRecord } from "../../_interfaces";
 import Button from "../../_components/Button";
 import { mdiChevronLeft, mdiChevronRight } from "@mdi/js";
+import { getStatusStyles } from "../_lib/statusStyles";
+import { db } from "../../../firebase-config";
 
 // This interface is for the internal state of the calendar grid
 interface CalendarCell {
@@ -29,7 +31,7 @@ interface CalendarCell {
 // Props that this component accepts
 interface Props {
   student: Student;
-  attendanceRecords: RawAttendanceRecord[]; // Use the main AttendanceRecord type
+  attendanceRecords?: RawAttendanceRecord[]; // Make this optional since we'll fetch our own
   allClassConfigs: AllClassConfigs;
   approvedPermissions: PermissionRecord[];
   isActive: boolean;
@@ -41,7 +43,7 @@ const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const DailyStatusDetailsModal: React.FC<Props> = ({
   student,
-  attendanceRecords,
+  attendanceRecords, // This is now optional - we'll fetch our own
   allClassConfigs,
   approvedPermissions,
   isActive,
@@ -53,6 +55,41 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
   const [modalSelectedMonth, setModalSelectedMonth] = useState<string>(
     initialMonthValue || getCurrentYearMonthString()
   );
+  const [monthlyAttendanceRecords, setMonthlyAttendanceRecords] = useState<RawAttendanceRecord[]>([]);
+  
+  // Function to fetch attendance records for a specific month
+  const fetchAttendanceForMonth = async (studentId: string, yearMonth: string) => {
+    try {      
+      const startDate = `${yearMonth}-01`;
+      const endDate = `${yearMonth}-31`;
+      
+      const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('studentId', '==', studentId),
+        where('date', '>=', startDate),
+        where('date', '<=', endDate),
+        orderBy('date', 'asc')
+      );
+      
+      const snapshot = await getDocs(attendanceQuery);
+      const records: RawAttendanceRecord[] = [];
+      
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        records.push({
+          id: doc.id,
+          studentId: data.studentId,
+          date: data.date,
+          status: data.status,
+          timestamp: data.timestamp,
+        });
+      });
+      return records;
+    } catch (error) {
+      console.error('Error fetching attendance records:', error);
+      return [];
+    }
+  };
   
   const handleMonthChange = (direction: 'prev' | 'next') => {
     const [yearStr, monthStr] = modalSelectedMonth.split('-');
@@ -82,11 +119,26 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
   useEffect(() => {
     if (!isActive || !student || !allClassConfigs || !modalSelectedMonth) {
       setCalendarGrid([]);
+      setMonthlyAttendanceRecords([]);
       if (isActive) setIsLoading(false);
       return;
     }
-    setIsLoading(true);
-
+    
+    // Fetch attendance records for the selected month
+    const loadMonthData = async () => {
+      setIsLoading(true);
+      
+      const records = await fetchAttendanceForMonth(student.id, modalSelectedMonth);
+      setMonthlyAttendanceRecords(records);
+      
+      // Continue with calendar generation
+      generateCalendar(records);
+    };
+    
+    loadMonthData();
+  }, [isActive, student?.id, allClassConfigs, approvedPermissions, modalSelectedMonth]);
+  
+  const generateCalendar = (records: RawAttendanceRecord[]) => {
     const [yearStr, monthNumStr] = modalSelectedMonth.split('-');
     const year = parseInt(yearStr);
     const month = parseInt(monthNumStr) - 1;
@@ -95,9 +147,9 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     todayForComparison.setHours(0, 0, 0, 0);
 
     const attendanceMap = new Map<string, RawAttendanceRecord>();
-    attendanceRecords
-      .filter(att => att.date?.startsWith(modalSelectedMonth))
-      .forEach(att => attendanceMap.set(att.date, att));
+    const filteredRecords = records.filter(att => att.date?.startsWith(modalSelectedMonth));
+
+    filteredRecords.forEach(att => attendanceMap.set(att.date, att));
 
     const firstDayOfMonthOfWeek = new Date(year, month, 1).getDay();
     const daysInTargetMonth = new Date(year, month + 1, 0).getDate();
@@ -118,7 +170,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayCounter).padStart(2, '0')}`;
       
       const attendanceRecord = attendanceMap.get(dateStr);
-      
+
       const calculatedStatus = getStudentDailyStatus(
         student,
         dateStr,
@@ -126,7 +178,6 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
         allClassConfigs,
         approvedPermissions
       );
-
       const cellData: CalendarCell = {
         dayOfMonth: dayCounter,
         fullDateStr: dateStr,
@@ -145,21 +196,13 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
 
     setCalendarGrid(grid);
     setIsLoading(false);
-  }, [isActive, student, attendanceRecords, allClassConfigs, approvedPermissions, modalSelectedMonth]);
+  };
 
   const getStatusColor = (status?: DailyStatusInfo['status']): string => {
-    switch (status) {
-      case "Present": return "bg-green-200 text-green-800";
-      case "Late": return "bg-yellow-200 text-yellow-800";
-      case "Absent": return "bg-red-200 text-red-800";
-      case "Permission": return "bg-purple-200 text-purple-800";
-      case "Pending": return "bg-blue-100 text-blue-700";
-      case "Absent (Config Missing)": return "bg-orange-100 text-orange-700";
-      case "No School": return "text-gray-400";
-      case "Not Yet Enrolled": return "text-gray-400 dark:text-slate-500";
-      case "Unknown": return "bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200";
-      default: return "text-transparent";
-    }
+    if (!status) return "text-transparent";
+    
+    const styles = getStatusStyles(status);
+    return styles.badge;
   };
 
   const currentModalMonthLabel = useMemo(() => {
@@ -206,7 +249,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     >
       <div className="mb-4 flex justify-between items-center px-2 sm:px-4 py-2 border-b dark:border-slate-700">
         <Button icon={mdiChevronLeft} onClick={() => handleMonthChange('prev')} small outline color="lightDark" aria-label="Previous Month" disabled={isPrevDisabled} />
-        <h3 className="text-md sm:text-lg font-semibold text-gray-700 dark:text-gray-200">{currentModalMonthLabel}</h3>
+        <h3 className="text-md sm:text-lg text-gray-700 dark:text-gray-200">{currentModalMonthLabel}</h3>
         <Button icon={mdiChevronRight} onClick={() => handleMonthChange('next')} small outline color="lightDark" aria-label="Next Month" disabled={isNextDisabled} />
       </div>
 
@@ -217,7 +260,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
             <thead>
               <tr>
                 {daysOfWeek.map(day => (
-                  <th key={day} className="py-2 px-1 border dark:border-slate-700 font-semibold text-xs text-center">{day}</th>
+                  <th key={day} className="py-2 px-1 border dark:border-slate-700 text-xs text-center">{day}</th>
                 ))}
               </tr>
             </thead>
@@ -230,12 +273,12 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
                       {cell.dayOfMonth && (
                         <>
                           <div className={`absolute top-1 left-1 text-s p-0.5 
-                            ${cell.isToday ? 'font-bold text-sky-600 dark:text-sky-200' : (cell.isPast || cell.status) ? 'text-gray-800 dark:text-gray-100 font-medium' : 'text-gray-400 dark:text-slate-500'}`}>
+                            ${cell.isToday ? 'font-bold text-sky-600 dark:text-sky-200' : (cell.isPast || cell.status) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400 dark:text-slate-500'}`}>
                             {cell.dayOfMonth}
                           </div>
                           <div className="absolute inset-0 top-5 md:top-6 flex flex-col items-center justify-start pt-1 px-0.5 text-center">
                             {cell.status && ["Present", "Late", "Absent", "Pending", "Permission", "Absent (Config Missing)", "Unknown"].includes(cell.status) && (
-                              <span className={`px-1.5 py-0.5 text-xs sm:text-xs rounded-full leading-tight whitespace-nowrap font-semibold ${getStatusColor(cell.status)}`}>
+                              <span className={`px-1.5 py-0.5 text-xs sm:text-xs rounded-full leading-tight whitespace-nowrap border ${getStatusColor(cell.status)}`}>
                                 {cell.status === "Absent (Config Missing)" ? "Absent_@" : cell.status}
                               </span>
                             )}
@@ -245,7 +288,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
                               </span>
                             )}
                             {(cell.status === "No School" || cell.status === "Not Yet Enrolled") && (
-                               <span className={`text-xxs leading-tight opacity-70 ${getStatusColor(cell.status)} ${cell.isToday ? 'font-medium' : ''}`}>
+                               <span className={`text-[0.65rem] leading-tight px-1.5 py-0.5 rounded-full ${getStatusColor(cell.status)} ${cell.isToday ? 'font-medium' : ''}`}>
                                    {cell.status === "No School" ? "Non-School" : "Not Enrolled"}
                                </span>
                             )}

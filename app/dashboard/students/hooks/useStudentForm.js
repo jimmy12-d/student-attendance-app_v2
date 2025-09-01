@@ -19,6 +19,7 @@ export const useStudentForm = (initialData) => {
   const [note, setNote] = useState('');
   const [warning, setWarning] = useState(false);
   const [onWaitlist, setOnWaitlist] = useState(false); // Add waitlist state
+  const [lateFeePermission, setLateFeePermission] = useState(false); // Add late fee permission state
   const [hasTelegramUsername, setHasTelegramUsername] = useState(true);
   const [telegramUsername, setTelegramUsername] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -47,6 +48,7 @@ export const useStudentForm = (initialData) => {
       setNote(initialData.note || '');
       setWarning(initialData.warning || false);
       setOnWaitlist(initialData.onWaitlist || false); // Initialize waitlist from data
+      setLateFeePermission(initialData.lateFeePermission || false); // Initialize late fee permission from data
       setHasTelegramUsername(initialData.hasTelegramUsername !== undefined ? initialData.hasTelegramUsername : true);
       setTelegramUsername(initialData.telegramUsername || '');
       // Default to collapsed in edit mode
@@ -70,6 +72,7 @@ export const useStudentForm = (initialData) => {
       setDiscount('');
       setNote('');
       setWarning(false);
+      setLateFeePermission(false); // Default to false for new students
       setHasTelegramUsername(true);
       setTelegramUsername('');
       setGradeTypeFilter('');
@@ -129,6 +132,9 @@ export const useStudentForm = (initialData) => {
     // Waitlist is a boolean, so we always include it
     data.onWaitlist = onWaitlist;
     
+    // Late fee permission is a boolean, so we always include it
+    data.lateFeePermission = lateFeePermission;
+    
     // If adding to waitlist, set waitlistDate to current timestamp
     if (onWaitlist) {
       data.waitlistDate = new Date();
@@ -168,6 +174,7 @@ export const useStudentForm = (initialData) => {
     note, setNote,
     warning, setWarning,
     onWaitlist, setOnWaitlist, // Add waitlist to exports
+    lateFeePermission, setLateFeePermission, // Add late fee permission to exports
     hasTelegramUsername, setHasTelegramUsername,
     telegramUsername, setTelegramUsername,
     isEditMode,

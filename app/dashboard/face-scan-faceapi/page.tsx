@@ -114,7 +114,7 @@ const FaceApiAttendanceScanner = () => {
     // Define typical shift time ranges (you can adjust these)
     const morningStart = 6 * 60; // 6:00 AM
     const morningEnd = 11 * 60; // 11:00 AM
-    const afternoonEnd = 16 * 60; // 4:00 PM
+    const afternoonEnd = 15 * 60; // 3:00 PM
 
     let autoShift = '';
     if (currentTimeInMinutes >= morningStart && currentTimeInMinutes < morningEnd) {

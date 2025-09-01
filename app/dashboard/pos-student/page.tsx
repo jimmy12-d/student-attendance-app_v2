@@ -880,7 +880,7 @@ const POSStudentPage = () => {
     const copyInstructionsToClipboard = async () => {
         if (!lastTransaction) return;
         
-        const instructions = `Portal Account Setup Instructions:
+        const instructions = `Portal Account Setup Instructions for ${lastTransaction.studentName}:
 
 INSTRUCTIONS:
 1. Click on this link: https://t.me/rodwell_portal_password_bot?start=${lastTransaction.registrationToken || 'TOKEN'}

@@ -184,7 +184,8 @@ export default function AttendanceRecordPage() {
       weekday: 'short',
       year: 'numeric', 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      timeZone: 'Asia/Phnom_Penh'
     });
   };
 
@@ -228,8 +229,17 @@ export default function AttendanceRecordPage() {
 
   // Filter attendance records by selected date
   const filteredAttendanceRecords = useMemo(() => {
+    console.log('Filtering attendance records:', {
+      totalRecords: attendanceRecords.length,
+      selectedDate,
+      sampleRecords: attendanceRecords.slice(0, 3).map(r => ({ id: r.id, date: r.date, studentName: r.studentName }))
+    });
+    
     const filtered = attendanceRecords.filter(record => {
-      if (!record.date) return false;
+      if (!record.date) {
+        console.log('Skipping record with no date:', record.id);
+        return false;
+      }
       
       // Handle both date formats: "2025-09-01" and "Mon Sep 01 2025"
       const recordDate = record.date.split('T')[0]; // Handle ISO with time
@@ -245,13 +255,19 @@ export default function AttendanceRecordPage() {
         const selectedDateObj = new Date(selectedDate + 'T00:00:00');
         const selectedDateString = selectedDateObj.toDateString();
         if (record.date === selectedDateString) {
+          console.log('Matched toDateString format:', { recordId: record.id, recordDate: record.date, selectedDateString });
           return true;
         }
       } catch (error) {
-        // Ignore date parsing errors
+        console.warn('Date parsing error in filter:', error, { recordDate: record.date, selectedDate });
       }
       
       return false;
+    });
+    
+    console.log('Filtered results:', {
+      filteredCount: filtered.length,
+      filteredRecordIds: filtered.map(r => r.id)
     });
         
     return filtered;
@@ -260,10 +276,26 @@ export default function AttendanceRecordPage() {
   // Compute a display string for the table title.
   const tableDateDisplay = useMemo(() => {
     const uniqueDates = Array.from(new Set(filteredAttendanceRecords.map(r => r.date).filter(Boolean)));
+    
+    // Debug logging for date processing
+    console.log('Processing dates for table display:', {
+      totalRecords: filteredAttendanceRecords.length,
+      uniqueDates,
+      selectedDate,
+      uniqueDatesDetailed: uniqueDates.map(date => ({
+        rawDate: date,
+        type: typeof date,
+        includes_dash: date.includes('-'),
+        split_result: date.split('T')[0]
+      }))
+    });
+    
     if (uniqueDates.length === 0) return '';
 
     if (uniqueDates.length === 1) {
       const raw = uniqueDates[0];
+      console.log(`Processing single date: ${raw}`);
+      
       try {
         // Handle ISO like '2025-09-01' or '2025-09-01T12:00:00'
         let dateObj: Date;
@@ -272,17 +304,53 @@ export default function AttendanceRecordPage() {
         } else {
           dateObj = new Date(raw);
         }
+        
         if (!isNaN(dateObj.getTime())) {
-          return `· ${dateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}`;
+          // Use Phnom Penh timezone for consistent display
+          const phnomPenhDate = dateObj.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric',
+            timeZone: 'Asia/Phnom_Penh'
+          });
+          console.log(`Formatted date with Phnom Penh timezone: ${phnomPenhDate}`);
+          return `· ${phnomPenhDate}`;
         }
       } catch (e) {
-        // fallthrough
+        console.warn('Date parsing error:', e, 'for raw date:', raw);
       }
 
+      console.log(`Fallback to raw date: ${raw}`);
       return `· ${raw}`;
     }
 
-    return `· ${uniqueDates.length} dates`;
+    // Handle multiple unique dates - show them all for debugging
+    console.log('Multiple unique dates found:', uniqueDates);
+    const datesList = uniqueDates.map(raw => {
+      try {
+        let dateObj: Date;
+        if (raw.includes('-')) {
+          dateObj = new Date(raw.split('T')[0] + 'T00:00:00');
+        } else {
+          dateObj = new Date(raw);
+        }
+        
+        if (!isNaN(dateObj.getTime())) {
+          return dateObj.toLocaleDateString('en-US', { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric',
+            timeZone: 'Asia/Phnom_Penh'
+          });
+        }
+      } catch (e) {
+        console.warn('Date parsing error for multiple dates:', e, 'for raw date:', raw);
+      }
+      return raw;
+    }).join(', ');
+
+    return `· ${datesList}`;
   }, [filteredAttendanceRecords]);
   const attendanceStats = useMemo((): AttendanceStats => {
     if (!allClassConfigs || students.length === 0) {

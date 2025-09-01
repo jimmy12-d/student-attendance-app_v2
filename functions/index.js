@@ -159,6 +159,12 @@ exports.telegramWebhook = onRequest({
 
         console.log(`Received message from chatId ${chatId}: ${text}`);
 
+        // Handle non-text messages (photos, stickers, etc.)
+        if (!text || typeof text !== 'string') {
+            console.log(`Non-text message received from chatId ${chatId}, ignoring`);
+            return res.status(200).send('OK');
+        }
+
         if (text.startsWith('/start')) {
             // Handle /start command with optional token parameter
             const parts = text.split(' ');

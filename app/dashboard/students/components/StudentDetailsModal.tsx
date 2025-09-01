@@ -3,7 +3,7 @@ import { Student } from '../../../_interfaces';
 import DailyStatusDetailsModal from '../../_components/DailyStatusDetailsModal';
 import StarManagementSection from './StarManagementSection';
 import ClaimedStarsHistory from './ClaimedStarsHistory';
-import { Timestamp, collection, query, where, getDocs, doc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { Timestamp, collection, query, where, getDocs, doc, updateDoc, onSnapshot, deleteDoc, orderBy } from 'firebase/firestore';
 import { db } from '../../../../firebase-config';
 import { RawAttendanceRecord } from '../../_lib/attendanceLogic';
 import { PermissionRecord, ClaimedStar } from '../../../_interfaces';
@@ -119,21 +119,39 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   const fetchAttendanceData = async (studentId: string) => {
     setIsLoadingAttendance(true);
     try {
-      // Get current month
+      // Fetch records for a wide range to support month navigation in the modal
       const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1; // JavaScript months are 0-indexed
+      const currentYear = now.getFullYear();
       
-      // Create start and end dates for the current month
-      const startDate = `${year}-${month.toString().padStart(2, '0')}-01`;
-      const endDate = `${year}-${month.toString().padStart(2, '0')}-31`;
+      // Fetch from 6 months ago to 1 month in future to support navigation
+      const startMonth = now.getMonth() - 5; // 6 months back
+      const endMonth = now.getMonth() + 1; // 1 month forward
       
-      // Fetch attendance records
+      let startDate, endDate;
+      
+      if (startMonth >= 0) {
+        startDate = `${currentYear}-${(startMonth + 1).toString().padStart(2, '0')}-01`;
+      } else {
+        const prevYear = currentYear - 1;
+        const adjustedStartMonth = 12 + startMonth + 1;
+        startDate = `${prevYear}-${adjustedStartMonth.toString().padStart(2, '0')}-01`;
+      }
+      
+      if (endMonth <= 12) {
+        endDate = `${currentYear}-${endMonth.toString().padStart(2, '0')}-31`;
+      } else {
+        const nextYear = currentYear + 1;
+        const adjustedEndMonth = endMonth - 12;
+        endDate = `${nextYear}-${adjustedEndMonth.toString().padStart(2, '0')}-31`;
+      }
+      
+      // Fetch attendance records with wider date range
       const attendanceQuery = query(
         collection(db, 'attendance'),
         where('studentId', '==', studentId),
         where('date', '>=', startDate),
-        where('date', '<=', endDate)
+        where('date', '<=', endDate),
+        orderBy('date', 'desc')
       );
       
       const attendanceSnapshot = await getDocs(attendanceQuery);
@@ -173,8 +191,6 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           // Filter for permissions that belong to this student and are approved
           return record.status === 'approved' && record.studentId === studentId;
         }) as PermissionRecord[];
-      
-      console.log(`Fetched ${permissionsData.length} approved permissions for student ${studentId}:`, permissionsData);
       
       setAttendanceRecords(attendanceData);
       setApprovedPermissions(permissionsData);
@@ -617,14 +633,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                         src={getDisplayableImageUrl(student.photoUrl) || ''}
                         alt={student.fullName}
                         className="w-full h-full object-cover"
-                        onLoad={(e) => {
-                          console.log('Modal image loaded successfully:', e.currentTarget.src);
-                          console.log('Original photoUrl was:', student.photoUrl);
-                        }}
                         onError={(e) => {
-                          console.error('Modal image failed to load:', e.currentTarget.src);
-                          console.error('Original URL:', student.photoUrl);
-                          console.error('Trying alternative approach...');
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
                           const fallback = target.nextElementSibling as HTMLElement;

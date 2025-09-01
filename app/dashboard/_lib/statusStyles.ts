@@ -91,8 +91,8 @@ export const getStatusStyles = (status: string, useSvg: boolean = false): Status
       };
     case 'no school':
       return {
-        badge: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800',
-        cardBg: 'bg-gradient-to-br from-purple-500 to-indigo-600',
+        badge: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700',
+        cardBg: 'bg-gradient-to-br from-gray-500 to-slate-600',
         icon: mdiAccountCheckOutline,
         textColor: 'text-white',
         tableCell: 'bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200',
