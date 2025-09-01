@@ -11,6 +11,7 @@ import { auth, db } from '../../firebase-config';
 import { mdiLogout, mdiMagnify, mdiContentSave } from '@mdi/js';
 import { collection, query, where, getDocs, updateDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
+import RouteGuard from '../_components/RouteGuard';
 
 interface Student {
   id: string;
@@ -732,4 +733,12 @@ const TeacherDashboard = () => {
   );
 };
 
-export default TeacherDashboard;
+const ProtectedTeacherDashboard = () => {
+  return (
+    <RouteGuard requiredRole="teacher">
+      <TeacherDashboard />
+    </RouteGuard>
+  );
+};
+
+export default ProtectedTeacherDashboard;

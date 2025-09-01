@@ -3,7 +3,7 @@ import { Student } from '../../../_interfaces';
 import DailyStatusDetailsModal from '../../_components/DailyStatusDetailsModal';
 import StarManagementSection from './StarManagementSection';
 import ClaimedStarsHistory from './ClaimedStarsHistory';
-import { Timestamp, collection, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { Timestamp, collection, query, where, getDocs, doc, updateDoc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../../firebase-config';
 import { RawAttendanceRecord } from '../../_lib/attendanceLogic';
 import { PermissionRecord, ClaimedStar } from '../../../_interfaces';
@@ -383,7 +383,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto mt-10">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 transition-opacity"
@@ -698,6 +698,16 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                     claimedStars={claimedStars}
                     totalStars={totalStars}
                     isCompact={true}
+                    onDelete={async (id: string) => {
+                      if (!student?.id) return;
+                      try {
+                        await deleteDoc(doc(db, 'students', student.id, 'claimedStars', id));
+                        toast.success('Claimed star deleted');
+                      } catch (error) {
+                        console.error('Failed to delete claimed star:', error);
+                        toast.error('Failed to delete claimed star');
+                      }
+                    }}
                   />
                 </div>
 

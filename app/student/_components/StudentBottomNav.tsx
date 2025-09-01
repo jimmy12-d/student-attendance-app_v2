@@ -9,17 +9,20 @@ import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
 import { useAppSelector } from '@/app/_stores/hooks';
+import { useTranslations, useLocale } from 'next-intl';
 
 export const navItems = [
-  { name: 'Home', href: '/student/attendance', icon: mdiHome },
-  { name: 'Mock Exam', href: '/student/mock-exam', icon: mdiFileDocumentEdit },
-  { name: 'Account', href: '/student/account', icon: mdiAccountCircle },
+  { name: 'Home', href: '/student/attendance', icon: mdiHome, translationKey: 'home' },
+  { name: 'Mock Exam', href: '/student/mock-exam', icon: mdiFileDocumentEdit, translationKey: 'mockExam' },
+  { name: 'Account', href: '/student/account', icon: mdiAccountCircle, translationKey: 'account' },
 ];
 
 export default function StudentBottomNav() {
   const pathname = usePathname();
   const [currentNavItems, setCurrentNavItems] = useState(navItems);
   const isBottomNavVisible = useAppSelector((state) => state.main.isBottomNavVisible);
+  const t = useTranslations('navigation');
+  const locale = useLocale();
 
 
   useEffect(() => {
@@ -87,13 +90,13 @@ export default function StudentBottomNav() {
                 <AnimatePresence>
                   {!isActive && (
                     <motion.span
-                      className="absolute bottom-1 text-xs"
+                      className={`absolute bottom-1 text-xs ${locale === 'kh' ? 'khmer-font' : ''}`}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                  {item.name}
+                  {t(item.translationKey)}
                     </motion.span>
                   )}
                 </AnimatePresence>

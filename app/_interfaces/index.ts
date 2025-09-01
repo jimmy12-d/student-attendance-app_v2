@@ -152,6 +152,9 @@ export interface PermissionRecord {
   permissionEndDate: string;   // "YYYY-MM-DD"
   duration?: number; // Added from actual data
   reason: string;
+  // Optional translation key for the reason (preferred). If present, UI will
+  // use this key to look up translations under `student.attendance.reasons`.
+  reasonKey?: string;
   details?: string;
   status: 'pending' | 'approved' | 'rejected';
   requestedAt: Timestamp; // Changed from requestDate to match actual data

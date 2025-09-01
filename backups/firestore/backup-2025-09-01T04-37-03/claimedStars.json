@@ -1,0 +1,13 @@
+{
+  "collection": "claimedStars",
+  "totalDocuments": 1,
+  "backupTimestamp": "2025-09-01T04:37:07.649Z",
+  "documents": [
+    {
+      "id": "3zcwntbBUWtV7d0tc0Xn",
+      "data": {
+        "test": "t"
+      }
+    }
+  ]
+}

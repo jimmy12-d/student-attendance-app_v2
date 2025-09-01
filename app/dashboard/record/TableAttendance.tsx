@@ -57,6 +57,17 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
   const [currentPage, setCurrentPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Determine a date to show in the table title. If multiple dates exist, show a summary.
+  const uniqueDates = Array.from(new Set(records.map(r => r.date).filter(Boolean)));
+  let tableDateDisplay = '';
+  if (uniqueDates.length === 0) {
+    tableDateDisplay = 'No date selected';
+  } else if (uniqueDates.length === 1) {
+    tableDateDisplay = formatDateToDDMMYYYY(uniqueDates[0]);
+  } else {
+    tableDateDisplay = `${uniqueDates.length} dates`;
+  }
+
   // Filter records based on search term
   const filteredRecords = records.filter(record =>
     record.studentName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -108,12 +119,12 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
 
   return (
     <>
-      {/* Search Filter */}
+      {/* Search Filter (title moved to page header) */}
       <div className="mb-4 flex items-center justify-between">
         <div className="relative flex-1 max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg 
-              className="h-5 w-5 text-gray-400" 
+              className="h-5 w-5 mt-4 ml-4 text-gray-400" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -131,7 +142,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
             placeholder="Search by student name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            className="block w-full pl-10 pr-3 py-2 mt-4 ml-4 border border-gray-300 dark:border-gray-600 rounded-lg leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           />
           {searchTerm && (
             <button
@@ -154,7 +165,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
             </button>
           )}
         </div>
-        <div className="ml-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
+        <div className="mr-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
           Showing {filteredRecords.length} of {records.length} records
         </div>
       </div>
@@ -175,9 +186,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Date
-              </th>
+              {/* Date column removed - date displayed in the title */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 <div className="flex items-center">
                   Time
@@ -209,12 +218,12 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
+                <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
+                  <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
                     {record.class || 'N/A'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                     record.shift?.toLowerCase() === 'morning' 
                       ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
@@ -227,19 +236,12 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
                     {record.shift || 'N/A'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-center">
+                <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
                   {renderStatusBadge(record.status)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{formatDateToDDMMYYYY(record.date)}</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {new Date(record.date).toLocaleDateString('en-US', { weekday: 'short' })}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                  <div className="flex items-center">
+                {/* Date cell removed - date displayed in the title */}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center align-middle">
+                  <div className="flex items-center justify-center">
                     <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>

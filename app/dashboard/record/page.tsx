@@ -256,6 +256,34 @@ export default function AttendanceRecordPage() {
         
     return filtered;
   }, [attendanceRecords, selectedDate]);
+
+  // Compute a display string for the table title.
+  const tableDateDisplay = useMemo(() => {
+    const uniqueDates = Array.from(new Set(filteredAttendanceRecords.map(r => r.date).filter(Boolean)));
+    if (uniqueDates.length === 0) return '';
+
+    if (uniqueDates.length === 1) {
+      const raw = uniqueDates[0];
+      try {
+        // Handle ISO like '2025-09-01' or '2025-09-01T12:00:00'
+        let dateObj: Date;
+        if (raw.includes('-')) {
+          dateObj = new Date(raw.split('T')[0] + 'T00:00:00');
+        } else {
+          dateObj = new Date(raw);
+        }
+        if (!isNaN(dateObj.getTime())) {
+          return `· ${dateObj.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}`;
+        }
+      } catch (e) {
+        // fallthrough
+      }
+
+      return `· ${raw}`;
+    }
+
+    return `· ${uniqueDates.length} dates`;
+  }, [filteredAttendanceRecords]);
   const attendanceStats = useMemo((): AttendanceStats => {
     if (!allClassConfigs || students.length === 0) {
       // Return basic counts if configs not loaded yet
@@ -1108,7 +1136,7 @@ export default function AttendanceRecordPage() {
               </div>
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                  Attendance Records
+                  Attendance Records {tableDateDisplay}
                   {isUpdating && <LoadingSpinner size="sm" />}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 flex items-center gap-2">

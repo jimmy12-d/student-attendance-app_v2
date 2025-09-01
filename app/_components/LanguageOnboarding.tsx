@@ -55,7 +55,7 @@ export default function LanguageOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-900 flex items-center justify-center p-4">
+    <div className="z-4000 min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* App Logo/Icon */}
         <div className="text-center mb-8">

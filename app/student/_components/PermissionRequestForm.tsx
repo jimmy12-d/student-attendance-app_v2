@@ -1,5 +1,6 @@
 "use client";
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { useAppSelector } from '../../_stores/hooks';
 import { db } from '../../../firebase-config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
@@ -16,25 +17,26 @@ type Props = {
 };
 
 export const PermissionRequestForm = ({ onSuccess }: Props) => {
+  const t = useTranslations('student.attendance');
   const studentDocId = useAppSelector((state) => state.main.studentDocId);
   const studentAuthUid = useAppSelector((state) => state.main.userUid);
   const userName = useAppSelector((state) => state.main.userName);
 
   const reasonOptions = [
-    { value: 'Sickness', label: 'Sickness' },
-    { value: 'Family Event', label: 'Family Event' },
-    { value: 'Appointment', label: 'Appointment' },
+    { value: 'Sickness', label: t('reasons.sickness') },
+    { value: 'Family Event', label: t('reasons.familyEvent') },
+    { value: 'Appointment', label: t('reasons.appointment') },
   ];
 
   const validationSchema = Yup.object().shape({
-    permissionStartDate: Yup.date().required('Start date is required'),
-    duration: Yup.number().min(1, 'Duration must be at least 1 day').required('Duration is required'),
-    reason: Yup.string().required('Please select or specify a reason'),
+    permissionStartDate: Yup.date().required(t('validation.startDateRequired')),
+    duration: Yup.number().min(1, t('validation.durationMin')).required(t('validation.durationRequired')),
+    reason: Yup.string().required(t('validation.reasonRequired')),
     details: Yup.string()
-      .required('Details are required')
+      .required(t('validation.detailsRequired'))
       .test(
         'min-words',
-        'Details must be at least 10 words long',
+        t('validation.detailsMinWords'),
         (value) => (value || '').split(/\s+/).filter(Boolean).length >= 10
       ),
   });
@@ -45,7 +47,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
     }
 
     if (!studentDocId || !studentAuthUid) {
-      toast.error('Error: User not authenticated properly.');
+      toast.error(t('errorNotAuthenticated'));
       setSubmitting(false);
       return;
     }
@@ -72,7 +74,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
     const submissionPromise = addDoc(collection(db, 'permissions'), newPermissionRequest);
 
     toast.promise(submissionPromise, {
-      loading: 'Submitting request...',
+      loading: t('submittingRequest'),
       success: () => {
         resetForm({
           values: {
@@ -83,18 +85,18 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
           }
         });
         setSubmitting(false);
-        return 'Permission request submitted successfully!';
+        return t('requestSuccess');
       },
       error: (err) => {
         setSubmitting(false);
         console.error('Error submitting permission request:', err);
-        return 'An error occurred. Please try again.';
+        return t('requestError');
       },
     });
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-lg mb-4">
+    <div className="rounded-lg mb-4">
       <Formik
         initialValues={{
           permissionStartDate: '',
@@ -109,12 +111,12 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
           
           <Form className="space-y-2">
             <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-              <FormField label="Start Date" labelFor="permissionStartDate">
+              <FormField label={t('startDate')} labelFor="permissionStartDate">
                 {(fieldData) => (
                   <Field id="permissionStartDate" name="permissionStartDate" type="date" {...fieldData} />
                 )}
               </FormField>
-              <FormField label="Duration (days)" labelFor="duration">
+              <FormField label={t('durationDays')} labelFor="duration">
                 {() => (
                   <DurationSelector
                     value={values.duration}
@@ -124,7 +126,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
               </FormField>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Reason" labelFor="reason">
+              <FormField label={t('reasonLabel')} labelFor="reason">
                 {(fieldData) => (
                   <CustomSingleSelectDropdown
                     options={reasonOptions}
@@ -136,9 +138,9 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
                 )}
               </FormField>
 
-              <FormField label="Details (min. 10 words)" labelFor="details" hasTextareaHeight>
+              <FormField label={t('detailsLabel')} labelFor="details" hasTextareaHeight>
                 {(fieldData) => (
-                  <Field id="details" name="details" as="textarea" {...fieldData} placeholder="Please provide specific details about your absence..." />
+                  <Field id="details" name="details" as="textarea" {...fieldData} placeholder={t('detailsPlaceholder')} />
                 )}
               </FormField>
             </div>
@@ -149,7 +151,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
               <Button
                 type="submit"
                 color="company-purple"
-                label={isSubmitting ? 'Submitting...' : 'Submit Request'}
+                label={isSubmitting ? t('submitting') : t('submitRequest')}
                 disabled={isSubmitting}
               />
             </div>

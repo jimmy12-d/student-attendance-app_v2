@@ -7,10 +7,10 @@ import { useRouter, usePathname } from "next/navigation";
 // Firebase Authentication
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../../firebase-config";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore";
 
 // Redux
-import { useAppDispatch } from "../_stores/hooks";
+import { useAppDispatch, useAppSelector } from "../_stores/hooks";
 import { setUser } from "../_stores/mainSlice";
 
 // Your existing imports
@@ -100,17 +100,36 @@ export default function LayoutAuthenticated({ children }: Props) {
 
   // Auth state listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        dispatch(
-          setUser({
-            name: user.displayName,
-            email: user.email,
-            avatar: user.photoURL,
-            uid: user.uid,
-          })
-        );
-        setIsAuthenticated(true);
+        // Check if user is authorized admin
+        if (user.email) {
+          const authorizedUserRef = doc(db, "authorizedUsers", user.email);
+          const authorizedUserSnap = await getDoc(authorizedUserRef);
+          
+          if (authorizedUserSnap.exists()) {
+            dispatch(
+              setUser({
+                name: user.displayName,
+                email: user.email,
+                avatar: user.photoURL,
+                uid: user.uid,
+                role: "admin",
+              })
+            );
+            setIsAuthenticated(true);
+          } else {
+            // User is authenticated but not authorized for admin access
+            dispatch(setUser(null));
+            setIsAuthenticated(false);
+            router.replace("/login");
+          }
+        } else {
+          // No email, cannot verify admin status
+          dispatch(setUser(null));
+          setIsAuthenticated(false);
+          router.replace("/login");
+        }
       } else {
         dispatch(setUser(null));
         setIsAuthenticated(false);

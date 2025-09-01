@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { PermissionRecord } from '../../_interfaces';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -8,6 +9,8 @@ interface OngoingPermissionsProps {
 }
 
 const OngoingPermissions: React.FC<OngoingPermissionsProps> = ({ permissions, isLoading }) => {
+  const t = useTranslations('student.attendance');
+  const locale = useLocale();
   const [ripples, setRipples] = useState<{ [key: string]: any[] }>({});
 
   const createRipple = (event: React.MouseEvent<HTMLDivElement, MouseEvent>, permissionId: string) => {
@@ -52,9 +55,15 @@ const OngoingPermissions: React.FC<OngoingPermissionsProps> = ({ permissions, is
 
   if (permissions.length === 0) {
     return (
-      <div className="text-center text-gray-500 dark:text-slate-500 py-8">
-        No permission requests in the last 30 days.
-      </div>
+      <motion.div 
+        key={locale}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className={`text-center text-gray-500 dark:text-slate-500 py-8 ${locale === 'kh' ? 'khmer-font' : ''}`}
+      >
+        {t('noPermissionRequests')}
+      </motion.div>
     );
   }
 
@@ -69,7 +78,7 @@ const OngoingPermissions: React.FC<OngoingPermissionsProps> = ({ permissions, is
   };
   
   const formatDate = (dateString: string) => {
-    return new Date(dateString.replace(/-/g, '\/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return new Date(dateString.replace(/-/g, '\/')).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
   const getStatusInfo = (status: string) => {
@@ -78,21 +87,21 @@ const OngoingPermissions: React.FC<OngoingPermissionsProps> = ({ permissions, is
         return { 
           borderColor: 'border-l-4 border-l-green-500 dark:border-l-green-400', 
           badgeStyle: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800',
-          tag: 'Approved', 
+          tag: 'approved', 
           rippleColor: 'rgba(34, 197, 94, 0.4)' 
         };
       case 'pending':
         return { 
           borderColor: 'border-l-4 border-l-amber-500 dark:border-l-amber-400', 
           badgeStyle: 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700',
-          tag: 'Pending', 
+          tag: 'pending', 
           rippleColor: 'rgba(245, 158, 11, 0.4)' 
         };
       case 'rejected':
         return { 
           borderColor: 'border-l-4 border-l-red-500 dark:border-l-red-400', 
           badgeStyle: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800',
-          tag: 'Rejected', 
+          tag: 'rejected', 
           rippleColor: 'rgba(239, 68, 68, 0.4)' 
         };
       default:
@@ -106,7 +115,13 @@ const OngoingPermissions: React.FC<OngoingPermissionsProps> = ({ permissions, is
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <motion.div 
+      key={locale}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeInOut" }}
+      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+    >
       {permissions.map(permission => {
         const { borderColor, badgeStyle, tag, rippleColor } = getStatusInfo(permission.status);
         const progress = calculateProgress(permission.permissionStartDate, permission.permissionEndDate);
@@ -124,12 +139,21 @@ const OngoingPermissions: React.FC<OngoingPermissionsProps> = ({ permissions, is
               </div>
               <div className="flex-1 ml-3">
                 <p className="font-semibold text-gray-900 dark:text-white">{permission.studentName}</p>
-                <p className="text-sm text-gray-600 dark:text-slate-400">{permission.reason}</p>
+                {/* Keep reason text in English as stored in database */}
+                <p className="text-sm text-gray-600 dark:text-slate-400">
+                  {permission.reason}
+                </p>
               </div>
               {tag && (
-                <div className={`text-xs font-medium px-2 py-1 -mt-4 rounded-md ${badgeStyle}`}>
-                  {tag}
-                </div>
+                <motion.div 
+                  key={`${permission.id}-${locale}`}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className={`text-xs font-medium px-2 py-1 -mt-4 rounded-md ${badgeStyle} ${locale === 'kh' ? 'khmer-font' : ''}`}
+                >
+                  {t(tag)}
+                </motion.div>
               )}
             </div>
             
@@ -139,9 +163,15 @@ const OngoingPermissions: React.FC<OngoingPermissionsProps> = ({ permissions, is
                   <div className="bg-purple-500 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
                 </div>
               )}
-              <div className="text-xs text-gray-500 dark:text-slate-500">
-                  <span>{formatDate(permission.permissionStartDate)} to {formatDate(permission.permissionEndDate)}</span>
-              </div>
+              <motion.div 
+                key={`${permission.id}-date-${locale}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+                className={`text-xs text-gray-500 dark:text-slate-500 ${locale === 'kh' ? 'khmer-font' : ''}`}
+              >
+                <span>{formatDate(permission.permissionStartDate)} {t('to')} {formatDate(permission.permissionEndDate)}</span>
+              </motion.div>
             </div>
             <AnimatePresence>
               {(ripples[permission.id] || []).map((ripple) => (
@@ -165,7 +195,7 @@ const OngoingPermissions: React.FC<OngoingPermissionsProps> = ({ permissions, is
           </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 };
 

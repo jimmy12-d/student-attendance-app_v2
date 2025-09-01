@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { mdiStar, mdiStarOutline } from '@mdi/js';
+import { mdiStar, mdiStarOutline, mdiDelete } from '@mdi/js';
 import Icon from '../../../_components/Icon';
 import { ClaimedStar } from '../../../_interfaces';
 
@@ -9,6 +9,7 @@ interface ClaimedStarsHistoryProps {
   claimedStars: ClaimedStar[];
   totalStars: number;
   isCompact?: boolean; // For use below copy permission link
+  onDelete?: (id: string) => void;
 }
 
 const STAR_COLORS = {
@@ -31,8 +32,14 @@ const formatDate = (timestamp: any) => {
 export const ClaimedStarsHistory: React.FC<ClaimedStarsHistoryProps> = ({
   claimedStars,
   totalStars,
-  isCompact = false
+  isCompact = false,
+  onDelete
 }) => {
+  const handleDelete = (id: string) => {
+    const ok = window.confirm('Are you sure you want to delete this claimed star? This action cannot be undone.');
+    if (!ok) return;
+    if (onDelete) onDelete(id);
+  };
   if (isCompact) {
     return (
       <div className="mt-4 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
@@ -60,7 +67,7 @@ export const ClaimedStarsHistory: React.FC<ClaimedStarsHistoryProps> = ({
                 >
                   <div className="flex items-center space-x-2">
                     <div className={`flex items-center justify-center w-6 h-6 rounded-full ${colorConfig.bgClass} ring-1 ${colorConfig.ringClass}`}>
-                      <Icon path={mdiStar} size={12} className={colorConfig.textClass} />
+                      <Icon path={mdiStar} size={16} className={colorConfig.textClass} />
                     </div>
                     <div>
                       <p className="text-xs font-medium text-gray-900 dark:text-gray-100">
@@ -71,11 +78,18 @@ export const ClaimedStarsHistory: React.FC<ClaimedStarsHistoryProps> = ({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Icon path={mdiStar} size={10} className="text-yellow-500" />
-                    <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-                      +{claimed.amount}
-                    </span>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center">
+                      <Icon path={mdiStar} size={16} className="text-yellow-500" />
+                      <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">+{claimed.amount}</span>
+                    </div>
+                    <button
+                      onClick={() => handleDelete(claimed.id)}
+                      title="Delete"
+                      className="rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <Icon path={mdiDelete} size={12} className="text-red-500" />
+                    </button>
                   </div>
                 </div>
               );

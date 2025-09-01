@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import DarkModeToggle from '@/app/student/_components/DarkModeToggle';
+import LanguageToggle from '@/app/student/_components/LanguageToggle';
 import CardBoxModal from '@/app/_components/CardBox/Modal';
 import { useAppDispatch } from '@/app/_stores/hooks';
 import { setUser } from '@/app/_stores/mainSlice';
@@ -11,10 +12,12 @@ import { auth } from '@/firebase-config';
 import { useRouter } from 'next/navigation';
 import { usePWANavigation } from '@/app/_hooks/usePWANavigation';
 import { usePWAInstall } from '@/app/_hooks/usePWAInstall';
+import { useTranslations, useLocale } from 'next-intl';
+import { motion } from 'framer-motion';
 
 // --- Import components for settings ---
 import NotificationSettings from '../_components/NotificationSettings';
-import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle } from '@mdi/js';
+import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle, mdiWeb } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
 
 // --- Reusable UI Components for the new design ---
@@ -29,6 +32,8 @@ const SettingsListItem = ({
   onClick,
   href,
   isDestructive = false,
+  titleClassName = '',
+  subtitleClassName = '',
 }: {
   icon?: string;
   iconPath?: string;
@@ -39,6 +44,8 @@ const SettingsListItem = ({
   onClick?: () => void;
   href?: string;
   isDestructive?: boolean;
+  titleClassName?: string;
+  subtitleClassName?: string;
 }) => {
   const content = (
     <>
@@ -51,11 +58,11 @@ const SettingsListItem = ({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className={`font-semibold text-lg ${isDestructive ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+          <h3 className={`font-semibold text-lg ${isDestructive ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'} ${titleClassName}`}>
             {title}
           </h3>
           {subtitle && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className={`text-sm text-gray-500 dark:text-gray-400 mt-0.5 ${subtitleClassName}`}>
               {subtitle}
             </p>
           )}
@@ -112,6 +119,15 @@ const AccountPage = () => {
   const router = useRouter();
   const { navigateWithinPWA } = usePWANavigation();
   const { canInstallPWA, isStandalone, isIOS, triggerInstall } = usePWAInstall();
+  const t = useTranslations('student.account');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
+
+  // Utility function for Khmer font styling
+  const khmerFont = (additionalClasses = '') => {
+    const baseClasses = locale === 'kh' ? 'khmer-font' : '';
+    return additionalClasses ? `${baseClasses} ${additionalClasses}`.trim() : baseClasses;
+  };
 
   const [isLogoutModalActive, setIsLogoutModalActive] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
@@ -134,139 +150,234 @@ const AccountPage = () => {
   return (
     <>
       <CardBoxModal
-        title="Confirm Logout"
+        title={t('confirmLogoutTitle')}
         buttonColor="danger"
-        buttonLabel="Confirm"
+        buttonLabel={tCommon('confirm')}
         isActive={isLogoutModalActive}
         onConfirm={handleLogout}
         onCancel={() => setIsLogoutModalActive(false)}
       >
-        <p>Are you sure you want to log out?</p>
+        <p className={khmerFont()}>{t('confirmLogoutDescription')}</p>
       </CardBoxModal>
 
       <CardBoxModal
-        title="Install App on iOS"
+        title={t('installIOSTitle')}
         buttonColor="info"
-        buttonLabel="Got it"
+        buttonLabel={t('installIOSButton')}
         isActive={showIOSInstructions}
         onConfirm={() => setShowIOSInstructions(false)}
         onCancel={() => setShowIOSInstructions(false)}
       >
-        <div className="space-y-3 text-sm">
-          <p>To install this app on your iOS device:</p>
-          <ol className="list-decimal list-inside space-y-2 text-gray-600 dark:text-gray-300">
-            <li>Tap the <strong>Share</strong> button in Safari's toolbar</li>
-            <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-            <li>Tap <strong>"Add"</strong> to install the app</li>
-          </ol>
-        </div>
+        <motion.div 
+          key={locale}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className={khmerFont('space-y-3 text-sm')}
+        >
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            {t('installIOSIntro')}
+          </motion.p>
+          <motion.ol 
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="list-decimal list-inside space-y-2 text-gray-600 dark:text-gray-300"
+          >
+            <motion.li 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+              className={khmerFont()}
+            >
+              {t.rich('installIOSStep1', {
+                strong: (chunks) => <strong>{chunks}</strong>
+              })}
+            </motion.li>
+            <motion.li 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.4 }}
+              className={khmerFont()}
+            >
+              {t.rich('installIOSStep2', {
+                strong: (chunks) => <strong>{chunks}</strong>
+              })}
+            </motion.li>
+            <motion.li 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.5 }}
+              className={khmerFont()}
+            >
+              {t.rich('installIOSStep3', {
+                strong: (chunks) => <strong>{chunks}</strong>
+              })}
+            </motion.li>
+          </motion.ol>
+        </motion.div>
       </CardBoxModal>
 
-      <div className="pb-24 px-1">
+      <motion.div 
+        key={locale}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        className="px-1"
+      >
         {/* Modern Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-3 mb-2">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="text-center mb-6"
+        >
+            <div className="flex items-center justify-center space-x-3 mb-2">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
               <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
-              Account Settings
+            <h1 className={khmerFont('text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent')}>
+              {t('pageTitle')}
             </h1>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Manage your preferences and account details
+          <p className={khmerFont('text-gray-500 dark:text-gray-400 text-sm')}>
+            {t('pageDescription')}
           </p>
-        </div>
+        </motion.div>
 
-        <div className="space-y-6">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="space-y-6"
+        >
           {/* Preferences Group */}
-          <div>
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4">
-              Preferences
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
+            <h2 className={khmerFont('text-base font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4')}>
+              {t('preferencesHeading')}
             </h2>
             <SettingsGroup>
               <SettingsListItem
                 iconPath={mdiBell}
                 iconBgColor="bg-gradient-to-br from-red-500 to-pink-600"
-                title="Notifications"
-                subtitle="Manage your alert preferences"
+                title={t('notifications')}
+                subtitle={t('notificationsSubtitle')}
+                titleClassName={khmerFont()}
+                subtitleClassName={khmerFont()}
               >
                 <NotificationSettings />
               </SettingsListItem>
               <ListDivider />
               <SettingsListItem
+                iconPath={mdiWeb}
+                iconBgColor="bg-gradient-to-br from-orange-500 to-red-600"
+                title={t('language')}
+                subtitle={t('languageSubtitle')}
+                titleClassName={khmerFont()}
+                subtitleClassName={khmerFont()}
+              >
+                <LanguageToggle />
+              </SettingsListItem>
+              <ListDivider />
+              <SettingsListItem
                 iconPath={mdiPalette}
                 iconBgColor="bg-gradient-to-br from-indigo-500 to-purple-600"
-                title="Appearance"
-                subtitle="Toggle dark mode theme"
+                title={t('appearanceTitle')}
+                subtitle={t('appearanceSubtitle')}
+                titleClassName={khmerFont()}
+                subtitleClassName={khmerFont()}
               >
                 <DarkModeToggle />
               </SettingsListItem>
             </SettingsGroup>
-          </div>
+          </motion.div>
           
           {/* App Installation Group */}
-          <div>
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4">
-              App Installation
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.4 }}
+          >
+            <h2 className={khmerFont('text-base font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4')}>
+              {t('installationHeading')}
             </h2>
             <SettingsGroup>
               {isStandalone ? (
                 <SettingsListItem
                   iconPath={mdiCheckCircle}
                   iconBgColor="bg-gradient-to-br from-green-500 to-emerald-600"
-                  title="App Installed"
-                  subtitle="You're using the installed app version"
+                  title={t('appInstalledTitle')}
+                  subtitle={t('appInstalledSubtitle')}
+                  titleClassName={khmerFont()}
+                  subtitleClassName={khmerFont()}
                 >
-                  <div className="text-green-600 dark:text-green-400 text-sm font-medium">
-                    ✓ Installed
+                  <div className={khmerFont('text-green-600 dark:text-green-400 text-sm font-medium')}>
+                    {t('installedBadge')}
                   </div>
                 </SettingsListItem>
               ) : canInstallPWA ? (
                 <SettingsListItem
                   iconPath={mdiDownload}
                   iconBgColor="bg-gradient-to-br from-blue-500 to-cyan-600"
-                  title="Install App"
-                  subtitle={isIOS ? "Add to home screen for better experience" : "Install for offline access and notifications"}
+                  title={t('installAppTitle')}
+                  subtitle={isIOS ? t('installAppSubtitleIOS') : t('installAppSubtitleDefault')}
                   onClick={handlePWAInstall}
+                  titleClassName={khmerFont()}
+                  subtitleClassName={khmerFont()}
                 >
-                  <div className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
-                    Install
+                  <div className={khmerFont('bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors')}>
+                    {t('installButton')}
                   </div>
                 </SettingsListItem>
               ) : (
                 <SettingsListItem
                   iconPath={mdiDownload}
                   iconBgColor="bg-gradient-to-br from-gray-400 to-gray-500"
-                  title="App Installation"
-                  subtitle="Not available in your current browser"
+                  title={t('appInstallationTitle')}
+                  subtitle={t('appInstallationUnavailable')}
+                  titleClassName={khmerFont()}
+                  subtitleClassName={khmerFont()}
                 >
-                  <div className="text-gray-500 dark:text-gray-400 text-sm">
-                    Unavailable
+                  <div className={khmerFont('text-gray-500 dark:text-gray-400 text-sm')}>
+                    {t('unavailableLabel')}
                   </div>
                 </SettingsListItem>
               )}
             </SettingsGroup>
-          </div>
+          </motion.div>
           
           {/* Account Actions Group */}
-          <div>
-            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4">
-              Account
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
+          >
+            <h2 className={khmerFont('text-base font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4')}>
+              {t('accountHeading')}
             </h2>
             <SettingsGroup>
               <SettingsListItem
                 iconPath={mdiLogout}
                 iconBgColor="bg-gradient-to-br from-red-500 to-rose-600"
-                title="Sign Out"
-                subtitle="Log out of your account"
+                title={tCommon('logout')}
+                subtitle={t('logoutSubtitle')}
                 onClick={() => setIsLogoutModalActive(true)}
                 isDestructive={true}
+                titleClassName={khmerFont()}
+                subtitleClassName={khmerFont()}
               />
             </SettingsGroup>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        </motion.div>
+      </motion.div>
     </>
   );
 };

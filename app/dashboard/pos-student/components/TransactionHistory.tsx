@@ -121,11 +121,13 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
 
     const copyInstructionsToClipboard = async () => {
         if (!selectedTransactionForInstructions?.registrationToken) return;
-        
-        const instructions = `Portal Account Setup Instructions:
+
+        const studentName = selectedTransactionForInstructions?.studentName || 'Student';
+        const token = selectedTransactionForInstructions.registrationToken;
+        const instructions = `Portal Account Setup Instructions for ${studentName}:
 
 INSTRUCTIONS:
-1. Click on this link: https://t.me/rodwell_portal_password_bot?start=${selectedTransactionForInstructions.registrationToken}
+1. Click on this link: https://t.me/rodwell_portal_password_bot?start=${token}
 
 2. After creating password, go to: portal.rodwell.center/login
 
@@ -152,6 +154,7 @@ INSTRUCTIONS:
                     onConfirm={onClose}
                     onCancel={onClose}
                     buttonLabel="Close"
+                    modalClassName='py-2 px-4'
                 >
                     <div className="pr-4 pb-4">
                         {isLoading ? (
@@ -350,6 +353,7 @@ INSTRUCTIONS:
                     onConfirm={() => setShowInstructionModal(false)}
                     onCancel={() => setShowInstructionModal(false)}
                     buttonLabel="Close"
+                    modalClassName='px-4 py-2'
                 >
                 <div className="space-y-4 pr-2 sm:pr-4 pb-4">
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3 sm:p-4">
@@ -372,6 +376,9 @@ INSTRUCTIONS:
                                         Click on this link to create your password:
                                     </p>
                                     <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded border text-xs break-all overflow-hidden">
+                                        <div className="mb-2 text-xs text-gray-700 dark:text-gray-300">
+                                            <strong>Student:</strong> {selectedTransactionForInstructions?.studentName || 'Student'}
+                                        </div>
                                         <code className="text-purple-600 dark:text-purple-300 block">
                                             https://t.me/rodwell_portal_password_bot?start={selectedTransactionForInstructions?.registrationToken || 'TOKEN'}
                                         </code>
@@ -387,8 +394,9 @@ INSTRUCTIONS:
                                         After creating password, go to:
                                     </p>
                                     <div className="bg-gray-100 dark:bg-gray-700 p-2 rounded border text-xs overflow-hidden">
-                                        <code className="text-green-600 dark:text-green-300 block">portal.rodwell.center/login</code>
-                                    </div>
+                                                <div className="mb-1 text-xs text-gray-700 dark:text-gray-300"><strong>Student:</strong> {selectedTransactionForInstructions?.studentName || 'Student'}</div>
+                                                <code className="text-green-600 dark:text-green-300 block">portal.rodwell.center/login</code>
+                                            </div>
                                 </div>
                             </div>
 

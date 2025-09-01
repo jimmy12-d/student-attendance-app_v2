@@ -1,0 +1,51 @@
+{
+  "collection": "telegramUserStates",
+  "totalDocuments": 4,
+  "backupTimestamp": "2025-09-01T04:37:13.376Z",
+  "documents": [
+    {
+      "id": "1245033245",
+      "data": {
+        "userId": 1245033245,
+        "chatId": 1245033245,
+        "state": "waiting_token",
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-08-31T10:02:20.496Z"
+        }
+      }
+    },
+    {
+      "id": "1691405915",
+      "data": {
+        "userId": 1691405915,
+        "chatId": 1691405915,
+        "studentId": "ZB03MUQXcOE1pWVzqeGn",
+        "messageIdToEdit": 275,
+        "state": "waiting_custom_password_initial",
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-01T00:44:13.370Z"
+        }
+      }
+    },
+    {
+      "id": "4Bl12h4k41AkOI0oBuLF",
+      "data": {
+        "test": "testing"
+      }
+    },
+    {
+      "id": "804933488",
+      "data": {
+        "userId": 804933488,
+        "chatId": 804933488,
+        "state": "waiting_token",
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-01T03:16:50.981Z"
+        }
+      }
+    }
+  ]
+}

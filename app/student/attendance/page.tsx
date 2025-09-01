@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useAppSelector } from '../../_stores/hooks';
 import { db } from '../../../firebase-config';
 import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
@@ -18,6 +19,16 @@ import AttendanceSummaryCardSkeleton from '../_components/AttendanceSummaryCardS
 import Button from '../../_components/Button';
 
 const AttendancePage = () => {
+  const t = useTranslations('student.attendance');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
+  
+  // Centralized khmer font utility
+  const khmerFont = (additionalClasses: string = '') => {
+    const baseClasses = locale === 'kh' ? 'khmer-font' : '';
+    return additionalClasses ? `${baseClasses} ${additionalClasses}`.trim() : baseClasses;
+  };
+
   const { studentUid, studentName, studentDocId } = useAppSelector((state) => ({
     studentUid: state.main.userUid,
     studentName: state.main.userName,
@@ -72,17 +83,17 @@ const AttendancePage = () => {
 
   const handleRequestAttendance = async () => {
     if (!studentData || !studentUid || !studentDocId) {
-      toast.error("Student information not loaded yet. Please try again in a moment.");
+      toast.error(t('studentInfoError'));
       return;
     }
 
     if (todayRecord) {
       if (["present", "late", "permission"].includes(todayRecord.status)) {
-        toast.info(`Attendance already marked as ${todayRecord.status}.`);
+        toast.info(t('alreadyMarked', { status: todayRecord.status }));
         return;
       }
       if (todayRecord.status === "requested") {
-        toast.info("Your attendance request is already pending approval.");
+        toast.info(t('alreadyRequested'));
         return;
       }
     }
@@ -116,11 +127,11 @@ const AttendancePage = () => {
         await addDoc(collection(db, "attendance"), newRecordData);
       }
 
-      toast.success("Attendance request sent! You will be notified upon approval.");
+      toast.success(t('requestSuccess'));
       setIsRequestConfirmOpen(false);
     } catch (error) {
       console.error("Error sending attendance request: ", error);
-      toast.error("Failed to send request. Please try again.");
+      toast.error(t('requestError'));
     }
   };
 
@@ -321,6 +332,23 @@ const AttendancePage = () => {
     setIsPermissionPanelOpen(false);
   };
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'present':
+        return t('present');
+      case 'absent':
+        return t('absent');
+      case 'late':
+        return t('late');
+      case 'permission':
+        return t('permission');
+      case 'requested':
+        return t('requested');
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+  };
+
   const formatDate = (timestamp: Timestamp | Date | undefined | null) => {
     if (!timestamp) return '';
     const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
@@ -332,14 +360,6 @@ const AttendancePage = () => {
     const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
-
-   const getTodayGreeting = () => {
-     const hour = new Date().getHours();
-     if (hour < 12) return "Good Morning";
-     if (hour < 17) return "Good Afternoon";
-     return "Good Evening";
-   };
-
      return (
      <>
        <style jsx>{`
@@ -351,28 +371,28 @@ const AttendancePage = () => {
          }
        `}</style>
 
-      <SlideInPanel title="Confirm Attendance Request" isOpen={isRequestConfirmOpen} onClose={() => setIsRequestConfirmOpen(false)}>
+      <SlideInPanel title={t('confirmRequest')} isOpen={isRequestConfirmOpen} onClose={() => setIsRequestConfirmOpen(false)}>
         <div className="">
-            <p className="text-gray-700 dark:text-gray-300 mb-6">
-                You are about to request manual attendance marking. This should only be used if face recognition has failed. Are you sure you want to proceed?
+            <p className={khmerFont('text-gray-700 dark:text-gray-300 mb-6')}>
+                {t('requestDescription')}
             </p>
             <div className="flex justify-end space-x-3">
-                <Button onClick={() => setIsRequestConfirmOpen(false)} color="whiteDark">Cancel</Button>
-                <Button onClick={handleRequestAttendance} color="company-purple">Confirm Request</Button>
+                <Button onClick={() => setIsRequestConfirmOpen(false)} color="whiteDark" className={khmerFont()}>{tCommon('cancel')}</Button>
+                <Button onClick={handleRequestAttendance} color="company-purple" className={khmerFont()}>{t('confirmRequestBtn')}</Button>
             </div>
         </div>
       </SlideInPanel>
 
-       <SlideInPanel title="Request Permission for Absence" isOpen={isPermissionPanelOpen} onClose={() => setIsPermissionPanelOpen(false)}>
+       <SlideInPanel title={`${t('permissionForm')} - ${t('plannedAbsences')}`} isOpen={isPermissionPanelOpen} onClose={() => setIsPermissionPanelOpen(false)}>
          <PermissionRequestForm onSuccess={handlePermissionSuccess} />
        </SlideInPanel>
 
-       <SlideInPanel title="Last 10 Days Activity" isOpen={isDetailsPanelOpen} onClose={() => setIsDetailsPanelOpen(false)}>
+       <SlideInPanel title={t('lastDaysActivity')} isOpen={isDetailsPanelOpen} onClose={() => setIsDetailsPanelOpen(false)}>
            <div className="bg-white/95 dark:bg-slate-800/95 rounded-2xl p-3 shadow-xl border border-gray-100/50 dark:border-slate-600/50">
              <div className="max-h-[50vh] overflow-y-auto">
                {recentRecords.length > 0 ? recentRecords.map(record => {
                const styles = getStatusStyles(record.status);
-               const statusText = record.status.charAt(0).toUpperCase() + record.status.slice(1);
+               const statusText = getStatusText(record.status);
                const dateOnRight = record.status === 'absent' || record.status === 'permission'
                  ? formatDate(new Date(record.date.replace(/-/g, '\/')))
                  : formatDate(record.timestamp);
@@ -388,14 +408,14 @@ const AttendancePage = () => {
                        <Icon path={styles.icon} size={20} className="text-white" />
                      </div>
                      <div>
-                       <span className={`px-3 py-1 text-sm font-medium rounded-full ${styles.badge}`}>
+                       <span className={`px-3 py-1 text-sm font-medium rounded-full ${styles.badge} ${khmerFont()}`}>
                          {statusText}
                        </span>
                      </div>
                    </div>
 
                    <div className="text-right">
-                     <p className="font-semibold text-gray-900 dark:text-white">
+                     <p className={khmerFont('font-semibold text-gray-900 dark:text-white')}>
                        {timeText && (
                          <span className="text-sm text-gray-500 dark:text-gray-400 mr-2 font-normal">
                            {timeText}
@@ -407,7 +427,7 @@ const AttendancePage = () => {
                  </div>
                );
              }) : (
-               <p className="text-center text-gray-500 p-6">No recent activity.</p>
+               <p className={khmerFont('text-center text-gray-500 p-6')}>{t('noRecentActivity')}</p>
              )}
              </div>
            </div>
@@ -416,7 +436,7 @@ const AttendancePage = () => {
        <div className="space-y-2">
           {/* Header with Date */}
           <div className="text-center">
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className={khmerFont('text-gray-600 dark:text-gray-300')}>
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -439,9 +459,9 @@ const AttendancePage = () => {
                          <Icon path={getStatusStyles(todayRecord.status).icon} size={24} className="text-white" />
                        </div>
                        <div>
-                         <h3 className="text-white text-lg font-semibold">Today's Status</h3>
-                         <p className="text-white/80 text-sm">
-                           {todayRecord.status.charAt(0).toUpperCase() + todayRecord.status.slice(1)}
+                         <h3 className={khmerFont('text-white text-lg font-semibold')}>{t('status')}</h3>
+                         <p className={khmerFont('text-white/80 text-sm')}>
+                           {getStatusText(todayRecord.status)}
                            {todayRecord.timestamp && (
                              <span className="ml-2">at {formatTime(todayRecord.timestamp)}</span>
                            )}
@@ -454,9 +474,9 @@ const AttendancePage = () => {
              </div>
            )}
 
-           {/* Quick Actions */}
-           <div className="space-y-5 px-1 pt-2">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Quick Actions</h2>
+        {/* Quick Actions */}
+        <div className="space-y-5">
+          <h2 className={khmerFont('pt-4 ml-2 font-bold text-xl text-gray-900 dark:text-white mb-2')}>{t('quickActions')}</h2>
              {/* Mobile-optimized Action Cards */}
              <div className="space-y-4">
                {/* Request Attendance Card - Mobile First */}
@@ -483,13 +503,13 @@ const AttendancePage = () => {
                      
                      {/* Content Section */}
                      <div className="text-left flex-1 min-w-0">
-                       <p className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
-                         Request Attendance
+                       <p className={khmerFont('text-lg font-bold text-gray-900 dark:text-white mb-1.5')}>
+                         {t('requestAttendance')}
                        </p>
                        <div className="flex items-center space-x-2">
                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                         <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                           Use when face scanning is unavailable
+                         <span className={khmerFont('text-xs text-blue-600 dark:text-blue-400 font-medium')}>
+                           {t('faceUnavailable')}
                          </span>
                        </div>
                      </div>
@@ -525,13 +545,13 @@ const AttendancePage = () => {
                      
                      {/* Content Section */}
                      <div className="text-left flex-1 min-w-0">
-                       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1.5">
-                        Permission Form
+                       <h3 className={khmerFont('text-lg font-bold text-gray-900 dark:text-white mb-1.5')}>
+                        {t('permissionForm')}
                        </h3>
                        <div className="flex items-center space-x-2">
                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                         <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
-                           For planned absences or emergencies
+                         <span className={khmerFont('text-xs text-purple-600 dark:text-purple-400 font-medium')}>
+                           {t('plannedAbsences')}
                          </span>
                        </div>
                      </div>
@@ -547,14 +567,14 @@ const AttendancePage = () => {
            </div>
 
            {/* Summary Stats */}
-           <div className="space-y-4 pt-2">
-             <div className="flex items-center justify-between">
-               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Last 10 Days Summary</h2>
+           <div className="space-y-4">
+             <div className="flex items-center justify-between mb-0">
+                <h2 className={khmerFont('pt-4 ml-2 font-bold text-xl text-gray-900 dark:text-white mb-2')}>{t('lastDaysSummary')}</h2>
                <button 
                  onClick={() => setIsDetailsPanelOpen(true)} 
-                 className="flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                 className={khmerFont('flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors')}
                >
-                 View Details
+                 {t('viewDetails')}
                  <Icon path={mdiChevronRight} size={16} className="ml-1" />
                </button>
              </div>
@@ -578,7 +598,7 @@ const AttendancePage = () => {
                        </div>
                        <span className="text-2xl font-bold text-gray-900 dark:text-white">{presentCount}</span>
                      </div>
-                     <h3 className="font-medium text-gray-900 dark:text-white">Present</h3>
+                     <h3 className={khmerFont('font-medium text-gray-900 dark:text-white')}>{t('present')}</h3>
                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mt-2">
                        <div 
                          className="bg-green-500 h-2 rounded-full transition-all duration-500"
@@ -597,7 +617,7 @@ const AttendancePage = () => {
                        </div>
                        <span className="text-2xl font-bold text-gray-900 dark:text-white">{lateCount}</span>
                      </div>
-                     <h3 className="font-medium text-gray-900 dark:text-white">Late</h3>
+                     <h3 className={khmerFont('font-medium text-gray-900 dark:text-white')}>{t('late')}</h3>
                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mt-2">
                        <div 
                          className="bg-yellow-500 h-2 rounded-full transition-all duration-500"
@@ -616,7 +636,7 @@ const AttendancePage = () => {
                        </div>
                        <span className="text-2xl font-bold text-gray-900 dark:text-white">{absentCount}</span>
                      </div>
-                     <h3 className="font-medium text-gray-900 dark:text-white">Absent</h3>
+                     <h3 className={khmerFont('font-medium text-gray-900 dark:text-white')}>{t('absent')}</h3>
                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mt-2">
                        <div 
                          className="bg-red-500 h-2 rounded-full transition-all duration-500"
@@ -630,8 +650,8 @@ const AttendancePage = () => {
            </div>
 
            {/* Permissions History */}
-           <div className="space-y-4 pt-2">
-             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Recent Permissions</h2>
+           <div className="space-y-4">
+             <h2 className={khmerFont('pt-4 ml-2 font-bold text-xl text-gray-900 dark:text-white mb-2')}>{t('recentPermissions')}</h2>
              <div className="overflow-hidden">
                <OngoingPermissions permissions={ongoingPermissions} isLoading={loadingPermissions} />
              </div>

@@ -1,9 +1,13 @@
 'use client'
 
-import { useLocale, useTranslations } from 'next-intl'
-import { useRouter, usePathname } from 'next/navigation'
-import { locales } from '../../../i18n'
-import { useState, useTransition } from 'react'
+import { useTranslations } from 'next-intl'
+import { useTransition } from 'react'
+import { useLocaleContext } from '../../_components/LocaleProvider'
+import { motion } from 'framer-motion'
+import Icon from '@/app/_components/Icon'
+import { mdiCheck } from '@mdi/js'
+
+const locales = ['en', 'kh'] as const
 
 interface LanguageSelectorProps {
   showTitle?: boolean
@@ -17,159 +21,127 @@ export default function LanguageSelector({
   compact = false
 }: LanguageSelectorProps) {
   const t = useTranslations('languageSelector')
-  const locale = useLocale()
-  const router = useRouter()
-  const pathname = usePathname()
+  const { locale, setLocale } = useLocaleContext()
   const [isPending, startTransition] = useTransition()
-  const [isOpen, setIsOpen] = useState(false)
 
   const handleLanguageChange = (newLocale: string) => {
     if (newLocale === locale) return
 
     startTransition(() => {
-      // Update localStorage preference
-      localStorage.setItem('preferredLanguage', newLocale)
-      
-      // Remove the current locale from the pathname
-      const pathWithoutLocale = pathname.replace(/^\/[^\/]+/, '') || '/'
-      // Create the new path with the selected locale
-      const newPath = `/${newLocale}${pathWithoutLocale}`
-      router.push(newPath)
-      setIsOpen(false)
+      setLocale(newLocale)
     })
   }
 
-  const getLanguageDisplayName = (localeCode: string) => {
+  const getLanguageInfo = (localeCode: string) => {
     switch (localeCode) {
       case 'en':
-        return 'EN'
+        return {
+          name: t('english'),
+          nativeName: 'English',
+          flag: '🇺🇸'
+        }
       case 'kh':
-        return 'ខ្មែរ'
+        return {
+          name: t('khmer'),
+          nativeName: 'ខ្មែរ',
+          flag: '🇰🇭'
+        }
       default:
-        return localeCode
-    }
-  }
-
-  const getFullLanguageDisplayName = (localeCode: string) => {
-    switch (localeCode) {
-      case 'en':
-        return t('english')
-      case 'kh':
-        return t('khmer')
-      default:
-        return localeCode
+        return {
+          name: localeCode,
+          nativeName: localeCode,
+          flag: '🌐'
+        }
     }
   }
 
   if (compact) {
     return (
-      <div className={`relative ${className}`}>
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={isPending}
-          className="flex items-center justify-center w-10 h-10 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isPending ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-          ) : (
-            <span className="text-xs">{getLanguageDisplayName(locale)}</span>
-          )}
-        </button>
-
-        {isOpen && (
-          <div className="absolute z-10 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-600 min-w-[120px]">
-            {locales.map((localeOption) => (
-              <button
-                key={localeOption}
-                onClick={() => handleLanguageChange(localeOption)}
-                disabled={isPending}
-                className={`w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-                  locale === localeOption
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
-                    : 'text-gray-700 dark:text-gray-200'
-                }`}
-              >
-                {getFullLanguageDisplayName(localeOption)}
-              </button>
-            ))}
-          </div>
-        )}
+      <div className={`flex space-x-2 ${className}`}>
+        {locales.map((localeOption) => {
+          const langInfo = getLanguageInfo(localeOption)
+          const isSelected = locale === localeOption
+          
+          return (
+            <button
+              key={localeOption}
+              onClick={() => handleLanguageChange(localeOption)}
+              disabled={isPending}
+              className={`px-3 py-1 text-xs font-medium rounded-lg transition-all duration-200 ${
+                isSelected
+                  ? 'bg-company-purple text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+              } disabled:opacity-50 disabled:cursor-not-allowed ${localeOption === 'kh' ? 'khmer-font' : ''}`}
+            >
+              {langInfo.flag} {langInfo.nativeName}
+            </button>
+          )
+        })}
       </div>
     )
   }
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={className}>
       {showTitle && (
-        <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
           {t('title')}
         </h3>
       )}
       
-      <div className="relative">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          disabled={isPending}
-          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span className="flex items-center">
-            <span className="ml-2">{getFullLanguageDisplayName(locale)}</span>
-          </span>
-          <svg
-            className={`w-5 h-5 transition-transform duration-200 ${
-              isOpen ? 'rotate-180' : ''
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
-
-        {isOpen && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-600">
-            {locales.map((localeOption) => (
-              <button
-                key={localeOption}
-                onClick={() => handleLanguageChange(localeOption)}
-                disabled={isPending}
-                className={`w-full px-4 py-3 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-                  locale === localeOption
-                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
-                    : 'text-gray-700 dark:text-gray-200'
-                }`}
-              >
-                <div className="flex items-center">
-                  <span className="ml-2">{getFullLanguageDisplayName(localeOption)}</span>
-                  {locale === localeOption && (
-                    <svg
-                      className="w-4 h-4 ml-auto text-blue-600 dark:text-blue-400"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
+      <div className="space-y-3">
+        {locales.map((localeOption) => {
+          const langInfo = getLanguageInfo(localeOption)
+          const isSelected = locale === localeOption
+          
+          return (
+            <motion.button
+              key={localeOption}
+              onClick={() => handleLanguageChange(localeOption)}
+              disabled={isPending}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`w-full p-4 rounded-xl border-2 transition-all duration-300 ${
+                isSelected
+                  ? 'border-company-purple bg-company-purple/10 dark:bg-company-purple/20 dark:border-company-purple shadow-lg'
+                  : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 hover:border-company-purple/50 dark:hover:border-company-purple/50 hover:shadow-md'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">{langInfo.flag}</span>
+                  <div className="text-left">
+                    <div className={`font-semibold transition-colors duration-200 ${
+                      isSelected 
+                        ? 'text-company-purple-dark dark:text-company-purple' 
+                        : 'text-gray-900 dark:text-white'
+                    }`}>
+                      {langInfo.name}
+                    </div>
+                    <div className={`text-sm transition-colors duration-200 ${
+                      isSelected 
+                        ? 'text-company-purple dark:text-company-purple/80' 
+                        : 'text-gray-500 dark:text-gray-400'
+                    } ${localeOption === 'kh' ? 'khmer-font' : ''}`}>
+                      {langInfo.nativeName}
+                    </div>
+                  </div>
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
+                
+                {isSelected && (
+                  <div className="w-8 h-8 bg-company-purple rounded-full flex items-center justify-center shadow-lg">
+                    <Icon path={mdiCheck} size={16} className="text-white" />
+                  </div>
+                )}
+              </div>
+            </motion.button>
+          )
+        })}
       </div>
 
       {isPending && (
         <div className="absolute inset-0 bg-white bg-opacity-50 dark:bg-gray-800 dark:bg-opacity-50 flex items-center justify-center rounded-lg">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-company-purple"></div>
         </div>
       )}
     </div>

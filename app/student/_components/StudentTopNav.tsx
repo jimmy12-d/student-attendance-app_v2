@@ -8,8 +8,11 @@ import { doc, getDoc } from 'firebase/firestore';
 import Icon from '@/app/_components/Icon';
 import { mdiBell } from '@mdi/js';
 import NotificationsPanel from './NotificationsPanel';
+import { useTranslations, useLocale } from 'next-intl';
 
 const StudentTopNav = () => {
+    const t = useTranslations('student.dashboard');
+    const locale = useLocale();
     const { studentDocId, authUserName, unreadNotificationCount } = useAppSelector((state) => ({
         studentDocId: state.main.studentDocId,
         authUserName: state.main.userName,
@@ -28,7 +31,11 @@ const StudentTopNav = () => {
 
                 if (studentSnap.exists()) {
                     const studentData = studentSnap.data();
-                    setFullName(studentData.fullName);
+                    // Use nameKhmer when locale is 'kh', otherwise use fullName
+                    const displayName = locale === 'kh' && studentData.nameKhmer 
+                        ? studentData.nameKhmer 
+                        : studentData.fullName;
+                    setFullName(displayName);
                     setUserClass(studentData.class);
                 } else {
                     setFullName(authUserName); // Fallback to auth name
@@ -60,18 +67,18 @@ const StudentTopNav = () => {
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center space-x-2">
                         <Image src="/rodwell_logo.png" alt="Logo" width={46} height={46} />
-                        <span className="text-lg font-bold text-gray-800 dark:text-white">Student Portal</span>
+                        <span className={`text-lg font-bold text-gray-800 dark:text-white ${locale === 'kh' ? 'khmer-font' : ''}`}>{t('title')}</span>
                     </div>
                     
                     <div className="flex items-center space-x-2">
                         <div className="flex flex-col items-end">
                             {fullName && (
-                                <span className="text-base font-semibold text-gray-800 dark:text-slate-100 truncate">
+                                <span className={`text-base font-semibold text-gray-800 dark:text-slate-100 truncate ${locale === 'kh' ? 'khmer-font' : ''}`}>
                                     {fullName}
                                 </span>
                             )}
                             {userClass && (
-                                <span className="text-xs text-gray-500 dark:text-slate-400 truncate">
+                                <span className={`text-xs text-gray-500 dark:text-slate-400 truncate ${locale === 'kh' ? 'khmer-font' : ''}`}>
                                     {userClass}
                                 </span>
                             )}

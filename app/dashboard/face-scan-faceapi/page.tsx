@@ -33,8 +33,8 @@ const FaceApiAttendanceScanner = () => {
   
   const [recognitionThreshold, setRecognitionThreshold] = useState(60); // Default 60%
   const [showRecognitionControls, setShowRecognitionControls] = useState(false); // Collapsible Recognition Controls
-  const [minFaceSize, setMinFaceSize] = useState(30); // Minimum face width/height in pixels - made more permissive
-  const [maxFaceSize, setMaxFaceSize] = useState(500); // Maximum face width/height in pixels - made more permissive
+  const [minFaceSize, setMinFaceSize] = useState(100); // Minimum face width/height in pixels - default to 100
+  const [maxFaceSize, setMaxFaceSize] = useState(300); // Maximum face width/height in pixels - default to 300
   const [selectedShift, setSelectedShift] = useState<string>(''); // Selected shift/session
   const [availableShifts] = useState([
     { value: 'All', label: 'All Shifts' },
@@ -995,7 +995,7 @@ const FaceApiAttendanceScanner = () => {
                         </div>
                         <button
                           onClick={() => {
-                            setMinFaceSize(80);
+                            setMinFaceSize(100);
                             setMaxFaceSize(300);
                           }}
                           className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
