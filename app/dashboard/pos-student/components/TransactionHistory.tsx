@@ -234,14 +234,14 @@ INSTRUCTIONS:
                                                             <p className="text-xs text-purple-600 dark:text-purple-400 truncate">Generated for student portal access</p>
                                                         </div>
                                                     </div>
-                                                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 flex-shrink-0">
+                                                    <div className="flex flex-col space-y-2 flex-shrink-0">
                                                         <Button
                                                             color="warning"
                                                             label="View Instructions"
                                                             onClick={() => handleViewInstructions(transaction)}
                                                             icon={mdiInformation}
                                                             small
-                                                            className="text-xs w-full sm:w-auto"
+                                                            className="text-xs w-full"
                                                         />
                                                         <Button
                                                             color={copiedTokenId === transaction.transactionId ? "success" : "info"}
@@ -249,7 +249,7 @@ INSTRUCTIONS:
                                                             onClick={() => copyTokenToClipboard(transaction.registrationToken!, transaction.transactionId!)}
                                                             icon={copiedTokenId === transaction.transactionId ? mdiCheckCircle : mdiContentCopy}
                                                             small
-                                                            className="text-xs w-full sm:w-auto"
+                                                            className="text-xs w-full"
                                                         />
                                                     </div>
                                                 </div>

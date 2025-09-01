@@ -228,10 +228,33 @@ export default function AttendanceRecordPage() {
 
   // Filter attendance records by selected date
   const filteredAttendanceRecords = useMemo(() => {
-    return attendanceRecords.filter(record => {
-      const recordDate = record.date.split('T')[0];
-      return recordDate === selectedDate;
+    const filtered = attendanceRecords.filter(record => {
+      if (!record.date) return false;
+      
+      // Handle both date formats: "2025-09-01" and "Mon Sep 01 2025"
+      const recordDate = record.date.split('T')[0]; // Handle ISO with time
+      
+      // Check if it matches ISO format (YYYY-MM-DD)
+      if (recordDate === selectedDate) {
+        return true;
+      }
+      
+      // Check if it matches JS toDateString format (e.g., "Mon Sep 01 2025")
+      // Convert selected date to compare with JS toDateString format
+      try {
+        const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+        const selectedDateString = selectedDateObj.toDateString();
+        if (record.date === selectedDateString) {
+          return true;
+        }
+      } catch (error) {
+        // Ignore date parsing errors
+      }
+      
+      return false;
     });
+        
+    return filtered;
   }, [attendanceRecords, selectedDate]);
   const attendanceStats = useMemo((): AttendanceStats => {
     if (!allClassConfigs || students.length === 0) {
@@ -239,23 +262,32 @@ export default function AttendanceRecordPage() {
       // Note: This fallback doesn't exclude "No School" students since configs aren't available yet
       const selectedDateRecords = attendanceRecords.filter(record => {
         if (!record.date) return false;
-        const recordDate = record.date.split('T')[0];
-        return recordDate === selectedDate;
+        
+        // Handle both date formats: "2025-09-01" and "Mon Sep 01 2025"
+        const recordDate = record.date.split('T')[0]; // Handle ISO with time
+        
+        // Check if it matches ISO format (YYYY-MM-DD)
+        if (recordDate === selectedDate) {
+          return true;
+        }
+        
+        // Check if it matches JS toDateString format (e.g., "Mon Sep 01 2025")
+        try {
+          const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+          const selectedDateString = selectedDateObj.toDateString();
+          if (record.date === selectedDateString) {
+            return true;
+          }
+        } catch (error) {
+          // Ignore date parsing errors
+        }
+        
+        return false;
       });
 
       // Filter students by current shift
       const shiftStudents = students.filter(student => student.shift === currentShift);
       const shiftStudentIds = new Set(shiftStudents.map(student => student.id));
-
-      // Debug logging
-      console.log('Shift calculation debug:', {
-        currentShift,
-        totalStudents: students.length,
-        shiftStudents: shiftStudents.length,
-        selectedDate,
-        totalRecords: selectedDateRecords.length,
-        shiftRecords: selectedDateRecords.filter(record => shiftStudentIds.has(record.studentId)).length
-      });
 
       // Filter attendance records for students in the current shift
       const shiftAttendanceRecords = selectedDateRecords.filter(record => 
@@ -310,9 +342,31 @@ export default function AttendanceRecordPage() {
       if (student.shift !== currentShift) return;
 
       // Find this student's attendance record for selected date
-      const attendanceRecord = attendanceRecords.find(
-        att => att.studentId === student.id && att.date.split('T')[0] === selectedDate
-      );
+      const attendanceRecord = attendanceRecords.find(att => {
+        if (att.studentId !== student.id) return false;
+        if (!att.date) return false;
+        
+        // Handle both date formats: "2025-09-01" and "Mon Sep 01 2025"
+        const recordDate = att.date.split('T')[0]; // Handle ISO with time
+        
+        // Check if it matches ISO format (YYYY-MM-DD)
+        if (recordDate === selectedDate) {
+          return true;
+        }
+        
+        // Check if it matches JS toDateString format (e.g., "Mon Sep 01 2025")
+        try {
+          const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+          const selectedDateString = selectedDateObj.toDateString();
+          if (att.date === selectedDateString) {
+            return true;
+          }
+        } catch (error) {
+          // Ignore date parsing errors
+        }
+        
+        return false;
+      });
       
       // Find this student's approved permissions
       const approvedPermissionsForStudent = permissions.filter(
@@ -475,7 +529,9 @@ export default function AttendanceRecordPage() {
             const isDropped = data.dropped === true;
             const isOnBreak = data.onBreak === true;
             const isOnWaitlist = data.onWaitlist === true;
-            return !isDropped && !isOnBreak && !isOnWaitlist;
+            const isActive = !isDropped && !isOnBreak && !isOnWaitlist;
+            
+            return isActive;
           })
           .map(docSnap => ({
             id: docSnap.id,
@@ -483,7 +539,6 @@ export default function AttendanceRecordPage() {
           } as Student));
         
         setStudents(activeStudentsData);
-        console.log(`Dashboard: Filtered to ${activeStudentsData.length} students (excluded dropped, on break, and waitlisted)`);
 
         // Fetch permissions and class configs in parallel
         const [permissionsSnapshot, classesSnapshot] = await Promise.all([
@@ -510,20 +565,41 @@ export default function AttendanceRecordPage() {
         activeStudentsData.forEach(student => {
           studentsMap.set(student.id, student);
         });
-
+        
         // Listen to attendance records
         const recordsCollection = collection(db, "attendance");
         const q = query(recordsCollection, orderBy("timestamp", "desc"));
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {          
           const fetchedRecords: AttendanceRecord[] = querySnapshot.docs
             .map(docSnap => {
               const data = docSnap.data();
               const student = studentsMap.get(data.studentId);
 
-              // Only include records for active students
+              // Debug logging for missing students
               if (!student) {
-                return null;
+                console.warn(`Student not found for attendance record:`, {
+                  recordId: docSnap.id,
+                  studentId: data.studentId,
+                  studentName: data.studentName,
+                  date: data.date,
+                  status: data.status,
+                  method: data.method,
+                  authUid: data.authUid
+                });
+                
+                // For debugging: include the record with basic info from the attendance data
+                // This will show records even if the student is not in the active students list
+                return {
+                  id: docSnap.id,
+                  studentName: data.studentName || `Unknown (${data.studentId})`,
+                  studentId: data.studentId,
+                  class: data.class || 'N/A',
+                  shift: data.shift || 'N/A',
+                  status: data.status || 'Unknown',
+                  date: data.date,
+                  timestamp: data.timestamp,
+                } as AttendanceRecord;
               }
 
               return {

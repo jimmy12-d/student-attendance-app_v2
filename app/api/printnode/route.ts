@@ -8,6 +8,48 @@ import { getFirestore } from 'firebase-admin/firestore';
 // Initialize Firebase Admin (only if not already initialized)
 let db: any = null;
 
+// Helper function to ensure Firebase Admin is initialized
+async function ensureFirebaseInitialized() {
+  if (db) {
+    return db;
+  }
+
+  try {
+    console.log('🔥 [Firebase] Initializing Firebase Admin SDK for Firebase Hosting...');
+    
+    // Check environment variables
+    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
+      throw new Error('Missing Firebase environment variables');
+    }
+
+    // Clean initialization for Firebase Hosting
+    let app;
+    const existingApps = getApps();
+    
+    if (existingApps.length > 0) {
+      console.log('♻️ [Firebase] Using existing Firebase app');
+      app = existingApps[0];
+    } else {
+      console.log('🚀 [Firebase] Creating new Firebase Admin app...');
+      app = initializeApp({
+        credential: cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        }),
+      });
+    }
+    
+    db = getFirestore(app);
+    console.log('✅ [Firebase] Firebase Admin SDK initialized successfully');
+    return db;
+  } catch (error) {
+    console.error('❌ [Firebase] Firebase Admin initialization failed:', error);
+    return null;
+  }
+}
+
+// Initial attempt to initialize Firebase
 try {
   if (!getApps().length) {
     initializeApp({
@@ -20,7 +62,7 @@ try {
   }
   db = getFirestore();
 } catch (error) {
-  console.warn('Firebase Admin initialization failed (PDF generation will work without QR codes):', error);
+  console.warn('Firebase Admin initialization failed (will retry when needed):', error);
 }
 
 // PrintNode API configuration
@@ -219,12 +261,18 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
     // 3. Payment is for September 2025 or later
     let qrCodeImage = null;
     let studentToken = null;
-    if (studentId && db && !isStudentRegistered && shouldShowQRCode(transaction.paymentMonth)) {
+    
+    // Ensure Firebase is initialized for QR code generation
+    const firebaseDb = await ensureFirebaseInitialized();
+    
+    console.log(`🔍 QR Code Debug - StudentId: ${studentId}, DB Available: ${!!firebaseDb}, IsStudentRegistered: ${isStudentRegistered}, PaymentMonth: ${transaction.paymentMonth}, ShouldShowQR: ${shouldShowQRCode(transaction.paymentMonth)}`);
+    
+    if (studentId && firebaseDb && !isStudentRegistered && shouldShowQRCode(transaction.paymentMonth)) {
       try {
         console.log(`📅 Payment month check: ${transaction.paymentMonth} - QR code generation allowed`);
         
         // Try to fetch existing token from tempRegistrationTokens collection
-        const tokensRef = db.collection('tempRegistrationTokens');
+        const tokensRef = firebaseDb.collection('tempRegistrationTokens');
         const tokenQuery = tokensRef.where('studentId', '==', studentId);
         const tokenSnapshot = await tokenQuery.get();
         
@@ -261,6 +309,7 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
             const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000); // 72 hours
             
             // Store token in database
+            const { db } = await ensureFirebaseInitialized();
             await db.collection('tempRegistrationTokens').doc(studentToken).set({
               studentId: studentId,
               token: studentToken,
@@ -284,7 +333,7 @@ async function generateReceiptPdf(transaction: any, pageHeight: number, isForPri
       } catch (error) {
         console.warn('Failed to fetch or display QR code:', error);
       }
-    } else if (studentId && !db) {
+    } else if (studentId && !firebaseDb) {
       console.warn('Firebase not available, skipping QR code display for receipt');
     } else if (studentId && isStudentRegistered) {
       console.log('Student already registered, skipping QR code display');

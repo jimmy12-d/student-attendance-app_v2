@@ -73,7 +73,8 @@ const FaceApiAttendanceScanner = () => {
           faceDescriptor: data.faceDescriptor,
           // Include shift and class data
           shift: data.shift,
-          class: data.class
+          class: data.class,
+          authUid: data.authUid // Add authUid for student portal access
         } as any);
       });
       
@@ -168,8 +169,11 @@ const FaceApiAttendanceScanner = () => {
           loadCameras()
         ]);
         
-        // Auto-select shift after loading configs
-        autoSelectShift();
+        // Auto-select shift after loading configs (only if no saved preference)
+        const savedSelectedShift = localStorage.getItem('faceapi-selected-shift');
+        if (!savedSelectedShift) {
+          autoSelectShift();
+        }
       } else {
         setLoadingMessage('Failed to load face detection models');
       }
@@ -179,9 +183,49 @@ const FaceApiAttendanceScanner = () => {
     initialize();
   }, [loadStudents, loadClassConfigs, autoSelectShift, loadCameras]);
 
+  // Load saved face size settings from localStorage
+  useEffect(() => {
+    const savedMinFaceSize = localStorage.getItem('faceapi-min-face-size');
+    const savedMaxFaceSize = localStorage.getItem('faceapi-max-face-size');
+    const savedRecognitionThreshold = localStorage.getItem('faceapi-recognition-threshold');
+    const savedSelectedShift = localStorage.getItem('faceapi-selected-shift');
+    
+    if (savedMinFaceSize) {
+      setMinFaceSize(Number(savedMinFaceSize));
+    }
+    if (savedMaxFaceSize) {
+      setMaxFaceSize(Number(savedMaxFaceSize));
+    }
+    if (savedRecognitionThreshold) {
+      setRecognitionThreshold(Number(savedRecognitionThreshold));
+    }
+    if (savedSelectedShift) {
+      setSelectedShift(savedSelectedShift);
+    }
+  }, []);
+
+  // Save face size settings to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('faceapi-min-face-size', minFaceSize.toString());
+  }, [minFaceSize]);
+
+  useEffect(() => {
+    localStorage.setItem('faceapi-max-face-size', maxFaceSize.toString());
+  }, [maxFaceSize]);
+
+  useEffect(() => {
+    localStorage.setItem('faceapi-recognition-threshold', recognitionThreshold.toString());
+  }, [recognitionThreshold]);
+
+  useEffect(() => {
+    if (selectedShift) {
+      localStorage.setItem('faceapi-selected-shift', selectedShift);
+    }
+  }, [selectedShift]);
+
   // Initialize success sound
   useEffect(() => {
-    const audio = new Audio('/success_sound_2.mp3');
+    const audio = new Audio('/success_sound_3.mp3');
     audio.preload = 'auto';
     audio.volume = 0.8;
     audioRef.current = audio;
@@ -222,7 +266,7 @@ const FaceApiAttendanceScanner = () => {
         console.error("❌ Error playing sound:", e);
         // Fallback: try to create a new audio instance
         try {
-          const fallbackAudio = new Audio('/success_sound_2.mp3');
+          const fallbackAudio = new Audio('/success_sound_3.mp3');
           fallbackAudio.volume = 0.8;
           fallbackAudio.play();
         } catch (fallbackError) {
@@ -656,9 +700,6 @@ const FaceApiAttendanceScanner = () => {
                 <p className="flex items-center space-x-2">
                   <Icon path={mdiClock} className="w-4 h-4 text-yellow-400" />
                   <span>Hold position for 2 seconds</span>
-                </p>
-                <p className="text-xs text-gray-300 mt-3">
-                  Press <kbd className="px-2 py-1 bg-gray-700 rounded text-white">ESC</kbd> or click ✕ to exit
                 </p>
               </div>
             </div>

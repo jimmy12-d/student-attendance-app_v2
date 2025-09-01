@@ -34,8 +34,6 @@ export const initializeFaceApi = async (): Promise<boolean> => {
       return false;
     }
 
-    console.log('🚀 Loading face detection models...');
-    console.log('📍 Available faceapi methods:', Object.keys(faceapi));
     
     // Load models from CDN
     const MODEL_URL = '/models';
@@ -73,8 +71,6 @@ export const detectAllFaces = async (video: HTMLVideoElement) => {
       .detectAllFaces(video)
       .withFaceLandmarks()
       .withFaceDescriptors();
-    
-    console.log('✅ Face detection completed, found:', result.length, 'faces');
     return result;
   } catch (error) {
     console.error('❌ Error in detectAllFaces:', error);

@@ -10,6 +10,7 @@ export interface Student {
   faceDescriptor?: number[];
   shift?: string;
   class?: string; // Add class property for late calculation
+  authUid?: string; // Add authUid for student portal access
 }
 
 // Helper function to filter students by shift
@@ -91,16 +92,7 @@ export const determineAttendanceStatus = (student: any, selectedShift: string, c
       if (now > onTimeDeadline) {
         attendanceStatus = 'late';
       }
-      
-      console.log('Advanced late calculation:', {
-        studentName: student.fullName,
-        shiftStartTime: shiftStartTimeDate.toLocaleTimeString(),
-        graceMinutes,
-        onTimeDeadline: onTimeDeadline.toLocaleTimeString(),
-        currentTime: now.toLocaleTimeString(),
-        isLate: now > onTimeDeadline,
-        finalStatus: attendanceStatus
-      });
+
     } else {
       console.warn(`No shift config found for ${student.fullName}. Using fallback logic.`);
       
@@ -138,7 +130,7 @@ export const determineAttendanceStatus = (student: any, selectedShift: string, c
 export const markAttendance = async (student: Student, selectedShift: string, classConfigs: any, playSuccessSound: () => void): Promise<string> => {
   try {
     // Check if already marked today for this shift
-    const today = new Date().toDateString();
+    const today = new Date().toISOString().split('T')[0]; // Use ISO format: YYYY-MM-DD
     const attendanceRef = collection(db, 'attendance');
     const attendanceQuery = query(
       attendanceRef,
@@ -169,6 +161,7 @@ export const markAttendance = async (student: Student, selectedShift: string, cl
     const attendanceRecord = {
       studentId: student.id,
       studentName: student.fullName,
+      authUid: student.authUid || null, // Add authUid for student portal access
       date: today,
       timeIn: timeString,
       status: status,

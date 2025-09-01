@@ -159,7 +159,6 @@ const POSStudentPage = () => {
 
         // Cleanup function to unsubscribe from the listener
         return () => {
-            console.log("🔌 Unsubscribing from students real-time listener");
             unsubscribe();
         };
     }, []);
@@ -167,8 +166,6 @@ const POSStudentPage = () => {
     // Real-time listener for selected student's lastPaymentMonth only
     useEffect(() => {
         if (!selectedStudent?.id) return;
-
-        console.log("🔍 Setting up real-time listener for lastPaymentMonth:", selectedStudent.id);
         
         const studentDocRef = doc(db, "students", selectedStudent.id);
         const unsubscribe = onSnapshot(studentDocRef,
@@ -184,7 +181,6 @@ const POSStudentPage = () => {
                     const lastPaymentMonthChanged = newLastPaymentMonth !== previousLastPaymentMonth;
                     
                     if (lastPaymentMonthChanged) {
-                        console.log("📡 Real-time update: lastPaymentMonth changed", previousLastPaymentMonth, "→", newLastPaymentMonth);
                         
                         // Update selected student's lastPaymentMonth
                         setSelectedStudent(prev => prev ? { ...prev, lastPaymentMonth: newLastPaymentMonth } : null);
@@ -200,7 +196,6 @@ const POSStudentPage = () => {
 
                         // Only update payment calculations if user is not interacting with details
                         if (!isUserInteractingWithDetails) {
-                            console.log("📡 Updating payment calculations for lastPaymentMonth change");
                             
                             if (newLastPaymentMonth) {
                                 // For existing students, calculate next month from lastPaymentMonth
@@ -226,8 +221,6 @@ const POSStudentPage = () => {
                                 setShowMonthInput(true);
                                 setJoinDate('');
                             }
-                        } else {
-                            console.log("📡 Skipping payment calculations update: User is interacting with details");
                         }
                     }
                 } else {
@@ -251,7 +244,6 @@ const POSStudentPage = () => {
 
         // Cleanup function
         return () => {
-            console.log("🔌 Unsubscribing from lastPaymentMonth real-time listener");
             unsubscribe();
         };
     }, [selectedStudent?.id, isUserInteractingWithDetails]); // Removed joinDate from dependencies as it's not needed
@@ -411,7 +403,6 @@ const POSStudentPage = () => {
                     setJoinDate('');
                 }
                 
-                console.log("✅ Student selected and payment setup completed", currentStudentData.fullName, "lastPaymentMonth:", currentStudentData.lastPaymentMonth);
             }
         } catch (error) {
             console.error("❌ Error fetching current student data:", error);
@@ -517,10 +508,7 @@ const POSStudentPage = () => {
                 : (isLatePayment(paymentMonth) ? 5.00 : 0);
             
             // Calculate actual late fee amount (considering admin override)
-            const lateFeeAmount = lateFeeOverride ? 0 : rawLateFeeAmount;
-            
-            console.log(`💰 Transaction Late Fee Logic: Raw: $${rawLateFeeAmount}, Applied: $${lateFeeAmount}, Waived: ${lateFeeOverride && rawLateFeeAmount > 0}`);
-            
+            const lateFeeAmount = lateFeeOverride ? 0 : rawLateFeeAmount;            
             
             let proratedAmount: number;
             let finalAmount: number;
@@ -576,9 +564,7 @@ const POSStudentPage = () => {
             
             // Create registration token immediately for unregistered students (only for September 2025 or later)
             if (!transactionData.isStudentRegistered && shouldShowQRCode(displayPaymentMonth)) {
-                try {
-                    console.log(`📅 Payment month check: ${displayPaymentMonth} - Token creation allowed`);
-                    
+                try {                    
                     // Check if token already exists to avoid duplicates
                     const tokensRef = collection(db, 'tempRegistrationTokens');
                     const tokenQuery = query(tokensRef, where('studentId', '==', selectedStudent.id));
@@ -605,9 +591,7 @@ const POSStudentPage = () => {
                             token: token,
                             createdAt: new Date(),
                             expiresAt: expiresAt
-                        });
-                        
-                        console.log(`✅ Registration token created for student ${selectedStudent.id}: ${token}`);
+                        });                        
                     } else {
                         // Check if existing token is expired
                         const existingToken = existingTokens.docs[0];
@@ -637,20 +621,15 @@ const POSStudentPage = () => {
                                 token: newToken,
                                 createdAt: new Date(),
                                 expiresAt: newExpiresAt
-                            });
-                            
-                            console.log(`✅ Expired token replaced for student ${selectedStudent.id}: ${newToken}`);
+                            });                            
                         } else {
                             registrationToken = tokenData.token;
-                            console.log(`📱 Valid token already exists for student ${selectedStudent.id}: ${tokenData.token}`);
                         }
                     }
                 } catch (tokenError) {
                     console.error('❌ Failed to create registration token:', tokenError);
                     // Don't fail the transaction if token creation fails
                 }
-            } else if (!transactionData.isStudentRegistered && !shouldShowQRCode(displayPaymentMonth)) {
-                console.log(`📅 Payment month ${displayPaymentMonth} is before August 2025, skipping token creation`);
             }
             
             // Now, update the student's record with the new last payment month
@@ -664,7 +643,6 @@ const POSStudentPage = () => {
                     await updateDoc(doc(db, "transactions", docRef.id), {
                         registrationToken: registrationToken
                     });
-                    console.log(`✅ Transaction updated with registration token: ${registrationToken}`);
                 } catch (updateError) {
                     console.error(`❌ Failed to update transaction with token:`, updateError);
                     // Don't fail the entire transaction if token update fails
@@ -783,7 +761,22 @@ const POSStudentPage = () => {
             }
             
             toast.success("Receipt sent to printer.");
-            closePostTransactionModal();
+            
+            // Check if QR code token was created for this transaction (same logic as download)
+            // Use the registration status from the transaction data, not current student status
+            const isStudentRegistered = lastTransaction.isStudentRegistered;
+            // Only show QR if student is not registered AND payment month qualifies
+            const shouldShowQR = !isStudentRegistered && shouldShowQRCode(lastTransaction.paymentMonth);
+            const tokenWasCreated = !isStudentRegistered && shouldShowQR;
+            
+            if (tokenWasCreated) {
+                // Close the transaction modal first to prevent overlay stacking
+                setIsPostTransactionModalActive(false);
+                // Show portal instruction modal
+                setShowPortalInstructionModal(true);
+            } else {
+                closePostTransactionModal();
+            }
         } catch (error) {
             console.error(error);
             toast.error(error instanceof Error ? error.message : "Failed to print receipt.");
@@ -890,7 +883,7 @@ const POSStudentPage = () => {
         const instructions = `Portal Account Setup Instructions:
 
 INSTRUCTIONS:
-1. Click on this link: https://t.me/rodwell_portal_password_bot?start=token_${lastTransaction.registrationToken || 'TOKEN'}
+1. Click on this link: https://t.me/rodwell_portal_password_bot?start=${lastTransaction.registrationToken || 'TOKEN'}
 
 2. After creating password, go to: portal.rodwell.center/login
 
@@ -1061,9 +1054,7 @@ INSTRUCTIONS:
         // Refresh transaction history - the students data will be updated automatically via real-time listeners
         if (selectedStudent) {
             fetchTransactionHistory(selectedStudent.id);
-        }
-        
-        console.log("📡 Transaction data refreshed - student data updates automatically via real-time listeners");
+        }        
     };
 
     const decrementMonth = (dateStr: string) => {
@@ -1088,9 +1079,7 @@ INSTRUCTIONS:
         // Create date objects for comparison
         const paymentDueDate = new Date(paymentYear, paymentMonthNum - 1, 5); // 5th of the payment month
         const today = new Date(currentYear, currentMonth - 1, currentDay);
-        
-        console.log(`🔍 Late fee check: Payment for ${paymentMonth}, Today: ${today.toDateString()}, Due: ${paymentDueDate.toDateString()}, Is Late: ${today > paymentDueDate}`);
-        
+                
         // If today is after the 5th of the payment month, it's late
         return today > paymentDueDate;
     };
@@ -1099,33 +1088,27 @@ INSTRUCTIONS:
     const calculateLateFeeAmount = (): number => {
         if (!selectedStudent || !paymentMonth) return 0;
         
-        console.log(`🔍 Late fee calculation: Student: ${selectedStudent.fullName}, PaymentMonth: ${paymentMonth}, LastPaymentMonth: ${selectedStudent.lastPaymentMonth}, LateFeePermission: ${selectedStudent.lateFeePermission}, LateFeeOverride: ${lateFeeOverride}`);
         
         // No late fee for new students (Set Student Details mode)
         if (!selectedStudent.lastPaymentMonth) {
-            console.log(`📝 No late fee: New student`);
             return 0;
         }
         
         // No late fee if student has lateFeePermission = true
         if (selectedStudent.lateFeePermission === true) {
-            console.log(`📝 No late fee: Student has late fee permission`);
             return 0;
         }
         
         // No late fee if admin overrides it
         if (lateFeeOverride) {
-            console.log(`📝 No late fee: Admin override`);
             return 0;
         }
         
         // Apply $5 late fee if payment is late
         if (isLatePayment(paymentMonth)) {
-            console.log(`📝 Late fee applied: $5.00`);
             return 5.00;
         }
         
-        console.log(`📝 No late fee: Payment is not late`);
         return 0;
     };
 
@@ -1162,7 +1145,6 @@ INSTRUCTIONS:
             // Refresh transaction list - student data will update automatically via real-time listener
             fetchTransactionHistory(transaction.studentId);
             toast.success("Transaction removed successfully");
-            console.log("📡 Student data will update automatically via real-time listener");
         } catch (error) {
             console.error("Error removing transaction:", error);
             toast.error("Failed to remove transaction");
@@ -1204,7 +1186,6 @@ INSTRUCTIONS:
         
         // Auto-open cash drawer when cash payment is selected
         if (method === 'Cash') {
-            console.log('💰 Cash payment selected - attempting to open cash drawer automatically');
             try {
                 const success = await openCashDrawerWithBP003();
                 if (success) {
@@ -1396,19 +1377,6 @@ INSTRUCTIONS:
                                         onClick={() => {
                                             if (!isProcessing && paymentAmount !== null && paymentMonth && joinDate && selectedCashier) {
                                                 handleCharge();
-                                            } else {
-                                                // More specific error logging
-                                                if (!selectedCashier) {
-                                                    console.log("❌ Charge blocked: No cashier selected");
-                                                } else if (!paymentAmount) {
-                                                    console.log("❌ Charge blocked: No payment amount");
-                                                } else if (!paymentMonth) {
-                                                    console.log("❌ Charge blocked: No payment month");
-                                                } else if (!joinDate) {
-                                                    console.log("❌ Charge blocked: No join date");
-                                                } else if (isProcessing) {
-                                                    console.log("❌ Charge blocked: Already processing");
-                                                }
                                             }
                                         }}
                                         disabled={isProcessing || paymentAmount === null || !paymentMonth || !joinDate || !selectedCashier} 
@@ -1663,12 +1631,12 @@ INSTRUCTIONS:
                                                 </strong> 
                                                 <br />
                                                 <a 
-                                                    href={`https://t.me/rodwell_portal_password_bot?start=token_${lastTransaction.registrationToken || 'TOKEN'}`}
+                                                    href={`https://t.me/rodwell_portal_password_bot?start=${lastTransaction.registrationToken || 'TOKEN'}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="inline-block mt-1 px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors duration-200"
                                                 >
-                                                    t.me/rodwell_portal_password_bot?start=token_{lastTransaction.registrationToken || 'TOKEN'}
+                                                    t.me/rodwell_portal_password_bot?start={lastTransaction.registrationToken || 'TOKEN'}
                                                 </a>
                                             </div>
                                         </li>

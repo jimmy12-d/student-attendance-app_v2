@@ -20,7 +20,10 @@
     "backup:help": "echo 'Available backup commands:' && echo '  npm run backup:create    - Create a new backup' && echo '  npm run backup:restore   - Restore from backup (requires --backup-id)' && echo '  npm run backup:schedule  - Start scheduled backups' && echo '  npm run backup:once      - Run single backup now' && echo '  npm run backup:list      - List all backups'",
     "flip-flop:init": "node scripts/initialize-flip-flop-system.js",
     "flip-flop:baseline": "node scripts/create-august-2025-baseline.js",
-    "flip-flop:help": "echo 'Flip-Flop System Commands:' && echo '  npm run flip-flop:baseline  - Create August 2025 baseline (run once)' && echo '  npm run flip-flop:init      - Initialize system (alternative setup)' && echo '  Check README-FLIP-FLOP-SYSTEM.md for details'"
+    "flip-flop:help": "echo 'Flip-Flop System Commands:' && echo '  npm run flip-flop:baseline  - Create August 2025 baseline (run once)' && echo '  npm run flip-flop:init      - Initialize system (alternative setup)' && echo '  Check README-FLIP-FLOP-SYSTEM.md for details'",
+    "fix:authuid": "node scripts/fix_method_api.js",
+    "fix:test": "node scripts/test-firebase-connection.js",
+    "fix:help": "echo 'Data Fix Commands:' && echo '  npm run fix:test     - Test Firebase Admin connection' && echo '  npm run fix:authuid  - Add authUid to face-api attendance records'"
   },
   "dependencies": {
     "@mdi/js": "^7.0.96",

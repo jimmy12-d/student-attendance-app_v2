@@ -581,7 +581,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           // Create new record
           const attendanceRef = doc(collection(db, "attendance"));
           batch.set(attendanceRef, {
-            authUid: "manual-entry", // Placeholder for manual entry
+            authUid: student.authUid || null, // Use student's authUid if available
             class: student.class,
             date: todayStr,
             scannedBy: `Manual attendance by teacher`,

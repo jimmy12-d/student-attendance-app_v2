@@ -1416,6 +1416,15 @@ exports.authenticateStudentWithPhone = onCall({
                     console.error(`Migration failed for student ${studentDoc.id} (phone auth):`, migrationError);
                     // Migration failure shouldn't prevent authentication
                 }
+                
+                // Fix all attendance records for this student by adding authUid
+                try {
+                    const fixResult = await fixAttendanceRecordsForStudent(studentDoc.id, authUid);
+                    console.log(`Attendance fix result for student ${studentDoc.id} (phone auth):`, fixResult);
+                } catch (fixError) {
+                    console.error(`Attendance fix failed for student ${studentDoc.id} (phone auth):`, fixError);
+                    // Fix failure shouldn't prevent authentication
+                }
             } catch (authError) {
                 console.error("Error creating Firebase Auth user:", authError);
                 // If user already exists with this email, try to find them
@@ -1437,6 +1446,15 @@ exports.authenticateStudentWithPhone = onCall({
                         console.error(`Migration failed for student ${studentDoc.id} (phone auth - existing user):`, migrationError);
                         // Migration failure shouldn't prevent authentication
                     }
+                    
+                    // Fix all attendance records for this student by adding authUid
+                    try {
+                        const fixResult = await fixAttendanceRecordsForStudent(studentDoc.id, authUid);
+                        console.log(`Attendance fix result for student ${studentDoc.id} (phone auth - existing user):`, fixResult);
+                    } catch (fixError) {
+                        console.error(`Attendance fix failed for student ${studentDoc.id} (phone auth - existing user):`, fixError);
+                        // Fix failure shouldn't prevent authentication
+                    }
                 } catch (findError) {
                     console.error("Error finding existing Firebase Auth user:", findError);
                     throw new HttpsError("internal", "Authentication service error. Please try again.");
@@ -1445,6 +1463,15 @@ exports.authenticateStudentWithPhone = onCall({
         } else {
             // Update last login time
             await studentDoc.ref.update({ lastLoginAt: FieldValue.serverTimestamp() });
+            
+            // Fix all attendance records for this student by adding authUid (for existing users)
+            try {
+                const fixResult = await fixAttendanceRecordsForStudent(studentDoc.id, authUid);
+                console.log(`Attendance fix result for student ${studentDoc.id} (phone auth - existing login):`, fixResult);
+            } catch (fixError) {
+                console.error(`Attendance fix failed for student ${studentDoc.id} (phone auth - existing login):`, fixError);
+                // Fix failure shouldn't prevent authentication
+            }
         }
 
         // Generate custom token for Firebase Auth
@@ -1541,6 +1568,15 @@ exports.authenticateStudentWithUsername = onCall({
                     console.error(`Migration failed for student ${studentDoc.id} (username auth):`, migrationError);
                     // Migration failure shouldn't prevent authentication
                 }
+                
+                // Fix all attendance records for this student by adding authUid
+                try {
+                    const fixResult = await fixAttendanceRecordsForStudent(studentDoc.id, authUid);
+                    console.log(`Attendance fix result for student ${studentDoc.id} (username auth):`, fixResult);
+                } catch (fixError) {
+                    console.error(`Attendance fix failed for student ${studentDoc.id} (username auth):`, fixError);
+                    // Fix failure shouldn't prevent authentication
+                }
             } catch (authError) {
                 console.error("Error creating Firebase Auth user:", authError);
                 // If user already exists with this email, try to find them
@@ -1562,6 +1598,15 @@ exports.authenticateStudentWithUsername = onCall({
                         console.error(`Migration failed for student ${studentDoc.id} (existing user):`, migrationError);
                         // Migration failure shouldn't prevent authentication
                     }
+                    
+                    // Fix all attendance records for this student by adding authUid
+                    try {
+                        const fixResult = await fixAttendanceRecordsForStudent(studentDoc.id, authUid);
+                        console.log(`Attendance fix result for student ${studentDoc.id} (username auth - existing user):`, fixResult);
+                    } catch (fixError) {
+                        console.error(`Attendance fix failed for student ${studentDoc.id} (username auth - existing user):`, fixError);
+                        // Fix failure shouldn't prevent authentication
+                    }
                 } catch (findError) {
                     console.error("Error finding existing user:", findError);
                     throw new HttpsError("internal", "Failed to create or find user account.");
@@ -1572,6 +1617,15 @@ exports.authenticateStudentWithUsername = onCall({
             await studentDoc.ref.update({ 
                 lastLoginAt: FieldValue.serverTimestamp()
             });
+            
+            // Fix all attendance records for this student by adding authUid (for existing users)
+            try {
+                const fixResult = await fixAttendanceRecordsForStudent(studentDoc.id, authUid);
+                console.log(`Attendance fix result for student ${studentDoc.id} (username auth - existing login):`, fixResult);
+            } catch (fixError) {
+                console.error(`Attendance fix failed for student ${studentDoc.id} (username auth - existing login):`, fixError);
+                // Fix failure shouldn't prevent authentication
+            }
         }
 
         // Generate custom token for client-side sign-in
@@ -2088,6 +2142,87 @@ async function migrateManualAttendanceRecords(studentName, newAuthUid) {
     } catch (error) {
         console.error(`Error during attendance migration for ${studentName}:`, error);
         throw new Error(`Migration failed: ${error.message}`);
+    }
+}
+
+/**
+ * Fix attendance records by adding authUid based on studentId
+ * This function is called when a student logs in to ensure all their attendance records have the correct authUid
+ * @param {string} studentId - The Firestore document ID of the student
+ * @param {string} authUid - The authentication UID to add to the records
+ * @returns {Object} Migration results with counts of updated records
+ */
+async function fixAttendanceRecordsForStudent(studentId, authUid) {
+    try {
+        console.log(`Starting attendance fix for studentId: ${studentId} with authUid: ${authUid}`);
+        
+        // Query for attendance records with this studentId that don't have authUid or have empty authUid
+        const attendanceQuery = await db.collection("attendance")
+            .where("studentId", "==", studentId)
+            .get();
+        
+        if (attendanceQuery.empty) {
+            console.log(`No attendance records found for studentId: ${studentId}`);
+            return { 
+                success: true, 
+                recordsFound: 0, 
+                recordsUpdated: 0,
+                message: "No attendance records found for this student"
+            };
+        }
+        
+        // Filter records that need authUid added
+        const recordsNeedingFix = attendanceQuery.docs.filter(doc => {
+            const data = doc.data();
+            return !data.authUid || data.authUid === "" || data.authUid === null || data.authUid === "manual-entry";
+        });
+        
+        if (recordsNeedingFix.length === 0) {
+            console.log(`All ${attendanceQuery.docs.length} attendance records already have authUid for studentId: ${studentId}`);
+            return { 
+                success: true, 
+                recordsFound: attendanceQuery.docs.length, 
+                recordsUpdated: 0,
+                message: "All attendance records already have authUid"
+            };
+        }
+        
+        console.log(`Found ${recordsNeedingFix.length} attendance records needing authUid fix for studentId: ${studentId}`);
+        
+        // Use batch writes for better performance and atomicity
+        const batch = db.batch();
+        let updateCount = 0;
+        
+        recordsNeedingFix.forEach((doc) => {
+            const attendanceData = doc.data();
+            
+            console.log(`Fixing attendance record from ${attendanceData.date} (Method: ${attendanceData.method || 'unknown'}, Status: ${attendanceData.status})`);
+            
+            // Update the authUid and add fix metadata
+            batch.update(doc.ref, {
+                authUid: authUid,
+                fixedAt: FieldValue.serverTimestamp(),
+                originalAuthUid: attendanceData.authUid || null
+            });
+            
+            updateCount++;
+        });
+        
+        // Commit the batch update
+        await batch.commit();
+        
+        console.log(`Successfully fixed ${updateCount} attendance records for studentId: ${studentId}`);
+        
+        return {
+            success: true,
+            recordsFound: attendanceQuery.docs.length,
+            recordsUpdated: updateCount,
+            message: `Successfully fixed ${updateCount} attendance records`
+        };
+        
+    } catch (error) {
+        console.error(`Error during attendance fix for studentId ${studentId}:`, error);
+        throw new Error(`Attendance fix failed: ${error.message}`);
     }
 }
 
@@ -2712,6 +2847,15 @@ exports.linkStudentByPhone = onCall({
     // We will also add the user's email to the student document for reference.
     const userEmail = request.auth.token.email;
     await studentDoc.ref.update({ authUid: uid, email: userEmail });
+    
+    // Fix all attendance records for this student by adding authUid
+    try {
+        const fixResult = await fixAttendanceRecordsForStudent(studentDoc.id, uid);
+        console.log(`Attendance fix result for student ${studentDoc.id} (link by phone):`, fixResult);
+    } catch (fixError) {
+        console.error(`Attendance fix failed for student ${studentDoc.id} (link by phone):`, fixError);
+        // Fix failure shouldn't prevent linking
+    }
     
     return { success: true, message: "Your account has been successfully linked!" };
 

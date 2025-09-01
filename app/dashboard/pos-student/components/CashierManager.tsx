@@ -84,12 +84,6 @@ const CashierManager: React.FC<CashierManagerProps> = ({
   const handleDropdownChange = (value: string) => {
     setSelectedCashier(value);
     onCashierSelected(value);
-    
-    // Provide visual feedback when cashier is selected
-    if (value) {
-      // You could add a toast notification here if needed
-      console.log(`✅ Cashier selected: ${value}`);
-    }
   };
 
   if (authLoading || loading) {

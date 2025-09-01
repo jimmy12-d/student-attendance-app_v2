@@ -173,7 +173,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ student, isOpen, onClo
                   </a>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`https://t.me/rodwell_portal_password_bot?start=token_${student.registrationToken}`);
+                      navigator.clipboard.writeText(`https://t.me/rodwell_portal_password_bot?start=${student.registrationToken}`);
                       toast.success('Telegram link copied to clipboard!');
                     }}
                     className="ml-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"

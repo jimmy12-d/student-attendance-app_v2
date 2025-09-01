@@ -35,32 +35,50 @@ async function migrateStudentAttendance(studentName, authUid, studentId) {
         console.log(`\n📝 Processing: ${studentName} (ID: ${studentId})`);
         console.log(`   AuthUid: ${authUid}`);
         
-        // Query for attendance records with manual-entry authUid and matching student name
+        // Query for manual-entry attendance records
         const manualAttendanceQuery = await db.collection("attendance")
             .where("authUid", "==", "manual-entry")
             .where("studentName", "==", studentName)
             .get();
         
-        if (manualAttendanceQuery.empty) {
-            console.log(`   ⚪ No manual attendance records found`);
+        // Query for face-api attendance records without authUid
+        const faceApiQuery = await db.collection("attendance")
+            .where("studentId", "==", studentId)
+            .where("method", "==", "face-api")
+            .get();
+        
+        // Filter face-api records that don't have authUid
+        const faceApiRecordsWithoutAuth = faceApiQuery.docs.filter(doc => {
+            const data = doc.data();
+            return !data.authUid || data.authUid === "" || data.authUid === null;
+        });
+        
+        const totalRecordsFound = manualAttendanceQuery.docs.length + faceApiRecordsWithoutAuth.length;
+        
+        if (totalRecordsFound === 0) {
+            console.log(`   ⚪ No attendance records found to migrate`);
             return { 
                 success: true, 
                 recordsFound: 0, 
                 recordsUpdated: 0,
-                message: "No manual attendance records found to migrate"
+                manualRecords: 0,
+                faceApiRecords: 0,
+                message: "No attendance records found to migrate"
             };
         }
         
-        console.log(`   📊 Found ${manualAttendanceQuery.docs.length} manual attendance records`);
+        console.log(`   📊 Found ${manualAttendanceQuery.docs.length} manual-entry records`);
+        console.log(`   📊 Found ${faceApiRecordsWithoutAuth.length} face-api records without authUid`);
         
         // Use batch writes for better performance and atomicity
         const batch = db.batch();
         let updateCount = 0;
         
+        // Process manual-entry records
         manualAttendanceQuery.docs.forEach((doc) => {
             const attendanceData = doc.data();
             
-            console.log(`   📅 Migrating record from ${attendanceData.date} (Status: ${attendanceData.status})`);
+            console.log(`   📅 Migrating manual record from ${attendanceData.date} (Status: ${attendanceData.status})`);
             
             // Update the authUid and add migration metadata
             batch.update(doc.ref, {
@@ -72,16 +90,35 @@ async function migrateStudentAttendance(studentName, authUid, studentId) {
             updateCount++;
         });
         
+        // Process face-api records
+        faceApiRecordsWithoutAuth.forEach((doc) => {
+            const attendanceData = doc.data();
+            
+            console.log(`   📸 Migrating face-api record from ${attendanceData.date} (Status: ${attendanceData.status})`);
+            
+            // Update the authUid and add migration metadata
+            batch.update(doc.ref, {
+                authUid: authUid,
+                migratedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+            
+            updateCount++;
+        });
+        
         // Commit the batch update
         await batch.commit();
         
         console.log(`   ✅ Successfully migrated ${updateCount} records for ${studentName}`);
+        console.log(`      - ${manualAttendanceQuery.docs.length} manual-entry records`);
+        console.log(`      - ${faceApiRecordsWithoutAuth.length} face-api records`);
         
         return {
             success: true,
-            recordsFound: manualAttendanceQuery.docs.length,
+            recordsFound: totalRecordsFound,
             recordsUpdated: updateCount,
-            message: `Successfully migrated ${updateCount} manual attendance records`
+            manualRecords: manualAttendanceQuery.docs.length,
+            faceApiRecords: faceApiRecordsWithoutAuth.length,
+            message: `Successfully migrated ${updateCount} attendance records`
         };
         
     } catch (error) {
@@ -90,7 +127,9 @@ async function migrateStudentAttendance(studentName, authUid, studentId) {
             success: false,
             error: error.message,
             recordsFound: 0,
-            recordsUpdated: 0
+            recordsUpdated: 0,
+            manualRecords: 0,
+            faceApiRecords: 0
         };
     }
 }
@@ -99,7 +138,9 @@ async function migrateStudentAttendance(studentName, authUid, studentId) {
  * Main migration function
  */
 async function migrateAllStudentsAttendance() {
-    console.log('🚀 Starting bulk attendance migration for all students with authUid...\n');
+    console.log('🚀 Starting bulk attendance migration for all students with authUid...');
+    console.log('   📝 Manual-entry records (authUid: "manual-entry")');
+    console.log('   📸 Face-API records (method: "face-api" without authUid)\n');
     
     try {
         // Get all students who have an authUid
@@ -128,6 +169,8 @@ async function migrateAllStudentsAttendance() {
         let totalProcessed = 0;
         let totalRecordsFound = 0;
         let totalRecordsMigrated = 0;
+        let totalManualRecords = 0;
+        let totalFaceApiRecords = 0;
         let successfulMigrations = 0;
         let failedMigrations = 0;
         
@@ -148,6 +191,8 @@ async function migrateAllStudentsAttendance() {
             totalProcessed++;
             totalRecordsFound += result.recordsFound;
             totalRecordsMigrated += result.recordsUpdated;
+            totalManualRecords += (result.manualRecords || 0);
+            totalFaceApiRecords += (result.faceApiRecords || 0);
             
             if (result.success) {
                 successfulMigrations++;
@@ -166,8 +211,10 @@ async function migrateAllStudentsAttendance() {
         console.log(`👥 Students processed: ${totalProcessed}`);
         console.log(`✅ Successful migrations: ${successfulMigrations}`);
         console.log(`❌ Failed migrations: ${failedMigrations}`);
-        console.log(`📄 Total manual records found: ${totalRecordsFound}`);
+        console.log(`📄 Total records found: ${totalRecordsFound}`);
         console.log(`🔄 Total records migrated: ${totalRecordsMigrated}`);
+        console.log(`📝 Manual-entry records: ${totalManualRecords}`);
+        console.log(`📸 Face-API records: ${totalFaceApiRecords}`);
         console.log('=' .repeat(60));
         
         if (failedMigrations > 0) {
@@ -189,7 +236,9 @@ async function migrateAllStudentsAttendance() {
  * Check what would be migrated without actually doing it
  */
 async function checkMigrationStatus() {
-    console.log('🔍 Checking migration status for all students...\n');
+    console.log('🔍 Checking migration status for all students...');
+    console.log('   📝 Manual-entry records (authUid: "manual-entry")');
+    console.log('   📸 Face-API records (method: "face-api" without authUid)\n');
     
     try {
         // Get all students who have an authUid
@@ -216,11 +265,13 @@ async function checkMigrationStatus() {
         console.log('=' .repeat(80));
         
         let totalManualRecords = 0;
-        let studentsWithManualRecords = 0;
+        let totalFaceApiRecords = 0;
+        let studentsWithRecords = 0;
         
         for (const studentDoc of studentsWithAuthUid) {
             const studentData = studentDoc.data();
             const studentName = studentData.fullName;
+            const studentId = studentDoc.id;
             
             if (!studentName) continue;
             
@@ -230,22 +281,38 @@ async function checkMigrationStatus() {
                 .where("studentName", "==", studentName)
                 .get();
             
+            // Check for face-api records without authUid
+            const faceApiQuery = await db.collection("attendance")
+                .where("studentId", "==", studentId)
+                .where("method", "==", "face-api")
+                .get();
+            
+            // Filter face-api records that don't have authUid
+            const faceApiRecordsWithoutAuth = faceApiQuery.docs.filter(doc => {
+                const data = doc.data();
+                return !data.authUid || data.authUid === "" || data.authUid === null;
+            });
+            
             // Check for already migrated records
             const migratedRecords = await db.collection("attendance")
                 .where("studentName", "==", studentName)
                 .where("migratedAt", "!=", null)
                 .get();
             
-            if (!manualRecords.empty || !migratedRecords.empty) {
+            const totalRecordsToMigrate = manualRecords.size + faceApiRecordsWithoutAuth.length;
+            
+            if (totalRecordsToMigrate > 0 || !migratedRecords.empty) {
                 console.log(`📝 ${studentName}:`);
                 console.log(`   📄 Manual records: ${manualRecords.size}`);
-                console.log(`   🔄 Already migrated: ${migratedRecords.size}`);
+                console.log(`   � Face-API records (no authUid): ${faceApiRecordsWithoutAuth.length}`);
+                console.log(`   �🔄 Already migrated: ${migratedRecords.size}`);
                 console.log(`   🆔 Student ID: ${studentDoc.id}`);
                 console.log(`   🔑 AuthUid: ${studentData.authUid}`);
                 
-                if (!manualRecords.empty) {
-                    studentsWithManualRecords++;
+                if (totalRecordsToMigrate > 0) {
+                    studentsWithRecords++;
                     totalManualRecords += manualRecords.size;
+                    totalFaceApiRecords += faceApiRecordsWithoutAuth.length;
                 }
             }
         }
@@ -254,8 +321,10 @@ async function checkMigrationStatus() {
         console.log('📊 MIGRATION STATUS SUMMARY');
         console.log('=' .repeat(80));
         console.log(`👥 Students with valid authUid: ${studentsWithAuthUid.length}`);
-        console.log(`📄 Students with manual records: ${studentsWithManualRecords}`);
-        console.log(`🔄 Total manual records to migrate: ${totalManualRecords}`);
+        console.log(`📄 Students with records to migrate: ${studentsWithRecords}`);
+        console.log(`📝 Manual-entry records to migrate: ${totalManualRecords}`);
+        console.log(`� Face-API records to migrate: ${totalFaceApiRecords}`);
+        console.log(`🔄 Total records to migrate: ${totalManualRecords + totalFaceApiRecords}`);
         console.log('=' .repeat(80));
         
     } catch (error) {

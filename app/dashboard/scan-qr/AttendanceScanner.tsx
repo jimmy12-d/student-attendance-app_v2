@@ -62,7 +62,7 @@ const AttendanceScanner: React.FC = () => {
   useEffect(() => {
     if (typeof Audio !== "undefined") {
         const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
-      successSoundRef.current = new Audio(`${basePath}/success_sound_2.mp3`);
+      successSoundRef.current = new Audio(`${basePath}/success_sound_3.mp3`);
     }
   }, []);
 
