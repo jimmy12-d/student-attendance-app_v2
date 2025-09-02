@@ -11,13 +11,15 @@ export interface TrackedFace {
   box: { x: number; y: number; width: number; height: number };
   descriptor?: Float32Array;
   name?: string;
-  status: 'detecting' | 'recognizing' | 'recognized' | 'unknown';
+  status: 'detecting' | 'recognizing' | 'recognized' | 'unknown' | 'scanning';
   confidence?: number;
   message?: string;
   firstSeen: number;
   lastSeen: number;
   lastRecognized?: number; // Track when attendance was last marked
   attendanceStatus?: string; // Track the attendance status (present, late, etc.)
+  isScanning?: boolean; // Per-face scan lock
+  scanMessage?: string; // Per-face scan message
 }
 
 // Initialize face-api.js models
@@ -64,8 +66,6 @@ export const detectAllFaces = async (video: HTMLVideoElement) => {
     if (!faceapi) {
       throw new Error('Face-api.js not initialized');
     }
-    
-    console.log('🔍 Calling faceapi.detectAllFaces...');
     
     const result = await faceapi
       .detectAllFaces(video)

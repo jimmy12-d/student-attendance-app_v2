@@ -44,3 +44,4 @@ workerFiles.forEach(workerFile => {
 });
 
 console.log('🔒 All service worker files secured!');
+console.log(`✅ Successfully Built`);
