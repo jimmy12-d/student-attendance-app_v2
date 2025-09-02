@@ -240,6 +240,11 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   // Get today's detailed attendance status including time
   const getTodayAttendanceStatus = (student: Student) => {
     try {
+      // Return loading state if configs aren't loaded yet
+      if (!allClassConfigs || loadingAttendanceData) {
+        return { status: "Loading..." };
+      }
+
       const todayStr = new Date().toISOString().split('T')[0];
       
       // Find today's attendance record for this student

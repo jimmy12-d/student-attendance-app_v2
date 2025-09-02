@@ -361,20 +361,147 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
               />
             </div>
-            <CustomDropdown
-              label="Schedule Type"
-              id="scheduleType"
-              value={scheduleType}
-              onChange={setScheduleType}
-              options={scheduleTypeOptions}
-              placeholder="Select Type"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Schedule Type
+              </label>
+              <div className="relative">
+                <div className={`flex bg-gradient-to-r rounded-full p-1 w-fit relative overflow-hidden shadow-inner ${
+                  !scheduleType
+                    ? 'from-gray-100 to-gray-100 dark:from-gray-800 dark:to-gray-800 border border-gray-300 dark:border-gray-600'
+                    : 'from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-gray-200 dark:border-gray-600'
+                }`}>
+                  {/* Sliding background */}
+                  <div
+                    className={`absolute top-1 bottom-1 rounded-full shadow-lg transition-all duration-300 ease-out ${
+                      !scheduleType
+                        ? 'left-1/2 right-1/2 bg-gray-300 dark:bg-gray-600'
+                        : scheduleType === 'Flip-Flop'
+                        ? 'left-1/2 right-1 bg-gradient-to-r from-purple-400 to-purple-500'
+                        : 'left-1 right-1/2 bg-gradient-to-r from-blue-400 to-blue-500'
+                    }`}
+                  />
+
+                  {/* Fix Option */}
+                  <button
+                    type="button"
+                    onClick={() => setScheduleType('Fix')}
+                    className={`relative px-6 py-1.5 text-sm font-semibold rounded-full transition-all duration-200 z-10 flex items-center justify-center min-w-[110px] gap-2 ${
+                      !scheduleType
+                        ? 'text-gray-500 dark:text-gray-400'
+                        : scheduleType === 'Fix'
+                        ? 'text-white drop-shadow-sm'
+                        : 'text-blue-700 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200'
+                    }`}
+                  >
+                    <div className={`w-2 h-2 rounded-full transition-colors ${
+                      !scheduleType
+                        ? 'bg-gray-400'
+                        : scheduleType === 'Fix'
+                        ? 'bg-white/80'
+                        : 'bg-blue-400'
+                    }`} />
+                    Fix
+                  </button>
+
+                  {/* Flip-Flop Option */}
+                  <button
+                    type="button"
+                    onClick={() => setScheduleType('Flip-Flop')}
+                    className={`relative px-6 py-1.5 text-sm font-semibold rounded-full transition-all duration-200 z-10 flex items-center justify-center min-w-[110px] gap-2 ${
+                      !scheduleType
+                        ? 'text-gray-500 dark:text-gray-400'
+                        : scheduleType === 'Flip-Flop'
+                        ? 'text-white drop-shadow-sm'
+                        : 'text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200'
+                    }`}
+                  >
+                    <div className={`w-2 h-2 rounded-full transition-colors ${
+                      !scheduleType
+                        ? 'bg-gray-400'
+                        : scheduleType === 'Flip-Flop'
+                        ? 'bg-white/80'
+                        : 'bg-purple-400'
+                    }`} />
+                    Flip-Flop
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Row 2.5: Telegram Settings */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mt-6">
-            <div className="flex items-start space-x-4">
-              <div className="flex items-center">
+          <div className="mt-6 transition-all duration-500 ease-in-out">
+            {hasTelegramUsername ? (
+              // Full visual version when enabled
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 transform transition-all duration-300 ease-in-out opacity-100 scale-100">
+                <div className="flex items-start space-x-4">
+                  <div className="flex items-center">
+                    <div className="relative inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        id="hasTelegramUsername"
+                        checked={hasTelegramUsername}
+                        onChange={(e) => {
+                          setHasTelegramUsername(e.target.checked);
+                          if (!e.target.checked) {
+                            setTelegramUsername('');
+                          }
+                        }}
+                        className="sr-only"
+                      />
+                      <label
+                        htmlFor="hasTelegramUsername"
+                        className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                          hasTelegramUsername ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                            hasTelegramUsername ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label htmlFor="hasTelegramUsername" className="text-sm font-medium text-blue-800 dark:text-blue-200 cursor-pointer">
+                      Student has Telegram account
+                    </label>
+                    <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                      Enable this to allow Telegram communication with the student
+                    </p>
+
+                    {hasTelegramUsername && (
+                      <div className="mt-4 transform transition-all duration-300 ease-in-out">
+                        <label htmlFor="telegramUsername" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Telegram Username
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">@</span>
+                          </div>
+                          <input
+                            type="text"
+                            id="telegramUsername"
+                            name="telegramUsername"
+                            value={telegramUsername}
+                            onChange={(e) => setTelegramUsername(e.target.value)}
+                            placeholder="username"
+                            className="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black transition-all duration-200 ease-in-out"
+                          />
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          Enter the username without @ symbol (e.g., john_doe)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Minimal toggle when disabled
+              <div className="flex items-center space-x-3 transform transition-all duration-300 ease-in-out opacity-100 scale-100">
                 <div className="relative inline-flex items-center">
                   <input
                     type="checkbox"
@@ -401,41 +528,16 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                     />
                   </label>
                 </div>
+                <div>
+                  <label htmlFor="hasTelegramUsername" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                    Enable Telegram integration
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Allow Telegram communication with this student
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                <label htmlFor="hasTelegramUsername" className="text-sm font-medium text-blue-800 dark:text-blue-200 cursor-pointer">
-                  Student has Telegram account
-                </label>
-                <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                  Enable this to allow Telegram communication with the student
-                </p>
-                
-                {hasTelegramUsername && (
-                  <div className="mt-4">
-                    <label htmlFor="telegramUsername" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Telegram Username
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 sm:text-sm">@</span>
-                      </div>
-                      <input
-                        type="text"
-                        id="telegramUsername"
-                        name="telegramUsername"
-                        value={telegramUsername}
-                        onChange={(e) => setTelegramUsername(e.target.value)}
-                        placeholder="username"
-                        className="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black"
-                      />
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      Enter the username without @ symbol (e.g., john_doe)
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Row 3: Class and Shift */}
@@ -579,29 +681,27 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Enable to allow charging late fees for this student.</p>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <div className="relative">
+                  <div className={`flex items-center px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
+                    lateFeePermission
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+                      : 'bg-red-50 dark:bg-gray-500/20 border-gray-300 dark:border-gray-700'
+                  }`}>
                     <input
                       id="lateFeePermission"
                       name="lateFeePermission"
                       type="checkbox"
                       checked={lateFeePermission}
                       onChange={(e) => setLateFeePermission(e.target.checked)}
-                      className="sr-only"
-                      aria-checked={lateFeePermission}
+                      className="h-5 w-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
                     />
-                    <div
-                      role="switch"
-                      aria-checked={lateFeePermission}
-                      onClick={() => setLateFeePermission(!lateFeePermission)}
-                      className={`w-12 h-7 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ${lateFeePermission ? 'bg-emerald-500' : 'bg-gray-200 dark:bg-gray-600'}`}
-                    >
-                      <div className={`bg-white w-5 h-5 rounded-full shadow transform transition-transform duration-200 ${lateFeePermission ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </div>
+                    <label htmlFor="lateFeePermission" className={`ml-3 text-sm font-medium cursor-pointer ${
+                      lateFeePermission
+                        ? 'text-emerald-700 dark:text-emerald-300'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      {lateFeePermission ? 'Allowed' : '5$ Fee'}
+                    </label>
                   </div>
-
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${lateFeePermission ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'}`}>
-                    {lateFeePermission ? 'Allowed' : '5$ Fee'}
-                  </span>
                 </div>
               </div>
             </div>

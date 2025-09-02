@@ -229,15 +229,8 @@ export default function AttendanceRecordPage() {
 
   // Filter attendance records by selected date
   const filteredAttendanceRecords = useMemo(() => {
-    console.log('Filtering attendance records:', {
-      totalRecords: attendanceRecords.length,
-      selectedDate,
-      sampleRecords: attendanceRecords.slice(0, 3).map(r => ({ id: r.id, date: r.date, studentName: r.studentName }))
-    });
-    
     const filtered = attendanceRecords.filter(record => {
       if (!record.date) {
-        console.log('Skipping record with no date:', record.id);
         return false;
       }
       
@@ -255,7 +248,6 @@ export default function AttendanceRecordPage() {
         const selectedDateObj = new Date(selectedDate + 'T00:00:00');
         const selectedDateString = selectedDateObj.toDateString();
         if (record.date === selectedDateString) {
-          console.log('Matched toDateString format:', { recordId: record.id, recordDate: record.date, selectedDateString });
           return true;
         }
       } catch (error) {
@@ -264,11 +256,6 @@ export default function AttendanceRecordPage() {
       
       return false;
     });
-    
-    console.log('Filtered results:', {
-      filteredCount: filtered.length,
-      filteredRecordIds: filtered.map(r => r.id)
-    });
         
     return filtered;
   }, [attendanceRecords, selectedDate]);
@@ -276,25 +263,11 @@ export default function AttendanceRecordPage() {
   // Compute a display string for the table title.
   const tableDateDisplay = useMemo(() => {
     const uniqueDates = Array.from(new Set(filteredAttendanceRecords.map(r => r.date).filter(Boolean)));
-    
-    // Debug logging for date processing
-    console.log('Processing dates for table display:', {
-      totalRecords: filteredAttendanceRecords.length,
-      uniqueDates,
-      selectedDate,
-      uniqueDatesDetailed: uniqueDates.map(date => ({
-        rawDate: date,
-        type: typeof date,
-        includes_dash: date.includes('-'),
-        split_result: date.split('T')[0]
-      }))
-    });
-    
+
     if (uniqueDates.length === 0) return '';
 
     if (uniqueDates.length === 1) {
       const raw = uniqueDates[0];
-      console.log(`Processing single date: ${raw}`);
       
       try {
         // Handle ISO like '2025-09-01' or '2025-09-01T12:00:00'
@@ -314,19 +287,16 @@ export default function AttendanceRecordPage() {
             day: 'numeric',
             timeZone: 'Asia/Phnom_Penh'
           });
-          console.log(`Formatted date with Phnom Penh timezone: ${phnomPenhDate}`);
           return `· ${phnomPenhDate}`;
         }
       } catch (e) {
         console.warn('Date parsing error:', e, 'for raw date:', raw);
       }
 
-      console.log(`Fallback to raw date: ${raw}`);
       return `· ${raw}`;
     }
 
     // Handle multiple unique dates - show them all for debugging
-    console.log('Multiple unique dates found:', uniqueDates);
     const datesList = uniqueDates.map(raw => {
       try {
         let dateObj: Date;

@@ -1,7 +1,7 @@
 {
   "collection": "transactions",
-  "totalDocuments": 200,
-  "backupTimestamp": "2025-08-23T07:20:23.824Z",
+  "totalDocuments": 315,
+  "backupTimestamp": "2025-09-02T07:19:04.217Z",
   "documents": [
     {
       "id": "05hgUUMPNKslNV2FFg7g",
@@ -34,6 +34,134 @@
       }
     },
     {
+      "id": "0lKGPzM2rTPR7ZvOSuzB",
+      "data": {
+        "studentId": "ApoJLnMTQ33QNjyW2UHa",
+        "studentName": "Sam VattanakViseth",
+        "className": "Class 11F",
+        "classType": "Grade 11E",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology"
+        ],
+        "fullAmount": 115,
+        "proratedAmount": 115,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 115,
+        "receiptNumber": "2509111",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T13:01:22.251Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "4G2LFVXWJBEJVBJ9"
+      }
+    },
+    {
+      "id": "0oFQvHDzbqEmeEbvikSt",
+      "data": {
+        "studentId": "pm4iNwkkax4F2vhGPFQK",
+        "studentName": "Orn Vichetra",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509059",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T05:47:23.182Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "BRBBTF28QW5U3LFG"
+      }
+    },
+    {
+      "id": "0r1MjzbLjUb9rKwwdJQ0",
+      "data": {
+        "studentId": "Wa9QNM0mmon8yGEMOsC6",
+        "studentName": "Sao Sokhouy",
+        "className": "Class 7E",
+        "classType": "Grade 7",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": 30,
+        "manualDiscountReason": "pay back last month",
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 30,
+        "receiptNumber": "2509104",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T12:15:09.696Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "NQUMQ9WARNYHDYXB"
+      }
+    },
+    {
+      "id": "0tNVmGZJ85mY184tPSZl",
+      "data": {
+        "studentId": "OFb272tq8hUIFcL01ddU",
+        "studentName": "Theng DyLyJames",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509047",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T01:02:40.913Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "C8F9SSDMBRA7EGY2"
+      }
+    },
+    {
       "id": "15BlsPuQI0ZjwfvwNufG",
       "data": {
         "studentId": "XNPYpt4qIdXu4OUIWY9U",
@@ -58,6 +186,37 @@
         "date": "2025-08-05T04:13:51.751Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "16Bx2H01Ng1XIbZCQG4G",
+      "data": {
+        "studentId": "d6eGhtcPVOXWV2Ausilk",
+        "studentName": "Dy Sreypich",
+        "className": "Class 9E",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509103",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T12:00:47.279Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "PDJJF3GLGJU6D4PK"
       }
     },
     {
@@ -90,6 +249,71 @@
         "joinDate": "2025-08-18",
         "cashier": "Admin",
         "isStudentRegistered": true
+      }
+    },
+    {
+      "id": "1c8HFD5Psr1PIdvuKhw2",
+      "data": {
+        "studentId": "kxpBw3qrxSAbOdTRjk0L",
+        "studentName": "lim po un",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509125",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T04:18:13.935Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "W7VFYRLZZAWBVQRT"
+      }
+    },
+    {
+      "id": "1dJdP6i3mAZOmhVICe7b",
+      "data": {
+        "studentId": "oFSJhTfNxlRpuiG1oELU",
+        "studentName": "Chun Ek",
+        "className": "Class 12E",
+        "classType": "Grade 12E",
+        "subjects": [
+          "Math",
+          "Khmer",
+          "Chemistry",
+          "Physics",
+          "Biology"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509095",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T10:25:35.877Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "C3SHBAZ7N2B5G575"
       }
     },
     {
@@ -218,6 +442,35 @@
       }
     },
     {
+      "id": "2C93N2Y8jl5VKwzWKOfH",
+      "data": {
+        "studentId": "3MMmd2V5LMSLRTFzQYCe",
+        "studentName": "Sor Nyta",
+        "className": "Class 7E",
+        "classType": "Grade 7",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509017",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-27T06:44:46.404Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Admin",
+        "isStudentRegistered": false
+      }
+    },
+    {
       "id": "2TLqIous6c8P4viKFID3",
       "data": {
         "studentId": "oybTXQ1muBcMBvp0xAlJ",
@@ -245,6 +498,71 @@
         "date": "2025-08-11T13:28:41.585Z",
         "joinDate": "2025-08-11",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "2g2g0LqoRAaKBFyuX5Ap",
+      "data": {
+        "studentId": "TShLL20nKV8vnrmBx5t3",
+        "studentName": "Phearon Chanraksa",
+        "className": "Class 11A",
+        "classType": "Grade 11A",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509021",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-29T11:50:57.134Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false
+      }
+    },
+    {
+      "id": "2hAVo97h75nDeg4T9xht",
+      "data": {
+        "studentId": "hzKJ0wqeUQ1sVNDyn2Jw",
+        "studentName": "Chey Norin",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509038",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T00:27:36.187Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "DKL2KYR7WBJR52PL"
       }
     },
     {
@@ -351,6 +669,36 @@
       }
     },
     {
+      "id": "3qRWZCMT2WNFRvkQhdnO",
+      "data": {
+        "studentId": "Gh8zIKdPtovsnyO0GNfT",
+        "studentName": "Nal Oudom",
+        "className": "Class 9F",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509023",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-08-29T13:05:02.826Z",
+        "joinDate": "2025-08-29",
+        "cashier": "Jon",
+        "isStudentRegistered": false
+      }
+    },
+    {
       "id": "42uCl9jSlaWKGk0eb3Nd",
       "data": {
         "studentId": "hZ07uzbVu2QnzIR5ipFP",
@@ -427,6 +775,38 @@
         "date": "2025-08-12T06:20:05.356Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "4gRGcda3RMR4cKcVT8Ua",
+      "data": {
+        "studentId": "FNhZxVeuVsMcHL3k1utE",
+        "studentName": "Sreng Sethyka",
+        "className": "Class 12NKGS",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509029",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-30T09:17:10.939Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false
       }
     },
     {
@@ -559,11 +939,41 @@
       }
     },
     {
-      "id": "6YPDMGUJpQzUtlFdrqcP",
+      "id": "64C8mbbhyPwpLTc3a5Ch",
       "data": {
-        "studentId": "PgUKI9WQDG6yTmzt2PWx",
-        "studentName": "Ly Sonisa",
-        "className": "Class 12M",
+        "studentId": "wAckME2otJGH9rvZeF0z",
+        "studentName": "Seng Lykheang",
+        "className": "Class 9F",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509020",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-29T03:42:32.758Z",
+        "joinDate": "2025-08-29",
+        "cashier": "Jon",
+        "isStudentRegistered": false
+      }
+    },
+    {
+      "id": "6PfK0sOq43WzH7Nq4vHm",
+      "data": {
+        "studentId": "n54cRd3qisHdC0iMddJD",
+        "studentName": "Svay Vattana",
+        "className": "Class 12B",
         "classType": "Grade 12",
         "subjects": [
           "Math",
@@ -581,45 +991,14 @@
         "lateFeeAmount": null,
         "lateFeeWaived": false,
         "amount": 150,
-        "receiptNumber": "2509010",
+        "receiptNumber": "2509036",
         "paymentMonth": "September 2025",
         "paymentMethod": "QR Payment",
-        "date": "2025-08-16T04:28:22.944Z",
-        "joinDate": "2025-08-16",
-        "cashier": "Admin",
-        "isStudentRegistered": false
-      }
-    },
-    {
-      "id": "6c3IYI2o0DBOyRQCVAUJ",
-      "data": {
-        "studentId": "cwcRQXLk5fY0M2DxeOe4",
-        "studentName": "Test Testing_w2",
-        "className": "Class 11A",
-        "classType": "Grade 11A",
-        "subjects": [
-          "Math",
-          "Chemistry",
-          "Physics",
-          "Khmer",
-          "Biology",
-          "History"
-        ],
-        "fullAmount": 135,
-        "proratedAmount": 135,
-        "discountAmount": 0,
-        "manualDiscountAmount": null,
-        "manualDiscountReason": null,
-        "lateFeeAmount": null,
-        "lateFeeWaived": false,
-        "amount": 135,
-        "receiptNumber": "2509011",
-        "paymentMonth": "September 2025",
-        "paymentMethod": "QR Payment",
-        "date": "2025-08-21T06:49:59.098Z",
-        "joinDate": "2025-08-21",
-        "cashier": "Admin",
-        "isStudentRegistered": true
+        "date": "2025-09-01T00:00:01.165Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "BS95N8D44NBCNC7D"
       }
     },
     {
@@ -893,6 +1272,70 @@
       }
     },
     {
+      "id": "8dwYxKkPWiC34x5iKwSu",
+      "data": {
+        "studentId": "Us2iBBRcH5sSJ1yOxB9V",
+        "studentName": "Mov Kokhour",
+        "className": "Class 10F",
+        "classType": "Grade 10",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509085",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T09:54:12.563Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "E6PWYCLXJJFQC677"
+      }
+    },
+    {
+      "id": "8ye6mbyFrYn6b0o7VdLv",
+      "data": {
+        "studentId": "bnQ4DZ1dVHzCiDRdQuvG",
+        "studentName": "Houn Somart",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509050",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T01:40:33.250Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "VPU5VDHJWGH8JDTD"
+      }
+    },
+    {
       "id": "9D1Hwo3KVoBBlEV4GU0r",
       "data": {
         "studentId": "wAckME2otJGH9rvZeF0z",
@@ -967,6 +1410,103 @@
       }
     },
     {
+      "id": "9uF4gE2i30Eiha4tFNsW",
+      "data": {
+        "studentId": "PS4diz0IPpAb8ySRkNxf",
+        "studentName": "Yin Sovannetra",
+        "className": "Class 12T",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509130",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T06:00:04.052Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "VE8MMLTTPLR29QEW"
+      }
+    },
+    {
+      "id": "AINgvgSvMwDxvCbwBpPE",
+      "data": {
+        "studentId": "zObLyONODoEIKCrezkfq",
+        "studentName": "Kim Rothviseth",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509118",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T01:27:57.180Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "3PKK7PVB8TE7KYJP"
+      }
+    },
+    {
+      "id": "ASpl2qYeUw7YeJBxZfod",
+      "data": {
+        "studentId": "RtjDU4n0BJZ7XDEi0uTg",
+        "studentName": "Lim Panhaboth",
+        "className": "Class 10E",
+        "classType": "Grade 10",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509108",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T12:46:35.022Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "37UYE5ASET66DWV3"
+      }
+    },
+    {
       "id": "AVXptdTgrjglrXUWvpRc",
       "data": {
         "studentId": "WuLtHTeVcWzzYZj5ZIks",
@@ -989,6 +1529,72 @@
         "date": "2025-08-04T00:31:33.501Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "B1JHwM0tQNRRrMkW8aVM",
+      "data": {
+        "studentId": "5oB28GetSnIsDgRLk4gg",
+        "studentName": "Duong Toeuyeak",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509040",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T00:34:41.423Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "JLPRSRBTRU7KYRYL"
+      }
+    },
+    {
+      "id": "B7fCks9j2DAm9ilAuiuL",
+      "data": {
+        "studentId": "2C1HOnDZWTFPH6FNf7Fe",
+        "studentName": "Chea MeyY",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509063",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T05:53:17.819Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "GXY2KBYELM2HA3N7"
       }
     },
     {
@@ -1091,6 +1697,39 @@
       }
     },
     {
+      "id": "CIk3fmxZo8AiyXqoaA6t",
+      "data": {
+        "studentId": "cJv6jNqPdp2REfCSdn0Y",
+        "studentName": "Leng Kimsong",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509051",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T02:50:04.646Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "Q9UCW34QUZCSL7US"
+      }
+    },
+    {
       "id": "CQW6wUznhSyPNXZer9tQ",
       "data": {
         "studentId": "CN864m0V4dHcyUqY41CQ",
@@ -1123,6 +1762,71 @@
       }
     },
     {
+      "id": "Cwy5RMKdf7O14AlcvUAU",
+      "data": {
+        "studentId": "nNUe4Ou6No4VNj2PjocZ",
+        "studentName": "Chinda Vouchly",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509129",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T05:57:25.074Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "LT4KUKZEJTK4K6WN"
+      }
+    },
+    {
+      "id": "D9NkRIKdbMAC0QRzFIQd",
+      "data": {
+        "studentId": "VfSK796y4rAiDx0KOdcw",
+        "studentName": "Hong Chengkeang",
+        "className": "Class 11E",
+        "classType": "Grade 11E",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology"
+        ],
+        "fullAmount": 115,
+        "proratedAmount": 115,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 115,
+        "receiptNumber": "2509128",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-02T04:56:55.648Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "VYCSL8KZRFBGPL6F"
+      }
+    },
+    {
       "id": "DALpUFmxoRRqr2uSW6Pf",
       "data": {
         "studentId": "GZorw0hErUI5EG48gHx6",
@@ -1143,6 +1847,39 @@
         "date": "2025-08-04T05:50:23.771Z",
         "joinDate": "2025-08-11",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "DCEpAMP4mz0Y2fuNGBJA",
+      "data": {
+        "studentId": "OhCYnl5Sc2a7CySsTm2f",
+        "studentName": "Kong VengJing ",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509123",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T04:15:32.598Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "CA86Y4Y2QQXHKKMZ"
       }
     },
     {
@@ -1193,6 +1930,103 @@
         "date": "2025-08-04T05:37:45.225Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "DbMvkAjfB4mhXhlq9too",
+      "data": {
+        "studentId": "obshexEsX9Qpc9PssYoR",
+        "studentName": "Eap Kimlyza",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509117",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-02T01:22:57.452Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "ZHTH3DFZSBD5PFAF"
+      }
+    },
+    {
+      "id": "Ds3FB19WUA0EH6vpWwxw",
+      "data": {
+        "studentId": "7WB2Aaj8uqADgcaQBSFF",
+        "studentName": "Seng Sakrachony ",
+        "className": "Class 12E",
+        "classType": "Grade 12E",
+        "subjects": [
+          "Math",
+          "Khmer",
+          "Chemistry",
+          "Physics",
+          "Biology"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509122",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T02:41:26.713Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "29DQQFMYY5FSRQAK"
+      }
+    },
+    {
+      "id": "DxfykyN37KHEWMMif9ct",
+      "data": {
+        "studentId": "Lx0SmylZWPytX8bjJMeB",
+        "studentName": "Rath Sokleap",
+        "className": "Class 12M",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509018",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-28T04:15:27.445Z",
+        "joinDate": "2025-08-28",
+        "cashier": "Jimmy",
+        "isStudentRegistered": true
       }
     },
     {
@@ -1281,6 +2115,70 @@
       }
     },
     {
+      "id": "Ep6Ns77TGzspGQrZn9pq",
+      "data": {
+        "studentId": "d6pvQ5s7HP8DbPvP9pC4",
+        "studentName": "Heng ChendaVattey",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509073",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T07:18:23.458Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "QXGPRJUPW34MMMXB"
+      }
+    },
+    {
+      "id": "Ev67mK2RuxS99dJijDV9",
+      "data": {
+        "studentId": "W5qazT2WrNnubEbryRMQ",
+        "studentName": "Reth Nypheareach",
+        "className": "Class 10E",
+        "classType": "Grade 10",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509101",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T11:54:04.882Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "K8VYDDVTRUCU67R7"
+      }
+    },
+    {
       "id": "F4MMvZItyjc3XNOQHAJ2",
       "data": {
         "studentId": "pxyFStt2AHkw5lufsoco",
@@ -1331,6 +2229,39 @@
       }
     },
     {
+      "id": "Fq4CST1dpZe4vsYBbFpR",
+      "data": {
+        "studentId": "TbGfZ1j5kcbd5wyaDrRl",
+        "studentName": "Ly Kimsoung",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509115",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T01:20:45.555Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "E3GVKLZZZ44BFADY"
+      }
+    },
+    {
       "id": "FxMEVFulXwRI9U0OpKr5",
       "data": {
         "studentId": "R0uVROTT5a0xS7sdiwsf",
@@ -1358,6 +2289,39 @@
       }
     },
     {
+      "id": "GDsouHY9zfpGz9yrvdaN",
+      "data": {
+        "studentId": "eOdgOzC1gxWeGjME65r4",
+        "studentName": "Eang Lucent",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509082",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T08:15:47.991Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "C9HF5KHXQ54KEAHE"
+      }
+    },
+    {
       "id": "GMNtw3dpoPaCEQEpglm3",
       "data": {
         "studentId": "kJWytP3KTcQMd8WIFODE",
@@ -1381,6 +2345,36 @@
         "date": "2025-08-05T10:32:20.266Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "GbetaJ3DLO9tPPBdWAqP",
+      "data": {
+        "studentId": "abonKvvYCfgHBEIubX8R",
+        "studentName": "Leng Longhak",
+        "className": "Class 8E",
+        "classType": "Grade 8",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509086",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T10:00:23.070Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "ERYDBQAJ9SR299TJ"
       }
     },
     {
@@ -1430,6 +2424,39 @@
         "date": "2025-08-04T10:29:23.386Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "GqMnrPIxkjS8zSy4JWMf",
+      "data": {
+        "studentId": "j2ZZu7iVxI8hiDEzy6Z7",
+        "studentName": "Chhen Chanlyza",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509065",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T05:58:59.172Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "2QR4DMCXEKC2MSXA"
       }
     },
     {
@@ -1485,6 +2512,39 @@
         "date": "2025-08-11T10:44:55.097Z",
         "joinDate": "2025-08-11",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "Hd7jzsEPHS6BdxopDDf4",
+      "data": {
+        "studentId": "UcgKl5bkdclKFUpTmHpc",
+        "studentName": "Heng virakpitou",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509067",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T06:07:14.671Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "U7S7A3MT7EKA6P9D"
       }
     },
     {
@@ -1590,6 +2650,101 @@
       }
     },
     {
+      "id": "J7MoVj1tHym2Ivh8RuL9",
+      "data": {
+        "studentId": "ENCtO8Dr5YpjHn5aDXFF",
+        "studentName": "Kann Monineath",
+        "className": "Class 9E",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 40,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 40,
+        "receiptNumber": "2509102",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T11:55:17.321Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "6DVBYD3E35WL4PYQ"
+      }
+    },
+    {
+      "id": "J9ygq6UCT7kVNCTEnhMO",
+      "data": {
+        "studentId": "4RPr5w3rPRs3MIQ5zJCI",
+        "studentName": "You Sopheakpanhavatey",
+        "className": "Class 10F",
+        "classType": "Grade 10",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509094",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T10:17:01.887Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "3WSSH96LFDKR46DK"
+      }
+    },
+    {
+      "id": "JQJQRKNroH73xGFNT0iw",
+      "data": {
+        "studentId": "bjnMLHcH32fIugkPlzBV",
+        "studentName": "Kannari Megumi",
+        "className": "Class 12NKGS",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509039",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T00:32:38.707Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "9E5FKGQMSF7F44AE"
+      }
+    },
+    {
       "id": "JWrNxAv60leSX0vM1lSQ",
       "data": {
         "studentId": "ywwr0f5fLnwlBT9yhJ7M",
@@ -1639,6 +2794,39 @@
         "date": "2025-08-04T11:23:41.518Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "JxSVpidzf8nRqOrTB2DY",
+      "data": {
+        "studentId": "XNWzNkZHFnRLGSV6hFEh",
+        "studentName": "Chhea Vortey",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 110.8696,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 110.8696,
+        "receiptNumber": "2509052",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T03:01:23.962Z",
+        "joinDate": "2025-09-08",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "9LU7JHASSFU9LSKX"
       }
     },
     {
@@ -1699,6 +2887,36 @@
       }
     },
     {
+      "id": "Kdc0kDxMkyHxKlJX3xmG",
+      "data": {
+        "studentId": "wFwldiTZHUlViwUG1ITX",
+        "studentName": "Buoy Sofia",
+        "className": "Class 8E",
+        "classType": "Grade 8",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509043",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T00:46:46.825Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "V74VWPHYNGVP8BMD"
+      }
+    },
+    {
       "id": "KgaBET4gcKzYctbPIgD5",
       "data": {
         "studentId": "dSPG1f4pEMPoKLXSxzFX",
@@ -1752,6 +2970,72 @@
       }
     },
     {
+      "id": "LAYMg7ShVrOBwfFH9KEZ",
+      "data": {
+        "studentId": "VRfZsQPoQSOEmeAFqLjC",
+        "studentName": "Chhour Sokkhim",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509058",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T04:23:01.191Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "MXVRJC6A2X4VRNYP"
+      }
+    },
+    {
+      "id": "LHQCLfh6ZuPykCoZwWGS",
+      "data": {
+        "studentId": "O1pKkop3xNOqoZlQo8Pa",
+        "studentName": "Saruth Vuthika",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509072",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T07:16:25.099Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "Z2CJXF9SMURSWDT8"
+      }
+    },
+    {
       "id": "LSmG39ONAmPnpcEwKlBK",
       "data": {
         "studentId": "lLuUkIavAV9PozBsStt0",
@@ -1777,6 +3061,39 @@
       }
     },
     {
+      "id": "LaY1zWIOUl17gR5eIQ6Y",
+      "data": {
+        "studentId": "WuLtHTeVcWzzYZj5ZIks",
+        "studentName": "Sou Saprina",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509126",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T04:20:48.625Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "SP9BLVTKU87JRQ65"
+      }
+    },
+    {
       "id": "LgyVMmgEYilZ77mA6pRm",
       "data": {
         "studentId": "4RPr5w3rPRs3MIQ5zJCI",
@@ -1797,6 +3114,69 @@
         "date": "2025-08-02T05:03:28.860Z",
         "joinDate": "2025-08-02",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "LqbhlqFTwnhzjEnCUF6h",
+      "data": {
+        "studentId": "Or5KU25Y8ET1Oyli7JVF",
+        "studentName": "Pang Meykim",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509088",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T10:04:19.431Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "3AUYJLC5GS47FHQZ"
+      }
+    },
+    {
+      "id": "LxNsT73T1VbUIXOaVnOH",
+      "data": {
+        "studentId": "qQuNmaz3VI1iY7THVuM7",
+        "studentName": "Sam Visothirith Panha",
+        "className": "Class 8E",
+        "classType": "Grade 8",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509110",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T13:00:59.613Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "QVFMVLBGHLRQRK4V"
       }
     },
     {
@@ -1847,6 +3227,39 @@
         "date": "2025-08-05T11:54:22.819Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "MV2NObQ7QdC2ZoxrkO6M",
+      "data": {
+        "studentId": "LAyeHZMi6qpZF39XF5lA",
+        "studentName": "Khat Sovanpanha",
+        "className": "Class 12NKGS",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509055",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T03:34:21.758Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "L3C28KQSZSCMRZK8"
       }
     },
     {
@@ -1904,6 +3317,69 @@
       }
     },
     {
+      "id": "MlVwmBJIxu3kqoQAJOQ9",
+      "data": {
+        "studentId": "UBlyHa2yrV5qpxzGDJNq",
+        "studentName": "Lim Panhabo",
+        "className": "Class 7E",
+        "classType": "Grade 7",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509109",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T12:47:02.160Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "V98QFWEXBQT6LLBW"
+      }
+    },
+    {
+      "id": "NAOMTGHQj9UyS16PaXhf",
+      "data": {
+        "studentId": "jEI5PKOrX0OGmOeJYD99",
+        "studentName": "Kong Reachraksa",
+        "className": "Class 11A",
+        "classType": "Grade 11A",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509131",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T06:01:06.117Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "3Q84JFLUXXWUAAT8"
+      }
+    },
+    {
       "id": "NAw3HPTkgfFmbkz5f7rw",
       "data": {
         "studentId": "oXtWM7DJ8WU51sRMz3SC",
@@ -1928,6 +3404,39 @@
         "date": "2025-08-06T01:13:13.661Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "NTk43R7TrAqDUHcqyEfd",
+      "data": {
+        "studentId": "KBEuRqtPGwpzEKkfGfcA",
+        "studentName": "Heng Mengsrun",
+        "className": "Class 12NKGS",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509078",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T07:30:52.302Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "N8Q4F469ZXBHPCVZ"
       }
     },
     {
@@ -2008,6 +3517,69 @@
         "joinDate": "2025-08-04",
         "cashier": "Admin",
         "isStudentRegistered": false
+      }
+    },
+    {
+      "id": "OEoMuuQwPYC5HvPKB2sJ",
+      "data": {
+        "studentId": "44zCLf0NixW58eOsLMnX",
+        "studentName": "Srea RattanasaRakpich",
+        "className": "Class 8E",
+        "classType": "Grade 8",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509062",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T05:52:32.696Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "YVPFHYUJHHK456MT"
+      }
+    },
+    {
+      "id": "OSxXohgHJN1N6QRCW1VZ",
+      "data": {
+        "studentId": "ReLs04a81mVCxmtFuqTG",
+        "studentName": "Hang ChanLinda",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509066",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T06:02:00.760Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "39H8FJ3UT9RRHXN8"
       }
     },
     {
@@ -2137,38 +3709,6 @@
       }
     },
     {
-      "id": "PY2vPNMocA54HgXY8tG2",
-      "data": {
-        "studentId": "cwcRQXLk5fY0M2DxeOe4",
-        "studentName": "Test Testing_w2",
-        "className": "Class 11A",
-        "classType": "Grade 11A",
-        "subjects": [
-          "Math",
-          "Chemistry",
-          "Physics",
-          "Khmer",
-          "Biology",
-          "History"
-        ],
-        "fullAmount": 135,
-        "proratedAmount": 135,
-        "discountAmount": 0,
-        "manualDiscountAmount": null,
-        "manualDiscountReason": null,
-        "lateFeeAmount": 5,
-        "lateFeeWaived": true,
-        "amount": 135,
-        "receiptNumber": "2508159",
-        "paymentMonth": "August 2025",
-        "paymentMethod": "QR Payment",
-        "date": "2025-08-18T06:42:19.898Z",
-        "joinDate": "2025-08-18",
-        "cashier": "Admin",
-        "isStudentRegistered": false
-      }
-    },
-    {
       "id": "Pp0nYTPLSHBhyoQZf6PL",
       "data": {
         "studentId": "ukvjkmfAPGlMHbpoQf9l",
@@ -2193,6 +3733,38 @@
         "date": "2025-08-06T01:58:15.946Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "Q03TztKhEyVd7YrjgMyr",
+      "data": {
+        "studentId": "pDStLz4iTuSOfZjlOYsg",
+        "studentName": "Sereykol Nectar",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509012",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-08-26T01:49:49.026Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Admin",
+        "isStudentRegistered": false
       }
     },
     {
@@ -2221,6 +3793,39 @@
         "date": "2025-08-12T03:25:27.765Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "QCcBtA8AjOg9POeMY8Al",
+      "data": {
+        "studentId": "ln1YPLOdHXYYU6uEQrFN",
+        "studentName": "Lim Geachleap",
+        "className": "Class 12M",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509075",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T07:20:47.183Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "76KTVMPK4XS58YEB"
       }
     },
     {
@@ -2275,6 +3880,37 @@
         "date": "2025-08-11T10:23:31.016Z",
         "joinDate": "2025-08-11",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "QHPIN6jQCz34kGrb8XsC",
+      "data": {
+        "studentId": "RjmK5kXwrg2BwEux0KgZ",
+        "studentName": "Chhun SokkumMongkol",
+        "className": "Class 9E",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509099",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T11:53:08.545Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "A5UBUWPEKKPKP3CU"
       }
     },
     {
@@ -2387,6 +4023,105 @@
         "date": "2025-08-14T08:30:17.725Z",
         "joinDate": "2025-08-15",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "RPuMMp8PMkXIadPBFefV",
+      "data": {
+        "studentId": "GQuGOO80iMF4p3SxqGQm",
+        "studentName": "Thornteth Sopheaktra",
+        "className": "Class 12T",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509132",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T06:10:06.461Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "3ELFHA8P86FVESWP"
+      }
+    },
+    {
+      "id": "RUiqdkQCoZV2bRRctfod",
+      "data": {
+        "studentId": "Aoy8HV4dp0Yl7VKeBiFW",
+        "studentName": "Sokha Rothpiseth",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509064",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T05:56:50.027Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "P4QHE752MGV2223X"
+      }
+    },
+    {
+      "id": "Rdh1uSaTQSNiIE7zfgGH",
+      "data": {
+        "studentId": "X4uGqcONHz3mUdvATzTE",
+        "studentName": "Phorn Sorina",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509116",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T01:21:58.107Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "EKLBFLTYZGPGJYSK"
       }
     },
     {
@@ -2550,6 +4285,38 @@
       }
     },
     {
+      "id": "TPAx73jtGbQZaUmbxY1J",
+      "data": {
+        "studentId": "PgUKI9WQDG6yTmzt2PWx",
+        "studentName": "Ly Sonisa",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509127",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T04:23:43.581Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jon",
+        "isStudentRegistered": true
+      }
+    },
+    {
       "id": "TQBkxeCXRlFdPDX4kabS",
       "data": {
         "studentId": "qTaijrrT2FdM3J5sx0qC",
@@ -2653,6 +4420,39 @@
       }
     },
     {
+      "id": "U7RzeKHB0U1VtuXH7cle",
+      "data": {
+        "studentId": "RJrUg4jL3TIcqIgw8dWO",
+        "studentName": "Leng Sreypich",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509049",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T01:27:13.892Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "XDZCK34X7FSQNCHM"
+      }
+    },
+    {
       "id": "U9kWPotcxp7c3BUA3Wqd",
       "data": {
         "studentId": "gEjMKyok7FgRr9sdpGQI",
@@ -2711,6 +4511,39 @@
       }
     },
     {
+      "id": "UX2ATfpoAKduNsOMc7Dt",
+      "data": {
+        "studentId": "fFquVV2O7MqGcS3kryiM",
+        "studentName": "Sor Sivly",
+        "className": "Class 11A",
+        "classType": "Grade 11A",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509090",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T10:05:29.926Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "YT6AEV3G4Y7K96EU"
+      }
+    },
+    {
       "id": "Ugjc3EgIoRNSmAtjYl9c",
       "data": {
         "studentId": "OwVekPD0GkILBKnAzRUK",
@@ -2762,6 +4595,68 @@
       }
     },
     {
+      "id": "UueWCleZIdjLy7C9bjpL",
+      "data": {
+        "studentId": "GZorw0hErUI5EG48gHx6",
+        "studentName": "Hoeun Keochanpisey",
+        "className": "Class 9F",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 20,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509081",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T07:47:18.163Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "4ZJCDYYETDTWDWSK"
+      }
+    },
+    {
+      "id": "VEVwxLP66LOsDK0aTRJn",
+      "data": {
+        "studentId": "P41vrhxAG62aVrUnSMgb",
+        "studentName": "Chea Rosa",
+        "className": "Class 9E",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509100",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T11:53:36.100Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "QF9FSQTCHMPHEWV4"
+      }
+    },
+    {
       "id": "VVW2BsuRlcMMPbpxivrj",
       "data": {
         "studentId": "AnCloe0hy7l8IxCSdMaJ",
@@ -2783,6 +4678,39 @@
         "date": "2025-08-04T12:03:21.158Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "VWT6DuZLx2ZZdC07nGR6",
+      "data": {
+        "studentId": "L0j4vTyH7qL7rUlwpKf4",
+        "studentName": "Heng ChiTek",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509046",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T01:01:31.296Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "H5PFUT3H3LQY8ZWR"
       }
     },
     {
@@ -2812,6 +4740,39 @@
         "joinDate": "2025-08-18",
         "cashier": "Admin",
         "isStudentRegistered": false
+      }
+    },
+    {
+      "id": "Vss2QmfAXZ95d6M87bvS",
+      "data": {
+        "studentId": "CN864m0V4dHcyUqY41CQ",
+        "studentName": "Toch Sorida",
+        "className": "Class 11A",
+        "classType": "Grade 11A",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509089",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T10:04:36.908Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "F78XL4MBB6D8G2UV"
       }
     },
     {
@@ -2888,6 +4849,37 @@
       }
     },
     {
+      "id": "WINZtOG1iIPufW0Z7Xma",
+      "data": {
+        "studentId": "cjvXUIdQqpx3tRsHd9Ks",
+        "studentName": "Seng Chansocheat",
+        "className": "Class 10F",
+        "classType": "Grade 10",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509106",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T12:43:11.060Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "9NXG38MXTF9U9DGT"
+      }
+    },
+    {
       "id": "WjmiakRoq3Wf849JFub9",
       "data": {
         "studentId": "VRfZsQPoQSOEmeAFqLjC",
@@ -2910,6 +4902,38 @@
         "date": "2025-08-02T03:00:23.833Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "WwYcxgCRcmoee5tjdh12",
+      "data": {
+        "studentId": "xSZm547NSPLvz6XNsRe0",
+        "studentName": "Test Testing",
+        "className": "Class 11A",
+        "classType": "Grade 11A",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509026",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-30T04:58:32.710Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false
       }
     },
     {
@@ -2968,6 +4992,70 @@
       }
     },
     {
+      "id": "XTMR2fAaWgqiklNdrRp0",
+      "data": {
+        "studentId": "tRqMxk9lefD9l4r6ht9H",
+        "studentName": "Sovannadany Narita",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509083",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T08:23:33.368Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "WAYN84973ZANRRDD"
+      }
+    },
+    {
+      "id": "XawZAFRRSl6WYIuE7I4l",
+      "data": {
+        "studentId": "ZB03MUQXcOE1pWVzqeGn",
+        "studentName": "Hengsereyudom",
+        "className": "Class 9E",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509041",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T00:40:06.815Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "ZGR7Z748SWLECZ8K"
+      }
+    },
+    {
       "id": "XpBOpdjJzmTlsGxz0F2l",
       "data": {
         "studentId": "CAMMl6A6ewoBrn4iOAEq",
@@ -3015,6 +5103,37 @@
         "date": "2025-08-02T04:40:48.096Z",
         "joinDate": "2025-08-02",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "YLKUKNZtERZgsaVLmVc9",
+      "data": {
+        "studentId": "hBCrUyRTQh2pG2KnPnzW",
+        "studentName": "Po Chanrattanak",
+        "className": "Class 12E",
+        "classType": "Grade 12E",
+        "subjects": [
+          "Math",
+          "Khmer",
+          "Chemistry",
+          "Physics",
+          "Biology"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509022",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-29T11:55:38.071Z",
+        "joinDate": "2025-08-29",
+        "cashier": "Jason",
+        "isStudentRegistered": false
       }
     },
     {
@@ -3127,6 +5246,39 @@
       }
     },
     {
+      "id": "ZNck3lUwedpIOJS6CMug",
+      "data": {
+        "studentId": "1utUgycRKoo6iFBHUA5Y",
+        "studentName": "Taing Eav",
+        "className": "Class 11A",
+        "classType": "Grade 11A",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509087",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T10:02:28.634Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "UQY4P5FFACCNM4ER"
+      }
+    },
+    {
       "id": "Zb04vJD6CG5sKaERwwk7",
       "data": {
         "studentId": "yPc1thygsKXMnIpV0NPm",
@@ -3174,6 +5326,38 @@
         "date": "2025-08-04T05:42:50.892Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "aEgBKCQifsjgRDrOkTv3",
+      "data": {
+        "studentId": "awEaDHHoPdbDkyNQ2WQm",
+        "studentName": "Kong Hannlong",
+        "className": "Class 11E",
+        "classType": "Grade 11E",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology"
+        ],
+        "fullAmount": 115,
+        "proratedAmount": 115,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 115,
+        "receiptNumber": "2509097",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T10:50:20.613Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "WCHFPSWWHTVHSCUB"
       }
     },
     {
@@ -3307,6 +5491,36 @@
       }
     },
     {
+      "id": "bP3oXoRmWnIXhj9d2Etl",
+      "data": {
+        "studentId": "xpFs133KDQlYjNca2RyA",
+        "studentName": "Rathana Panhapich",
+        "className": "Class 8E",
+        "classType": "Grade 8",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509105",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T12:41:46.320Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "XHJN9HMCXNEGAG45"
+      }
+    },
+    {
       "id": "bW2M2A51y62KgiRxRUHk",
       "data": {
         "studentId": "N53tARF7BXNIvqtp4eNf",
@@ -3416,6 +5630,39 @@
       }
     },
     {
+      "id": "c92PWa8VBEPQVZBB0RAZ",
+      "data": {
+        "studentId": "rnmq9BjlaHTn9nZyPxOT",
+        "studentName": "Din Sokhaneary",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509124",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-02T04:16:58.273Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "C9VHUBYSKXU8M7XS"
+      }
+    },
+    {
       "id": "cYDTfpeiQ8vSiJ0g3O7L",
       "data": {
         "studentId": "VxzqXXjevyPvoMKKTShI",
@@ -3464,6 +5711,134 @@
         "date": "2025-08-04T10:40:30.435Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "ccHJMoJnosYk0LmtouoN",
+      "data": {
+        "studentId": "oXtWM7DJ8WU51sRMz3SC",
+        "studentName": "Ly ReakSatevi",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509053",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T03:03:11.370Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "KLGHNYJ84WT465DL"
+      }
+    },
+    {
+      "id": "ccvYazCtJ5BZGTBt1So5",
+      "data": {
+        "studentId": "hcZtzF7XECemYPtz8ED3",
+        "studentName": "Rath Sopheakleap",
+        "className": "Class 12E",
+        "classType": "Grade 12E",
+        "subjects": [
+          "Math",
+          "Khmer",
+          "Chemistry",
+          "Physics",
+          "Biology"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509120",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T01:59:12.620Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "7BBCFRVZSXPZUDMJ"
+      }
+    },
+    {
+      "id": "cdNFZjG4m3b9eyZF0Tnk",
+      "data": {
+        "studentId": "8o1XD7WqktF4zsosZ3Fj",
+        "studentName": "Kong Hanchhay",
+        "className": "Class 7E",
+        "classType": "Grade 7",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509098",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T10:51:24.576Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "5KMMNG44QZYTRSWS"
+      }
+    },
+    {
+      "id": "cjBBWO7kTEx1tqyLmZrd",
+      "data": {
+        "studentId": "0BIrBHN6VYD2hAvvFuvT",
+        "studentName": "Kak Kunvorthno",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509068",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T06:07:53.084Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "84UR7PGPJZ8EBE6S"
       }
     },
     {
@@ -3516,6 +5891,38 @@
       }
     },
     {
+      "id": "czWk39683NQvbP3QLBZ2",
+      "data": {
+        "studentId": "is6gTf0lmACJP2UlrO5A",
+        "studentName": "Phol Sophana",
+        "className": "Class 11E",
+        "classType": "Grade 11E",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology"
+        ],
+        "fullAmount": 115,
+        "proratedAmount": 115,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 115,
+        "receiptNumber": "2509112",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T13:32:58.170Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "TBQS5XNZR92Z8SN3"
+      }
+    },
+    {
       "id": "dN0kyR5Ftx7Nf7IlcKm6",
       "data": {
         "studentId": "ApoJLnMTQ33QNjyW2UHa",
@@ -3539,6 +5946,72 @@
         "date": "2025-08-04T11:48:35.620Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "dN3okwoF1vl38rFRKfjm",
+      "data": {
+        "studentId": "pdztsMXCm4yKw4EKZjVt",
+        "studentName": "Vuth Dykhynaruth",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509121",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T02:00:15.652Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "GFPYPJNL6WKL5H5X"
+      }
+    },
+    {
+      "id": "dTjGZP3HUgtLy6gzcYt6",
+      "data": {
+        "studentId": "cPpJb1XCs7vb5cIX4DFj",
+        "studentName": "So Sovanda",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509133",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-02T06:16:10.766Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "BYV4W4ARHHCYEN6R"
       }
     },
     {
@@ -3661,6 +6134,38 @@
         "date": "2025-07-31T11:31:39.644Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "emY9CaPQms3EY8smcjVt",
+      "data": {
+        "studentId": "0gXbbKQtsaoBDpIShDm3",
+        "studentName": "Eap Huyly",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509033",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-31T06:43:37.778Z",
+        "joinDate": "2025-08-31",
+        "cashier": "Jon",
+        "isStudentRegistered": false
       }
     },
     {
@@ -3801,6 +6306,39 @@
       }
     },
     {
+      "id": "g8DHKoX89G4fmnhSVT0n",
+      "data": {
+        "studentId": "VxzqXXjevyPvoMKKTShI",
+        "studentName": "Kheav MengLeang",
+        "className": "Class 12T",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509135",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T07:18:41.022Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "6JLKDJXTUJMUS7FK"
+      }
+    },
+    {
       "id": "g9dRsn5xcKTP89LShF9h",
       "data": {
         "studentId": "HNTD9yMki9w6HqOsbsUE",
@@ -3902,6 +6440,38 @@
         "date": "2025-07-31T11:28:36.345Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "gfujvIkIajQgP7Mkt2D4",
+      "data": {
+        "studentId": "SOBB6EnFiie5EWQ6ASOU",
+        "studentName": "Sok Chanpheary",
+        "className": "Class 11E",
+        "classType": "Grade 11E",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology"
+        ],
+        "fullAmount": 115,
+        "proratedAmount": 115,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 115,
+        "receiptNumber": "2509091",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T10:11:02.543Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "825ARLK9LCMPDG3Q"
       }
     },
     {
@@ -4038,6 +6608,38 @@
       }
     },
     {
+      "id": "iSFgTXPcefZgzrwoS8qo",
+      "data": {
+        "studentId": "NEZRF0MGCpeX6UGubFq6",
+        "studentName": "Mech Penhbormey",
+        "className": "Class 11E",
+        "classType": "Grade 11E",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology"
+        ],
+        "fullAmount": 115,
+        "proratedAmount": 115,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 115,
+        "receiptNumber": "2509092",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T10:12:19.641Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "EMR893WC7RLMF8X2"
+      }
+    },
+    {
       "id": "iyFw3HDH2qptGFgkjkZG",
       "data": {
         "studentId": "OTQBW8nl3ma2ez9NmRnk",
@@ -4063,6 +6665,38 @@
         "date": "2025-08-13T11:01:44.686Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "j0brLaKDGoNIc2T943PT",
+      "data": {
+        "studentId": "RTcWCR8ZaMJaaQ6rNppD",
+        "studentName": "Thiounn Panhabot",
+        "className": "Class 12M",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509024",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-30T04:10:24.013Z",
+        "joinDate": "2025-08-30",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false
       }
     },
     {
@@ -4092,6 +6726,71 @@
       }
     },
     {
+      "id": "jZZ0Dn0G3bixkuw994Ac",
+      "data": {
+        "studentId": "ogS4OANa2vLiKUiuHekZ",
+        "studentName": "Chea Sivmey",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509027",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-30T06:35:45.766Z",
+        "joinDate": "2025-08-30",
+        "cashier": "Jason",
+        "isStudentRegistered": false
+      }
+    },
+    {
+      "id": "jZxfw8g6hgI5MbXNdztk",
+      "data": {
+        "studentId": "rpwTpfS9hjq7f9itBrRu",
+        "studentName": "Luy Somreksa",
+        "className": "Class 12T",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509077",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T07:28:42.920Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "AGTRRZZAE2D52SFX"
+      }
+    },
+    {
       "id": "jyO5vybl2dQY9vDQP1zY",
       "data": {
         "studentId": "cpAcoWSdZDr4awyrjJnH",
@@ -4113,6 +6812,39 @@
         "date": "2025-08-04T05:50:10.066Z",
         "joinDate": "2025-08-18",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "k0k5SowdINw88djDlznP",
+      "data": {
+        "studentId": "ywwr0f5fLnwlBT9yhJ7M",
+        "studentName": "Srea RattanaSonyta",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509061",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T05:52:10.608Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "RFDU5XM2BY8KUABB"
       }
     },
     {
@@ -4195,6 +6927,39 @@
       }
     },
     {
+      "id": "kNWcfPCalqMlZBZKfJFN",
+      "data": {
+        "studentId": "wrMUHu1g6Z3o8oVWSWdy",
+        "studentName": "Ly Sengkeang",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509070",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T06:24:37.317Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "KD2Z4BXRX9Y4Y79Z"
+      }
+    },
+    {
       "id": "kgdEA0CvC4wpyoSF6cNt",
       "data": {
         "studentId": "cPpJb1XCs7vb5cIX4DFj",
@@ -4272,6 +7037,39 @@
       }
     },
     {
+      "id": "lMU5hJglkZk1xOzJHIeG",
+      "data": {
+        "studentId": "33Ln9yaPNS35v5FOc7iF",
+        "studentName": "Tei ChhivEang",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509114",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T00:02:42.742Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "94SRWAYFEFYR887M"
+      }
+    },
+    {
       "id": "lWKf7JeihIqgFIXjUWFs",
       "data": {
         "studentId": "bjnMLHcH32fIugkPlzBV",
@@ -4293,6 +7091,39 @@
         "date": "2025-08-02T07:40:14.737Z",
         "joinDate": "2025-08-02",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "lYRFPrNhHqnpIqTXKlF0",
+      "data": {
+        "studentId": "OR8KUBnocQJWtqE0wFkK",
+        "studentName": "Sear SarikKnika",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509074",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T07:19:26.421Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "NG7HFUW5MZJ5QVPL"
       }
     },
     {
@@ -4318,6 +7149,71 @@
         "date": "2025-07-31T11:30:13.124Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "mbYmzvaGLiXhOlgAClvO",
+      "data": {
+        "studentId": "OwVekPD0GkILBKnAzRUK",
+        "studentName": "Koemsinh Sochheka",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509048",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T01:23:06.540Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "8ND6JXD2LJC8K5K7"
+      }
+    },
+    {
+      "id": "mtZVw1eaibC3DZ0MxbVU",
+      "data": {
+        "studentId": "5WJvvyCOswdmTwCtF3uG",
+        "studentName": "Tith Reth Borain",
+        "className": "Class 12E",
+        "classType": "Grade 12E",
+        "subjects": [
+          "Math",
+          "Khmer",
+          "Chemistry",
+          "Physics",
+          "Biology"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509079",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T07:37:07.691Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "QWCEJEQVCMCE3AVU"
       }
     },
     {
@@ -4377,6 +7273,71 @@
       }
     },
     {
+      "id": "nCHlIfxD8wCMVQmvmZKz",
+      "data": {
+        "studentId": "QRF5TOa7eUVmQ9qgDcNh",
+        "studentName": "Toun Kornsethawin",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509034",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-31T06:44:19.889Z",
+        "joinDate": "2025-08-31",
+        "cashier": "Jon",
+        "isStudentRegistered": false
+      }
+    },
+    {
+      "id": "nDjCOsdHSKZ67Q75kvLt",
+      "data": {
+        "studentId": "Iz8gu2Qx39qk6Sf0JyAa",
+        "studentName": "Kem Odamvuttey",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509069",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T06:12:00.416Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "PSK8ENBAN6H476RS"
+      }
+    },
+    {
       "id": "nE38qeJwsKVyxjkHwn1L",
       "data": {
         "studentId": "obshexEsX9Qpc9PssYoR",
@@ -4399,6 +7360,39 @@
         "date": "2025-08-02T10:24:36.687Z",
         "joinDate": "2025-08-02",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "nGnsSnZv8yDiIJi3KKrg",
+      "data": {
+        "studentId": "nVFlhctujk9qmbLtRTff",
+        "studentName": "Huy Sovichar",
+        "className": "Class 12T",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509134",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-02T07:17:13.998Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "LVTW6MPNJ8JKDELC"
       }
     },
     {
@@ -4500,6 +7494,39 @@
       }
     },
     {
+      "id": "oMBLAYpjdgIwEtrciNXu",
+      "data": {
+        "studentId": "cpAcoWSdZDr4awyrjJnH",
+        "studentName": "Kim KeoSokunpidor",
+        "className": "Class 12NKGS",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 67.5,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 82.5,
+        "receiptNumber": "2509080",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T07:46:26.666Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "E2SND7HS8KLNAT3Y"
+      }
+    },
+    {
       "id": "oMjehTw8WVAdYPcfIQ1F",
       "data": {
         "studentId": "1d7nzGQOx9odSrmTlwXA",
@@ -4524,6 +7551,38 @@
         "date": "2025-08-05T03:01:39.845Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "oNiNVBlMTZUyUQirj22a",
+      "data": {
+        "studentId": "eIdrgXEva57SRdPlKmZx",
+        "studentName": "Run MonyKeo",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509019",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-28T05:31:50.799Z",
+        "joinDate": "2025-08-28",
+        "cashier": "Jon",
+        "isStudentRegistered": false
       }
     },
     {
@@ -4576,6 +7635,39 @@
         "date": "2025-08-05T02:19:51.762Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "p1ZX6EXrq2vLw8vsq8kH",
+      "data": {
+        "studentId": "k0gjt5OOSP71khyEa7Dz",
+        "studentName": "Proumho Panha",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509057",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T04:18:39.036Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "Z8UTPHJNJED8VTG9"
       }
     },
     {
@@ -4632,6 +7724,39 @@
       }
     },
     {
+      "id": "q2RYGKrC22lOfdI6lP0z",
+      "data": {
+        "studentId": "lLuUkIavAV9PozBsStt0",
+        "studentName": "Kea Danita",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509045",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T01:00:27.960Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "XWBFRSH3KQH7UJKC"
+      }
+    },
+    {
       "id": "q7TkIRFqldetHp5ns965",
       "data": {
         "studentId": "fFquVV2O7MqGcS3kryiM",
@@ -4656,6 +7781,136 @@
         "date": "2025-08-07T08:24:31.366Z",
         "joinDate": "2025-08-08",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "qOec2XHh6Io3NKdHxBSD",
+      "data": {
+        "studentId": "1KsCYbSpNo2AFYytSniS",
+        "studentName": "Houn Kongnoreach",
+        "className": "Class 12M",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509037",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T00:02:10.612Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "JUKP3KGBYJ57TTG2"
+      }
+    },
+    {
+      "id": "qXgyumzd8CiHTcSAmrYT",
+      "data": {
+        "studentId": "xGlmQcE16iNQHxHToBOp",
+        "studentName": "Thouern Thanhsa",
+        "className": "Class 11E",
+        "classType": "Grade 11E",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology"
+        ],
+        "fullAmount": 115,
+        "proratedAmount": 115,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 115,
+        "receiptNumber": "2509093",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T10:13:28.040Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "Y62L6U4ES3USPF6M"
+      }
+    },
+    {
+      "id": "qaTDQxEjESswkf3wErrE",
+      "data": {
+        "studentId": "xSZm547NSPLvz6XNsRe0",
+        "studentName": "Test Testing",
+        "className": "Class 11A",
+        "classType": "Grade 11A",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2510001",
+        "paymentMonth": "October 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-30T07:26:39.746Z",
+        "joinDate": "2025-08-30",
+        "cashier": "Jimmy",
+        "isStudentRegistered": true
+      }
+    },
+    {
+      "id": "qrg5lA6vKXmLznroEJmd",
+      "data": {
+        "studentId": "XNPYpt4qIdXu4OUIWY9U",
+        "studentName": "Dy Danana",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509056",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T03:46:51.555Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "GA7YMK94ACZYLXHK"
       }
     },
     {
@@ -4747,6 +8002,39 @@
       }
     },
     {
+      "id": "sYerEQATwGGZkC79B4vT",
+      "data": {
+        "studentId": "0QRp8BRg4d81WBLdFbqI",
+        "studentName": "Phet Sovanreach",
+        "className": "Class 12B",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 150,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 0,
+        "receiptNumber": "2509035",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-31T17:37:49.798Z",
+        "joinDate": "2025-08-31",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "PLM3UDQ96KSPE2S3"
+      }
+    },
+    {
       "id": "sgbzOyojZfIFVlKON6Mt",
       "data": {
         "studentId": "eIdrgXEva57SRdPlKmZx",
@@ -4771,19 +8059,19 @@
       }
     },
     {
-      "id": "tJ9FtLOA67D4rQE0hHB5",
+      "id": "shAcX1TdAJ9IznEArOKs",
       "data": {
-        "studentId": "Lx0SmylZWPytX8bjJMeB",
-        "studentName": "Rath Sokleap",
-        "className": "Class 12M",
-        "classType": "Grade 12",
+        "studentId": "IB5e5LrUPDqjAl2jIaG4",
+        "studentName": "Mao Sopheaniron",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
         "subjects": [
-          "Math",
-          "Chemistry",
-          "Physics",
           "Khmer",
-          "Biology",
-          "History"
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
         ],
         "fullAmount": 150,
         "proratedAmount": 150,
@@ -4793,13 +8081,105 @@
         "lateFeeAmount": null,
         "lateFeeWaived": false,
         "amount": 150,
-        "receiptNumber": "2509009",
+        "receiptNumber": "2509015",
         "paymentMonth": "September 2025",
         "paymentMethod": "QR Payment",
-        "date": "2025-08-16T04:19:38.790Z",
-        "joinDate": "2025-08-16",
+        "date": "2025-08-27T05:55:52.262Z",
+        "joinDate": "2025-09-01",
         "cashier": "Admin",
         "isStudentRegistered": false
+      }
+    },
+    {
+      "id": "sobEqd5ScBoleASCJhdt",
+      "data": {
+        "studentId": "h2DQ9pKSS7BDtSMNbx34",
+        "studentName": "Ket Phallika",
+        "className": "Class 12S",
+        "classType": "Grade 12 Social",
+        "subjects": [
+          "Khmer",
+          "Math",
+          "Moral",
+          "History",
+          "Geography",
+          "Earth"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509071",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T06:31:20.074Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "6RXDM7E7MKLVN7JA"
+      }
+    },
+    {
+      "id": "t3Yluj1xR7sqrrT5zK2X",
+      "data": {
+        "studentId": "MYYNqUKY20s5tFF9Z0lS",
+        "studentName": "Keo Amarahrath",
+        "className": "Class 7E",
+        "classType": "Grade 7",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509014",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-08-26T15:18:00.989Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Admin",
+        "isStudentRegistered": false
+      }
+    },
+    {
+      "id": "tSddVfxkRR5vN6G7WVpx",
+      "data": {
+        "studentId": "AnCloe0hy7l8IxCSdMaJ",
+        "studentName": "Sophat Sophanan",
+        "className": "Class 8E",
+        "classType": "Grade 8",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics"
+        ],
+        "fullAmount": 60,
+        "proratedAmount": 60,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 60,
+        "receiptNumber": "2509113",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T13:33:19.609Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "VGYH8CTRG2GV98JM"
       }
     },
     {
@@ -4881,6 +8261,70 @@
       }
     },
     {
+      "id": "uJR2nGfxn0x48X21egFU",
+      "data": {
+        "studentId": "xudNSJEL5kvenLIT4hHg",
+        "studentName": "Van Panharoth",
+        "className": "Class 12NKGS",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 37.5,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 112.5,
+        "receiptNumber": "2509096",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T10:29:28.614Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "4U6D4X84ZA8JP8XF"
+      }
+    },
+    {
+      "id": "uOIxfIWoJOCsSe80dJBf",
+      "data": {
+        "studentId": "kQWUwqJwjZPSX6FPdPQE",
+        "studentName": "Seng Sumethy",
+        "className": "Class 9F",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509107",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T12:43:35.946Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "W38Y2J4ZUFKZJYX8"
+      }
+    },
+    {
       "id": "uSqhBHjit7GDYqkrPPQB",
       "data": {
         "studentId": "tRqMxk9lefD9l4r6ht9H",
@@ -4903,6 +8347,39 @@
         "date": "2025-07-31T11:28:56.736Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "uq8wxsLjuunQV0onbiS9",
+      "data": {
+        "studentId": "KdtfftiXOZmnqxA5FgYv",
+        "studentName": "So Liza",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509076",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-09-01T07:24:54.562Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "YBGS3DYLUAJ3WUMB"
       }
     },
     {
@@ -4930,6 +8407,71 @@
         "date": "2025-08-05T02:20:09.193Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "vCibCtoMFMY1B5hAFScb",
+      "data": {
+        "studentId": "nraprRDDGG9yUIqVakvm",
+        "studentName": "Heng sokharany",
+        "className": "Class 11F",
+        "classType": "Grade 11E",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology"
+        ],
+        "fullAmount": 115,
+        "proratedAmount": 115,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 115,
+        "receiptNumber": "2509042",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T00:40:40.545Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "FN85UWTTPD299ZKM"
+      }
+    },
+    {
+      "id": "vDKHac3pgJIEPeeIeJA0",
+      "data": {
+        "studentId": "pxyFStt2AHkw5lufsoco",
+        "studentName": "Ouk Sovanmulyka",
+        "className": "Class 12C",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509054",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T03:31:27.714Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "LBMUDDHVPL87V9NB"
       }
     },
     {
@@ -5042,6 +8584,37 @@
       }
     },
     {
+      "id": "vy5v5K9O4WLGCBaQVSCD",
+      "data": {
+        "studentId": "zrVLxmQ1pHqO8e6AvN4u",
+        "studentName": "Chheak Sophalina",
+        "className": "Class 9F",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509084",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T08:32:56.481Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jason",
+        "isStudentRegistered": false,
+        "registrationToken": "TS2GCLPHEQ2ZLDP2"
+      }
+    },
+    {
       "id": "w1JWlNRp0TVUANiOuyTM",
       "data": {
         "studentId": "09b2i0oZ2byUjqazR4wy",
@@ -5149,6 +8722,69 @@
       }
     },
     {
+      "id": "x4GgH6fsNXUINuy0UHPK",
+      "data": {
+        "studentId": "L21ttJcwPIpet6juO4ZF",
+        "studentName": "Reth Rechborneath",
+        "className": "Class 12I",
+        "classType": "Grade 12",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 150,
+        "proratedAmount": 150,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 150,
+        "receiptNumber": "2509060",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T05:51:21.217Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jimmy",
+        "isStudentRegistered": false,
+        "registrationToken": "54ZB68PCV6JYLFPG"
+      }
+    },
+    {
+      "id": "x8LGf127DkqPPgH0zQHu",
+      "data": {
+        "studentId": "Djl3Eh16NgaoiDF9bG4w",
+        "studentName": "Keo Nisavorleak",
+        "className": "Class 9F",
+        "classType": "Grade 9",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer"
+        ],
+        "fullAmount": 80,
+        "proratedAmount": 80,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 80,
+        "receiptNumber": "2509013",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "Cash",
+        "date": "2025-08-26T06:59:38.897Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Admin",
+        "isStudentRegistered": false
+      }
+    },
+    {
       "id": "xsiGyUn6QRppG6XAtJCr",
       "data": {
         "studentId": "0GR4lS3h7PZ3cWeK1Baj",
@@ -5198,6 +8834,39 @@
         "date": "2025-08-05T11:52:54.091Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "z11SpfXvrBS54xocthsp",
+      "data": {
+        "studentId": "0GR4lS3h7PZ3cWeK1Baj",
+        "studentName": "Simvi Sopheaknita",
+        "className": "Class 11A",
+        "classType": "Grade 11A",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology",
+          "History"
+        ],
+        "fullAmount": 135,
+        "proratedAmount": 135,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 135,
+        "receiptNumber": "2509044",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-01T00:53:52.253Z",
+        "joinDate": "2025-09-01",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "FGD3UWP8LD3HNA74"
       }
     },
     {
@@ -5252,6 +8921,38 @@
         "date": "2025-08-05T10:03:39.336Z",
         "joinDate": "2025-08-04",
         "cashier": "Admin"
+      }
+    },
+    {
+      "id": "zTjXF4j9gSm7P8tMIdx0",
+      "data": {
+        "studentId": "N53tARF7BXNIvqtp4eNf",
+        "studentName": "Leng Rosalyn",
+        "className": "Class 11E",
+        "classType": "Grade 11E",
+        "subjects": [
+          "Math",
+          "Chemistry",
+          "Physics",
+          "Khmer",
+          "Biology"
+        ],
+        "fullAmount": 115,
+        "proratedAmount": 115,
+        "discountAmount": 0,
+        "manualDiscountAmount": null,
+        "manualDiscountReason": null,
+        "lateFeeAmount": null,
+        "lateFeeWaived": false,
+        "amount": 115,
+        "receiptNumber": "2509119",
+        "paymentMonth": "September 2025",
+        "paymentMethod": "QR Payment",
+        "date": "2025-09-02T01:52:21.561Z",
+        "joinDate": "2025-09-02",
+        "cashier": "Jon",
+        "isStudentRegistered": false,
+        "registrationToken": "RLLGAD4GHQCXJFHB"
       }
     },
     {

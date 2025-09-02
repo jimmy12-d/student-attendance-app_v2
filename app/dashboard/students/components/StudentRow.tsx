@@ -337,7 +337,17 @@ export const StudentRow: React.FC<StudentRowProps> = ({
             return (
               <td key="todayAttendance" className="p-3 whitespace-nowrap">
                 <div className="flex items-center justify-center">
-                  {todayStatus.status === 'Absent' ? (
+                  {/* Show loading state if status is undefined, contains error messages, or is explicitly "Loading..." */}
+                  {(!todayStatus || !todayStatus.status || 
+                    todayStatus.status.includes('config missing') || 
+                    todayStatus.status.includes('loading') ||
+                    todayStatus.status === 'Loading...' ||
+                    todayStatus.status === 'Unknown') ? (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+                      <div className="w-3 h-3 mr-1 animate-spin rounded-full border border-current border-t-transparent"></div>
+                      Loading...
+                    </span>
+                  ) : todayStatus.status === 'Absent' ? (
                     // Use AbsentStatusTracker for absent students
                     <AbsentStatusTracker
                       studentId={student.id}

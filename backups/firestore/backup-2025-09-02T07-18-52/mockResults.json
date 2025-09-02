@@ -1,7 +1,7 @@
 {
   "collection": "mockResults",
   "totalDocuments": 106,
-  "backupTimestamp": "2025-08-23T07:20:22.867Z",
+  "backupTimestamp": "2025-09-02T07:19:01.910Z",
   "documents": [
     {
       "id": "0121",
@@ -110,6 +110,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:10.762Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:43:26.863Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 86,
@@ -167,17 +171,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:47:25.358Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 21,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:31:25.462Z"
             },
-            "earth": 21
+            "biology": 51,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:43:26.863Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:31:25.462Z"
         }
       }
     },
@@ -288,6 +294,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:10.143Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:40:34.086Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 0,
@@ -345,17 +355,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:47:10.524Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth": 33,
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 33,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:29:14.301Z"
+            },
+            "biology": 26,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:40:34.086Z"
             }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:29:14.301Z"
         }
       }
     },
@@ -435,6 +447,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:10.345Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:41:24.329Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 67,
@@ -492,17 +508,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:37:46.310Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 35,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:30:03.004Z"
             },
-            "earth": 35
+            "biology": 45,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:41:24.329Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:30:03.004Z"
         }
       }
     },
@@ -520,6 +538,10 @@
         "createdAt": {
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:17.057Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:44:55.148Z"
         },
         "mockResults": {
           "mock_1": {
@@ -578,17 +600,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:54:31.073Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 46,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:33:53.280Z"
             },
-            "earth": 46
+            "biology": 55,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:44:55.148Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:33:53.280Z"
         }
       }
     },
@@ -1067,6 +1091,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:16.844Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:45:19.560Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 27,
@@ -1124,17 +1152,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:51:38.392Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 38,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:34:15.806Z"
             },
-            "earth": 38
+            "biology": 39,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:45:19.560Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:34:15.806Z"
         }
       }
     },
@@ -2613,6 +2643,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:10.243Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:40:56.084Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 0,
@@ -2670,17 +2704,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:39:06.531Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 25,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:29:32.432Z"
             },
-            "earth": 25
+            "biology": 53,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:40:56.084Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:29:32.432Z"
         }
       }
     },
@@ -2858,6 +2894,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:11.914Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:47:10.152Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 0,
@@ -2915,17 +2955,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:41:24.633Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 42,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:24:51.403Z"
             },
-            "earth": 42
+            "biology": 45,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:47:10.152Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:24:51.403Z"
         }
       }
     },
@@ -3128,6 +3170,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:11.694Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:46:11.917Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 100,
@@ -3185,17 +3231,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:45:53.190Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 19,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:24:09.962Z"
             },
-            "earth": 19
+            "biology": 44,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:46:11.917Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:24:09.962Z"
         }
       }
     },
@@ -3260,28 +3308,34 @@
               "_value": "2025-08-22T01:47:24.068Z"
             },
             "khmer_teacher": "Kim Penh",
-            "khmer_timestamp": {
-              "_type": "timestamp",
-              "_value": "2025-08-22T04:37:25.566Z"
-            },
-            "khmer": 62,
             "physics": 57,
             "physics_teacher": "Chheng Kimchhorm",
             "physics_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-22T05:38:40.482Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 18,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:30:52.042Z"
             },
-            "earth": 18
+            "biology": 43,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:42:27.518Z"
+            },
+            "khmer_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-25T07:46:26.063Z"
+            },
+            "khmer": 64
           }
         },
         "updatedAt": {
           "_type": "timestamp",
-          "_value": "2025-08-23T06:30:52.042Z"
+          "_value": "2025-08-25T07:46:26.063Z"
         }
       }
     },
@@ -3484,6 +3538,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:10.871Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:43:47.276Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 90,
@@ -3541,17 +3599,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:46:54.334Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 34,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:31:43.807Z"
             },
-            "earth": 34
+            "biology": 40,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:43:47.276Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:31:43.807Z"
         }
       }
     },
@@ -3569,6 +3629,10 @@
         "createdAt": {
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:09.808Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:39:20.058Z"
         },
         "mockResults": {
           "mock_1": {
@@ -3627,17 +3691,19 @@
               "_value": "2025-08-23T02:02:04.334Z"
             },
             "khmer": 60,
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 32,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:27:05.252Z"
             },
-            "earth": 32
+            "biology": 43,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:39:20.058Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:27:05.252Z"
         }
       }
     },
@@ -3748,6 +3814,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:10.662Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:43:03.333Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 0,
@@ -3805,17 +3875,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:37:08.665Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 33,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:31:10.732Z"
             },
-            "earth": 33
+            "biology": 38,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:43:03.333Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:31:10.732Z"
         }
       }
     },
@@ -4110,6 +4182,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:10.443Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:41:44.924Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 65,
@@ -4167,17 +4243,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:47:43.964Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 25,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:30:26.945Z"
             },
-            "earth": 25
+            "biology": 24,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:41:44.924Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:30:26.945Z"
         }
       }
     },
@@ -4558,6 +4636,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:09.608Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:39:00.767Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 0,
@@ -4615,17 +4697,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:51:00.910Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 39,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:26:45.107Z"
             },
-            "earth": 39
+            "biology": 48,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:39:00.767Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:26:45.107Z"
         }
       }
     },
@@ -4828,6 +4912,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:12.336Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:48:26.842Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 68,
@@ -4885,17 +4973,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:40:25.806Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 39,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:22:58.236Z"
             },
-            "earth": 39
+            "biology": 41,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:48:26.842Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:22:58.236Z"
         }
       }
     },
@@ -5006,6 +5096,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:11.798Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:46:32.241Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 0,
@@ -5063,17 +5157,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:41:46.883Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 42,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:23:50.847Z"
             },
-            "earth": 42
+            "biology": 54,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:46:32.241Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:23:50.847Z"
         }
       }
     },
@@ -5091,6 +5187,10 @@
         "createdAt": {
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:12.132Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:47:46.593Z"
         },
         "mockResults": {
           "mock_1": {
@@ -5149,17 +5249,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:42:27.054Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 22,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:24:30.833Z"
             },
-            "earth": 22
+            "biology": 33,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:47:46.593Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:24:30.833Z"
         }
       }
     },
@@ -5259,6 +5361,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:12.234Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:48:09.254Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 26,
@@ -5316,17 +5422,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:40:56.318Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 29,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:23:28.008Z"
             },
-            "earth": 29
+            "biology": 35,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:48:09.254Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:23:28.008Z"
         }
       }
     },
@@ -5529,6 +5637,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:15.797Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T01:40:56.586Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 77,
@@ -5556,17 +5668,6 @@
             "english": 29
           },
           "mock_4": {
-            "absent_recorded_by": "admin",
-            "absent_subjects": [
-              "math",
-              "khmer",
-              "chemistry",
-              "physics",
-              "biology",
-              "history",
-              "english"
-            ],
-            "absent_timestamp": "2025-08-21T07:34:27.281Z",
             "biology": 43,
             "biology_teacher": "Kan Sophearak",
             "biology_timestamp": {
@@ -5610,10 +5711,6 @@
             },
             "khmer": 61
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T01:40:56.586Z"
         }
       }
     },
@@ -6646,7 +6743,7 @@
         },
         "updatedAt": {
           "_type": "timestamp",
-          "_value": "2025-08-21T11:44:36.659Z"
+          "_value": "2025-08-23T07:31:50.625Z"
         },
         "mockResults": {
           "mock_1": {
@@ -7692,6 +7789,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:10.044Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:40:11.564Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 74,
@@ -7749,17 +7850,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:47:59.340Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 29,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:27:55.493Z"
             },
-            "earth": 29
+            "biology": 33,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:40:11.564Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:27:55.493Z"
         }
       }
     },
@@ -7870,6 +7973,10 @@
           "_value": "2025-08-18T09:57:10.969Z"
         },
         "class": "Class 12T",
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:44:27.461Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 63,
@@ -7927,17 +8034,19 @@
               "_value": "2025-08-22T06:27:05.884Z"
             },
             "khmer": 4,
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 20,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:32:28.466Z"
             },
-            "earth": 20
+            "biology": 22,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:44:27.461Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:32:28.466Z"
         }
       }
     },
@@ -8048,6 +8157,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:09.910Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:39:42.895Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 0,
@@ -8105,17 +8218,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:39:33.037Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 18,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:27:32.613Z"
             },
-            "earth": 18
+            "biology": 19,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:39:42.895Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:27:32.613Z"
         }
       }
     },
@@ -8594,6 +8709,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:09.502Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:38:36.073Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 84,
@@ -8651,17 +8770,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:54:04.112Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 39,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:26:23.556Z"
             },
-            "earth": 39
+            "biology": 50,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:38:36.073Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:26:23.556Z"
         }
       }
     },
@@ -9048,6 +9169,10 @@
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:12.012Z"
         },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:47:28.546Z"
+        },
         "mockResults": {
           "mock_1": {
             "math": 110,
@@ -9105,17 +9230,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:46:10.492Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 46,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:22:37.508Z"
             },
-            "earth": 46
+            "biology": 68,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:47:28.546Z"
+            }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:22:37.508Z"
         }
       }
     },
@@ -9133,6 +9260,10 @@
         "createdAt": {
           "_type": "timestamp",
           "_value": "2025-08-18T09:57:11.596Z"
+        },
+        "updatedAt": {
+          "_type": "timestamp",
+          "_value": "2025-08-23T10:45:58.736Z"
         },
         "mockResults": {
           "mock_1": {
@@ -9191,17 +9322,19 @@
               "_type": "timestamp",
               "_value": "2025-08-22T05:44:48.404Z"
             },
-            "earth_teacher": "Douk Satya",
-            "earth": 35,
-            "earth_timestamp": {
+            "history_teacher": "Douk Satya",
+            "history": 35,
+            "history_timestamp": {
               "_type": "timestamp",
               "_value": "2025-08-23T06:22:15.651Z"
+            },
+            "biology": 52,
+            "biology_teacher": "Douk Satya",
+            "biology_timestamp": {
+              "_type": "timestamp",
+              "_value": "2025-08-23T10:45:58.736Z"
             }
           }
-        },
-        "updatedAt": {
-          "_type": "timestamp",
-          "_value": "2025-08-23T06:22:15.651Z"
         }
       }
     },

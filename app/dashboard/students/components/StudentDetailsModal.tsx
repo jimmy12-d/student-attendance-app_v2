@@ -399,7 +399,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto mt-10">
+    <div className="fixed inset-0 z-115 overflow-y-auto mt-10">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 transition-opacity"
@@ -763,6 +763,28 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                     <div>
                       <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Type</label>
                       <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.scheduleType}</p>
+                    </div>
+                  )}
+                  {student.createdAt && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Enrollment Date</label>
+                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
+                        {(() => {
+                          const date = student.createdAt;
+                          if (date && typeof date === 'object' && 'toDate' in date) {
+                            return new Date(date.toDate()).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            });
+                          }
+                          return new Date(date as Date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          });
+                        })()}
+                      </p>
                     </div>
                   )}
                 </div>

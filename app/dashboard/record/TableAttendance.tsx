@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Timestamp } from "firebase/firestore";
 import { getStatusStyles } from "../_lib/statusStyles";
+import { toast } from 'sonner';
 
 const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined): string => {
     if (!dateInput) return 'N/A';
@@ -71,6 +72,23 @@ type Props = {
 const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 20 }: Props) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Function to copy student name to clipboard
+  const copyStudentName = async (name: string) => {
+    try {
+      await navigator.clipboard.writeText(name);
+      toast.success(`Copied "${name}" to clipboard!`);
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = name;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      toast.success(`Copied "${name}" to clipboard!`);
+    }
+  };
 
   // Determine a date to show in the table title. If multiple dates exist, show a summary.
   const uniqueDates = Array.from(new Set(records.map(r => r.date).filter(Boolean)));
@@ -226,7 +244,11 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
                       </div>
                     </div>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <div 
+                        className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:underline hover:text-purple-600 dark:hover:text-purple-400 transition-colors duration-200"
+                        onClick={() => copyStudentName(record.studentName)}
+                        title="Click to copy student name"
+                      >
                         {record.studentName}
                       </div>
 

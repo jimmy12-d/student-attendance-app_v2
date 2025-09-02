@@ -1,0 +1,115 @@
+{
+  "collection": "telegramUserStates",
+  "totalDocuments": 9,
+  "backupTimestamp": "2025-09-02T07:19:03.751Z",
+  "documents": [
+    {
+      "id": "1146749350",
+      "data": {
+        "userId": 1146749350,
+        "chatId": 1146749350,
+        "state": "waiting_manual_token",
+        "messageIdToEdit": 757,
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-01T13:07:47.096Z"
+        }
+      }
+    },
+    {
+      "id": "1402067360",
+      "data": {
+        "userId": 1402067360,
+        "chatId": 1402067360,
+        "state": "waiting_token",
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-01T12:52:09.981Z"
+        }
+      }
+    },
+    {
+      "id": "1804940037",
+      "data": {
+        "userId": 1804940037,
+        "chatId": 1804940037,
+        "state": "waiting_custom_password_initial",
+        "studentId": "nVFlhctujk9qmbLtRTff",
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-02T07:18:13.885Z"
+        }
+      }
+    },
+    {
+      "id": "4Bl12h4k41AkOI0oBuLF",
+      "data": {
+        "test": "testing"
+      }
+    },
+    {
+      "id": "5141450523",
+      "data": {
+        "userId": 5141450523,
+        "chatId": 5141450523,
+        "state": "waiting_manual_token",
+        "messageIdToEdit": 577,
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-01T09:02:55.913Z"
+        }
+      }
+    },
+    {
+      "id": "5959257474",
+      "data": {
+        "userId": 5959257474,
+        "chatId": 5959257474,
+        "state": "waiting_custom_password_initial",
+        "studentId": "pdztsMXCm4yKw4EKZjVt",
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-02T03:09:33.890Z"
+        }
+      }
+    },
+    {
+      "id": "6453297755",
+      "data": {
+        "userId": 6453297755,
+        "chatId": 6453297755,
+        "state": "waiting_custom_password_initial",
+        "studentId": "OhCYnl5Sc2a7CySsTm2f",
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-02T04:16:21.952Z"
+        }
+      }
+    },
+    {
+      "id": "804933488",
+      "data": {
+        "userId": 804933488,
+        "chatId": 804933488,
+        "state": "waiting_token",
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-01T03:16:50.981Z"
+        }
+      }
+    },
+    {
+      "id": "999967159",
+      "data": {
+        "userId": 999967159,
+        "chatId": 999967159,
+        "state": "waiting_custom_password_initial",
+        "studentId": "NEZRF0MGCpeX6UGubFq6",
+        "timestamp": {
+          "_type": "timestamp",
+          "_value": "2025-09-01T14:00:29.028Z"
+        }
+      }
+    }
+  ]
+}

@@ -230,7 +230,7 @@ const handleStartCommand = async (bot, chatId, userId) => {
                     `• Contains lowercase letters (a-z)\n\n` +
                     `Type your password in the next message. You'll get an option to delete the password message after processing for security.\n\n` +
                     `📱 You'll use your phone (${studentData.phone}) and password to login at:\n` +
-                    `🌐 **portal.rodwell.center/login**\n\n` +
+                    `🌐 **portal.rodwell.center/login\n\n` +
                     `Type /cancel to cancel this operation.`
                 );
                 return;
@@ -790,7 +790,7 @@ const handleCustomPasswordInputInitial = async (bot, chatId, userId, password, m
             `✅ **Custom Password Set Successfully!**\n\n` +
             `🔐 Your password has been securely saved.\n\n` +
             `📱 **Login Information:**\n` +
-            `• Website: **portal.rodwell.center/login**\n` +
+            `• Website: **portal.rodwell.center/login\n` +
             `• Phone: Use your registered phone number\n` +
             `• Password: Use your custom password\n\n` +
             `� Use /changepassword anytime to change your password.`;
@@ -908,7 +908,7 @@ const handleCustomPasswordInputChange = async (bot, chatId, userId, password, me
             `✅ **Password Changed Successfully!**\n\n` +
             `🔐 Your new custom password has been securely saved.\n\n` +
             `📱 **Login Information:**\n` +
-            `• Website: **portal.rodwell.center/login**\n` +
+            `• Website: **portal.rodwell.center/login\n` +
             `• Phone: Use your registered phone number\n` +
             `• Password: Use your new custom password\n\n` +
             `� Use /changepassword anytime to change your password.`;
@@ -1043,7 +1043,7 @@ const handleTokenInput = async (bot, chatId, userId, token) => {
             `• Contains lowercase letters (a-z)\n\n` +
             `Type your password in the next message. You'll get an option to delete the password message after processing for security.\n\n` +
             `📱 You'll use your phone (${studentData.phone}) and password to login at:\n` +
-            `🌐 **portal.rodwell.center/login**\n\n` +
+            `🌐 **portal.rodwell.center/login\n\n` +
             `Type /cancel to cancel this operation.`
         );
 
@@ -1112,7 +1112,7 @@ const handleUsernameInput = async (bot, chatId, userId, username) => {
             `• Contains lowercase letters (a-z)\n\n` +
             `Type your password in the next message. You'll get an option to delete the password message after processing for security.\n\n` +
             `📱 You'll use your phone (${studentData.phone}) and password to login at:\n` +
-            `🌐 **portal.rodwell.center/login**\n\n` +
+            `🌐 **portal.rodwell.center/login\n\n` +
             `Type /cancel to cancel this operation.`
         );
 
@@ -1188,7 +1188,7 @@ const handleCustomPasswordInput = async (bot, chatId, userId, password) => {
         await bot.sendMessage(chatId, 
             `✅ Your custom password has been set successfully!\n\n` +
             `You can now use your phone and this password to log into the Student Portal at:\n` +
-            `🌐 **portal.rodwell.center/login**\n\n` +
+            `🌐 **portal.rodwell.center/login\n\n` +
             `🔒 For security, your password has been encrypted and stored safely.`
         );
 

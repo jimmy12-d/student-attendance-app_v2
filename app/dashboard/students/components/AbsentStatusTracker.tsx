@@ -59,12 +59,14 @@ export const AbsentStatusTracker: React.FC<AbsentStatusTrackerProps> = ({
   const [status, setStatus] = useState<AbsentStatus>(currentStatus);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Load existing follow-up record if it exists
   useEffect(() => {
     const loadExistingRecord = async () => {
+      setIsLoading(true);
       try {
         const q = query(
           collection(db, 'absentFollowUps'),
@@ -81,6 +83,8 @@ export const AbsentStatusTracker: React.FC<AbsentStatusTrackerProps> = ({
         }
       } catch (error) {
         console.error('Error loading absent follow-up record:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -176,6 +180,16 @@ export const AbsentStatusTracker: React.FC<AbsentStatusTrackerProps> = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getStatusIcon(status)} />
         </svg>
         {status}
+      </span>
+    );
+  }
+
+  // Show loading state while fetching data
+  if (isLoading) {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+        <div className="w-3 h-3 mr-1 animate-spin rounded-full border border-current border-t-transparent"></div>
+        Loading...
       </span>
     );
   }

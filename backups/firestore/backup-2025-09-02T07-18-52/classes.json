@@ -1,7 +1,7 @@
 {
   "collection": "classes",
   "totalDocuments": 24,
-  "backupTimestamp": "2025-08-23T07:20:19.492Z",
+  "backupTimestamp": "2025-09-02T07:18:57.666Z",
   "documents": [
     {
       "id": "10E",
@@ -294,14 +294,6 @@
     {
       "id": "12NKGS",
       "data": {
-        "shifts": {
-          "Morning": {
-            "startTime": "07:00"
-          },
-          "Afternoon": {
-            "startTime": "13:00"
-          }
-        },
         "studyDays": [
           1,
           2,
@@ -311,7 +303,15 @@
           6
         ],
         "name": "Class 12NKGS",
-        "type": "Grade 12"
+        "type": "Grade 12",
+        "shifts": {
+          "Morning": {
+            "startTime": "07:00"
+          },
+          "Afternoon": {
+            "startTime": "14:30"
+          }
+        }
       }
     },
     {
