@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../../firebase-config';
 import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { mdiClockOutline, mdiAlertCircle, mdiCash } from '@mdi/js';
+import Icon from '../../_components/Icon';
 
 // Components
 import TimestampFetcher from './components/TimestampFetcher';
@@ -63,13 +65,10 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     fatherPhone, setFatherPhone,
     photoUrl, setPhotoUrl,
     shift, setShift,
-    ay, setAy,
     studentClass, setStudentClass,
     gradeTypeFilter, setGradeTypeFilter,
-    discount, setDiscount,
-    note, setNote,
-    warning, setWarning,
     onWaitlist, setOnWaitlist, // Add waitlist variables
+    warning, setWarning, // Add warning variables
     lateFeePermission, setLateFeePermission, // Add late fee permission variables
     hasTelegramUsername, setHasTelegramUsername,
     telegramUsername, setTelegramUsername,
@@ -78,11 +77,6 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     populateFromSheetData,
     getFormData
   } = useStudentForm();
-
-  const scheduleTypeOptions = [
-    { value: 'Fix', label: 'Fix' },
-    { value: 'Flip-Flop', label: 'Flip-Flop' },
-  ];
 
   // Effect to set grade type filter when adding a student
   useEffect(() => {
@@ -529,22 +523,66 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
 
           {/* Waitlist Option */}
           <div className="mt-6">
-            <div className="flex items-center">
-              <input
-                id="onWaitlist"
-                name="onWaitlist"
-                type="checkbox"
-                checked={onWaitlist}
-                onChange={(e) => setOnWaitlist(e.target.checked)}
-                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-              />
-              <label htmlFor="onWaitlist" className="ml-2 block text-sm text-gray-900 dark:text-gray-100">
-                Add to Waitlist
-              </label>
+            <div className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+              onWaitlist
+                ? 'from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800 hover:border-orange-300 dark:hover:border-orange-700'
+                : 'from-gray-50 to-gray-50 dark:from-gray-800 dark:to-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}>
+              <div className="flex items-start space-x-4">
+                <div className="flex items-center">
+                  <div className="relative inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      id="onWaitlist"
+                      checked={onWaitlist}
+                      onChange={(e) => setOnWaitlist(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor="onWaitlist"
+                      className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                        onWaitlist ? 'bg-orange-600' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                          onWaitlist ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </label>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    <Icon path={mdiClockOutline} size={16} className={`transition-colors duration-200 ${
+                      onWaitlist ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'
+                    }`} />
+                    <label htmlFor="onWaitlist" className={`text-sm font-medium cursor-pointer transition-colors duration-200 ${
+                      onWaitlist
+                        ? 'text-orange-800 dark:text-orange-200'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      Add to Waitlist
+                    </label>
+                    {onWaitlist && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 animate-in fade-in duration-300">
+                        Waitlisted
+                      </span>
+                    )}
+                  </div>
+                  <p className={`mt-1 text-xs transition-colors duration-200 ${
+                    onWaitlist
+                      ? 'text-orange-600 dark:text-orange-400'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {onWaitlist
+                      ? 'Student will be added to the waitlist and can be enrolled later when space becomes available'
+                      : 'Enable this to add the student to the waitlist instead of enrolling them immediately'
+                    }
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Check this box to add the student to the waitlist instead of enrolling them immediately
-            </p>
           </div>
 
           {/* Row 3: Class and Shift */}
@@ -662,6 +700,136 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
           placeholder="https://example.com/image.jpg"
         />
         <PhotoPreview photoUrl={photoUrl} />
+
+      {/* Student Warning */}
+      <div className="mt-6">
+        <div className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+          warning
+            ? 'from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700'
+            : 'from-gray-50 to-gray-50 dark:from-gray-800 dark:to-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+        }`}>
+          <div className="flex items-start space-x-4">
+            <div className="flex items-center">
+              <div className="relative inline-flex items-center">
+                <input
+                  type="checkbox"
+                  id="warning"
+                  name="warning"
+                  checked={warning}
+                  onChange={(e) => setWarning(e.target.checked)}
+                  className="sr-only"
+                />
+                <label
+                  htmlFor="warning"
+                  className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${
+                    warning ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                      warning ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center space-x-2">
+                <Icon path={mdiAlertCircle} size={16} className={`transition-colors duration-200 ${
+                  warning ? 'text-red-600 dark:text-red-400' : 'text-gray-400'
+                }`} />
+                <label htmlFor="warning" className={`text-sm font-medium cursor-pointer transition-colors duration-200 ${
+                  warning
+                    ? 'text-red-800 dark:text-red-200'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  Student Warning
+                </label>
+                {warning && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 animate-in fade-in duration-300">
+                    ⚠️ Flagged
+                  </span>
+                )}
+              </div>
+              <p className={`mt-1 text-xs transition-colors duration-200 ${
+                warning
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                {warning
+                  ? 'Student will be flagged for special attention and close monitoring'
+                  : 'Enable this to flag students who need extra supervision or have behavioral concerns'
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Late Fee Permission */}
+      <div className="mt-6">
+        <div className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+          lateFeePermission
+            ? 'from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-200 dark:border-emerald-800 hover:border-emerald-300 dark:hover:border-emerald-700'
+            : 'from-gray-50 to-gray-50 dark:from-gray-800 dark:to-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+        }`}>
+          <div className="flex items-start space-x-4">
+            <div className="flex items-center">
+              <div className="relative inline-flex items-center">
+                <input
+                  type="checkbox"
+                  id="lateFeePermission"
+                  name="lateFeePermission"
+                  checked={lateFeePermission}
+                  onChange={(e) => setLateFeePermission(e.target.checked)}
+                  className="sr-only"
+                />
+                <label
+                  htmlFor="lateFeePermission"
+                  className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                    lateFeePermission ? 'bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                      lateFeePermission ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center space-x-2">
+                <Icon path={mdiCash} size={16} className={`transition-colors duration-200 ${
+                  lateFeePermission ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'
+                }`} />
+                <label htmlFor="lateFeePermission" className={`text-sm font-medium cursor-pointer transition-colors duration-200 ${
+                  lateFeePermission
+                    ? 'text-emerald-800 dark:text-emerald-200'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  Late Fee Permission
+                </label>
+                {lateFeePermission && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 animate-in fade-in duration-300">
+                    💰 Allowed
+                  </span>
+                )}
+              </div>
+              <p className={`mt-1 text-xs transition-colors duration-200 ${
+                lateFeePermission
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                {lateFeePermission
+                  ? 'Late fees can be charged for this student when payments are overdue'
+                  : 'Enable this to allow charging late fees for this student'
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {error && <p className="text-red-500 text-sm mb-3 -mt-2">{error}</p>}
       

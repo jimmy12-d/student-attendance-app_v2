@@ -263,7 +263,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
                 <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                     record.shift?.toLowerCase() === 'morning' 
-                      ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                      ? 'dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 borde'
                       : record.shift?.toLowerCase() === 'afternoon'
                       ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'
                       : record.shift?.toLowerCase() === 'evening'

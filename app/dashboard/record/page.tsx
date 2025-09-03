@@ -70,7 +70,7 @@ interface AttendanceStats {
 // Define typical shift time ranges
 const morningStart = 6 * 60; // 6:00 AM
 const morningEnd = 11 * 60; // 11:00 AM
-const afternoonEnd = 16 * 60; // 4:00 PM
+const afternoonEnd = 15 * 60; // 3:00 PM
 
 // Helper function to determine current shift based on time
 const getCurrentShift = (): 'Morning' | 'Afternoon' | 'Evening' => {
@@ -641,19 +641,8 @@ export default function AttendanceRecordPage() {
             .map(docSnap => {
               const data = docSnap.data();
               const student = studentsMap.get(data.studentId);
-
               // Debug logging for missing students
               if (!student) {
-                console.warn(`Student not found for attendance record:`, {
-                  recordId: docSnap.id,
-                  studentId: data.studentId,
-                  studentName: data.studentName,
-                  date: data.date,
-                  status: data.status,
-                  method: data.method,
-                  authUid: data.authUid
-                });
-                
                 // For debugging: include the record with basic info from the attendance data
                 // This will show records even if the student is not in the active students list
                 return {

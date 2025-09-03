@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../../firebase-config';
 import { collection, setDoc, doc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { mdiInformation } from '@mdi/js';
+import { mdiInformation, mdiClockOutline, mdiAlertCircle, mdiCash } from '@mdi/js';
 import Icon from '../../_components/Icon';
 
 // Components
@@ -70,6 +70,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     discount, setDiscount,
     note, setNote,
     warning, setWarning,
+    onWaitlist, setOnWaitlist, // Add waitlist functionality
     lateFeePermission, setLateFeePermission, // Add late fee permission variables
     hasTelegramUsername, setHasTelegramUsername,
     telegramUsername, setTelegramUsername,
@@ -540,6 +541,70 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
             )}
           </div>
 
+          {/* Waitlist Option */}
+          <div className="mt-6">
+            <div className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+              onWaitlist
+                ? 'from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-200 dark:border-orange-800 hover:border-orange-300 dark:hover:border-orange-700'
+                : 'from-gray-50 to-gray-50 dark:from-gray-800 dark:to-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}>
+              <div className="flex items-start space-x-4">
+                <div className="flex items-center">
+                  <div className="relative inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      id="onWaitlist"
+                      checked={onWaitlist}
+                      onChange={(e) => setOnWaitlist(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor="onWaitlist"
+                      className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                        onWaitlist ? 'bg-orange-600' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                          onWaitlist ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </label>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    <Icon path={mdiClockOutline} size={16} className={`transition-colors duration-200 ${
+                      onWaitlist ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'
+                    }`} />
+                    <label htmlFor="onWaitlist" className={`text-sm font-medium cursor-pointer transition-colors duration-200 ${
+                      onWaitlist
+                        ? 'text-orange-800 dark:text-orange-200'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      Add to Waitlist
+                    </label>
+                    {onWaitlist && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 animate-in fade-in duration-300">
+                        Waitlisted
+                      </span>
+                    )}
+                  </div>
+                  <p className={`mt-1 text-xs transition-colors duration-200 ${
+                    onWaitlist
+                      ? 'text-orange-600 dark:text-orange-400'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {onWaitlist
+                      ? 'Student is currently on the waitlist and can be enrolled later when space becomes available'
+                      : 'Enable this to add the student to the waitlist instead of keeping them enrolled'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Row 3: Class and Shift */}
           <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0 relative z-50 mt-6">
             <div className="relative z-[60]">
@@ -675,32 +740,64 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
 
             {/* Late Fee Permission */}
             <div className="flex flex-col justify-between">
-              <div className="flex items-start justify-between">
-                <div>
-                  <label htmlFor="lateFeePermission" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Allow Late Fee Charges</label>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Enable to allow charging late fees for this student.</p>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className={`flex items-center px-4 py-2 rounded-lg border-2 transition-all duration-200 ${
-                    lateFeePermission
-                      ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
-                      : 'bg-red-50 dark:bg-gray-500/20 border-gray-300 dark:border-gray-700'
-                  }`}>
-                    <input
-                      id="lateFeePermission"
-                      name="lateFeePermission"
-                      type="checkbox"
-                      checked={lateFeePermission}
-                      onChange={(e) => setLateFeePermission(e.target.checked)}
-                      className="h-5 w-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2"
-                    />
-                    <label htmlFor="lateFeePermission" className={`ml-3 text-sm font-medium cursor-pointer ${
+              <div className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+                lateFeePermission
+                  ? 'from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-200 dark:border-emerald-800 hover:border-emerald-300 dark:hover:border-emerald-700'
+                  : 'from-gray-50 to-gray-50 dark:from-gray-800 dark:to-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}>
+                <div className="flex items-start space-x-4">
+                  <div className="flex items-center">
+                    <div className="relative inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        id="lateFeePermission"
+                        name="lateFeePermission"
+                        checked={lateFeePermission}
+                        onChange={(e) => setLateFeePermission(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <label
+                        htmlFor="lateFeePermission"
+                        className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                          lateFeePermission ? 'bg-emerald-600' : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                            lateFeePermission ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <Icon path={mdiCash} size={16} className={`transition-colors duration-200 ${
+                        lateFeePermission ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'
+                      }`} />
+                      <label htmlFor="lateFeePermission" className={`text-sm font-medium cursor-pointer transition-colors duration-200 ${
+                        lateFeePermission
+                          ? 'text-emerald-800 dark:text-emerald-200'
+                          : 'text-gray-700 dark:text-gray-300'
+                      }`}>
+                        Late Fee Permission
+                      </label>
+                      {lateFeePermission && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 animate-in fade-in duration-300">
+                          Allowed
+                        </span>
+                      )}
+                    </div>
+                    <p className={`mt-1 text-xs transition-colors duration-200 ${
                       lateFeePermission
-                        ? 'text-emerald-700 dark:text-emerald-300'
-                        : 'text-gray-700 dark:text-gray-300'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-gray-500 dark:text-gray-400'
                     }`}>
-                      {lateFeePermission ? 'Allowed' : '5$ Fee'}
-                    </label>
+                      {lateFeePermission
+                        ? 'This student can pay late without 5$ fee'
+                        : 'Enable this to allow charging late fees for this student'
+                      }
+                    </p>
                   </div>
                 </div>
               </div>
@@ -721,20 +818,64 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
           </div>
 
           <div className="mt-6">
-            <label htmlFor="warning" className="block text-sm font-medium text-red-700 dark:text-red-400 mb-3">Student Warning</label>
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+              warning
+                ? 'from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700'
+                : 'from-gray-50 to-gray-50 dark:from-gray-800 dark:to-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}>
               <div className="flex items-start space-x-4">
-                <input
-                  type="checkbox"
-                  id="warning"
-                  name="warning"
-                  checked={warning}
-                  onChange={(e) => setWarning(e.target.checked)}
-                  className="h-5 w-5 text-red-600 border-red-300 rounded focus:ring-red-500 focus:ring-2 mt-0.5"
-                />
+                <div className="flex items-center">
+                  <div className="relative inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      id="warning"
+                      name="warning"
+                      checked={warning}
+                      onChange={(e) => setWarning(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor="warning"
+                      className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${
+                        warning ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                          warning ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </label>
+                  </div>
+                </div>
                 <div className="flex-1">
-                  <label htmlFor="warning" className="text-sm font-medium text-red-800 dark:text-red-200 cursor-pointer">This student requires special attention or close monitoring</label>
-                  <p className="mt-2 text-xs text-red-600 dark:text-red-400">Check this box to flag students who need extra supervision or have behavioral concerns. This will display a warning badge in the student details.</p>
+                  <div className="flex items-center space-x-2">
+                    <Icon path={mdiAlertCircle} size={16} className={`transition-colors duration-200 ${
+                      warning ? 'text-red-600 dark:text-red-400' : 'text-gray-400'
+                    }`} />
+                    <label htmlFor="warning" className={`text-sm font-medium cursor-pointer transition-colors duration-200 ${
+                      warning
+                        ? 'text-red-800 dark:text-red-200'
+                        : 'text-gray-700 dark:text-gray-300'
+                    }`}>
+                      Student Warning
+                    </label>
+                    {warning && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 animate-in fade-in duration-300">
+                        ⚠️ Flagged
+                      </span>
+                    )}
+                  </div>
+                  <p className={`mt-1 text-xs transition-colors duration-200 ${
+                    warning
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {warning
+                      ? 'Student is flagged for special attention and close monitoring'
+                      : 'Enable this to flag students who need extra supervision or have behavioral concerns'
+                    }
+                  </p>
                 </div>
               </div>
             </div>
