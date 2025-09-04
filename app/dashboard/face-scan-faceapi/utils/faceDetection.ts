@@ -36,23 +36,24 @@ export const initializeFaceApi = async (): Promise<boolean> => {
       return false;
     }
 
+    console.log('🔄 Starting face-api.js model loading...');
     
     // Load models from CDN
     const MODEL_URL = '/models';
     
-    console.log('📦 Loading SSD MobileNet V1...');
+    console.log('📥 Loading SSD MobileNet v1 model...');
     await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-    console.log('✅ SSD MobileNet V1 loaded');
+    console.log('✅ SSD MobileNet v1 loaded');
     
-    console.log('📦 Loading Face Landmark 68 Net...');
+    console.log('📥 Loading Face Landmark 68 model...');
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-    console.log('✅ Face Landmark 68 Net loaded');
+    console.log('✅ Face Landmark 68 loaded');
     
-    console.log('📦 Loading Face Recognition Net...');
+    console.log('📥 Loading Face Recognition model...');
     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-    console.log('✅ Face Recognition Net loaded');
+    console.log('✅ Face Recognition loaded');
     
-    console.log('🎉 All face-api.js models loaded successfully');
+    console.log('🎉 All face-api.js models loaded successfully!');
     return true;
   } catch (error) {
     console.error('❌ Failed to load face-api.js models:', error);
@@ -67,10 +68,45 @@ export const detectAllFaces = async (video: HTMLVideoElement) => {
       throw new Error('Face-api.js not initialized');
     }
     
+    // Check if video is ready
+    if (!video || video.readyState !== 4) {
+      console.warn('⚠️ Video not ready for face detection (readyState:', video?.readyState, ')');
+      return [];
+    }
+    
+    // Check video dimensions
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.warn('⚠️ Video has no dimensions:', video.videoWidth, 'x', video.videoHeight);
+      return [];
+    }
+    
+    console.log('🔍 Running face detection on video:', video.videoWidth, 'x', video.videoHeight);
+    
+    // Try with options for better detection
+    const detectionOptions = new faceapi.SsdMobilenetv1Options({ 
+      minConfidence: 0.5,
+      maxResults: 10
+    });
+    
+    console.log('🎯 Starting face detection with options:', detectionOptions);
+    
     const result = await faceapi
-      .detectAllFaces(video)
+      .detectAllFaces(video, detectionOptions)
       .withFaceLandmarks()
       .withFaceDescriptors();
+      
+    console.log('👁️ Face detection result:', result.length, 'faces found');
+    
+    // Log each detection for debugging
+    result.forEach((detection, index) => {
+      console.log(`Face ${index + 1}:`, {
+        confidence: detection.detection.score,
+        box: detection.detection.box,
+        hasLandmarks: !!detection.landmarks,
+        hasDescriptor: !!detection.descriptor
+      });
+    });
+    
     return result;
   } catch (error) {
     console.error('❌ Error in detectAllFaces:', error);

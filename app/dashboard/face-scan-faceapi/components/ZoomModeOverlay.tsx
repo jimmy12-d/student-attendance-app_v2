@@ -5,6 +5,7 @@ import Webcam from 'react-webcam';
 import { mdiCamera, mdiCameraOff, mdiClose, mdiEye, mdiFaceRecognition, mdiClock } from '@mdi/js';
 import Icon from '../../../_components/Icon';
 import { TrackedFace } from '../utils/faceDetection';
+import { getOptimizedVideoConstraints } from '../utils/deviceOptimization';
 
 interface ZoomModeOverlayProps {
   isZoomMode: boolean;
@@ -329,12 +330,7 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
             ref={webcamRef}
             screenshotFormat="image/jpeg"
             className="w-full h-full object-cover"
-            videoConstraints={{ 
-              facingMode: 'user',
-              deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }}
+            videoConstraints={getOptimizedVideoConstraints(selectedCamera)}
             style={{ transform: "scaleX(-1)" }}
             onUserMedia={onUserMedia}
             onUserMediaError={onUserMediaError}

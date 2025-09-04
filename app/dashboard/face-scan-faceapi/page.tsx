@@ -16,6 +16,16 @@ import Icon from '../../_components/Icon';
 // Import utilities
 import { Student, filterStudentsByShift, markAttendance } from './utils/attendanceLogic';
 import { TrackedFace, initializeFaceApi, detectAllFaces, calculateFaceDistance } from './utils/faceDetection';
+import { 
+  getDeviceInfo, 
+  getOptimizedVideoConstraints, 
+  getFrameProcessingInterval,
+  getOptimizedCanvasSize,
+  shouldSkipFrame,
+  optimizeCanvasForDevice,
+  PerformanceMonitor,
+  getAdaptiveQualitySettings
+} from './utils/deviceOptimization';
 import ZoomModeOverlay from './components/ZoomModeOverlay';
 import RecognitionControls from './components/RecognitionControls';
 import ShiftSelector from './components/ShiftSelector';
@@ -40,6 +50,11 @@ const FaceApiAttendanceScanner = () => {
   const [isCameraShutdown, setIsCameraShutdown] = useState(false);
   const [shutdownStage, setShutdownStage] = useState<'countdown' | 'shutting-down' | 'shutdown-complete' | null>(null);
 
+  // Device optimization state
+  const [deviceInfo, setDeviceInfo] = useState(getDeviceInfo());
+  const [performanceMonitor] = useState(new PerformanceMonitor());
+  const [adaptiveSettings, setAdaptiveSettings] = useState(getAdaptiveQualitySettings(new PerformanceMonitor()));
+
   const [recognitionThreshold, setRecognitionThreshold] = useState(65); // Default 65%
   const [showRecognitionControls, setShowRecognitionControls] = useState(false); // Collapsible Recognition Controls
   const [minFaceSize, setMinFaceSize] = useState(130); // Minimum face width/height in pixels - default to 130
@@ -63,8 +78,8 @@ const FaceApiAttendanceScanner = () => {
 
   const DWELL_TIME_BEFORE_RECOGNIZE = 1500; // 1.5 seconds
   const RECOGNITION_COOLDOWN = 10000; // 10 seconds (was 1 millisecond!)
-  const DETECTION_INTERVAL = 1000; // 1 second
-  const NO_FACE_TIMEOUT = 45000; // 10 seconds before camera shutdown (changed from 30s for easier debugging)
+  const DETECTION_INTERVAL = getFrameProcessingInterval(); // Device-optimized interval
+  const NO_FACE_TIMEOUT = 45000; // 45 seconds before camera shutdown
   const COUNTDOWN_START = 5; // Start countdown 5 seconds before shutdown
 
   // Load students from Firestore (real-time)
@@ -196,6 +211,10 @@ const FaceApiAttendanceScanner = () => {
         
         // Auto-select shift after loading configs (always auto-select on page load)
         autoSelectShift();
+        
+        // Log device information for debugging
+        console.log('📱 Device Info:', deviceInfo);
+        console.log('⚙️ Adaptive Settings:', adaptiveSettings);
       } else {
         setLoadingMessage('Failed to load face detection models');
       }
@@ -369,17 +388,140 @@ const FaceApiAttendanceScanner = () => {
     }
   }, [isZoomMode, isCameraActive]);
 
+  // Canvas optimization for device performance
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas && isCameraActive) {
+      optimizeCanvasForDevice(canvas);
+      
+      // Set optimal canvas size based on device
+      const video = webcamRef.current?.video;
+      if (video) {
+        const optimizedSize = getOptimizedCanvasSize(video);
+        canvas.width = optimizedSize.width;
+        canvas.height = optimizedSize.height;
+      }
+    }
+  }, [isCameraActive, deviceInfo]);
+
+  // Adaptive quality monitoring
+  useEffect(() => {
+    if (isCameraActive) {
+      const interval = setInterval(() => {
+        const newSettings = getAdaptiveQualitySettings(performanceMonitor);
+        setAdaptiveSettings(newSettings);
+      }, 5000); // Check every 5 seconds
+      
+      return () => clearInterval(interval);
+    }
+  }, [isCameraActive, performanceMonitor]);
+
+  // Draw bounding boxes on canvas
+  const drawCanvas = useCallback((faces: TrackedFace[]) => {
+    const canvas = canvasRef.current;
+    const video = webcamRef.current?.video;
+    
+    if (!canvas || !video) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    console.log('🎨 Drawing', faces.length, 'face boxes on canvas');
+    
+    faces.forEach((face, index) => {
+      const { x, y, width, height } = face.box;
+      
+      // Set style based on face status
+      let color = '#ff6b6b'; // default red
+      let lineWidth = 2;
+      
+      if (face.status === 'recognized') {
+        color = '#51cf66'; // green for recognized
+        lineWidth = 3;
+      } else if (face.status === 'recognizing') {
+        color = '#4dabf7'; // blue for recognizing
+        lineWidth = 2;
+      } else if (face.status === 'scanning') {
+        color = '#69db7c'; // bright green for scanning
+        lineWidth = 4;
+      }
+      
+      // Draw bounding box
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.strokeRect(x, y, width, height);
+      
+      // Draw label background
+      if (face.name || face.status) {
+        const label = face.name || face.status;
+        const confidence = face.confidence ? ` (${face.confidence.toFixed(1)}%)` : '';
+        const text = label + confidence;
+        
+        ctx.font = '16px Arial';
+        const textMetrics = ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        const textHeight = 20;
+        
+        // Background
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y - textHeight - 5, textWidth + 10, textHeight + 5);
+        
+        // Text
+        ctx.fillStyle = 'white';
+        ctx.fillText(text, x + 5, y - 8);
+      }
+      
+      console.log(`👤 Drew face ${index + 1}:`, {
+        name: face.name,
+        status: face.status,
+        box: face.box,
+        color
+      });
+    });
+  }, []);
+
   // Face detection and recognition
   const detectFaces = useCallback(async () => {
-    if (!webcamRef.current?.video || !isCameraActive || isCameraShutdown) return; // Removed global scan lock check
+    if (!webcamRef.current?.video || !isCameraActive || isCameraShutdown) {
+      console.log('🚫 Face detection skipped - camera not ready:', {
+        hasVideo: !!webcamRef.current?.video,
+        isCameraActive,
+        isCameraShutdown
+      });
+      return;
+    }
     
     const video = webcamRef.current.video;
-    if (video.readyState !== 4) return;
+    if (video.readyState !== 4) {
+      console.log('⏳ Video not ready for detection, readyState:', video.readyState);
+      return;
+    }
+
+    // Device optimization: Skip frames for mobile devices
+    if (deviceInfo.isMobile && shouldSkipFrame()) {
+      console.log('⏭️ Skipping frame for mobile optimization');
+      return;
+    }
+
+    // Performance monitoring
+    performanceMonitor.recordFrame();
+
+    console.log('🔍 Starting face detection cycle...');
 
     try {
       const detections = await detectAllFaces(video);
 
+      console.log('📊 Detection results:', detections.length, 'faces detected');
+
       if (detections.length === 0) {
+        console.log('😐 No faces detected, clearing tracked faces');
         setTrackedFaces([]);
         // No faces detected - don't update last face detection time
         return;
@@ -643,19 +785,33 @@ const FaceApiAttendanceScanner = () => {
           return face;
         });
       });
+      
     } catch (error) {
       console.error('Face detection error:', error);
     }
   }, [isCameraActive, minFaceSize, maxFaceSize, recognitionThreshold, selectedShift, students]);
 
+  // Draw faces on canvas whenever trackedFaces changes
+  useEffect(() => {
+    if (isCameraActive && trackedFaces.length > 0) {
+      drawCanvas(trackedFaces);
+    }
+  }, [trackedFaces, isCameraActive, drawCanvas]);
+
   // Start detection loop
   const startDetection = useCallback(() => {
-    if (isDetectingRef.current) return;
+    if (isDetectingRef.current) {
+      console.log('⚠️ Detection already running, skipping start');
+      return;
+    }
+    
+    console.log('🚀 Starting face detection with interval:', adaptiveSettings.processingInterval + 'ms');
     
     isDetectingRef.current = true;
     lastFaceDetectionTimeRef.current = Date.now(); // Reset timer when starting detection
     
     detectionIntervalRef.current = setInterval(() => {
+      console.log('⏰ Detection interval triggered');
       detectFaces();
       
       // Clean up old entries from recently marked students (every 10 detection cycles)
@@ -668,8 +824,10 @@ const FaceApiAttendanceScanner = () => {
           }
         }
       }
-    }, DETECTION_INTERVAL);
-  }, [detectFaces, isZoomMode, isCameraActive, isCameraShutdown, handleCameraShutdown]);
+    }, adaptiveSettings.processingInterval); // Use adaptive interval
+    
+    console.log('✅ Face detection interval started');
+  }, [detectFaces, adaptiveSettings, isZoomMode, isCameraActive, isCameraShutdown, handleCameraShutdown]);
 
   // Stop detection
   const stopDetection = useCallback(() => {
@@ -746,15 +904,27 @@ const FaceApiAttendanceScanner = () => {
   }, [stopDetection]);
 
   useEffect(() => {
-    if (isCameraActive && !isLoading) {
+    console.log('🔄 Camera detection effect triggered:', {
+      isCameraActive,
+      isLoading,
+      isCameraLoading
+    });
+    
+    if (isCameraActive && !isLoading && !isCameraLoading) {
+      console.log('✅ Starting detection - camera is active and not loading');
       startDetection();
     } else {
+      console.log('⏹️ Stopping detection:', {
+        reason: !isCameraActive ? 'camera not active' : 
+                isLoading ? 'app loading' : 
+                isCameraLoading ? 'camera loading' : 'unknown'
+      });
       stopDetection();
     }
     return () => {
       stopDetection();
     };
-  }, [isCameraActive, isLoading, startDetection, stopDetection]);
+  }, [isCameraActive, isLoading, isCameraLoading, startDetection, stopDetection]);
 
   // Enhanced cleanup effect with proper camera stream cleanup
   useEffect(() => {
@@ -1008,14 +1178,16 @@ const FaceApiAttendanceScanner = () => {
         }}
         onRestartCamera={restartCameraInZoomMode}
         onUserMedia={() => {
+          console.log('📹 Camera stream ready! Clearing loading state...');
           setIsCameraLoading(false);
           setIsCameraActive(true);
+          toast.success('Camera ready - face detection will start automatically');
         }}
         onUserMediaError={(error: any) => {
-          console.error('Camera access error:', error);
+          console.error('❌ Camera access error:', error);
           setIsCameraLoading(false);
           setIsCameraActive(false);
-          toast.error('Failed to access camera');
+          toast.error('Failed to access camera: ' + error.message);
         }}
       />
 
@@ -1360,6 +1532,36 @@ const FaceApiAttendanceScanner = () => {
                         <span className="text-sm font-medium text-gray-900 dark:text-white">
                           {selectedShift ? `${selectedShift} Only` : 'All Students'}
                         </span>
+                      </div>
+                      
+                      {/* Device optimization info */}
+                      <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Device Type</span>
+                          <span className={`text-sm font-medium ${
+                            deviceInfo.isMobile ? 'text-orange-600 dark:text-orange-400' :
+                            deviceInfo.isTablet ? 'text-blue-600 dark:text-blue-400' :
+                            'text-green-600 dark:text-green-400'
+                          }`}>
+                            {deviceInfo.isMobile ? '📱 Mobile' :
+                             deviceInfo.isTablet ? '📱 Tablet' :
+                             '🖥️ Desktop'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Processing Speed</span>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {adaptiveSettings.processingInterval / 1000}s interval
+                          </span>
+                        </div>
+                        {deviceInfo.isMobile && (
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Mobile Optimized</span>
+                            <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                              ✅ Active
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
