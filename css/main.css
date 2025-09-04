@@ -95,6 +95,7 @@
 .animate-fade-in-left {
   animation: fade-in-left 0.3s forwards;
 }
+
 .nokora-font {
   font-family: var(--font-nokora), 'Nokora', sans-serif;
 }

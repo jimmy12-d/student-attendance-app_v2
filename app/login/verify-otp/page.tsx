@@ -157,7 +157,32 @@ const VerifyOtpPage = () => {
 
 
 const SuspendedVerifyOtpPage = () => (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+            <div className="text-center">
+                <div className="relative mx-auto w-16 h-16 mb-4">
+                    <div className="absolute inset-0 border-4 border-gray-200 dark:border-slate-700 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-transparent border-t-green-500 border-r-green-500 rounded-full animate-spin"></div>
+                    <div className="absolute inset-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center animate-pulse">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+                <div className="flex items-center justify-center space-x-1 mb-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+                <p className="text-lg font-medium text-gray-800 dark:text-gray-200 animate-pulse">
+                    Loading verification...
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Preparing your secure session
+                </p>
+            </div>
+        </div>
+    }>
         <VerifyOtpPage />
     </Suspense>
 );

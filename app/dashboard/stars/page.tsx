@@ -40,7 +40,7 @@ const STAR_COLORS = [
   {
     value: 'white',
     label: 'White',
-    bgClass: 'bg-gray-600 dark:bg-gray-200',
+    bgClass: 'bg-gray-600 dark:bg-gray-500/30',
     textClass: 'text-gray-200 dark:text-gray-100',
     borderClass: 'border-gray-300 dark:border-gray-200',
     ringClass: 'ring-gray-200 dark:ring-gray-400'
@@ -274,7 +274,7 @@ const StarManagementPage = () => {
                       <Icon 
                         path={mdiStar} 
                         size={28} 
-                        className={`${colorConfig.textClass} drop-shadow-sm`}
+                        className={`${colorConfig.textClass} drop-shadow-sm mt-1`}
                       />
                       {/* Glow effect */}
                       <div className={`absolute inset-0 rounded-2xl ${colorConfig.bgClass} opacity-10 blur-lg group-hover:opacity-30 transition-opacity duration-300`}></div>
@@ -352,8 +352,8 @@ const StarManagementPage = () => {
                   <div className="flex items-center justify-between p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl border border-gray-200/50 dark:border-gray-600/50 backdrop-blur-sm">
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Theme Color</span>
                     <div className="flex items-center space-x-3">
-                      <div className={`relative w-6 h-6 rounded-full ${colorConfig.bgClass} border-2 ${colorConfig.borderClass} shadow-lg`}>
-                        <div className={`absolute inset-0 rounded-full ${colorConfig.bgClass} opacity-60 blur-sm`}></div>
+                      <div className={`relative w-6 h-6 rounded-full ${reward.color === 'white' ? 'bg-gray-200' : colorConfig.bgClass} border-2 ${colorConfig.borderClass} shadow-lg`}>
+                        <div className={`absolute inset-0 rounded-full ${reward.color === 'white' ? 'bg-gray-200' : colorConfig.bgClass} opacity-60 blur-sm`}></div>
                       </div>
                       <span className={`text-sm font-semibold ${colorConfig.textClass} capitalize px-2 py-1 rounded-md bg-white/70 dark:bg-gray-700/70`}>
                         {reward.color}

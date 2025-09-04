@@ -143,6 +143,7 @@ export const markAttendance = async (student: Student, selectedShift: string, cl
     
     if (!attendanceSnapshot.empty) {
       const existingRecord = attendanceSnapshot.docs[0].data();
+      console.log(`🚫 Duplicate attendance prevented for ${student.fullName} (${selectedShift} shift on ${today})`);
       toast.warning(`${student.fullName} already marked ${existingRecord.status} for ${selectedShift} shift today`);
       return existingRecord.status; // Return the existing status
     }

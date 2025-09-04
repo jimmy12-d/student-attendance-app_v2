@@ -87,7 +87,7 @@ const WaitlistStudentsSection: React.FC<WaitlistStudentsSectionProps> = ({
   }
 
   return (
-    <CardBox className="mb-6 border-l-4 border-l-blue-400">
+    <CardBox className="mb-6 border-l-4 border-l-blue-400 ">
       <div className="p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">

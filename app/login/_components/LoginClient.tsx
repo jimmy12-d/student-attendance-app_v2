@@ -2,27 +2,30 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
-import { auth, db } from '../../../firebase-config';
+import { db } from '../../../firebase-config';
 import CardBox from '../../_components/CardBox';
 import SectionFullScreen from '../../_components/Section/FullScreen';
 import StudentSignIn from './StudentSignIn';
 import { usePWANavigation } from '../../_hooks/usePWANavigation';
+import { useAuthContext } from '../../_contexts/AuthContext';
 
 const LoginClient = () => {
   const router = useRouter();
   const { navigateWithinPWA } = usePWANavigation();
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { currentUser, isAuthenticated, userRole, isLoading } = useAuthContext();
+  const [checkingProfile, setCheckingProfile] = useState(false);
 
   useEffect(() => {
-    if (auth) {
-      const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          // Check if user has a complete profile before redirecting
+    const checkUserProfile = async () => {
+      if (isAuthenticated && currentUser && !userRole) {
+        // User is authenticated but we don't know their role yet
+        // Check if they are a student with a complete profile
+        setCheckingProfile(true);
+        
+        try {
           const studentsRef = collection(db, "students");
-          const q = query(studentsRef, where("authUid", "==", user.uid), limit(1));
+          const q = query(studentsRef, where("authUid", "==", currentUser.uid), limit(1));
           const querySnapshot = await getDocs(q);
 
           if (!querySnapshot.empty) {
@@ -31,26 +34,33 @@ const LoginClient = () => {
 
             if (studentData && studentData.class && studentData.class !== 'Unassigned') {
               // User has a complete profile, redirect them using PWA navigation
-              setIsAuthenticated(true);
               navigateWithinPWA('/student/attendance', { replace: true });
               return;
             }
           }
-          
-          // User is authenticated but doesn't have a complete profile
-          // Let them stay on the login page to complete registration
-          setLoading(false);
-        } else {
-          // If no user, stop loading and show the login button.
-          setLoading(false);
+        } catch (error) {
+          console.error('Error checking user profile:', error);
+        } finally {
+          setCheckingProfile(false);
         }
-      });
-      // Cleanup the listener when the component unmounts.
-      return () => unsubscribe();
-    }
-  }, [router]);
+      } else if (isAuthenticated && userRole) {
+        // User is authenticated and has a role, redirect to appropriate dashboard
+        if (userRole === 'admin') {
+          navigateWithinPWA('/dashboard', { replace: true });
+        } else if (userRole === 'teacher') {
+          navigateWithinPWA('/teacher', { replace: true });
+        } else if (userRole === 'student') {
+          navigateWithinPWA('/student/attendance', { replace: true });
+        }
+      }
+    };
 
-  if (loading) {
+    if (!isLoading) {
+      checkUserProfile();
+    }
+  }, [isAuthenticated, currentUser, userRole, isLoading, navigateWithinPWA]);
+
+  if (isLoading || checkingProfile) {
     // Show a loading indicator while we check for an active session.
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">

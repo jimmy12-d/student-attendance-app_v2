@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
 
-import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiCog, mdiInformation } from '@mdi/js';
+import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiAlert, mdiEye, mdiCog, mdiInformation, mdiClock, mdiFullscreen, mdiClose } from '@mdi/js';
 import CardBox from "../../_components/CardBox";
 import { getPageTitle } from "../../_lib/config";
 import CustomDropdown from '../students/components/CustomDropdown';
@@ -16,11 +16,6 @@ import Icon from '../../_components/Icon';
 // Import utilities
 import { Student, filterStudentsByShift, markAttendance } from './utils/attendanceLogic';
 import { TrackedFace, initializeFaceApi, detectAllFaces, calculateFaceDistance } from './utils/faceDetection';
-import ZoomModeOverlay from './components/ZoomModeOverlay';
-import RecognitionControls from './components/RecognitionControls';
-import ShiftSelector from './components/ShiftSelector';
-import CameraShutdownHandler from './components/CameraShutdownHandler';
-import ShutdownTransition from './components/ShutdownTransition';
 
 const FaceApiAttendanceScanner = () => {
   const webcamRef = useRef<Webcam>(null);
@@ -36,14 +31,11 @@ const FaceApiAttendanceScanner = () => {
   const [isZoomMode, setIsZoomMode] = useState(false);
   const [availableCameras, setAvailableCameras] = useState<{ value: string, label: string }[]>([]);
   const [selectedCamera, setSelectedCamera] = useState<string>('');
-  const [cameraShutdownCountdown, setCameraShutdownCountdown] = useState<number | null>(null);
-  const [isCameraShutdown, setIsCameraShutdown] = useState(false);
-  const [shutdownStage, setShutdownStage] = useState<'countdown' | 'shutting-down' | 'shutdown-complete' | null>(null);
-
-  const [recognitionThreshold, setRecognitionThreshold] = useState(65); // Default 65%
+  
+  const [recognitionThreshold, setRecognitionThreshold] = useState(60); // Default 60%
   const [showRecognitionControls, setShowRecognitionControls] = useState(false); // Collapsible Recognition Controls
-  const [minFaceSize, setMinFaceSize] = useState(130); // Minimum face width/height in pixels - default to 130
-  const [maxFaceSize, setMaxFaceSize] = useState(350); // Maximum face width/height in pixels - default to 350
+  const [minFaceSize, setMinFaceSize] = useState(100); // Minimum face width/height in pixels - default to 100
+  const [maxFaceSize, setMaxFaceSize] = useState(300); // Maximum face width/height in pixels - default to 300
   const [selectedShift, setSelectedShift] = useState<string>(''); // Selected shift/session
   const [availableShifts] = useState([
     { value: 'All', label: 'All Shifts' },
@@ -57,15 +49,10 @@ const FaceApiAttendanceScanner = () => {
   const isDetectingRef = useRef(false);
   const recentlyMarkedStudents = useRef<Map<string, number>>(new Map()); // Track recently marked students
   const studentsUnsubRef = useRef<(() => void) | null>(null);
-  const lastFaceDetectionTimeRef = useRef<number>(Date.now()); // Track last face detection time
-  const shutdownTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const DWELL_TIME_BEFORE_RECOGNIZE = 1500; // 1.5 seconds
-  const RECOGNITION_COOLDOWN = 10000; // 10 seconds (was 1 millisecond!)
+  const RECOGNITION_COOLDOWN = 30000; // 30 seconds (was 1 millisecond!)
   const DETECTION_INTERVAL = 1000; // 1 second
-  const NO_FACE_TIMEOUT = 45000; // 10 seconds before camera shutdown (changed from 30s for easier debugging)
-  const COUNTDOWN_START = 5; // Start countdown 5 seconds before shutdown
 
   // Load students from Firestore (real-time)
   const loadStudents = useCallback(async () => {
@@ -98,6 +85,7 @@ const FaceApiAttendanceScanner = () => {
         });
         
         setStudents(studentsData);
+        console.log('📡 Students updated via real-time listener:', studentsData.length);
       }, (error) => {
         console.error('Students listener error:', error);
         toast.error('Failed to load students');
@@ -141,6 +129,7 @@ const FaceApiAttendanceScanner = () => {
     const morningEnd = 10 * 60; // 10:00 AM (600 minutes)
     const afternoonStart = 10 * 60; // 10:00 AM (600 minutes)
     const afternoonEnd = 15 * 60; // 3:00 PM (900 minutes)
+    const eveningStart = 15 * 60; // 3:00 PM (900 minutes)
 
     let autoShift = '';
     if (currentTimeInMinutes >= morningStart && currentTimeInMinutes < morningEnd) {
@@ -150,8 +139,19 @@ const FaceApiAttendanceScanner = () => {
     } else {
       autoShift = 'Evening';
     }
+    console.log(`🕐 Current time ${currentTimeInMinutes} minutes falls in: ${autoShift} shift`);
     setSelectedShift(autoShift);
   }, []);
+
+  // Clear all localStorage for debugging
+  const clearAllSettings = () => {
+    localStorage.removeItem('faceapi-min-face-size');
+    localStorage.removeItem('faceapi-max-face-size');
+    localStorage.removeItem('faceapi-recognition-threshold');
+    localStorage.removeItem('faceapi-selected-shift');
+    console.log('🧹 All face-api localStorage cleared');
+    autoSelectShift(); // Re-auto-select after clearing
+  };
 
   // Load available cameras
   const loadCameras = useCallback(async () => {
@@ -228,12 +228,21 @@ const FaceApiAttendanceScanner = () => {
   // Save face size settings to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('faceapi-min-face-size', minFaceSize.toString());
+  }, [minFaceSize]);
+
+  useEffect(() => {
     localStorage.setItem('faceapi-max-face-size', maxFaceSize.toString());
+  }, [maxFaceSize]);
+
+  useEffect(() => {
     localStorage.setItem('faceapi-recognition-threshold', recognitionThreshold.toString());
+  }, [recognitionThreshold]);
+
+  useEffect(() => {
     if (selectedShift) {
       localStorage.setItem('faceapi-selected-shift', selectedShift);
     }
-  }, [minFaceSize, maxFaceSize, recognitionThreshold, selectedShift]);
+  }, [selectedShift]);
 
   // Initialize success sound
   useEffect(() => {
@@ -288,62 +297,26 @@ const FaceApiAttendanceScanner = () => {
     }
   };
 
-  // Function to restart camera in zoom mode
-  const restartCameraInZoomMode = useCallback(() => {
-    if (!isZoomMode) return;
-    
-    setIsCameraShutdown(false);
-    setCameraShutdownCountdown(null);
-    setIsCameraLoading(true);
-    setIsCameraActive(true);
-    lastFaceDetectionTimeRef.current = Date.now();
-    
-    // Clear any existing timers
-    if (shutdownTimerRef.current) {
-      clearTimeout(shutdownTimerRef.current);
-      shutdownTimerRef.current = null;
-    }
-    if (countdownTimerRef.current) {
-      clearTimeout(countdownTimerRef.current);
-      countdownTimerRef.current = null;
+  // Handle zoom mode toggle
+  const toggleZoomMode = () => {
+    if (!isCameraActive) {
+      toast.error('Please start the camera first');
+      return;
     }
     
-    toast.success('Camera restarted');
-  }, [isZoomMode]);
-
-  // Function to handle camera auto-shutdown
-  const handleCameraShutdown = useCallback(() => {
-    if (!isZoomMode || !isCameraActive) return;
+    const newZoomMode = !isZoomMode;
+    setIsZoomMode(newZoomMode);
     
-    // Start shutdown transition
-    setShutdownStage('shutting-down');
-    
-    // After a brief delay, complete the shutdown
-    setTimeout(() => {
-      setIsCameraActive(false);
-      setIsCameraShutdown(true);
-      setCameraShutdownCountdown(null);
-      setShutdownStage('shutdown-complete');
-      
-      // Clear tracked faces
-      setTrackedFaces([]);
-      
-      // Reset to normal state after showing the complete message
-      setTimeout(() => {
-        setShutdownStage(null);
-      }, 2000);
-    }, 1000); // 1 second transition
-  }, [isZoomMode, isCameraActive]);
-
-  // Handle countdown stage changes
-  useEffect(() => {
-    if (cameraShutdownCountdown !== null && cameraShutdownCountdown > 0) {
-      setShutdownStage('countdown');
-    } else if (cameraShutdownCountdown === null && shutdownStage === 'countdown') {
-      setShutdownStage(null);
+    if (newZoomMode) {
+      toast.success('Zoom mode activated - Press ESC to exit');
+      // Prevent body scrolling
+      document.body.style.overflow = 'hidden';
+    } else {
+      toast.info('Zoom mode deactivated');
+      // Restore body scrolling
+      document.body.style.overflow = 'unset';
     }
-  }, [cameraShutdownCountdown, shutdownStage]);
-
+  };
 
   // Handle escape key to exit zoom mode
   useEffect(() => {
@@ -371,7 +344,7 @@ const FaceApiAttendanceScanner = () => {
 
   // Face detection and recognition
   const detectFaces = useCallback(async () => {
-    if (!webcamRef.current?.video || !isCameraActive || isCameraShutdown) return; // Removed global scan lock check
+    if (!webcamRef.current?.video || !isCameraActive) return; // Removed global scan lock check
     
     const video = webcamRef.current.video;
     if (video.readyState !== 4) return;
@@ -381,7 +354,6 @@ const FaceApiAttendanceScanner = () => {
 
       if (detections.length === 0) {
         setTrackedFaces([]);
-        // No faces detected - don't update last face detection time
         return;
       }
 
@@ -391,27 +363,6 @@ const FaceApiAttendanceScanner = () => {
         const faceSize = Math.max(width, height);
         return faceSize >= minFaceSize && faceSize <= maxFaceSize;
       });
-
-      // Only update last face detection time when we have valid filtered faces
-      if (filteredDetections.length > 0) {
-        const previousTime = lastFaceDetectionTimeRef.current;
-        lastFaceDetectionTimeRef.current = Date.now();
-        
-        // Clear any shutdown timers since we detected valid faces
-        if (shutdownTimerRef.current) {
-          clearTimeout(shutdownTimerRef.current);
-          shutdownTimerRef.current = null;
-        }
-        if (countdownTimerRef.current) {
-          clearInterval(countdownTimerRef.current);
-          countdownTimerRef.current = null;
-        }
-        setCameraShutdownCountdown(null);
-      } else {
-        // No valid faces within size criteria - clear tracked faces but don't update timestamp
-        setTrackedFaces([]);
-        return;
-      }
 
       const now = Date.now();
       
@@ -532,6 +483,7 @@ const FaceApiAttendanceScanner = () => {
                 const now = Date.now();
                 
                 if (lastMarked && now - lastMarked < RECOGNITION_COOLDOWN) {
+                  console.log(`⏰ Face scan cooldown active for ${bestMatch.student.fullName} (${Math.round((RECOGNITION_COOLDOWN - (now - lastMarked)) / 1000)}s remaining)`);
                   return {
                     ...face,
                     status: 'recognized',
@@ -560,6 +512,7 @@ const FaceApiAttendanceScanner = () => {
                 };
                 
                 // Notify attendance table that a face was detected (start loading state)
+                console.log('🔥 Dispatching faceDetected event for:', bestMatch.student.fullName);
                 window.dispatchEvent(new CustomEvent('faceDetected', {
                   detail: {
                     studentId: bestMatch.student.id,
@@ -653,7 +606,6 @@ const FaceApiAttendanceScanner = () => {
     if (isDetectingRef.current) return;
     
     isDetectingRef.current = true;
-    lastFaceDetectionTimeRef.current = Date.now(); // Reset timer when starting detection
     
     detectionIntervalRef.current = setInterval(() => {
       detectFaces();
@@ -669,7 +621,7 @@ const FaceApiAttendanceScanner = () => {
         }
       }
     }, DETECTION_INTERVAL);
-  }, [detectFaces, isZoomMode, isCameraActive, isCameraShutdown, handleCameraShutdown]);
+  }, [detectFaces]);
 
   // Stop detection
   const stopDetection = useCallback(() => {
@@ -678,18 +630,6 @@ const FaceApiAttendanceScanner = () => {
       clearInterval(detectionIntervalRef.current);
       detectionIntervalRef.current = null;
     }
-    
-    // Clear shutdown timers
-    if (shutdownTimerRef.current) {
-      clearTimeout(shutdownTimerRef.current);
-      shutdownTimerRef.current = null;
-    }
-    if (countdownTimerRef.current) {
-      clearTimeout(countdownTimerRef.current);
-      countdownTimerRef.current = null;
-    }
-    setCameraShutdownCountdown(null);
-    
     setTrackedFaces([]);
     // Clear recently marked students when stopping detection
     recentlyMarkedStudents.current.clear();
@@ -739,10 +679,6 @@ const FaceApiAttendanceScanner = () => {
     
     // Set camera inactive
     setIsCameraActive(false);
-    
-    // Reset shutdown state
-    setIsCameraShutdown(false);
-    setCameraShutdownCountdown(null);
   }, [stopDetection]);
 
   useEffect(() => {
@@ -964,60 +900,333 @@ const FaceApiAttendanceScanner = () => {
 
   return (
     <>
-      {/* Camera Shutdown Handler */}
-      <CameraShutdownHandler
-        isZoomMode={isZoomMode}
-        isCameraActive={isCameraActive}
-        isCameraShutdown={isCameraShutdown}
-        cameraShutdownCountdown={cameraShutdownCountdown}
-        lastFaceDetectionTimeRef={lastFaceDetectionTimeRef}
-        shutdownTimerRef={shutdownTimerRef}
-        countdownTimerRef={countdownTimerRef}
-        detectionIntervalRef={detectionIntervalRef}
-        webcamRef={webcamRef}
-        onCameraShutdown={handleCameraShutdown}
-        onCountdownUpdate={setCameraShutdownCountdown}
-        NO_FACE_TIMEOUT={NO_FACE_TIMEOUT}
-        COUNTDOWN_START={COUNTDOWN_START}
-      />
-
-      {/* Shutdown Transition Overlay */}
-      {isZoomMode && shutdownStage && (
-        <ShutdownTransition
-          isVisible={true}
-          stage={shutdownStage}
-          countdown={cameraShutdownCountdown}
-        />
-      )}
-
       {/* Zoom Mode Overlay */}
-      <ZoomModeOverlay
-        isZoomMode={isZoomMode}
-        isCameraActive={isCameraActive}
-        isCameraLoading={isCameraLoading}
-        isCameraShutdown={isCameraShutdown}
-        cameraShutdownCountdown={cameraShutdownCountdown}
-        selectedCamera={selectedCamera}
-        webcamRef={webcamRef}
-        canvasRef={canvasRef}
-        trackedFaces={trackedFaces}
-        recognitionThreshold={recognitionThreshold}
-        onExitZoomMode={() => {
-          setIsZoomMode(false);
-          stopCamera();
-        }}
-        onRestartCamera={restartCameraInZoomMode}
-        onUserMedia={() => {
-          setIsCameraLoading(false);
-          setIsCameraActive(true);
-        }}
-        onUserMediaError={(error: any) => {
-          console.error('Camera access error:', error);
-          setIsCameraLoading(false);
-          setIsCameraActive(false);
-          toast.error('Failed to access camera');
-        }}
-      />
+      {isZoomMode && (
+        <div className="fixed inset-0 z-[9999] bg-black">
+          {/* Exit Button */}
+          <button
+            onClick={() => {
+              setIsZoomMode(false);
+              stopCamera();
+            }}
+            className="absolute top-6 right-6 z-[10000] p-3 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-all duration-200 transform hover:scale-105"
+            title="Stop Scanning (ESC)"
+          >
+            <Icon path={mdiClose} className="w-6 h-6" />
+          </button>
+
+          {/* Dynamic Instructions */}
+          <div className="absolute top-6 left-6 z-[10000] bg-black/70 backdrop-blur-sm rounded-xl p-4 max-w-md">
+            <div className="text-white">
+              <h3 className="text-xl font-bold mb-2 flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span>Zoom Mode Active</span>
+              </h3>
+              <div className="space-y-2 text-sm">
+                <p className="flex items-center space-x-2">
+                  <Icon path={mdiEye} className="w-4 h-4 text-blue-400" />
+                  <span>Look directly at the camera</span>
+                </p>
+                <p className="flex items-center space-x-2">
+                  <Icon path={mdiFaceRecognition} className="w-4 h-4 text-green-400" />
+                  <span>Position your face in the center</span>
+                </p>
+                <p className="flex items-center space-x-2">
+                  <Icon path={mdiClock} className="w-4 h-4 text-yellow-400" />
+                  <span>Hold position for 2 seconds</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Student Recognition Display */}
+          {trackedFaces.length > 0 && (
+            <div className="absolute bottom-6 left-6 right-6 z-[10000]">
+              <div className="grid grid-cols-1 gap-3">
+                {/* Minimal Sophisticated Student Recognition Cards */}
+                {trackedFaces.map(face => (
+                  <div key={face.id} className={`group relative overflow-hidden rounded-2xl backdrop-blur-xl border transition-all duration-700 ease-out transform hover:scale-[1.01] ${
+                    face.isScanning
+                      ? face.attendanceStatus === 'late'
+                        ? 'bg-gradient-to-r from-amber-900/80 via-yellow-900/60 to-amber-900/80 border-amber-400/30 shadow-2xl shadow-amber-500/10'
+                        : 'bg-gradient-to-r from-slate-900/80 via-blue-900/60 to-slate-900/80 border-blue-400/30 shadow-2xl shadow-blue-500/10'
+                      : face.attendanceStatus === 'late'
+                      ? 'bg-gradient-to-r from-yellow-900/90 via-amber-900/70 to-yellow-900/90 border-yellow-400/40 shadow-2xl shadow-yellow-500/15'
+                      : face.name
+                      ? 'bg-gradient-to-r from-green-900/90 via-emerald-900/70 to-green-900/90 border-green-400/40 shadow-2xl shadow-green-500/15'
+                      : 'bg-gradient-to-r from-slate-900/80 via-gray-900/60 to-slate-900/80 border-gray-400/30 shadow-2xl shadow-gray-500/10'
+                  }`}>
+                    {/* Subtle animated background */}
+                    <div className="absolute inset-0 opacity-5">
+                      <div className={`absolute inset-0 ${
+                        face.isScanning 
+                          ? face.attendanceStatus === 'late'
+                            ? 'bg-gradient-to-r from-amber-500/20 to-transparent animate-pulse'
+                            : 'bg-gradient-to-r from-blue-500/20 to-transparent animate-pulse'
+                          : face.attendanceStatus === 'late' ? 'bg-gradient-to-r from-amber-500/20 to-transparent' :
+                        face.name ? 'bg-gradient-to-r from-emerald-500/20 to-transparent' : 'bg-gradient-to-r from-gray-500/20 to-transparent'
+                      }`}></div>
+                    </div>
+
+                    <div className="relative p-6">
+                      <div className="flex items-center justify-between">
+                        {/* Minimal Student Info */}
+                        <div className="flex-1 space-y-3">
+                          {face.name ? (
+                            <>
+                              {/* Elegant Name Display */}
+                              <div className="flex items-center space-x-4">
+                                <div className={`text-7xl font-light tracking-tight ${
+                                  face.attendanceStatus === 'late' ? 'text-amber-200' : 'text-emerald-200'
+                                }`}>
+                                  {face.name}
+                                </div>
+                                {/* Minimal Status Indicator */}
+                                <div className={`px-3 py-1 rounded-full text-xs font-medium tracking-wider ${
+                                  face.isScanning
+                                    ? 'bg-blue-500/20 text-blue-200 border border-blue-400/30'
+                                    : face.attendanceStatus === 'late'
+                                    ? 'bg-amber-500/20 text-amber-200 border border-amber-400/30'
+                                    : 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30'
+                                }`}>
+                                  {face.isScanning ? '•' : face.attendanceStatus === 'late' ? 'LATE' : '✓'}
+                                </div>
+                              </div>
+
+                              {/* Clean Status Line */}
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  face.isScanning 
+                                    ? face.attendanceStatus === 'late' 
+                                      ? 'bg-amber-400 animate-pulse' 
+                                      : 'bg-blue-400 animate-pulse'
+                                    : face.attendanceStatus === 'late' ? 'bg-amber-400' : 'bg-emerald-400'
+                                }`}></div>
+                                <span className="text-2xl font-light text-gray-200 tracking-wide">
+                                  {face.isScanning 
+                                    ? face.attendanceStatus === 'late' 
+                                      ? 'LATE' 
+                                      : 'PROCESSING'
+                                    : face.attendanceStatus === 'late' ? 'LATE ARRIVAL' : 'PRESENT'}
+                                </span>
+                              </div>
+
+                              {/* Minimal Time & Confidence */}
+                              <div className="flex items-center space-x-6 pt-2">
+                                <div className="text-lg font-mono text-gray-400 tracking-wider">
+                                  {new Date().toLocaleTimeString('en-US', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: false
+                                  })}
+                                </div>
+                                {face.confidence && (
+                                  <div className={`text-sm font-medium px-2 py-1 rounded-md ${
+                                    face.confidence >= recognitionThreshold
+                                      ? 'bg-emerald-500/10 text-emerald-300'
+                                      : 'bg-red-500/10 text-red-300'
+                                  }`}>
+                                    {face.confidence.toFixed(0)}%
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* Minimal Unknown State */}
+                              <div className="flex items-center space-x-4">
+                                <div className="text-5xl font-light text-gray-400 tracking-tight">
+                                  {face.status === 'detecting' ? 'DETECTING' :
+                                   face.status === 'recognizing' ? 'RECOGNIZING' :
+                                   face.status === 'unknown' ? 'UNKNOWN' : 'PROCESSING'}
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-gray-500/20 flex items-center justify-center">
+                                  <div className="w-4 h-4 bg-gray-400 rounded-full animate-pulse"></div>
+                                </div>
+                              </div>
+                              <div className="text-lg text-gray-500 font-light tracking-wide">
+                                {face.message || 'Position face in frame'}
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Sophisticated Status Orb */}
+                        <div className="flex flex-col items-center space-y-3 ml-8">
+                          <div className={`relative w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
+                            face.status === 'scanning'
+                              ? 'bg-blue-500/20 border-blue-400/60 shadow-lg shadow-blue-500/20'
+                              : face.status === 'recognized'
+                              ? face.attendanceStatus === 'late'
+                                ? 'bg-amber-500/20 border-amber-400/60 shadow-lg shadow-amber-500/20'
+                                : 'bg-emerald-500/20 border-emerald-400/60 shadow-lg shadow-emerald-500/20'
+                              : face.status === 'recognizing'
+                              ? 'bg-blue-500/20 border-blue-400/60 shadow-lg shadow-blue-500/20 animate-pulse'
+                              : face.status === 'unknown'
+                              ? 'bg-red-500/20 border-red-400/60 shadow-lg shadow-red-500/20'
+                              : 'bg-gray-500/20 border-gray-400/60 shadow-lg shadow-gray-500/20'
+                          }`}>
+                            <div className="w-6 h-6 bg-white/90 rounded-full"></div>
+                            {/* Subtle pulsing ring */}
+                            <div className={`absolute inset-0 rounded-full border border-white/20 ${
+                              face.status === 'scanning' ? 'animate-ping' :
+                              face.status === 'recognizing' ? 'animate-ping' :
+                              'opacity-0'
+                            }`}></div>
+                          </div>
+
+                          {/* Minimal status text */}
+                          <div className="text-center">
+                            <div className={`font-medium uppercase tracking-widest ${
+                              face.status === 'scanning' ? 'text-base text-blue-300' :
+                              face.status === 'recognized' 
+                                ? face.attendanceStatus === 'late' 
+                                  ? 'text-2xl text-amber-300' 
+                                  : 'text-2xl text-emerald-300'
+                                : face.status === 'recognizing' ? 'text-base text-blue-300' :
+                              face.status === 'unknown' ? 'text-base text-red-300' : 'text-base text-gray-300'
+                            }`}>
+                              {face.status === 'scanning' ? 'Active' :
+                               face.status === 'recognized' 
+                                 ? face.attendanceStatus === 'late' 
+                                   ? 'Late Arrival' 
+                                   : 'Present'
+                                 : face.status === 'recognizing' ? 'Scan' :
+                               face.status === 'unknown' ? 'Error' : 'Wait'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Minimal Progress Bar */}
+                      {face.isScanning && (
+                        <div className="mt-6">
+                          <div className="w-full bg-gray-700/30 rounded-full h-1 overflow-hidden">
+                            <div className="bg-gradient-to-r from-blue-400 to-blue-500 h-full rounded-full animate-pulse"
+                                 style={{width: '100%'}}></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Loading Overlay for Camera Initialization */}
+          {isCameraLoading && (
+            <div className="absolute inset-0 z-[10001] bg-gradient-to-br from-blue-900 via-slate-900 to-indigo-900 flex items-center justify-center">
+              {/* Animated Background Pattern */}
+              <div className="absolute inset-0 opacity-20">
+                <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+              </div>
+              
+              {/* Subtle Grid Pattern */}
+              <div className="absolute inset-0 opacity-5" style={{
+                backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)`,
+                backgroundSize: '20px 20px'
+              }}></div>
+              
+              <div className="relative text-center text-white max-w-md mx-auto px-8">
+                <div className="relative mx-auto mb-8">
+                  {/* Enhanced Animated Camera Icon */}
+                  <div className="relative w-32 h-32 mx-auto mb-6">
+                    {/* Outer spinning ring */}
+                    <div className="absolute inset-0 border-4 border-blue-500/30 border-t-blue-400 border-r-indigo-400 rounded-full animate-spin"></div>
+                    {/* Inner pulsing ring */}
+                    <div className="absolute inset-3 border-2 border-indigo-400/40 border-b-purple-400 rounded-full animate-spin" style={{animationDirection: 'reverse', animationDuration: '3s'}}></div>
+                    {/* Camera icon with glow */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="p-4 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 rounded-full backdrop-blur-sm">
+                        <Icon path={mdiCamera} className="w-12 h-12 text-blue-300 drop-shadow-lg animate-pulse" />
+                      </div>
+                    </div>
+                    {/* Orbiting dots */}
+                    <div className="absolute inset-0">
+                      <div className="w-3 h-3 bg-blue-400 rounded-full absolute -top-1 left-1/2 transform -translate-x-1/2 animate-ping"></div>
+                      <div className="w-2 h-2 bg-indigo-400 rounded-full absolute top-1/2 -right-1 transform -translate-y-1/2 animate-ping" style={{animationDelay: '0.5s'}}></div>
+                      <div className="w-3 h-3 bg-purple-400 rounded-full absolute -bottom-1 left-1/2 transform -translate-x-1/2 animate-ping" style={{animationDelay: '1s'}}></div>
+                      <div className="w-2 h-2 bg-blue-400 rounded-full absolute top-1/2 -left-1 transform -translate-y-1/2 animate-ping" style={{animationDelay: '1.5s'}}></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent drop-shadow-lg">
+                  Starting Camera
+                </h2>
+                <p className="text-xl text-blue-100 mb-8 drop-shadow-md">Initializing face recognition system...</p>
+                
+                {/* Enhanced Loading Animation */}
+                <div className="flex justify-center space-x-3 mb-8">
+                  <div className="w-4 h-4 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full animate-bounce drop-shadow-lg"></div>
+                  <div className="w-4 h-4 bg-gradient-to-r from-indigo-400 to-indigo-500 rounded-full animate-bounce drop-shadow-lg" style={{animationDelay: '0.1s'}}></div>
+                  <div className="w-4 h-4 bg-gradient-to-r from-purple-400 to-purple-500 rounded-full animate-bounce drop-shadow-lg" style={{animationDelay: '0.2s'}}></div>
+                </div>
+                
+                {/* Enhanced Progress Bar */}
+                <div className="w-80 mx-auto bg-slate-800/60 backdrop-blur-sm rounded-full h-3 overflow-hidden border border-blue-500/20 shadow-lg">
+                  <div className="bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 h-full rounded-full animate-pulse shadow-lg shadow-blue-500/20"
+                       style={{
+                         background: 'linear-gradient(90deg, #60a5fa, #6366f1, #8b5cf6)',
+                         animation: 'pulse 2s ease-in-out infinite'
+                       }}>
+                  </div>
+                </div>
+                
+                {/* Status Text */}
+                <p className="text-sm text-blue-200/80 mt-6 font-medium tracking-wide">
+                  Please allow camera access when prompted
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Full Screen Camera */}
+          <div className="w-full h-full relative">
+            {isCameraActive ? (
+              <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                className="w-full h-full object-cover"
+                videoConstraints={{ 
+                  facingMode: 'user',
+                  deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
+                  width: { ideal: 1280 },
+                  height: { ideal: 720 }
+                }}
+                style={{ transform: "scaleX(-1)" }}
+                onUserMedia={() => {
+                  // Camera stream is ready
+                  console.log('Camera stream ready');
+                  setIsCameraLoading(false);
+                }}
+                onUserMediaError={(error) => {
+                  console.error('Camera error:', error);
+                  toast.error('Failed to access camera. Please check permissions.');
+                  setIsCameraActive(false);
+                  setIsCameraLoading(false);
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center text-white">
+                  <Icon path={mdiCameraOff} className="w-24 h-24 mx-auto mb-4 text-gray-400" />
+                  <p className="text-2xl font-medium">Camera is off</p>
+                  <p className="text-gray-400 text-lg mt-2">Start scan to use zoom mode</p>
+                </div>
+              </div>
+            )}
+            <canvas
+              ref={canvasRef}
+              className="absolute top-0 left-0 w-full h-full pointer-events-none z-10"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main Application */}
       <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-800 dark:via-gray-800 dark:to-blue-900 ${isZoomMode ? 'hidden' : ''}`}>
@@ -1038,12 +1247,44 @@ const FaceApiAttendanceScanner = () => {
 
         {/* Status Cards */}
         {!isLoading && (
-          <ShiftSelector
-            selectedShift={selectedShift}
-            setSelectedShift={setSelectedShift}
-            availableShifts={availableShifts}
-            autoSelectShift={autoSelectShift}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 py-4 px-6 hover:shadow-md dark:hover:shadow-lg transition-shadow">
+              
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-white flex items-center space-x-2">
+                  <Icon path={mdiClock} className="w-4 h-4 text-blue-500" />
+                  <span>Select Shift/Session</span>
+                </h3>
+                <button
+                  onClick={autoSelectShift}
+                  className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                  title="Auto-select shift based on current time"
+                >
+                  Auto
+                </button>
+              </div>
+              
+              <CustomDropdown
+                id="shift-selection-header"
+                label=""
+                value={selectedShift}
+                onChange={setSelectedShift}
+                options={availableShifts}
+                placeholder="Choose shift/session..."
+                searchable={false}
+                className="w-full"
+              />
+              
+
+              {!selectedShift && (
+                <div className="mt-3 p-2 bg-orange-50 dark:bg-orange-900/30 rounded text-center">
+                  <p className="text-xs text-orange-700 dark:text-orange-300">
+                    ⚠️ Please select a shift before starting camera
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Loading State */}
@@ -1066,16 +1307,225 @@ const FaceApiAttendanceScanner = () => {
 
         {/* Recognition Controls - Full Width & Collapsible */}
         {!isLoading && (
-          <RecognitionControls
-            recognitionThreshold={recognitionThreshold}
-            setRecognitionThreshold={setRecognitionThreshold}
-            showRecognitionControls={showRecognitionControls}
-            setShowRecognitionControls={setShowRecognitionControls}
-            minFaceSize={minFaceSize}
-            setMinFaceSize={setMinFaceSize}
-            maxFaceSize={maxFaceSize}
-            setMaxFaceSize={setMaxFaceSize}
-          />
+          <div className="mb-6">
+            <CardBox className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-700">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                    <Icon path={mdiCog} className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                      Recognition Controls
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {showRecognitionControls 
+                        ? 'Fine-tune detection parameters' 
+                        : `Current threshold: ${recognitionThreshold}% • Face size: ${minFaceSize}-${maxFaceSize}px`
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {!showRecognitionControls && (
+                    <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-bold">
+                      {recognitionThreshold}%
+                    </div>
+                  )}
+                  <div className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-semibold">
+                    AI Powered
+                  </div>
+                  <button
+                    onClick={() => setShowRecognitionControls(!showRecognitionControls)}
+                    className="px-4 py-2 text-sm bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors"
+                  >
+                    {showRecognitionControls ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              
+              {showRecognitionControls && (
+                <div className="space-y-6">
+                  {/* Recognition Threshold */}
+                  <div className="bg-white dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="text-lg font-semibold text-gray-800 dark:text-white">
+                        Recognition Threshold
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <div className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-bold">
+                          {recognitionThreshold}%
+                        </div>
+                        <button
+                          onClick={() => setRecognitionThreshold(60)}
+                          className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                          title="Reset to default (60%)"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-4 mb-3">
+                      <div className="flex items-center space-x-2 text-sm">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="text-gray-600 dark:text-gray-400">Lenient (50%)</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="50"
+                        max="70"
+                        step="5"
+                        value={recognitionThreshold}
+                        onChange={(e) => setRecognitionThreshold(Number(e.target.value))}
+                        className="flex-1 h-3 bg-gradient-to-r from-green-200 via-yellow-200 to-red-200 dark:from-green-800 dark:via-yellow-800 dark:to-red-800 rounded-lg appearance-none cursor-pointer slider"
+                        style={{
+                          background: `linear-gradient(to right, 
+                            #86efac 0%, 
+                            #fcd34d ${((recognitionThreshold - 50) / 20) * 50}%, 
+                            #fca5a5 ${((recognitionThreshold - 50) / 20) * 100}%)`
+                        }}
+                      />
+                      <div className="flex items-center space-x-2 text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">Strict (70%)</span>
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                        <div className="text-lg font-bold text-green-600 dark:text-green-400">50%</div>
+                        <div className="text-xs text-green-600 dark:text-green-400">Lenient</div>
+                        <div className="text-xs text-gray-500 mt-1">Fast recognition</div>
+                      </div>
+                      <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                        <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">60%</div>
+                        <div className="text-xs text-yellow-600 dark:text-yellow-400">Recommended</div>
+                        <div className="text-xs text-gray-500 mt-1">Balanced</div>
+                      </div>
+                      <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div className="text-lg font-bold text-red-600 dark:text-red-400">70%</div>
+                        <div className="text-xs text-red-600 dark:text-red-400">Strict</div>
+                        <div className="text-xs text-gray-500 mt-1">High accuracy</div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm text-blue-800 dark:text-blue-300">
+                        <strong>Current Setting:</strong> {recognitionThreshold}% confidence required for recognition
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        🔍 <strong>Debug:</strong> Recognition threshold = {recognitionThreshold}% (faces must score ≥{recognitionThreshold}% to be recognized)
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        {recognitionThreshold >= 70 ? '🛡️ Strict mode - highest accuracy' :
+                         recognitionThreshold >= 60 ? '⚖️ Balanced mode - recommended for most use cases' :
+                         '🚀 Lenient mode - faster recognition'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Face Size Range */}
+                  <div className="bg-white dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="text-lg font-semibold text-gray-800 dark:text-white">
+                        Distance Control
+                      </label>
+                      <div className="flex items-center space-x-2">
+                        <div className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-sm font-bold">
+                          {minFaceSize}px - {maxFaceSize}px
+                        </div>
+                        <button
+                          onClick={() => {
+                            setMinFaceSize(100);
+                            setMaxFaceSize(300);
+                          }}
+                          className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                          title="Reset to default"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Minimum Size (Far Distance)</label>
+                          <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{minFaceSize}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="50"
+                          max="140"
+                          step="10"
+                          value={minFaceSize}
+                          onChange={(e) => setMinFaceSize(Number(e.target.value))}
+                          className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 dark:from-blue-800 dark:to-blue-500 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>50px (Very Far)</span>
+                          <span>140px (Close)</span>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Size (Near Distance)</label>
+                          <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{maxFaceSize}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="150"
+                          max="400"
+                          step="10"
+                          value={maxFaceSize}
+                          onChange={(e) => setMaxFaceSize(Number(e.target.value))}
+                          className="w-full h-2 bg-gradient-to-r from-orange-200 to-red-500 dark:from-orange-800 dark:to-red-500 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>150px (Far)</span>
+                          <span>400px (Very Close)</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <p className="text-sm text-purple-800 dark:text-purple-300">
+                        <strong>💡 Distance Guide:</strong> Smaller values = farther distance, larger values = closer distance
+                      </p>
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                        Optimal range: 2-4 feet from camera for best recognition results
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Performance Indicators */}
+                  <div className="bg-white dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Performance Indicators</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Detection Rate: Active</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Model: SSD MobileNet V1</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Processing: Real-time</span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Accuracy: High</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardBox>
+          </div>
         )}
 
         {/* Camera Section */}

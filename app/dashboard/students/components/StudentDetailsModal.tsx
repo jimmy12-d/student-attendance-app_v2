@@ -79,6 +79,9 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   const [claimedStars, setClaimedStars] = useState<ClaimedStar[]>([]);
   const [totalStars, setTotalStars] = useState(0);
 
+  // Photo viewer state
+  const [showPhotoInContainer, setShowPhotoInContainer] = useState(false);
+
   // Navigation logic
   const canNavigatePrev = students.length > 1 && currentIndex > 0;
   const canNavigateNext = students.length > 1 && currentIndex < students.length - 1;
@@ -245,6 +248,17 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     return () => unsubscribe();
   }, [student?.id, isOpen]);
 
+  // Reset photo state when student changes (but keep open if new student also has photo)
+  useEffect(() => {
+    if (student?.id) {
+      // Only reset if the new student doesn't have a photo
+      if (!student.photoUrl) {
+        setShowPhotoInContainer(false);
+      }
+      // If new student has photo and photo was open, keep it open for seamless navigation
+    }
+  }, [student?.id, student?.photoUrl]);
+
   // Handle keyboard navigation
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -257,13 +271,20 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
         return;
       }
       
+      // Handle photo viewer modal ESC
+      if (showPhotoInContainer && event.key === 'Escape') {
+        event.preventDefault();
+        setShowPhotoInContainer(false);
+        return;
+      }
+      
       if (showBreakConfirm && event.key === 'Escape') {
         event.preventDefault();
         cancelBreak();
         return;
       }
       
-      // Disable arrow navigation when break confirmation modal is open
+      // Disable arrow navigation when modals are open (but allow when photo is shown in container)
       if (showBreakConfirm) {
         return;
       }
@@ -309,7 +330,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, canNavigatePrev, canNavigateNext, isTransitioning, currentIndex, students, onNavigate, showAttendanceModal, showBreakConfirm]);
+  }, [isOpen, canNavigatePrev, canNavigateNext, isTransitioning, currentIndex, students, onNavigate, showAttendanceModal, showBreakConfirm, showPhotoInContainer]);
 
   if (!isOpen || !student) return null;
 
@@ -401,11 +422,14 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   return (
     <div className="fixed inset-0 z-115 overflow-y-auto mt-10">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 transition-opacity"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-        onClick={onClose}
-      ></div>
+    <div 
+      className="fixed inset-0 transition-opacity"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+      onClick={() => {
+        onClose();
+        setShowPhotoInContainer(false);
+      }}
+    ></div>
       
       {/* Modal */}
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
@@ -619,35 +643,83 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                 </div>
 
                 {/* Student Photo */}
-                <div className="w-58 h-58 rounded-lg overflow-hidden bg-gray-200 dark:bg-slate-600 mx-auto sm:mx-0 mb-4">
-                  {student.photoUrl ? (
-                    student.photoUrl.includes("drive.google.com") ? (
-                      <iframe
-                        src={getDisplayableImageUrl(student.photoUrl) || ''}
-                        className="w-full h-full border-none"
-                        title={`${student.fullName} photo`}
-                        frameBorder="0"
-                      />
+                <div className="relative group">
+                  <div className="w-58 h-58 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-800 mx-auto sm:mx-0 mb-4 shadow-lg border-2 border-gray-200 dark:border-slate-600 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
+                    {student.photoUrl ? (
+                      showPhotoInContainer ? (
+                        /* Show Actual Photo */
+                        <div className="relative w-full h-full">
+                          {student.photoUrl.includes("drive.google.com") ? (
+                            <iframe
+                              src={getDisplayableImageUrl(student.photoUrl) || ''}
+                              className="w-full h-full border-none"
+                              title={`${student.fullName} photo`}
+                              frameBorder="0"
+                            />
+                          ) : (
+                            <img
+                              src={getDisplayableImageUrl(student.photoUrl) || ''}
+                              alt={student.fullName}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                          
+                          {/* Close button overlay */}
+                          <div className="absolute top-2 left-2">
+                            <button
+                              onClick={() => setShowPhotoInContainer(false)}
+                              className="p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full transition-all duration-200 backdrop-blur-sm"
+                              title="Hide photo (ESC)"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Photo Available - Show placeholder with Open button */
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                          <div className="flex flex-col items-center space-y-4 p-6 text-center">
+                            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-full flex items-center justify-center shadow-lg">
+                              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Photo Available</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Click below to view student photo</p>
+                            </div>
+                            <button
+                              onClick={() => setShowPhotoInContainer(true)}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center space-x-2"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              <span>Open Photo</span>
+                            </button>
+                          </div>
+                        </div>
+                      )
                     ) : (
-                      <img
-                        src={getDisplayableImageUrl(student.photoUrl) || ''}
-                        alt={student.fullName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const fallback = target.nextElementSibling as HTMLElement;
-                          if (fallback) {
-                            fallback.classList.remove('hidden');
-                          }
-                        }}
-                      />
-                    )
-                  ) : null}
-                  <div className={`w-full h-full flex items-center justify-center ${student.photoUrl ? 'hidden' : ''}`}>
-                    <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                      /* No Photo State */
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-800 border-2 border-dashed border-gray-300 dark:border-slate-600">
+                        <div className="flex flex-col items-center space-y-4 p-6 text-center">
+                          <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 rounded-full flex items-center justify-center">
+                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No Photo Available</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Student photo not uploaded yet</p>
+                          </div>
+                          <div className="w-12 h-1 bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300 dark:from-gray-600 dark:via-gray-500 dark:to-gray-600 rounded-full"></div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

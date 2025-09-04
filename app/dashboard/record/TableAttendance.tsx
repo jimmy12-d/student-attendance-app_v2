@@ -61,15 +61,26 @@ export interface AttendanceRecord {
   timestamp?: Timestamp | Date; // The exact time of marking
 }
 
-type Props = {
+// Interface for loading states
+export interface LoadingRecord {
+  id: string;
+  isLoading: boolean;
+  studentName?: string; // Optional for when we know the student name but still loading
+}
+
+export type Props = {
   records: AttendanceRecord[];
   onDeleteRecord: (record: AttendanceRecord, reason?: 'rejected' | 'deleted') => void;
   onApproveRecord: (record: AttendanceRecord) => void;
   perPage?: number;
+  loadingRecords?: LoadingRecord[]; // New prop for loading states
+  isScanning?: boolean; // New prop to indicate when scanning is active
 };
 
 
-const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 20 }: Props) => {
+const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 20, loadingRecords = [], isScanning = false }: Props) => {
+  console.log('🎯 TableAttendance received loadingRecords:', loadingRecords);
+  console.log('🎯 TableAttendance isScanning:', isScanning);
   const [currentPage, setCurrentPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -150,8 +161,198 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
     );
   };
 
+  // Shimmer loading effect component
+  const ShimmerRow = ({ studentName }: { studentName?: string }) => (
+    <tr className="loading-row border-l-4 border-blue-400 animate-slide-in-top">
+      <td className="px-4 py-2 whitespace-nowrap">
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-semibold text-sm animate-pulse shadow-lg">
+              {studentName ? studentName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : (
+                <svg className="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              )}
+            </div>
+          </div>
+          <div className="ml-4">
+            {studentName ? (
+              <div className="text-sm font-medium text-blue-700 dark:text-blue-300 animate-pulse">
+                {studentName}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="h-4 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded w-32 animate-shimmer"></div>
+                <div className="h-3 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded w-20 animate-shimmer"></div>
+              </div>
+            )}
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
+        <div className="h-6 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded-full w-16 mx-auto animate-shimmer"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
+        <div className="h-6 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded-full w-20 mx-auto animate-shimmer"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
+        <div className="flex items-center justify-center space-x-2">
+          <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+          <span className="text-sm text-blue-600 dark:text-blue-400 font-medium animate-pulse">Processing...</span>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
+        <div className="flex items-center justify-center">
+          <svg className="w-4 h-4 mr-2 text-blue-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="h-4 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded w-16 animate-shimmer"></div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-center">
+        <div className="h-8 w-8 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded-full mx-auto animate-shimmer"></div>
+      </td>
+    </tr>
+  );
+
+  // Scanning indicator component
+  const ScanningIndicator = () => (
+    <div className="mb-4 flex items-center justify-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+      <div className="flex items-center space-x-3">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+          <div className="absolute inset-0 animate-ping rounded-full h-6 w-6 border border-blue-400 opacity-20"></div>
+        </div>
+        <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+          Scanning for student...
+        </div>
+        <div className="flex space-x-1">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
+      <style jsx>{`
+        @keyframes shimmer {
+          0% { 
+            transform: translateX(-100%);
+            opacity: 0;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% { 
+            transform: translateX(100%);
+            opacity: 0;
+          }
+        }
+        
+        @keyframes slideInFromTop {
+          0% {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        
+        @keyframes slideInFromRight {
+          0% {
+            opacity: 0;
+            transform: translateX(20px) scale(0.98);
+          }
+          100% {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+          }
+        }
+        
+        @keyframes successGlow {
+          0% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+          }
+          70% {
+            box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+          }
+        }
+        
+        .animate-shimmer {
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .animate-shimmer::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.6),
+            transparent
+          );
+          animation: shimmer 2s infinite;
+        }
+        
+        .dark .animate-shimmer::after {
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.2),
+            transparent
+          );
+        }
+        
+        .animate-slide-in-top {
+          animation: slideInFromTop 0.5s ease-out;
+        }
+        
+        .animate-slide-in-right {
+          animation: slideInFromRight 0.5s ease-out;
+        }
+        
+        .animate-success-glow {
+          animation: successGlow 1s ease-out;
+        }
+        
+        .loading-row {
+          background: linear-gradient(
+            90deg,
+            rgba(59, 130, 246, 0.05),
+            rgba(59, 130, 246, 0.1),
+            rgba(59, 130, 246, 0.05)
+          );
+          background-size: 200% 100%;
+          animation: shimmer 2s infinite;
+        }
+        
+        .dark .loading-row {
+          background: linear-gradient(
+            90deg,
+            rgba(59, 130, 246, 0.1),
+            rgba(59, 130, 246, 0.2),
+            rgba(59, 130, 246, 0.1)
+          );
+          background-size: 200% 100%;
+        }
+      `}</style>
+      
+      {/* Scanning Indicator */}
+      {isScanning && <ScanningIndicator />}
+
       {/* Search Filter (title moved to page header) */}
       <div className="mb-4 flex items-center justify-between">
         <div className="relative flex-1 max-w-md">
@@ -232,10 +433,23 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            {/* Loading rows - show at the top */}
+            {loadingRecords.map((loadingRecord) => (
+              <ShimmerRow 
+                key={`loading-${loadingRecord.id}`} 
+                studentName={loadingRecord.studentName}
+              />
+            ))}
+            
+            {/* Regular attendance records */}
             {recordsPaginated.map((record: AttendanceRecord, index) => (
-              <tr key={record.id} className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-200 ${
-                record.status === 'requested' ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
-              }`}>
+              <tr 
+                key={record.id} 
+                className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 animate-slide-in-right ${
+                  record.status === 'requested' ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
+                }`}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
                 <td className="px-4 py-2 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10">

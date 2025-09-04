@@ -17,7 +17,6 @@ import CardBox from "../../_components/CardBox";
 // CardBoxComponentEmpty might be needed if you use it for empty states
 // import CardBoxComponentEmpty from "../../_components/CardBox/Component/Empty";
 import NotificationBar from "../../_components/NotificationBar";
-import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
 import AddStudentForm from "./AddStudentForm";
 import EditStudentForm from "./EditStudentForm";
@@ -484,7 +483,7 @@ export default function StudentsPage() {
   };
 
   return (
-    <SectionMain>
+    <section className="bg-gray-100 dark:bg-slate-800 p-6 xl:max-w-auto xl:mx-auto">{/* Custom container for students page */}
 
       <SectionTitleLineWithButton
         icon={mdiTableBorder}
@@ -713,7 +712,39 @@ export default function StudentsPage() {
       {!isFormActive && ( // Use isFormActive here
         <>
           {loading ? (
-            <p className="text-center p-4">Loading students...</p>
+            <CardBox className="mb-6">
+              <div className="flex flex-col items-center justify-center py-16 px-8">
+                {/* Loading Animation */}
+                <div className="relative mb-8">
+                  {/* Outer ring with gradient */}
+                  <div className="w-16 h-16 border-4 border-gray-200 dark:border-slate-700 rounded-full animate-spin border-t-blue-500"></div>
+                  {/* Inner pulsing dot */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                </div>
+                
+                {/* Loading Text with Animation */}
+                <div className="text-center space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 animate-pulse">
+                    Loading Students
+                  </h3>
+                  <div className="flex items-center justify-center space-x-1">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Fetching student data...
+                  </p>
+                </div>
+                
+                {/* Decorative Elements */}
+                <div className="absolute top-4 left-4 w-2 h-2 bg-blue-300 rounded-full animate-ping opacity-75"></div>
+                <div className="absolute top-8 right-6 w-1 h-1 bg-purple-300 rounded-full animate-ping opacity-50" style={{ animationDelay: '500ms' }}></div>
+                <div className="absolute bottom-6 left-8 w-1.5 h-1.5 bg-green-300 rounded-full animate-ping opacity-60" style={{ animationDelay: '1000ms' }}></div>
+              </div>
+            </CardBox>
           ) : students.length === 0 && !error ? (
             <NotificationBar color="warning" icon={mdiMonitorCellphone}>
               No students found. Add one to get started!
@@ -785,6 +816,6 @@ export default function StudentsPage() {
         students={students}
         title="Export Students to Excel"
       />
-    </SectionMain>
+    </section>
   );
 }

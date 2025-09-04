@@ -8,6 +8,7 @@ import DarkModeInit from "./_components/DarkModeInit";
 import { Toaster } from 'sonner';
 import ClientLayoutWrapper from './_components/ClientLayoutWrapper';
 import PWAInstaller from './_components/PWAInstaller';
+import { AuthProvider } from './_contexts/AuthContext';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -61,15 +62,17 @@ export default function RootLayout({
       </head>
       <body id="student-attendance-app" className={`h-full bg-white dark:bg-slate-800 text-gray-900 dark:text-white ${inter.variable} ${nokora.variable}`}>
         <StoreProvider>
-          <ClientLayoutWrapper>
-            <div className="flex flex-col min-h-screen">
-              <PWAInstaller />
-              <main className="flex-grow">
-                {children}
-              </main>
-            </div>
-            <Toaster position="top-center" richColors />
-          </ClientLayoutWrapper>
+          <AuthProvider>
+            <ClientLayoutWrapper>
+              <div className="flex flex-col min-h-screen">
+                <PWAInstaller />
+                <main className="flex-grow">
+                  {children}
+                </main>
+              </div>
+              <Toaster position="top-center" richColors />
+            </ClientLayoutWrapper>
+          </AuthProvider>
         </StoreProvider>
       </body>
     </html>

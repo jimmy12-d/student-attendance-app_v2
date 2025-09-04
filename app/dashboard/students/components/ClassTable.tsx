@@ -448,14 +448,14 @@ export const ClassTable: React.FC<ClassTableProps> = ({
           const state = getViewState();
           if (state === 0) return "max-h-0 opacity-0 -translate-y-2 overflow-hidden"; // Hidden
           if (state === 2) return "opacity-100 translate-y-0 overflow-visible"; // Zoomed - no height limit
-          return "max-h-80 opacity-100 translate-y-0 overflow-hidden"; // Normal (default) - scrollable
+          return "max-h-108 opacity-100 translate-y-0 overflow-hidden"; // Normal (default) - scrollable
         })()
       }`}>
         <div className={`transition-all duration-300 ease-in-out ${
           (() => {
             const state = getViewState();
             if (state === 2) return "overflow-x-auto"; // Zoomed - no height restriction, only horizontal scroll if needed
-            if (state === 1) return "max-h-80 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800 scroll-smooth"; // Normal - limited scroll with custom scrollbar
+            if (state === 1) return "max-h-108 overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-slate-600 scrollbar-track-gray-100 dark:scrollbar-track-slate-800 scroll-smooth"; // Normal - limited scroll with custom scrollbar
             return "overflow-hidden"; // Hidden
           })()
         }`}>

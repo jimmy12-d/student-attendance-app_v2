@@ -47,7 +47,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ student, isOpen, onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-[rgba(0,0,0,0.6)] flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-[rgba(0,0,0,0.6)] flex items-center justify-center z-50 px-4 py-2 mt-15">
       <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-600">

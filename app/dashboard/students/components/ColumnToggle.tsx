@@ -30,7 +30,7 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
   const enabledColumns = columns.filter(col => col.enabled);
 
   return (
-    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl relative z-30">
+    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl relative z-25">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
           <svg className="w-6 h-6 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
