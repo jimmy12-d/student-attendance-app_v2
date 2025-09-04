@@ -60,6 +60,7 @@ const FaceApiAttendanceScanner = () => {
   const lastFaceDetectionTimeRef = useRef<number>(Date.now()); // Track last face detection time
   const shutdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const frameCounterRef = useRef<number>(0); // Frame skipping optimization for iPad Safari performance
 
   const DWELL_TIME_BEFORE_RECOGNIZE = 1500; // 1.5 seconds
   const RECOGNITION_COOLDOWN = 10000; // 10 seconds (was 1 millisecond!)
@@ -375,6 +376,12 @@ const FaceApiAttendanceScanner = () => {
     
     const video = webcamRef.current.video;
     if (video.readyState !== 4) return;
+
+    // Frame skipping optimization for iPad Safari performance - only process every third frame
+    frameCounterRef.current = (frameCounterRef.current + 1) % 3;
+    if (frameCounterRef.current !== 0) {
+      return; // Skip this frame
+    }
 
     try {
       const detections = await detectAllFaces(video);

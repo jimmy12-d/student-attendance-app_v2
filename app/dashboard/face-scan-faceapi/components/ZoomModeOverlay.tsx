@@ -330,10 +330,12 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
             screenshotFormat="image/jpeg"
             className="w-full h-full object-cover"
             videoConstraints={{ 
+              // Optimized for iPad Safari performance
               facingMode: 'user',
               deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
+              width: { ideal: 640, max: 800 }, // Reduced from 1280 for better performance
+              height: { ideal: 480, max: 600 }, // Reduced from 720 for better performance
+              frameRate: { ideal: 15, max: 20 } // Added frame rate limit for mobile devices
             }}
             style={{ transform: "scaleX(-1)" }}
             onUserMedia={onUserMedia}

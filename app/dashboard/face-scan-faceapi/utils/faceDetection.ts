@@ -40,22 +40,14 @@ export const initializeFaceApi = async (): Promise<boolean> => {
     // Load models from CDN
     const MODEL_URL = '/models';
     
-    console.log('📦 Loading SSD MobileNet V1...');
     await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-    console.log('✅ SSD MobileNet V1 loaded');
     
-    console.log('📦 Loading Face Landmark 68 Net...');
     await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-    console.log('✅ Face Landmark 68 Net loaded');
     
-    console.log('📦 Loading Face Recognition Net...');
     await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-    console.log('✅ Face Recognition Net loaded');
     
-    console.log('🎉 All face-api.js models loaded successfully');
     return true;
   } catch (error) {
-    console.error('❌ Failed to load face-api.js models:', error);
     return false;
   }
 };
