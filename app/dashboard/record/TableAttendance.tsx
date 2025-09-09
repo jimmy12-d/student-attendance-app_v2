@@ -8,9 +8,13 @@ import {
   mdiFaceRecognition,
   mdiGestureTap,
   mdiBell,
-  mdiHelpCircle
+  mdiHelpCircle,
+  mdiPencil,
+  mdiClockOutline
 } from "@mdi/js";
 import TimestampEditModal from "./components/TimestampEditModal";
+import { Student } from "../../_interfaces";
+import { AllClassConfigs } from "../_lib/configForAttendanceLogic";
 
 const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined): string => {
     if (!dateInput) return 'N/A';
@@ -19,55 +23,7 @@ const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined):
     if (typeof dateInput === 'string') {
         const parts = dateInput.split('-');
         if (parts.length === 3 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1])) && !isNaN(parseInt(parts[2]))) {
-            // Create date with explicit time to avoid ti                                : 'text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }`}
-                    >
-                    <span className="sr-only">Next</span>
-                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </nav>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Timestamp Edit Modal */}
-      {recordToEdit && (
-        <TimestampEditModal
-          record={recordToEdit}
-          isOpen={editModalOpen}
-          onClose={() => {
-            setEditModalOpen(false);
-            setRecordToEdit(null);
-          }}
-          onSave={handleTimestampSave}
-          allClassConfigs={allClassConfigs}
-        />
-      )}
-    </>
-  );
-};   </div>
-      )}
-      
-      {/* Timestamp Edit Modal */}
-      {recordToEdit && (
-        <TimestampEditModal
-          record={recordToEdit}
-          isOpen={editModalOpen}
-          onClose={() => {
-            setEditModalOpen(false);
-            setRecordToEdit(null);
-          }}
-          onSave={handleTimestampSave}
-          allClassConfigs={allClassConfigs}
-        />
-      )}
-    </div>
-  );
-}; issues
+            // Create date with explicit time to avoid timezone issues
             dateObj = new Date(`${parts[0]}-${parts[1]}-${parts[2]}T00:00:00`);
         } else {
             dateObj = new Date(dateInput); // Fallback
@@ -128,30 +84,24 @@ export type Props = {
   records: AttendanceRecord[];
   onDeleteRecord: (record: AttendanceRecord, reason?: 'rejected' | 'deleted') => void;
   onApproveRecord: (record: AttendanceRecord) => void;
-  onEditTimestamp?: (recordId: string, newTimestamp: Date, newStatus: string) => Promise<void>; // New prop for timestamp editing
+  onEditTimestamp?: (record: AttendanceRecord, newTimestamp: Date) => Promise<void>; // New prop for timestamp editing
+  students?: Student[]; // Student data for class configs
+  allClassConfigs?: AllClassConfigs | null; // Class configurations
   perPage?: number;
   loadingRecords?: LoadingRecord[]; // New prop for loading states
   isScanning?: boolean; // New prop to indicate when scanning is active
-  allClassConfigs?: any; // Add class configs for timestamp editing
 };
 
 
-const TableAttendance = ({ 
-  records, 
-  onDeleteRecord, 
-  onApproveRecord, 
-  onEditTimestamp,
-  perPage = 20, 
-  loadingRecords = [], 
-  isScanning = false,
-  allClassConfigs
-}: Props) => {
+const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimestamp, students = [], allClassConfigs = null, perPage = 20, loadingRecords = [], isScanning = false }: Props) => {
   console.log('🎯 TableAttendance received loadingRecords:', loadingRecords);
   console.log('🎯 TableAttendance isScanning:', isScanning);
   const [currentPage, setCurrentPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [recordToEdit, setRecordToEdit] = useState<AttendanceRecord | null>(null);
+  
+  // State for timestamp edit modal
+  const [isTimestampModalOpen, setIsTimestampModalOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
 
   // Function to copy student name to clipboard
   const copyStudentName = async (name: string) => {
@@ -170,19 +120,32 @@ const TableAttendance = ({
     }
   };
 
-  // Function to handle edit timestamp
+  // Function to handle opening timestamp edit modal
   const handleEditTimestamp = (record: AttendanceRecord) => {
-    setRecordToEdit(record);
-    setEditModalOpen(true);
+    setSelectedRecord(record);
+    setIsTimestampModalOpen(true);
   };
 
-  // Function to handle timestamp save
-  const handleTimestampSave = async (recordId: string, newTimestamp: Date, newStatus: string) => {
-    if (onEditTimestamp) {
-      await onEditTimestamp(recordId, newTimestamp, newStatus);
+  // Function to find student data for the selected record
+  const getStudentForRecord = (record: AttendanceRecord): Student | undefined => {
+    return students.find(student => student.id === record.studentId);
+  };
+
+  // Function to handle saving edited timestamp
+  const handleSaveTimestamp = async (newTimestamp: Date) => {
+    if (!selectedRecord || !onEditTimestamp) {
+      toast.error('Unable to save timestamp');
+      return;
     }
-    setEditModalOpen(false);
-    setRecordToEdit(null);
+
+    try {
+      await onEditTimestamp(selectedRecord, newTimestamp);
+      setIsTimestampModalOpen(false);
+      setSelectedRecord(null);
+    } catch (error) {
+      console.error('Error saving timestamp:', error);
+      throw error; // Re-throw to let the modal handle the error
+    }
   };
 
   // Determine a date to show in the table title. If multiple dates exist, show a summary.
@@ -626,14 +589,15 @@ const TableAttendance = ({
                         : 'N/A'}
                       </span>
                     </div>
-                    {onEditTimestamp && (
+                    {/* Edit timestamp button - only show if onEditTimestamp is provided */}
+                    {onEditTimestamp && record.timestamp && (
                       <button
                         onClick={() => handleEditTimestamp(record)}
-                        className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                        className="inline-flex items-center p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors duration-200 group"
                         title="Edit timestamp"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        <svg className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform duration-200" fill="currentColor" viewBox="0 0 24 24">
+                          <path d={mdiPencil} />
                         </svg>
                       </button>
                     )}
@@ -829,6 +793,24 @@ const TableAttendance = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Timestamp Edit Modal */}
+      {isTimestampModalOpen && selectedRecord && (
+        <TimestampEditModal
+          isOpen={isTimestampModalOpen}
+          onClose={() => {
+            setIsTimestampModalOpen(false);
+            setSelectedRecord(null);
+          }}
+          onSave={handleSaveTimestamp}
+          currentTimestamp={selectedRecord.timestamp || null}
+          studentName={selectedRecord.studentName}
+          recordId={selectedRecord.id}
+          currentStatus={selectedRecord.status}
+          student={getStudentForRecord(selectedRecord)}
+          allClassConfigs={allClassConfigs}
+        />
       )}
     </>
   );

@@ -806,6 +806,69 @@ export default function AttendanceRecordPage() {
     setModalAction(null);
   };
 
+  // Handle timestamp editing
+  const handleEditTimestamp = async (record: AttendanceRecord, newTimestamp: Date) => {
+    try {
+      setIsUpdating(true);
+      const recordRef = doc(db, "attendance", record.id);
+      
+      // Find the student data to get proper status calculation
+      // Note: students have 'id' field, attendance records have 'studentId' field
+      const student = students.find(s => s.id === record.studentId);
+      if (!student) {
+        throw new Error('Student not found');
+      }
+
+      // Use the same logic as getStudentDailyStatus for consistent status calculation
+      const dateStr = newTimestamp.toISOString().split('T')[0]; // Get YYYY-MM-DD format
+      let newStatus = 'present'; // Default status
+      
+      // Extract class and shift configuration using the same approach as attendanceLogic
+      const studentClassKey = student.class?.replace(/^Class\s+/i, '') || '';
+      const classConfig = studentClassKey && allClassConfigs ? allClassConfigs[studentClassKey] : undefined;
+      const studentShiftKey = student.shift;
+      const shiftConfig = (studentClassKey && classConfig?.shifts) ? classConfig.shifts[studentShiftKey] : undefined;
+      
+      if (shiftConfig && shiftConfig.startTime) {
+        const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
+        const shiftStartTime = new Date(newTimestamp);
+        shiftStartTime.setHours(startHour, startMinute, 0, 0);
+        
+        // Use the same grace period logic as getStudentDailyStatus
+        const studentGrace = (student as any).gracePeriodMinutes ?? 15; // Use same fallback as attendanceLogic
+        const onTimeDeadline = new Date(shiftStartTime);
+        onTimeDeadline.setMinutes(shiftStartTime.getMinutes() + studentGrace);
+        
+        if (newTimestamp > onTimeDeadline) {
+          newStatus = 'late';
+        }
+      } else {
+        // Fallback logic consistent with the modal
+        const timeOfDay = newTimestamp.getHours() * 60 + newTimestamp.getMinutes();
+        const defaultLateThreshold = 8 * 60 + 30; // 8:30 AM
+        if (timeOfDay > defaultLateThreshold) {
+          newStatus = 'late';
+        }
+      }
+
+      // Update both timestamp and status in Firestore
+      await updateDoc(recordRef, {
+        timestamp: Timestamp.fromDate(newTimestamp),
+        status: newStatus,
+        lastModified: serverTimestamp(),
+        modifiedBy: 'Admin' // Replace with actual admin user if available
+      });
+
+      toast.success(`Timestamp updated for ${record.studentName}. Status: ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating timestamp:', error);
+      toast.error('Failed to update timestamp');
+      throw error; // Re-throw to let the modal handle the error
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   // Loading management functions
   const addLoadingRecord = (studentId: string, studentName?: string) => {
     const loadingRecord: LoadingRecord = {
@@ -1429,6 +1492,9 @@ export default function AttendanceRecordPage() {
             records={filteredAttendanceRecords}
             onApproveRecord={handleApproveRecord}
             onDeleteRecord={handleDeleteOrRejectRecord}
+            onEditTimestamp={handleEditTimestamp}
+            students={students}
+            allClassConfigs={allClassConfigs}
             loadingRecords={loadingRecords}
             isScanning={isScanning}
           />
