@@ -98,10 +98,12 @@
         "familyEvent": "Family Event",
         "appointment": "Appointment"
       },
-  "lastDaysActivity": "Last 10 Days Activity",
+      "lastDaysActivity": "Last 10 Days Activity",
       "alreadyMarked": "Attendance already marked as {status}.",
       "alreadyRequested": "Your attendance request is already pending approval.",
       "studentInfoError": "Student information not loaded yet. Please try again in a moment.",
+      "requestError": "Failed to send request. Please try again.",
+      "requestSuccess": "Request sent successfully!",
       "noRecentActivity": "No recent activity."
     },
     "mockExam": {

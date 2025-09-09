@@ -69,7 +69,8 @@ export interface StudentAttendanceWarning {
   fullName: string;
   class?: string;
   shift?: string;
-  warningType: "consecutiveAbsence" | "totalAbsence" | "totalLate";
+  warningType: "consecutiveAbsence" | "totalAbsence" | "totalLate" | "flaggedStudent";
   value: number;
   details?: string;
+  note?: string; // Additional note field for flagged students
 }

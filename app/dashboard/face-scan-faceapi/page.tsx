@@ -59,13 +59,10 @@ const FaceApiAttendanceScanner = () => {
   const studentsUnsubRef = useRef<(() => void) | null>(null);
   const lastFaceDetectionTimeRef = useRef<number>(Date.now()); // Track last face detection time
   const shutdownTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const frameCounterRef = useRef<number>(0); // Frame skipping optimization for iPad Safari performance
-
-  const DWELL_TIME_BEFORE_RECOGNIZE = 1500; // 1.5 seconds
+const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);  const DWELL_TIME_BEFORE_RECOGNIZE = 1500; // 1.5 seconds
   const RECOGNITION_COOLDOWN = 10000; // 10 seconds (was 1 millisecond!)
   const DETECTION_INTERVAL = 1000; // 1 second
-  const NO_FACE_TIMEOUT = 45000; // 10 seconds before camera shutdown (changed from 30s for easier debugging)
+  const NO_FACE_TIMEOUT = 60000; // 60 seconds before camera shutdown (changed from 30s for easier debugging)
   const COUNTDOWN_START = 5; // Start countdown 5 seconds before shutdown
 
   // Load students from Firestore (real-time)
@@ -377,12 +374,6 @@ const FaceApiAttendanceScanner = () => {
     const video = webcamRef.current.video;
     if (video.readyState !== 4) return;
 
-    // Frame skipping optimization for iPad Safari performance - only process every third frame
-    frameCounterRef.current = (frameCounterRef.current + 1) % 3;
-    if (frameCounterRef.current !== 0) {
-      return; // Skip this frame
-    }
-
     try {
       const detections = await detectAllFaces(video);
 
@@ -576,11 +567,12 @@ const FaceApiAttendanceScanner = () => {
                   }
                 }));
                 
-                // Play success sound immediately
+                // Play success sound immediately when face is recognized
                 playSuccessSound();
                 
                 // Mark attendance for the recognized student (async)
-                markAttendance(bestMatch.student, selectedShift || '', classConfigs || {}, playSuccessSound)
+                // Don't pass playSuccessSound since we already played it
+                markAttendance(bestMatch.student, selectedShift || '', classConfigs || {}, () => {})
                   .then(attendanceStatus => {
                     // Notify other components that new attendance was marked
                     window.dispatchEvent(new CustomEvent('attendanceMarked', {
@@ -655,6 +647,46 @@ const FaceApiAttendanceScanner = () => {
     }
   }, [isCameraActive, minFaceSize, maxFaceSize, recognitionThreshold, selectedShift, students]);
 
+  // Helper function to get start time for a student's class/shift combination
+  const getStudentStartTime = useCallback((student: Student): Date | null => {
+    try {
+      if (!classConfigs || !student.class || !student.shift) {
+        return null;
+      }
+      
+      // Handle class name mismatch: student.class = "Class 12B" but doc ID = "12B"
+      const studentClassKey = student.class.replace(/^Class\s+/, '');
+      const classConfig = classConfigs[studentClassKey];
+      
+      if (!classConfig?.shifts) {
+        return null;
+      }
+      
+      let shiftConfig = classConfig.shifts[student.shift];
+      
+      // Special handling for Class 12NKGS on Saturday
+      const today = new Date();
+      const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+      if (studentClassKey === '12NKGS' && dayOfWeek === 6) {
+        // Override start time to 13:00 for Class 12NKGS on Saturday
+        shiftConfig = { startTime: '13:00' };
+      }
+      
+      if (!shiftConfig?.startTime) {
+        return null;
+      }
+      
+      const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
+      const startTime = new Date();
+      startTime.setHours(startHour, startMinute, 0, 0);
+      
+      return startTime;
+    } catch (error) {
+      console.error('Error getting student start time:', error);
+      return null;
+    }
+  }, [classConfigs]);
+
   // Start detection loop
   const startDetection = useCallback(() => {
     if (isDetectingRef.current) return;
@@ -667,16 +699,31 @@ const FaceApiAttendanceScanner = () => {
       
       // Clean up old entries from recently marked students (every 10 detection cycles)
       if (Math.random() < 0.1) { // 10% chance each cycle
-        const now = Date.now();
-        const cutoffTime = now - RECOGNITION_COOLDOWN;
+        const now = new Date();
+        
         for (const [key, timestamp] of recentlyMarkedStudents.current.entries()) {
-          if (timestamp < cutoffTime) {
+          // Parse the key to get student info (assuming format includes student data)
+          // For now, use the standard cooldown as fallback if no startTime available
+          let shouldRemove = timestamp < (now.getTime() - RECOGNITION_COOLDOWN);
+          
+          // Try to find the student from the key and use their actual start time
+          const student = students.find(s => key.includes(s.id) || key.includes(s.studentId));
+          if (student) {
+            const startTime = getStudentStartTime(student);
+            if (startTime) {
+              // Use start time as the basis for cleanup instead of fixed cooldown
+              // Keep entries until after the class start time has passed
+              shouldRemove = now > startTime && timestamp < startTime.getTime();
+            }
+          }
+          
+          if (shouldRemove) {
             recentlyMarkedStudents.current.delete(key);
           }
         }
       }
     }, DETECTION_INTERVAL);
-  }, [detectFaces, isZoomMode, isCameraActive, isCameraShutdown, handleCameraShutdown]);
+  }, [detectFaces, isZoomMode, isCameraActive, isCameraShutdown, handleCameraShutdown, getStudentStartTime, students]);
 
   // Stop detection
   const stopDetection = useCallback(() => {

@@ -48,6 +48,8 @@ interface StudentDetailsModalProps {
   currentIndex?: number; // Current student index in the list
   onNavigate?: (student: Student, index: number) => void; // Navigation callback
   onBreak?: () => void; // Callback for when a student is put on break
+  // Control visibility of action buttons (edit, delete, break)
+  hideActions?: boolean; // When true, hides edit/delete/break buttons
 }
 
 export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
@@ -60,6 +62,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   currentIndex = -1,
   onNavigate,
   onBreak,
+  hideActions = false,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBreakConfirm, setShowBreakConfirm] = useState(false);
@@ -980,33 +983,35 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
 
           {/* Footer */}
           <div className="bg-gray-50 dark:bg-slate-700 px-4 py-3 sm:flex sm:justify-between sm:px-6 gap-3 rounded-b-lg">
-            {/* Delete and Break buttons on the left */}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto"
-                onClick={handleDeleteClick}
-              >
-                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                Drop
-              </button>
-              
-              <button
-                type="button"
-                className="inline-flex w-full justify-center rounded-md bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 sm:w-auto"
-                onClick={handleBreakClick}
-              >
-                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Break
-              </button>
-            </div>
+            {/* Delete and Break buttons on the left - hidden when hideActions is true */}
+            {!hideActions && (
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto"
+                  onClick={handleDeleteClick}
+                >
+                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Drop
+                </button>
+                
+                <button
+                  type="button"
+                  className="inline-flex w-full justify-center rounded-md bg-orange-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 sm:w-auto"
+                  onClick={handleBreakClick}
+                >
+                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Break
+                </button>
+              </div>
+            )}
 
             {/* Edit and Close buttons on the right */}
-            <div className="flex gap-3 sm:flex-row-reverse">
+            <div className={`flex gap-3 ${hideActions ? 'ml-auto' : 'sm:flex-row-reverse'}`}>
               <button
                 type="button"
                 className="inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-600 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-gray-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-500 hover:bg-gray-50 dark:hover:bg-slate-500 sm:mt-0 sm:w-auto"
@@ -1014,16 +1019,18 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
               >
                 Close
               </button>
-              <button
-                type="button"
-                className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:mt-0 sm:w-auto"
-                onClick={() => onEdit(student)}
-              >
-                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Edit
-              </button>
+              {!hideActions && (
+                <button
+                  type="button"
+                  className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:mt-0 sm:w-auto"
+                  onClick={() => onEdit(student)}
+                >
+                  <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+              )}
             </div>
           </div>
         </div>

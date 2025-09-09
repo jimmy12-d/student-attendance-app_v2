@@ -637,6 +637,20 @@ const POSStudentPage = () => {
                 lastPaymentMonth: paymentMonth 
             });
 
+            // Open cash drawer if payment method is Cash
+            if (paymentMethod === 'Cash') {
+                try {
+                    const success = await openCashDrawerWithBP003();
+                    if (success) {
+                        toast.success('Cash drawer opened for cash payment');
+                    } else {
+                        console.warn('⚠️ Could not auto-open cash drawer - BP003 may not be available');
+                    }
+                } catch (error) {
+                    console.error('❌ Error auto-opening cash drawer:', error);
+                }
+            }
+
             // Update the transaction document with the registration token if one was created
             if (registrationToken) {
                 try {
@@ -1183,20 +1197,6 @@ INSTRUCTIONS:
     // Custom handler for payment method changes that auto-opens cash drawer for cash payments
     const handlePaymentMethodChange = async (method: 'Cash' | 'QR Payment') => {
         setPaymentMethod(method);
-        
-        // Auto-open cash drawer when cash payment is selected
-        if (method === 'Cash') {
-            try {
-                const success = await openCashDrawerWithBP003();
-                if (success) {
-                    toast.success('Cash drawer opened for cash payment');
-                } else {
-                    console.warn('⚠️ Could not auto-open cash drawer - BP003 may not be available');
-                }
-            } catch (error) {
-                console.error('❌ Error auto-opening cash drawer:', error);
-            }
-        }
     };
 
     return (

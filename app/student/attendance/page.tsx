@@ -111,7 +111,11 @@ const AttendancePage = () => {
 
       if (!attendanceSnap.empty) {
         const docRef = attendanceSnap.docs[0].ref;
-        await updateDoc(docRef, { status: "requested", requestedAt: serverTimestamp() });
+        await updateDoc(docRef, { 
+          status: "requested", 
+          requestedAt: serverTimestamp(),
+          method: "request"
+        });
       } else {
         const newRecordData = {
           authUid: studentUid,
@@ -123,6 +127,7 @@ const AttendancePage = () => {
           status: "requested",
           timestamp: serverTimestamp(),
           requestedAt: serverTimestamp(),
+          method: "request",
         };
         await addDoc(collection(db, "attendance"), newRecordData);
       }

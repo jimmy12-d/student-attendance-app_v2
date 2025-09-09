@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy, limit } from "firebase/firestore";
 import { db } from "../../../firebase-config";
 import { toast } from "sonner";
 import PaymentSummaryHeader from "./components/PaymentSummaryHeader";
@@ -9,6 +9,7 @@ import ControlsPanel from "./components/ControlsPanel";
 import MetricsCards from "./components/MetricsCards";
 import ClassTypeAnalysis from "./components/ClassTypeAnalysis";
 import PaymentTrends from "./components/PaymentTrends";
+import UnpaidStudentsTab from "./components/UnpaidStudentsTab";
 
 interface DateInterval {
   type: 'interval' | 'monthly';
@@ -30,6 +31,7 @@ const PaymentSummaryPage = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [activeTab, setActiveTab] = useState<'summary' | 'unpaid'>('summary');
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [dateInterval, setDateInterval] = useState<DateInterval>({ type: 'monthly', value: '0' });
@@ -76,7 +78,7 @@ const PaymentSummaryPage = () => {
     if (isAuthenticated) {
       fetchSummaryData();
     }
-  }, [isAuthenticated, startDate, endDate, dateInterval]);
+  }, [isAuthenticated]);
 
   const handleAuthentication = async () => {
     if (!password.trim()) {
@@ -401,48 +403,82 @@ const PaymentSummaryPage = () => {
           formatDateRange={formatDateRange}
         />
         
-        <ControlsPanel
-          startDate={startDate}
-          endDate={endDate}
-          dateInterval={dateInterval}
-          isLoading={isLoading}
-          summaryData={summaryData}
-          formatDateRange={formatDateRange}
-          setStartDate={setStartDate}
-          setEndDate={setEndDate}
-          setDateInterval={setDateInterval}
-          setQuickDateRange={setQuickDateRange}
-          fetchSummaryData={fetchSummaryData}
-          handleExportData={handleExportData}
-        />
-
-        <MetricsCards 
-          summaryData={summaryData || {
-            totalRevenue: 0,
-            totalTransactions: 0,
-            averagePayment: 0,
-            dailyAverage: 0
-          }}
-          isLoading={isLoading}
-        />
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          <ClassTypeAnalysis
-            summaryData={summaryData || {
-              classTypeBreakdown: [],
-              comparisonData: []
-            }}
-            dateInterval={dateInterval}
-            isLoading={isLoading}
-          />
-
-          <PaymentTrends
-            summaryData={summaryData || {
-              dailyBreakdown: []
-            }}
-            isLoading={isLoading}
-          />
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit">
+          <button
+            onClick={() => setActiveTab('summary')}
+            className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+              activeTab === 'summary'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            Payment Summary
+          </button>
+          <button
+            onClick={() => setActiveTab('unpaid')}
+            className={`px-6 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+              activeTab === 'unpaid'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            Unpaid Students
+          </button>
         </div>
+
+        {activeTab === 'summary' ? (
+          <>
+            <ControlsPanel
+              startDate={startDate}
+              endDate={endDate}
+              dateInterval={dateInterval}
+              isLoading={isLoading}
+              summaryData={summaryData}
+              formatDateRange={formatDateRange}
+              setStartDate={setStartDate}
+              setEndDate={setEndDate}
+              setDateInterval={setDateInterval}
+              setQuickDateRange={setQuickDateRange}
+              fetchSummaryData={fetchSummaryData}
+              handleExportData={handleExportData}
+            />
+
+            <MetricsCards 
+              summaryData={summaryData || {
+                totalRevenue: 0,
+                totalTransactions: 0,
+                averagePayment: 0,
+                dailyAverage: 0
+              }}
+              isLoading={isLoading}
+            />
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              <ClassTypeAnalysis
+                summaryData={summaryData || {
+                  classTypeBreakdown: [],
+                  comparisonData: []
+                }}
+                dateInterval={dateInterval}
+                isLoading={isLoading}
+              />
+
+              <PaymentTrends
+                summaryData={summaryData || {
+                  dailyBreakdown: []
+                }}
+                isLoading={isLoading}
+              />
+            </div>
+          </>
+        ) : (
+          /* Unpaid Students Tab */
+          <UnpaidStudentsTab 
+            isLoading={isLoading}
+            setIsLoading={setIsLoading}
+          />
+        )}
       </div>
     </div>
   );

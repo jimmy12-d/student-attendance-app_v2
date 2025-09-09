@@ -30,6 +30,9 @@ import Icon from "../../_components/Icon";
 import TableAttendance, { AttendanceRecord, LoadingRecord } from "./TableAttendance";
 import { Student, ColorButtonKey } from "../../_interfaces";
 import { toast } from 'sonner';
+import ConsecutiveAbsencesSection from "./components/ConsecutiveAbsencesSection";
+import WarningStudentsSection from "./components/WarningStudentsSection";
+import { StudentDetailsModal } from "../students/components/StudentDetailsModal";
 
 import { db } from "../../../firebase-config";
 import {
@@ -50,6 +53,7 @@ import {
 import { getStudentDailyStatus } from "../_lib/attendanceLogic";
 import { AllClassConfigs } from "../_lib/configForAttendanceLogic";
 import { PermissionRecord } from "../../_interfaces";
+import { RawAttendanceRecord } from "../_lib/attendanceLogic";
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
@@ -88,6 +92,7 @@ const getCurrentShift = (): 'Morning' | 'Afternoon' | 'Evening' => {
 
 export default function AttendanceRecordPage() {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [rawAttendanceRecords, setRawAttendanceRecords] = useState<RawAttendanceRecord[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [permissions, setPermissions] = useState<PermissionRecord[]>([]);
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs | null>(null);
@@ -100,6 +105,10 @@ export default function AttendanceRecordPage() {
   const [isModalActive, setIsModalActive] = useState(false);
   const [recordInModal, setRecordInModal] = useState<AttendanceRecord | null>(null);
   const [modalAction, setModalAction] = useState<'approve' | 'reject' | 'delete' | null>(null);
+  
+  // State for student detail modal
+  const [isDetailModalActive, setIsDetailModalActive] = useState(false);
+  const [studentForDetailModal, setStudentForDetailModal] = useState<Student | null>(null);
 
   // Loading states for table
   const [loadingRecords, setLoadingRecords] = useState<LoadingRecord[]>([]);
@@ -641,6 +650,20 @@ export default function AttendanceRecordPage() {
         const q = query(recordsCollection, orderBy("timestamp", "desc"));
 
         const unsubscribe = onSnapshot(q, (querySnapshot) => {          
+          // Store raw attendance records for consecutive absences calculation
+          const rawRecords: RawAttendanceRecord[] = querySnapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              studentId: data.studentId,
+              date: data.date,
+              status: data.status,
+              timestamp: data.timestamp,
+              class: data.class,
+              shift: data.shift,
+            } as RawAttendanceRecord;
+          });
+          
           const fetchedRecords: AttendanceRecord[] = querySnapshot.docs
             .map(docSnap => {
               const data = docSnap.data();
@@ -658,6 +681,7 @@ export default function AttendanceRecordPage() {
                   status: data.status || 'Unknown',
                   date: data.date,
                   timestamp: data.timestamp,
+                  method: data.method, // Add method field
                 } as AttendanceRecord;
               }
 
@@ -670,6 +694,7 @@ export default function AttendanceRecordPage() {
                 status: data.status || 'Unknown',
                 date: data.date,
                 timestamp: data.timestamp,
+                method: data.method, // Add method field
               } as AttendanceRecord;
             })
             .filter((record): record is AttendanceRecord => record !== null && record.status !== 'Unknown');
@@ -678,10 +703,17 @@ export default function AttendanceRecordPage() {
           const requestedRecords = fetchedRecords.filter(r => r.status === 'requested');
           const otherRecords = fetchedRecords.filter(r => r.status !== 'requested');
           
+          setRawAttendanceRecords(rawRecords);
           setAttendanceRecords([...requestedRecords, ...otherRecords]);
           setLastUpdated(new Date());
           setLoading(false);
           setIsUpdating(false);
+          
+          // Debug logging
+          console.log('🔍 Record Page - Raw records:', rawRecords.length);
+          console.log('🔍 Record Page - Students:', students.length);
+          console.log('🔍 Record Page - Sample raw record:', rawRecords[0]);
+          console.log('🔍 Record Page - Sample student:', students[0]);
         }, (error) => {
           console.error("Error with real-time listener: ", error);
           setError("Failed to listen for attendance updates.");
@@ -715,6 +747,29 @@ export default function AttendanceRecordPage() {
     setRecordInModal(record);
     setModalAction(reason === 'rejected' ? 'reject' : 'delete');
     setIsModalActive(true);
+  };
+
+  const handleOpenDetailsModal = (student: Student) => {
+    setStudentForDetailModal(student);
+    setIsDetailModalActive(true);
+  };
+
+  const handleEditStudent = (student: Student) => {
+    // Close the detail modal
+    setIsDetailModalActive(false);
+    setStudentForDetailModal(null);
+    
+    // Show toast message to indicate the user should navigate to students page for editing
+    toast.info(`To edit ${student.fullName}, please go to the Students page.`);
+  };
+
+  const handleDeleteStudent = (student: Student) => {
+    // Close the detail modal
+    setIsDetailModalActive(false);
+    setStudentForDetailModal(null);
+    
+    // Show toast message to indicate the user should navigate to students page for deletion
+    toast.info(`To delete ${student.fullName}, please go to the Students page.`);
   };
 
   const handleConfirmAction = async () => {
@@ -987,11 +1042,42 @@ export default function AttendanceRecordPage() {
         </NotificationBar>
       )}
 
+      {/* Consecutive Absences Section */}
+      <ConsecutiveAbsencesSection
+        students={students}
+        attendanceRecords={rawAttendanceRecords}
+        allClassConfigs={allClassConfigs}
+        approvedPermissions={permissions}
+        onViewDetails={handleOpenDetailsModal}
+      />
+
+      {/* Warning Students Section */}
+      <WarningStudentsSection
+        students={students}
+        attendanceRecords={rawAttendanceRecords}
+        allClassConfigs={allClassConfigs}
+        approvedPermissions={permissions}
+        onViewDetails={handleOpenDetailsModal}
+      />
+
+      <div className="flex flex-col items-center mb-6 mt-8">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-full bg-gradient-to-br from-blue-100/80 to-indigo-100/80 dark:from-blue-900/30 dark:to-indigo-900/30 shadow-md">
+            <Icon path={mdiChartPie} size={28} className="text-blue-600 dark:text-blue-400" />
+          </div>
+          <h3 className="text-2xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 dark:from-blue-400 dark:via-purple-400 dark:to-indigo-400">
+            Attendance Dashboard
+          </h3>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Overview & live statistics for {selectedDate}</p>
+        <div className="mt-3 h-0.5 w-24 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-60"></div>
+      </div>
       {/* Modern Shift-Based Statistics Cards */}
-      <div className="mb-8">
+      <div className="mb-8 mt-6">
         {/* Modern Minimal Cards Grid */}
       
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          
           {/* Expected Students Card */}
           <div className="group relative overflow-hidden bg-gradient-to-br from-white/70 via-white/50 to-white/30 dark:from-slate-700/70 dark:via-slate-600/50 dark:to-slate-500/30 backdrop-blur-2xl rounded-3xl p-6 border border-white/30 dark:border-slate-400/30 shadow-2xl shadow-black/5 hover:shadow-3xl hover:shadow-black/10 transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -1296,26 +1382,7 @@ export default function AttendanceRecordPage() {
                 </div>
               )}
               
-              {/* Test Scanning Button */}
-              <button
-                onClick={() => simulateStudentScan("Test Student")}
-                disabled={isScanning}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-indigo-500/80 to-indigo-600/60 dark:from-indigo-900/40 dark:to-indigo-800/30 backdrop-blur-md hover:from-indigo-600/90 hover:to-indigo-700/70 disabled:from-indigo-400/60 disabled:to-indigo-500/40 text-white rounded-xl transition-all duration-300 text-sm font-medium shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 disabled:cursor-not-allowed border border-indigo-400/30 dark:border-indigo-600/30"
-              >
-                {isScanning ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                    <span>Scanning...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M12 12h4.01M12 12v4.01M12 12v4.01M12 4h.01M12 4v.01M12 4v.01" />
-                    </svg>
-                    <span>Test Scan</span>
-                  </>
-                )}
-              </button>
+              {/* Test Scanning Button removed for production */}
               
               {/* Clear Loading Button */}
               {loadingRecords.length > 0 && (
@@ -1330,23 +1397,7 @@ export default function AttendanceRecordPage() {
                 </button>
               )}
 
-              {/* Test Face Detection Button */}
-              <button
-                onClick={() => {
-                  console.log('🧪 Manual face detection test triggered');
-                  window.dispatchEvent(new CustomEvent('faceDetected', {
-                    detail: {
-                      studentId: 'test-123',
-                      studentName: 'Test Student',
-                      confidence: 95.5,
-                      timestamp: new Date()
-                    }
-                  }));
-                }}
-                className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-500/80 to-purple-600/60 dark:from-purple-900/40 dark:to-purple-800/30 backdrop-blur-md hover:from-purple-600/90 hover:to-purple-700/70 text-white rounded-xl transition-all duration-300 text-sm font-medium shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/30 border border-purple-400/30 dark:border-purple-600/30"
-              >
-                <span>🧪 Test Face Event</span>
-              </button>
+              {/* Test Face Detection removed for production */}
               
               <div className="flex items-center gap-2 bg-gradient-to-r from-green-100/80 to-green-200/60 dark:from-green-900/40 dark:to-green-800/30 backdrop-blur-md px-3 py-2 rounded-xl border border-green-200/50 dark:border-green-700/30 shadow-lg shadow-green-500/10">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -1396,6 +1447,21 @@ export default function AttendanceRecordPage() {
         >
           <p>{getModalContent().content}</p>
         </CardBoxModal>
+      )}
+
+      {/* Student Details Modal */}
+      {isDetailModalActive && studentForDetailModal && (
+        <StudentDetailsModal
+          student={studentForDetailModal}
+          isOpen={isDetailModalActive}
+          onClose={() => {
+            setIsDetailModalActive(false);
+            setStudentForDetailModal(null);
+          }}
+          onEdit={handleEditStudent}
+          onDelete={handleDeleteStudent}
+          hideActions={true}
+        />
       )}
     </SectionMain>
   );

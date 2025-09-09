@@ -4,6 +4,13 @@ import React, { useState, useEffect } from "react";
 import { Timestamp } from "firebase/firestore";
 import { getStatusStyles } from "../_lib/statusStyles";
 import { toast } from 'sonner';
+import { 
+  mdiFaceRecognition,
+  mdiGestureTap,
+  mdiBell,
+  mdiHelpCircle
+} from "@mdi/js";
+import TimestampEditModal from "./components/TimestampEditModal";
 
 const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined): string => {
     if (!dateInput) return 'N/A';
@@ -12,7 +19,55 @@ const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined):
     if (typeof dateInput === 'string') {
         const parts = dateInput.split('-');
         if (parts.length === 3 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1])) && !isNaN(parseInt(parts[2]))) {
-            // Create date with explicit time to avoid timezone issues
+            // Create date with explicit time to avoid ti                                : 'text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                    >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Timestamp Edit Modal */}
+      {recordToEdit && (
+        <TimestampEditModal
+          record={recordToEdit}
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setRecordToEdit(null);
+          }}
+          onSave={handleTimestampSave}
+          allClassConfigs={allClassConfigs}
+        />
+      )}
+    </>
+  );
+};   </div>
+      )}
+      
+      {/* Timestamp Edit Modal */}
+      {recordToEdit && (
+        <TimestampEditModal
+          record={recordToEdit}
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setRecordToEdit(null);
+          }}
+          onSave={handleTimestampSave}
+          allClassConfigs={allClassConfigs}
+        />
+      )}
+    </div>
+  );
+}; issues
             dateObj = new Date(`${parts[0]}-${parts[1]}-${parts[2]}T00:00:00`);
         } else {
             dateObj = new Date(dateInput); // Fallback
@@ -59,6 +114,7 @@ export interface AttendanceRecord {
   status: string; // e.g., "present"
   date: string;   // Your primary date field (likely "YYYY-MM-DD" string)
   timestamp?: Timestamp | Date; // The exact time of marking
+  method?: string; // e.g., "QR Code", "Manual", "Face Recognition"
 }
 
 // Interface for loading states
@@ -72,17 +128,30 @@ export type Props = {
   records: AttendanceRecord[];
   onDeleteRecord: (record: AttendanceRecord, reason?: 'rejected' | 'deleted') => void;
   onApproveRecord: (record: AttendanceRecord) => void;
+  onEditTimestamp?: (recordId: string, newTimestamp: Date, newStatus: string) => Promise<void>; // New prop for timestamp editing
   perPage?: number;
   loadingRecords?: LoadingRecord[]; // New prop for loading states
   isScanning?: boolean; // New prop to indicate when scanning is active
+  allClassConfigs?: any; // Add class configs for timestamp editing
 };
 
 
-const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 20, loadingRecords = [], isScanning = false }: Props) => {
+const TableAttendance = ({ 
+  records, 
+  onDeleteRecord, 
+  onApproveRecord, 
+  onEditTimestamp,
+  perPage = 20, 
+  loadingRecords = [], 
+  isScanning = false,
+  allClassConfigs
+}: Props) => {
   console.log('🎯 TableAttendance received loadingRecords:', loadingRecords);
   console.log('🎯 TableAttendance isScanning:', isScanning);
   const [currentPage, setCurrentPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [recordToEdit, setRecordToEdit] = useState<AttendanceRecord | null>(null);
 
   // Function to copy student name to clipboard
   const copyStudentName = async (name: string) => {
@@ -99,6 +168,21 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
       document.body.removeChild(textArea);
       toast.success(`Copied "${name}" to clipboard!`);
     }
+  };
+
+  // Function to handle edit timestamp
+  const handleEditTimestamp = (record: AttendanceRecord) => {
+    setRecordToEdit(record);
+    setEditModalOpen(true);
+  };
+
+  // Function to handle timestamp save
+  const handleTimestampSave = async (recordId: string, newTimestamp: Date, newStatus: string) => {
+    if (onEditTimestamp) {
+      await onEditTimestamp(recordId, newTimestamp, newStatus);
+    }
+    setEditModalOpen(false);
+    setRecordToEdit(null);
   };
 
   // Determine a date to show in the table title. If multiple dates exist, show a summary.
@@ -188,6 +272,9 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
             )}
           </div>
         </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
+        <div className="h-6 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded-full w-16 mx-auto animate-shimmer"></div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
         <div className="h-6 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded-full w-16 mx-auto animate-shimmer"></div>
@@ -411,24 +498,24 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Student Name
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Class
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Shift
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Status
               </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Method
+              </th>
               {/* Date column removed - date displayed in the title */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                <div className="flex items-center">
-                  Time
-                  <span title="Ordered by time" className="ml-1 text-xs text-gray-400 dark:text-gray-500">▼</span>
-                </div>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Time
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Actions
+                Action
               </th>
             </tr>
           </thead>
@@ -487,22 +574,69 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, perPage = 2
                     {record.shift || 'N/A'}
                   </span>
                 </td>
+
                 <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
                   {renderStatusBadge(record.status)}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
+                  <div className="flex items-center justify-center">
+                    {record.method?.toLowerCase() === 'face-api' ? (
+                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d={mdiFaceRecognition} />
+                        </svg>
+                        <span className="text-xs font-medium">Face</span>
+                      </div>
+                    ) : record.method?.toLowerCase() === 'manual' ? (
+                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d={mdiGestureTap} />
+                        </svg>
+                        <span className="text-xs font-medium">Manual</span>
+                      </div>
+                    ) : record.method?.toLowerCase() === 'request' ? (
+                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d={mdiBell} />
+                        </svg>
+                        <span className="text-xs font-medium">Request</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d={mdiHelpCircle} />
+                        </svg>
+                        <span className="text-xs font-medium">{record.method || 'N/A'}</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
                 {/* Date cell removed - date displayed in the title */}
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 text-center align-middle">
-                  <div className="flex items-center justify-center">
-                    <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-medium">
-                      {record.timestamp instanceof Timestamp
-                      ? record.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-                      : record.timestamp instanceof Date
-                      ? record.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-                      : 'N/A'}
-                    </span>
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="font-medium">
+                        {record.timestamp instanceof Timestamp
+                        ? record.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+                        : record.timestamp instanceof Date
+                        ? record.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+                        : 'N/A'}
+                      </span>
+                    </div>
+                    {onEditTimestamp && (
+                      <button
+                        onClick={() => handleEditTimestamp(record)}
+                        className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                        title="Edit timestamp"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">

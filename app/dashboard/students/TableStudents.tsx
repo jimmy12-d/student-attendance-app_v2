@@ -580,7 +580,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           batch.update(attendanceRef, {
             status: isPresent ? 'present' : 'absent',
             timestamp: currentTime,
-            scannedBy: `Manual attendance by teacher`
+            method: 'manual'
           });
         } else {
           // Create new record
@@ -589,7 +589,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
             authUid: student.authUid || null, // Use student's authUid if available
             class: student.class,
             date: todayStr,
-            scannedBy: `Manual attendance by teacher`,
+            method: 'manual',
             shift: student.shift,
             status: isPresent ? 'present' : 'absent',
             studentId: studentId,

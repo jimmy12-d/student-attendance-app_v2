@@ -144,7 +144,7 @@ export const FlipFlopStatusIndicator: React.FC<FlipFlopStatusIndicatorProps> = (
       }
       return {
         title: 'Flip-Flop Schedules Updated',
-        subtitle: `Already updated for ${currentMonthName} ${currentYear} (Tracked in Firestore)`,
+        subtitle: `Already updated for ${currentMonthName} ${currentYear}`,
         color: 'text-green-800 dark:text-green-200'
       };
     }
