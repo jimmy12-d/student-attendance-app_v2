@@ -45,6 +45,8 @@ interface StudentRowProps {
   getTodayAttendanceStatus?: (student: Student) => { status?: string; time?: string };
   isStudentCurrentlyPresent?: (student: Student) => boolean;
   onAttendanceChange?: (studentId: string, isPresent: boolean) => void;
+  calculateAverageArrivalTime?: (student: Student) => string;
+  shiftRankings?: { earliest: { [studentId: string]: number }, latest: { [studentId: string]: number } };
 }
 
 export const StudentRow: React.FC<StudentRowProps> = ({ 
@@ -58,7 +60,9 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   onSelect,
   getTodayAttendanceStatus,
   isStudentCurrentlyPresent,
-  onAttendanceChange
+  onAttendanceChange,
+  calculateAverageArrivalTime,
+  shiftRankings
 }) => {
   // Check if student has warning and is absent today
   const todayStatus = getTodayAttendanceStatus ? getTodayAttendanceStatus(student) : { status: 'Unknown' };
@@ -370,30 +374,161 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               </td>
             );
 
-            case 'faceEnrollment':
-              // Show whether a face descriptor is present for the student
-              const sd: any = student as any;
-              const isEnrolledFace = !!sd.faceDescriptor && Array.isArray(sd.faceDescriptor) && sd.faceDescriptor.length > 0;
-              // Use getStatusStyles to keep consistent styling (lowercase keys)
-              const faceStatus = isEnrolledFace ? 'done' : 'not yet';
-              const faceStyles = getStatusStyles(faceStatus, true);
-
+            case 'averageArrivalTime':
+              const averageTime = calculateAverageArrivalTime ? calculateAverageArrivalTime(student) : "Loading...";
+              const isOnTime = averageTime === "on time";
+              const isLate = averageTime.includes('late');
+              const isEarly = averageTime.includes('early');
+              
+              // Check for rankings
+              const earliestRank = shiftRankings?.earliest[student.id];
+              const latestRank = shiftRankings?.latest[student.id];
+              
+              // Determine status type for styling
+              let statusType = 'default';
+              let badgeText = averageTime;
+              let showIcon = false;
+              let iconType = '';
+              
+              if (isOnTime) {
+                statusType = 'pending'; // Use pending for blue styling
+                badgeText = 'On Time';
+                showIcon = true;
+                iconType = 'check';
+                // Override with custom blue styling for on-time
+                //enhancedClasses = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700';
+              } else if (isEarly) {
+                statusType = 'present'; // Green for early
+                if (earliestRank) {
+                  badgeText = averageTime; // Just show time, icon will be separate
+                  showIcon = true;
+                  iconType = 'trophy';
+                } else {
+                  showIcon = true;
+                  iconType = 'early';
+                }
+              } else if (isLate) {
+                statusType = 'late'; // Yellow/amber for late
+                if (latestRank) {
+                  badgeText = averageTime; // Just show time, icon will be separate
+                  showIcon = true;
+                  iconType = 'warning';
+                } else {
+                  showIcon = true;
+                  iconType = 'clock';
+                }
+              } else if (averageTime === "Loading...") {
+                statusType = 'pending';
+                badgeText = 'Loading...';
+              } else {
+                statusType = 'default';
+                badgeText = averageTime;
+              }
+              
+              // Get status styles
+              const statusStyles = getStatusStyles(statusType);
+              
+              // Enhanced styling for top rankings and special cases
+              let enhancedClasses = statusStyles.badge;
+              let ringClasses = '';
+              
+              // Custom blue styling for on-time status
+              if (isOnTime) {
+                enhancedClasses = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700';
+              } else if (earliestRank && earliestRank <= 3) {
+                // Green styling for top 3 earliest (use original green status badge)
+                enhancedClasses = statusStyles.badge + ' ring-1 ring-green-300 dark:ring-green-600';
+                if (earliestRank === 1) {
+                  enhancedClasses = statusStyles.badge + ' ring-2 ring-green-400 dark:ring-green-500 shadow-lg';
+                }
+              } else if (latestRank && latestRank <= 3) {
+                // Yellow/amber styling for top 3 latest
+                const lateStatusStyles = getStatusStyles('late');
+                enhancedClasses = lateStatusStyles.badge + ' ring-1 ring-amber-300 dark:ring-amber-600';
+                if (latestRank === 1) {
+                  enhancedClasses = lateStatusStyles.badge + ' ring-2 ring-amber-400 dark:ring-amber-500 shadow-lg';
+                }
+              }
+              
               return (
-                <td key="faceEnrollment" className="p-3 whitespace-nowrap">
+                <td key="averageArrivalTime" className="p-3 whitespace-nowrap">
                   <div className="flex items-center justify-center">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${faceStyles.badge}`}>
-                      {faceStyles.svg && (
-                        <svg className="w-3 h-3 mr-1" fill={faceStatus === 'not yet' ? 'none' : 'currentColor'} stroke={faceStatus === 'not yet' ? 'currentColor' : 'none'} viewBox="0 0 20 20">
-                          <path d={faceStyles.svg} />
-                        </svg>
+                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${enhancedClasses} ${ringClasses} ${
+                      (earliestRank === 1 || latestRank === 1) ? 'animate-pulse' : ''
+                    }`}>
+                      {/* Rank number for top 3 performers */}
+                      {(earliestRank && earliestRank <= 3) && (
+                        <span className={`mr-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                          earliestRank === 1 
+                            ? 'bg-green-200 dark:bg-green-800 text-green-900 dark:text-green-100' 
+                            : earliestRank === 2
+                            ? 'bg-green-100 dark:bg-green-700 text-green-800 dark:text-green-200'
+                            : 'bg-green-50 dark:bg-green-600 text-green-700 dark:text-green-200'
+                        }`}>
+                          #{earliestRank}
+                        </span>
                       )}
-                      {faceStatus.charAt(0).toUpperCase() + faceStatus.slice(1)}
+                      
+                      {(latestRank && latestRank <= 3) && (
+                        <span className={`mr-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                          latestRank === 1 
+                            ? 'bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100' 
+                            : latestRank === 2
+                            ? 'bg-orange-200 dark:bg-orange-700 text-orange-800 dark:text-orange-200'
+                            : 'bg-yellow-200 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-200'
+                        }`}>
+                          #{latestRank}
+                        </span>
+                      )}
+                      
+                      {/* Icon based on type - Trophy for all top 3 earliest */}
+                      {showIcon && (earliestRank || latestRank) && (
+                        <span className="mr-1.5 flex-shrink-0">
+                          {earliestRank && earliestRank <= 3 ? (
+                            <svg className="w-3 h-3 text-yellow-600 dark:text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 2L7.5 4.5 4 4l.5 3.5L2 10l2.5 2.5L4 16l3.5-.5L10 18l2.5-2.5L16 16l-.5-3.5L18 10l-2.5-2.5L16 4l-3.5.5L10 2zM8 8a2 2 0 114 0 2 2 0 01-4 0zm4 6v1a1 1 0 01-1 1H9a1 1 0 01-1-1v-1a1 1 0 011-1h2a1 1 0 011 1z" clipRule="evenodd" />
+                            </svg>
+                          ) : latestRank && latestRank <= 3 ? (
+                            <svg className="w-3 h-3 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          ) : iconType === 'check' ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : null}
+                        </span>
+                      )}
+                      
+                      {/* Regular icons for non-ranked students */}
+                      {showIcon && !earliestRank && !latestRank && (
+                        <span className="mr-1.5 flex-shrink-0">
+                          {iconType === 'check' ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : iconType === 'clock' ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ) : iconType === 'early' ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          ) : null}
+                        </span>
+                      )}
+                      
+                      {/* Badge text (arrival time) */}
+                      <span className="truncate max-w-32">
+                        {badgeText}
+                      </span>
                     </span>
                   </div>
                 </td>
               );
 
-          case 'registerQR':
+          case 'portal':
             // Show different states based on registration and payment status
             const getDateFromTimestamp = (timestamp: any): Date | null => {
               if (!timestamp) return null;
@@ -413,7 +548,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
             const hasRecentPayment = student.lastPaymentMonth && student.lastPaymentMonth >= "2025-09"; // QR available from September 2025 onwards
             
             return (
-              <td key="registerQR" className="p-3 whitespace-nowrap">
+              <td key="portal" className="p-3 whitespace-nowrap">
                 <div className="flex items-center justify-center">
                   {isLoggedIn ? (
                     // 1. Logged In - Student is fully registered with legitimate auth UID

@@ -70,6 +70,7 @@ export interface AttendanceRecord {
   status: string; // e.g., "present"
   date: string;   // Your primary date field (likely "YYYY-MM-DD" string)
   timestamp?: Timestamp | Date; // The exact time of marking
+  timeIn?: string; // 24-hour format time (HH:MM)
   method?: string; // e.g., "QR Code", "Manual", "Face Recognition"
 }
 
@@ -84,7 +85,7 @@ export type Props = {
   records: AttendanceRecord[];
   onDeleteRecord: (record: AttendanceRecord, reason?: 'rejected' | 'deleted') => void;
   onApproveRecord: (record: AttendanceRecord) => void;
-  onEditTimestamp?: (record: AttendanceRecord, newTimestamp: Date) => Promise<void>; // New prop for timestamp editing
+  onEditTimestamp?: (record: AttendanceRecord, newTimestamp: Date, newTimeIn: string) => Promise<void>; // Updated to include timeIn
   students?: Student[]; // Student data for class configs
   allClassConfigs?: AllClassConfigs | null; // Class configurations
   perPage?: number;
@@ -94,8 +95,7 @@ export type Props = {
 
 
 const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimestamp, students = [], allClassConfigs = null, perPage = 20, loadingRecords = [], isScanning = false }: Props) => {
-  console.log('🎯 TableAttendance received loadingRecords:', loadingRecords);
-  console.log('🎯 TableAttendance isScanning:', isScanning);
+
   const [currentPage, setCurrentPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -126,7 +126,60 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
     setIsTimestampModalOpen(true);
   };
 
-  // Function to find student data for the selected record
+  // Function to get start time for a record based on class and shift
+  const getStartTimeForRecord = (record: AttendanceRecord): string | null => {
+    if (!allClassConfigs || !record.class || !record.shift) return null;
+    
+    // Extract class key by removing "Class " prefix
+    const classKey = record.class.replace(/^Class\s+/i, '');
+    const classConfig = allClassConfigs[classKey];
+    
+    if (!classConfig?.shifts) return null;
+    
+    const shiftConfig = classConfig.shifts[record.shift];
+    return shiftConfig?.startTime || null;
+  };
+
+  // Function to calculate time difference in minutes between startTime and timeIn
+  const calculateTimeDifference = (startTime: string, timeIn: string): number => {
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [timeInHour, timeInMinute] = timeIn.split(':').map(Number);
+    
+    const startMinutes = startHour * 60 + startMinute;
+    const timeInMinutes = timeInHour * 60 + timeInMinute;
+    
+    return timeInMinutes - startMinutes;
+  };
+
+  // Check if any record has time difference > 90 minutes
+  const hasLargeTimeDifference = records.some(record => {
+    const startTime = getStartTimeForRecord(record);
+    const timeIn = record.timeIn || (record.timestamp instanceof Timestamp
+      ? record.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+      : record.timestamp instanceof Date
+      ? record.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+      : null);
+    
+    if (!startTime || !timeIn) return false;
+    
+    const difference = Math.abs(calculateTimeDifference(startTime, timeIn));
+    return difference > 90;
+  });
+
+  // Get records with large time differences for highlighting
+  const recordsWithLargeDifferences = records.filter(record => {
+    const startTime = getStartTimeForRecord(record);
+    const timeIn = record.timeIn || (record.timestamp instanceof Timestamp
+      ? record.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+      : record.timestamp instanceof Date
+      ? record.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+      : null);
+    
+    if (!startTime || !timeIn) return false;
+    
+    const difference = Math.abs(calculateTimeDifference(startTime, timeIn));
+    return difference > 90;
+  });  // Function to find student data for the selected record
   const getStudentForRecord = (record: AttendanceRecord): Student | undefined => {
     return students.find(student => student.id === record.studentId);
   };
@@ -139,7 +192,14 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
     }
 
     try {
-      await onEditTimestamp(selectedRecord, newTimestamp);
+      // Convert timestamp to 24-hour format for timeIn
+      const newTimeIn = newTimestamp.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+      });
+      
+      await onEditTimestamp(selectedRecord, newTimestamp, newTimeIn);
       setIsTimestampModalOpen(false);
       setSelectedRecord(null);
     } catch (error) {
@@ -164,12 +224,22 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
     record.studentName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const recordsPaginated = filteredRecords.slice(
+  // Sort records to show large time differences at the top
+  const sortedRecords = [...filteredRecords].sort((a, b) => {
+    const aHasLargeDiff = recordsWithLargeDifferences.some(r => r.id === a.id);
+    const bHasLargeDiff = recordsWithLargeDifferences.some(r => r.id === b.id);
+
+    if (aHasLargeDiff && !bHasLargeDiff) return -1;
+    if (!aHasLargeDiff && bHasLargeDiff) return 1;
+    return 0; // Keep original order for records without large differences
+  });
+
+  const recordsPaginated = sortedRecords.slice(
     perPage * currentPage,
     perPage * (currentPage + 1)
   );
 
-  const numPages = Math.ceil(filteredRecords.length / perPage);
+  const numPages = Math.ceil(sortedRecords.length / perPage);
   const pagesList: number[] = [];
   for (let i = 0; i < numPages; i++) {
     pagesList.push(i);
@@ -261,6 +331,34 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-center">
         <div className="h-8 w-8 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded-full mx-auto animate-shimmer"></div>
+      </td>
+    </tr>
+  );
+
+  // Warning Row Component
+  const TimeDifferenceWarningRow = () => (
+    <tr className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 animate-pulse">
+      <td colSpan={7} className="px-6 py-4">
+        <div className="flex items-center space-x-3">
+          <div className="flex-shrink-0">
+            <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
+              ⚠️ Large Time Differences Detected
+            </h3>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+              {recordsWithLargeDifferences.length} record(s) have time differences greater than 90 minutes between scheduled start time and actual check-in time.
+              This may indicate data entry errors or system timing issues.
+            </p>
+            <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+              Affected students: {recordsWithLargeDifferences.slice(0, 3).map(r => r.studentName).join(', ')}
+              {recordsWithLargeDifferences.length > 3 && ` and ${recordsWithLargeDifferences.length - 3} more`}
+            </div>
+          </div>
+        </div>
       </td>
     </tr>
   );
@@ -450,7 +548,12 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
           )}
         </div>
         <div className="mr-4 flex items-center text-sm text-gray-600 dark:text-gray-400">
-          Showing {filteredRecords.length} of {records.length} records
+          Showing {sortedRecords.length} of {records.length} records
+          {recordsWithLargeDifferences.length > 0 && (
+            <span className="ml-2 text-red-600 dark:text-red-400 font-medium">
+              ({recordsWithLargeDifferences.length} with large time differences)
+            </span>
+          )}
         </div>
       </div>
 
@@ -492,14 +595,18 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
             ))}
             
             {/* Regular attendance records */}
-            {recordsPaginated.map((record: AttendanceRecord, index) => (
-              <tr 
-                key={record.id} 
-                className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 animate-slide-in-right ${
-                  record.status === 'requested' ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
-                }`}
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
+            {recordsPaginated.map((record: AttendanceRecord, index) => {
+              const hasLargeDiff = recordsWithLargeDifferences.some(r => r.id === record.id);
+              return (
+                <tr 
+                  key={record.id} 
+                  className={`hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 animate-slide-in-right ${
+                    record.status === 'requested' ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' : ''
+                  } ${
+                    hasLargeDiff ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500' : ''
+                  }`}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
                 <td className="px-4 py-2 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0 h-10 w-10">
@@ -527,11 +634,11 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                 <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                     record.shift?.toLowerCase() === 'morning' 
-                      ? 'dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 borde'
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
                       : record.shift?.toLowerCase() === 'afternoon'
-                      ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'
+                      ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-700'
                       : record.shift?.toLowerCase() === 'evening'
-                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300'
+                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                   }`}>
                     {record.shift || 'N/A'}
@@ -582,15 +689,15 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span className="font-medium">
-                        {record.timestamp instanceof Timestamp
-                        ? record.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+                        {record.timeIn || (record.timestamp instanceof Timestamp
+                        ? record.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
                         : record.timestamp instanceof Date
-                        ? record.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-                        : 'N/A'}
+                        ? record.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+                        : 'N/A')}
                       </span>
                     </div>
                     {/* Edit timestamp button - only show if onEditTimestamp is provided */}
-                    {onEditTimestamp && record.timestamp && (
+                    {onEditTimestamp && (record.timestamp || record.timeIn) && (
                       <button
                         onClick={() => handleEditTimestamp(record)}
                         className="inline-flex items-center p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors duration-200 group"
@@ -638,12 +745,13 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         
         {/* No results message */}
-        {filteredRecords.length === 0 && searchTerm && (
+        {sortedRecords.length === 0 && searchTerm && (
           <div className="text-center py-12">
             <svg 
               className="mx-auto h-12 w-12 text-gray-400" 
@@ -810,6 +918,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
           currentStatus={selectedRecord.status}
           student={getStudentForRecord(selectedRecord)}
           allClassConfigs={allClassConfigs}
+          currentTimeIn={selectedRecord.timeIn}
         />
       )}
     </>

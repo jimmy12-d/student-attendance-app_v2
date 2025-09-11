@@ -6,9 +6,10 @@ import { db } from '../../../firebase-config';
 import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Student, PermissionRecord } from '../../_interfaces';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
-import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord } from '../../dashboard/_lib/attendanceLogic';
+import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord, markAttendance, calculateAverageArrivalTime } from '../../dashboard/_lib/attendanceLogic';
+import { AllClassConfigs } from '../../dashboard/_lib/configForAttendanceLogic';
 import { getStatusStyles } from '../../dashboard/_lib/statusStyles';
-import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline } from '@mdi/js';
+import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
 import SlideInPanel from '../../_components/SlideInPanel';
@@ -45,6 +46,8 @@ const AttendancePage = () => {
   const [todayRecord, setTodayRecord] = useState<any>(null);
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [isRequestConfirmOpen, setIsRequestConfirmOpen] = useState(false);
+  const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs | null>(null);
+  const [averageArrivalTime, setAverageArrivalTime] = useState<{ averageTime: string; details: string } | null>(null);
 
 
   // Ripple effect hook
@@ -80,6 +83,105 @@ const AttendancePage = () => {
   };
 
   const createRipple = useRipple();
+
+  // Function to get shift icon and styling
+  const getShiftInfo = (shift: string) => {
+    switch (shift?.toLowerCase()) {
+      case 'morning':
+        return {
+          icon: mdiWeatherSunny,
+          bgGradient: 'from-blue-400 to-blue-600',
+          textColor: 'text-white',
+          name: t('shiftInfo.morning'),
+          time: '7:00 AM'
+        };
+      case 'afternoon':
+        return {
+          icon: mdiWeatherSunset,
+          bgGradient: 'from-yellow-400 to-orange-500',
+          textColor: 'text-white',
+          name: t('shiftInfo.afternoon'),
+          time: '1:00 PM'
+        };
+      case 'evening':
+        return {
+          icon: mdiWeatherNight,
+          bgGradient: 'from-purple-500 to-purple-700',
+          textColor: 'text-white',
+          name: t('shiftInfo.evening'),
+          time: '5:30 PM'
+        };
+      default:
+        return {
+          icon: mdiClockTimeThreeOutline,
+          bgGradient: 'from-gray-400 to-gray-600',
+          textColor: 'text-white',
+          name: 'Unknown',
+          time: 'N/A'
+        };
+    }
+  };
+
+  // Function to parse and format average arrival time for better UI display
+  const formatAverageArrivalForUI = (averageTime: string) => {
+    if (!averageTime || averageTime === 'N/A') {
+      return { 
+        text: t('shiftInfo.calculating'), 
+        color: 'text-white/80',
+        icon: '⏱️'
+      };
+    }
+
+    // Check if it contains "on time"
+    if (averageTime.includes('on time')) {
+      return {
+        text: t('shiftInfo.onTime'),
+        color: 'text-green-200',
+        icon: '✅'
+      };
+    }
+
+    // Check if it contains "early"
+    if (averageTime.includes('early')) {
+      const timeMatch = averageTime.match(/-(.+?) early/);
+      const timeValue = timeMatch ? timeMatch[1] : averageTime.replace('-', '').replace(' early', '');
+      return {
+        text: `${t('shiftInfo.early')} ${timeValue}`,
+        color: 'text-green-200',
+        icon: '🌟'
+      };
+    }
+
+    // Check if it contains "late"
+    if (averageTime.includes('late')) {
+      const timeMatch = averageTime.match(/\+(.+?) late/);
+      const timeValue = timeMatch ? timeMatch[1] : averageTime.replace('+', '').replace(' late', '');
+      
+      // Determine if it's "really late" (more than 30 minutes)
+      const isReallyLate = averageTime.includes('h') || (timeValue.includes('m') && parseInt(timeValue) > 30);
+      
+      if (isReallyLate) {
+        return {
+          text: `${t('shiftInfo.reallyLate')} ${timeValue}`,
+          color: 'text-red-200',
+          icon: '🚨'
+        };
+      } else {
+        return {
+          text: `${t('shiftInfo.late')} ${timeValue}`,
+          color: 'text-orange-200',
+          icon: '⚠️'
+        };
+      }
+    }
+
+    // Fallback
+    return {
+      text: averageTime,
+      color: 'text-white/80',
+      icon: '⏱️'
+    };
+  };
 
   const handleRequestAttendance = async () => {
     if (!studentData || !studentUid || !studentDocId) {
@@ -166,6 +268,7 @@ const AttendancePage = () => {
           classesUnsubscribe = onSnapshot(collection(db, "classes"), (classesSnap) => {
             const classConfigs: { [key: string]: any } = {};
             classesSnap.forEach(doc => { classConfigs[doc.id] = doc.data(); });
+            setAllClassConfigs(classConfigs); // Store class configs in state
             const studentClassConfig = studentDataFromDb.class ? classConfigs[studentDataFromDb.class] : null;
             const studyDays = studentClassConfig?.studyDays;
 
@@ -328,6 +431,54 @@ const AttendancePage = () => {
     return () => unsubscribe();
   }, [studentUid]);
 
+  // Calculate average arrival time when student data or class configs change
+  useEffect(() => {
+    const calculateAverage = async () => {
+      if (!studentData || !allClassConfigs) return;
+
+      try {
+        // Get current month attendance records for the student
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+        const attendanceQuery = query(
+          collection(db, "attendance"),
+          where("authUid", "==", studentUid),
+          where("date", ">=", `${currentMonth}-01`),
+          where("date", "<=", `${currentMonth}-31`)
+        );
+
+        const attendanceSnap = await getDocs(attendanceQuery);
+        const monthlyAttendance: RawAttendanceRecord[] = attendanceSnap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            studentId: data.studentId || studentData.id,
+            date: data.date,
+            status: data.status,
+            timeIn: data.timeIn,
+            startTime: data.startTime,
+            timestamp: data.timestamp,
+            class: data.class,
+            shift: data.shift,
+            id: doc.id
+          } as RawAttendanceRecord;
+        });
+
+        const avgResult = calculateAverageArrivalTime(
+          studentData,
+          monthlyAttendance,
+          currentMonth,
+          allClassConfigs
+        );
+
+        setAverageArrivalTime(avgResult);
+      } catch (error) {
+        console.error("Error calculating average arrival time:", error);
+        setAverageArrivalTime({ averageTime: 'N/A', details: 'Error calculating average' });
+      }
+    };
+
+    calculateAverage();
+  }, [studentData, allClassConfigs, studentUid]);
+
   const presentCount = recentRecords.filter(r => r.status === 'present' || r.status === 'permission').length;
   const lateCount = recentRecords.filter(r => r.status === 'late').length;
   const absentCount = recentRecords.filter(r => r.status === 'absent').length;
@@ -407,7 +558,7 @@ const AttendancePage = () => {
                  : null;
 
                return (
-                 <div key={record.id} className="flex items-center justify-between p-4 mb-3 bg-gray-50/80 dark:bg-slate-700/80 rounded-xl hover:shadow-md transition-all duration-200 border border-gray-100 dark:border-slate-600">
+                 <div key={record.id} className="flex items-center justify-between p-4 mb-3 bg-gray-50/80 dark:bg-slate-700/80 rounded-xl hover:shadow-md border border-gray-100 dark:border-slate-600">
                    <div className="flex items-center space-x-3">
                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${styles.cardBg}`}>
                        <Icon path={styles.icon} size={20} className="text-white" />
@@ -451,6 +602,44 @@ const AttendancePage = () => {
             </p>
           </div>
 
+          {/* Shift & Average Arrival Time Card */}
+          {!loading && studentData?.shift && (
+            <div className="mb-4">
+              <div className={`bg-gradient-to-r ${getShiftInfo(studentData.shift).bgGradient} rounded-2xl px-6 py-4 shadow-xl border border-white/20`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                      <Icon path={getShiftInfo(studentData.shift).icon} size={28} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className={khmerFont('text-white text-lg font-bold')}>
+                        {getShiftInfo(studentData.shift).name} {t('shiftInfo.shift')}
+                      </h3>
+                      <p className={khmerFont('text-white/90 text-sm')}>
+                        {t('shiftInfo.classStarts')} {getShiftInfo(studentData.shift).time}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
+                      <p className={khmerFont('text-white/80 text-xs font-medium mb-1')}>
+                        {t('shiftInfo.avgArrival')}
+                      </p>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-sm">
+                          {formatAverageArrivalForUI(averageArrivalTime?.averageTime || '').icon}
+                        </span>
+                        <p className={`${khmerFont('text-sm font-bold')} ${formatAverageArrivalForUI(averageArrivalTime?.averageTime || '').color}`}>
+                          {formatAverageArrivalForUI(averageArrivalTime?.averageTime || '').text}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
            {/* Today's Status Card */}
            {loading ? (
              <div className="animate-pulse bg-gray-200 dark:bg-slate-700 h-32 rounded-2xl"></div>
@@ -486,11 +675,11 @@ const AttendancePage = () => {
              <div className="space-y-4">
                {/* Request Attendance Card - Mobile First */}
                <div className="group relative overflow-hidden touch-manipulation">
-                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-all duration-200"></div>
+                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-3xl opacity-0 group-active:opacity-100"></div>
                  <button 
                    onClick={() => setIsRequestConfirmOpen(true)}
                    disabled={['present', 'late', 'permission', 'requested'].includes(todayRecord?.status)}
-                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
+                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed min-h-[120px] flex items-center"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
                    <div className="flex items-center w-full space-x-4">
@@ -529,10 +718,10 @@ const AttendancePage = () => {
 
                {/* Request Permission Card - Mobile First */}
                <div className="group relative overflow-hidden touch-manipulation">
-                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-all duration-200"></div>
+                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-active:opacity-100"></div>
                  <button 
                    onClick={() => setIsPermissionPanelOpen(true)}
-                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 active:scale-[0.98] transition-all duration-200 min-h-[120px] flex items-center"
+                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 min-h-[120px] flex items-center"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
                    <div className="flex items-center w-full space-x-4">
@@ -577,7 +766,7 @@ const AttendancePage = () => {
                 <h2 className={khmerFont('pt-4 ml-2 font-bold text-xl text-gray-900 dark:text-white mb-2')}>{t('lastDaysSummary')}</h2>
                <button 
                  onClick={() => setIsDetailsPanelOpen(true)} 
-                 className={khmerFont('flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors')}
+                 className={khmerFont('flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300')}
                >
                  {t('viewDetails')}
                  <Icon path={mdiChevronRight} size={16} className="ml-1" />
@@ -594,7 +783,7 @@ const AttendancePage = () => {
                ) : (
                  <>
                    <div 
-                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 cursor-pointer hover:shadow-xl transition-all duration-300 active:scale-95"
+                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 cursor-pointer"
                      onClick={(e) => createRipple(e, 'rgba(34, 197, 94, 0.3)')}
                    >
                      <div className="flex items-center justify-between mb-3">
@@ -606,14 +795,14 @@ const AttendancePage = () => {
                      <h3 className={khmerFont('font-medium text-gray-900 dark:text-white')}>{t('present')}</h3>
                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mt-2">
                        <div 
-                         className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                         className="bg-green-500 h-2 rounded-full"
                          style={{ width: `${(presentCount / totalDays) * 100}%` }}
                        ></div>
                      </div>
                    </div>
 
                    <div 
-                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 cursor-pointer hover:shadow-xl transition-all duration-300 active:scale-95"
+                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 cursor-pointer"
                      onClick={(e) => createRipple(e, 'rgba(234, 179, 8, 0.3)')}
                    >
                      <div className="flex items-center justify-between mb-3">
@@ -625,14 +814,14 @@ const AttendancePage = () => {
                      <h3 className={khmerFont('font-medium text-gray-900 dark:text-white')}>{t('late')}</h3>
                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mt-2">
                        <div 
-                         className="bg-yellow-500 h-2 rounded-full transition-all duration-500"
+                         className="bg-yellow-500 h-2 rounded-full"
                          style={{ width: `${(lateCount / totalDays) * 100}%` }}
                        ></div>
                      </div>
                    </div>
 
                    <div 
-                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 cursor-pointer hover:shadow-xl transition-all duration-300 active:scale-95"
+                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 cursor-pointer"
                      onClick={(e) => createRipple(e, 'rgba(239, 68, 68, 0.3)')}
                    >
                      <div className="flex items-center justify-between mb-3">
@@ -644,7 +833,7 @@ const AttendancePage = () => {
                      <h3 className={khmerFont('font-medium text-gray-900 dark:text-white')}>{t('absent')}</h3>
                      <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mt-2">
                        <div 
-                         className="bg-red-500 h-2 rounded-full transition-all duration-500"
+                         className="bg-red-500 h-2 rounded-full"
                          style={{ width: `${(absentCount / totalDays) * 100}%` }}
                        ></div>
                      </div>

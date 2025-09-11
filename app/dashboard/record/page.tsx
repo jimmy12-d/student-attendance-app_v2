@@ -48,6 +48,7 @@ import {
   where,
   Timestamp
 } from "firebase/firestore";
+import { determineAttendanceStatus } from "../_lib/attendanceLogic";
 
 // Import attendance logic
 import { getStudentDailyStatus } from "../_lib/attendanceLogic";
@@ -781,12 +782,62 @@ export default function AttendanceRecordPage() {
     try {
       if (modalAction === 'approve') {
         const recordRef = doc(db, "attendance", recordId);
+        
+        // Find the student to get their class and shift information
+        const student = students.find(s => s.studentId === recordInModal.studentId || s.id === recordInModal.studentId);
+        
+        let finalStatus = 'present'; // Default fallback
+        
+        if (student && allClassConfigs) {
+          // Use the original timestamp when the student made the request to determine late/present
+          const requestTimestamp = recordInModal.timestamp;
+          let requestTime: Date;
+          
+          if (requestTimestamp instanceof Timestamp) {
+            requestTime = requestTimestamp.toDate();
+          } else if (requestTimestamp instanceof Date) {
+            requestTime = requestTimestamp;
+          } else {
+            // Fallback to current time if timestamp is not available
+            requestTime = new Date();
+          }
+          
+          // Create a mock student object for the determineAttendanceStatus function
+          const studentForCalculation = {
+            ...student,
+            fullName: student.fullName,
+            class: student.class,
+            shift: student.shift || recordInModal.shift,
+            gracePeriodMinutes: (student as any).gracePeriodMinutes || 15
+          };
+          
+          // Temporarily override the current time to use the request timestamp
+          const originalNow = Date.now;
+          Date.now = () => requestTime.getTime();
+          
+          try {
+            const { status } = determineAttendanceStatus(
+              studentForCalculation,
+              recordInModal.shift || student.shift || 'Morning',
+              allClassConfigs
+            );
+            finalStatus = status;
+          } catch (error) {
+            console.error('Error determining attendance status:', error);
+            // Keep default 'present' status
+          } finally {
+            // Restore original Date.now
+            Date.now = originalNow;
+          }
+        }
+        
         await updateDoc(recordRef, {
-          status: 'present', // Or logic to determine 'late'
+          status: finalStatus,
           approvedAt: serverTimestamp(),
           approvedBy: 'Admin' // Replace with actual admin user
         });
-        toast.success(`Approved attendance for ${recordInModal.studentName}.`);
+        
+        toast.success(`Approved attendance for ${recordInModal.studentName} as ${finalStatus}.`);
       } else if (modalAction === 'reject') {
         await deleteDoc(doc(db, "attendance", recordId));
         toast.warning(`Rejected and deleted attendance request for ${recordInModal.studentName}.`);
@@ -807,7 +858,7 @@ export default function AttendanceRecordPage() {
   };
 
   // Handle timestamp editing
-  const handleEditTimestamp = async (record: AttendanceRecord, newTimestamp: Date) => {
+  const handleEditTimestamp = async (record: AttendanceRecord, newTimestamp: Date, newTimeIn: string) => {
     try {
       setIsUpdating(true);
       const recordRef = doc(db, "attendance", record.id);
@@ -851,9 +902,10 @@ export default function AttendanceRecordPage() {
         }
       }
 
-      // Update both timestamp and status in Firestore
+      // Update timestamp, timeIn, and status in Firestore
       await updateDoc(recordRef, {
         timestamp: Timestamp.fromDate(newTimestamp),
+        timeIn: newTimeIn, // Add timeIn field update
         status: newStatus,
         lastModified: serverTimestamp(),
         modifiedBy: 'Admin' // Replace with actual admin user if available

@@ -14,6 +14,9 @@ import { useClassData } from './hooks/useClassData';
 import { useStudentForm } from './hooks/useStudentForm';
 import { useStudentCount } from './hooks/useStudentCount';
 
+// Utilities
+import { getClassCapacityInfo, formatClassLabelWithCapacityAndSchedule, canEnrollInClass, getScheduleTypeStats } from './utils/classCapacity';
+
 /**
  * @typedef {object} Student
  * @property {string} id
@@ -49,6 +52,8 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [classOptionsWithCounts, setClassOptionsWithCounts] = useState([]);
+  const [capacityWarning, setCapacityWarning] = useState(null);
+  const [enrollmentCheck, setEnrollmentCheck] = useState(null);
 
   // Custom hooks
   const { allClassData, classOptions, allShiftOptions, loadingClasses } = useClassData();
@@ -62,11 +67,9 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     motherPhone, setMotherPhone,
     fatherName, setFatherName,
     fatherPhone, setFatherPhone,
-    photoUrl, setPhotoUrl,
     shift, setShift,
-    ay, setAy,
     studentClass, setStudentClass,
-    gradeTypeFilter, setGradeTypeFilter,
+    _, setGradeTypeFilter,
     discount, setDiscount,
     note, setNote,
     warning, setWarning,
@@ -78,11 +81,6 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     isParentInfoCollapsed, setIsParentInfoCollapsed,
     getFormData
   } = useStudentForm(studentData);
-
-  const scheduleTypeOptions = [
-    { value: 'Fix', label: 'Fix' },
-    { value: 'Flip-Flop', label: 'Flip-Flop' },
-  ];
 
   // Effect to set grade type filter when editing a student
   useEffect(() => {
@@ -114,6 +112,34 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     }
   }, [studentClass, allClassData, loadingClasses, shift, setShift]);
 
+  // Effect to check enrollment eligibility when class and shift are selected
+  useEffect(() => {
+    const checkEnrollmentEligibility = async () => {
+      if (!studentClass || !shift) {
+        setEnrollmentCheck(null);
+        setCapacityWarning(null);
+        return;
+      }
+
+      try {
+        const enrollmentResult = await canEnrollInClass(studentClass, shift, onWaitlist, studentData?.id);
+        setEnrollmentCheck(enrollmentResult);
+        
+        if (!enrollmentResult.canEnroll && !onWaitlist) {
+          setCapacityWarning(enrollmentResult.message);
+        } else {
+          setCapacityWarning(null);
+        }
+      } catch (error) {
+        console.error('Error checking enrollment eligibility:', error);
+        setEnrollmentCheck(null);
+        setCapacityWarning(null);
+      }
+    };
+
+    checkEnrollmentEligibility();
+  }, [studentClass, shift, onWaitlist, studentData?.id]);
+
   // Effect to update class options with student counts
   useEffect(() => {
     const updateClassOptionsWithCounts = async () => {
@@ -135,40 +161,19 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
             };
           }
           
-          // If shift is selected and this class has that shift, get student count
+          // If shift is selected and this class has that shift, get capacity info
           try {
-            const studentsRef = collection(db, "students");
-            const q = query(
-              studentsRef, 
-              where("class", "==", className),
-              where("shift", "==", shift),
-              where("ay", "==", "2026") // Filter by current academic year
-            );
-            const querySnapshot = await getDocs(q);
+            const capacityInfo = await getClassCapacityInfo(className, shift, studentData?.id);
+            const scheduleTypeStats = await getScheduleTypeStats(className, shift);
+            const formattedLabel = formatClassLabelWithCapacityAndSchedule(className, capacityInfo, scheduleTypeStats);
 
-            const activeStudents = querySnapshot.docs.filter(doc => {
-              const data = doc.data();
-              // Return the student if `dropped` is not true.
-              // This will include students where `dropped` is false or the field is missing.
-              return data.dropped !== true && data.onBreak !== true && data.onWaitlist !== true;
-            });
-
-            let count = activeStudents.length;
-
-            // If we need to exclude a specific student (for edit mode)
-            if (studentData?.id) {
-              const hasExcludedStudent = querySnapshot.docs.some(doc => doc.id === studentData.id);
-              if (hasExcludedStudent) {
-                count -= 1;
-              }
-            }
-            
             return {
               ...option,
-              label: `${className} (${count})`
+              label: formattedLabel,
+              capacityInfo
             };
           } catch (error) {
-            console.error(`Error fetching count for ${className}-${shift}:`, error);
+            console.error(`Error fetching capacity for ${className}-${shift}:`, error);
             return {
               ...option,
               label: className
@@ -230,6 +235,24 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
       toast.error("Full Name, Class, and Shift are required.");
       setLoading(false);
       return;
+    }
+
+    // Check class capacity before proceeding (only if not on waitlist and class/shift changed)
+    const classChanged = studentData.class !== studentClass || studentData.shift !== shift;
+    if (!onWaitlist && classChanged) {
+      try {
+        const enrollmentResult = await canEnrollInClass(studentClass, shift, false, studentData.id);
+        if (!enrollmentResult.canEnroll) {
+          toast.error(enrollmentResult.message);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking class capacity:', error);
+        toast.error('Failed to verify class capacity. Please try again.');
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -633,6 +656,37 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
               />
             </div>
           </div>
+
+          {/* Class Capacity Warning */}
+          {capacityWarning && !onWaitlist && (
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-start">
+                <Icon path={mdiAlertCircle} size={1} className="text-red-600 dark:text-red-400 mr-3 mt-1 flex-shrink-0" />
+                <div>
+                  <p className="text-red-800 dark:text-red-300 font-medium">Class Full</p>
+                  <p className="text-red-700 dark:text-red-400 text-sm mt-1">{capacityWarning}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Enrollment Info */}
+          {enrollmentCheck && enrollmentCheck.canEnroll && !onWaitlist && (
+            <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+              <p className="text-green-800 dark:text-green-300 text-sm">
+                ✓ {enrollmentCheck.message}
+              </p>
+            </div>
+          )}
+
+          {/* Waitlist Info */}
+          {onWaitlist && studentClass && shift && (
+            <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <p className="text-orange-800 dark:text-orange-300 text-sm">
+                ℹ️ Student will remain on the waitlist for this class
+              </p>
+            </div>
+          )}
         </div>
       </CollapsibleSection>
 
@@ -895,8 +949,8 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
         )}
         <button
           type="submit"
-          disabled={loading}
-          className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+          disabled={loading || (enrollmentCheck && !enrollmentCheck.canEnroll && !onWaitlist)}
+          className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Updating...' : 'Update Student'}
         </button>

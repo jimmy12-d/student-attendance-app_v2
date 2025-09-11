@@ -104,7 +104,20 @@
       "studentInfoError": "Student information not loaded yet. Please try again in a moment.",
       "requestError": "Failed to send request. Please try again.",
       "requestSuccess": "Request sent successfully!",
-      "noRecentActivity": "No recent activity."
+      "noRecentActivity": "No recent activity.",
+      "shiftInfo": {
+        "morning": "Morning",
+        "afternoon": "Afternoon", 
+        "evening": "Evening",
+        "shift": "Shift",
+        "classStarts": "Class starts at",
+        "avgArrival": "Avg Arrival",
+        "calculating": "Calculating...",
+        "onTime": "On Time",
+        "early": "Early",
+        "late": "Late",
+        "reallyLate": "Really Late"
+      }
     },
     "mockExam": {
       "title": "Mock Exam",

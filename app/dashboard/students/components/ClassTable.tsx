@@ -25,6 +25,8 @@ interface ClassTableProps {
   getTodayAttendanceStatus?: (student: Student) => { status?: string; time?: string };
   isStudentCurrentlyPresent?: (student: Student) => boolean;
   onAttendanceChange?: (studentId: string, isPresent: boolean) => void;
+  calculateAverageArrivalTime?: (student: Student) => string;
+  shiftRankings?: { earliest: { [studentId: string]: number }, latest: { [studentId: string]: number } };
   forceCollapsed?: boolean;
   onClassToggle?: (className: string, collapsed: boolean) => void;
   expandedClasses?: Set<string>;
@@ -51,6 +53,8 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   getTodayAttendanceStatus,
   isStudentCurrentlyPresent,
   onAttendanceChange,
+  calculateAverageArrivalTime,
+  shiftRankings,
   forceCollapsed = false,
   onClassToggle,
   expandedClasses = new Set(),
@@ -154,9 +158,9 @@ export const ClassTable: React.FC<ClassTableProps> = ({
       });
     }
 
-    // Register QR statistics (if registerQR column is enabled)
-    const registerQRColumnEnabled = enabledColumns.some(col => col.id === 'registerQR');
-    if (registerQRColumnEnabled) {
+    // Portal statistics (if portal column is enabled)
+    const portalColumnEnabled = enabledColumns.some(col => col.id === 'portal');
+    if (portalColumnEnabled) {
       const registeredCount = studentList.filter(student => 
         student.chatId && student.passwordHash
       ).length;
@@ -495,6 +499,8 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   getTodayAttendanceStatus={getTodayAttendanceStatus}
                   isStudentCurrentlyPresent={isStudentCurrentlyPresent}
                   onAttendanceChange={onAttendanceChange}
+                  calculateAverageArrivalTime={calculateAverageArrivalTime}
+                  shiftRankings={shiftRankings}
                 />
               ))}
             </tbody>

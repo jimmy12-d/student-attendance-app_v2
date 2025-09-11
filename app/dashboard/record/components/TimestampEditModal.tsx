@@ -23,6 +23,7 @@ interface TimestampEditModalProps {
   currentStatus: string;
   student?: Student;
   allClassConfigs?: AllClassConfigs | null;
+  currentTimeIn?: string; // Add timeIn prop
 }
 
 export const TimestampEditModal: React.FC<TimestampEditModalProps> = ({
@@ -34,34 +35,56 @@ export const TimestampEditModal: React.FC<TimestampEditModalProps> = ({
   recordId,
   currentStatus,
   student,
-  allClassConfigs
+  allClassConfigs,
+  currentTimeIn
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [previewStatus, setPreviewStatus] = useState<'present' | 'late'>('present');
 
-  // Initialize form with current timestamp
+  // Initialize form with current timestamp or timeIn
   useEffect(() => {
-    if (isOpen && currentTimestamp) {
-      const date = currentTimestamp instanceof Timestamp 
-        ? currentTimestamp.toDate() 
-        : currentTimestamp instanceof Date 
-        ? currentTimestamp 
-        : new Date();
+    if (isOpen) {
+      let date: Date;
+      
+      // If we have currentTimeIn, use it to set the time
+      if (currentTimeIn && currentTimestamp) {
+        // Use the timestamp for the date and currentTimeIn for the time
+        date = currentTimestamp instanceof Timestamp 
+          ? currentTimestamp.toDate() 
+          : currentTimestamp instanceof Date 
+          ? currentTimestamp 
+          : new Date();
+      } else if (currentTimestamp) {
+        // Fallback to timestamp only
+        date = currentTimestamp instanceof Timestamp 
+          ? currentTimestamp.toDate() 
+          : currentTimestamp instanceof Date 
+          ? currentTimestamp 
+          : new Date();
+      } else {
+        // Default to current time
+        date = new Date();
+      }
       
       // Format date for input (YYYY-MM-DD) - but we won't allow changing it
       const dateStr = date.toISOString().split('T')[0];
       setSelectedDate(dateStr);
       
-      // Format time for input (HH:MM)
-      const timeStr = date.toTimeString().slice(0, 5);
-      setSelectedTime(timeStr);
+      // Use currentTimeIn if available, otherwise extract from timestamp
+      if (currentTimeIn) {
+        setSelectedTime(currentTimeIn);
+      } else {
+        // Format time for input (HH:MM) from timestamp
+        const timeStr = date.toTimeString().slice(0, 5);
+        setSelectedTime(timeStr);
+      }
       
       // Set initial preview status
       setPreviewStatus(currentStatus === 'late' ? 'late' : 'present');
     }
-  }, [isOpen, currentTimestamp, currentStatus]);
+  }, [isOpen, currentTimestamp, currentTimeIn, currentStatus]);
 
   // Helper function for fallback status calculation
   const calculateStatusFromTimestamp = (timestamp: Date, dateStr: string): 'present' | 'late' => {

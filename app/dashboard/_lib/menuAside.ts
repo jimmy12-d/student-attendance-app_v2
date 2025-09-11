@@ -82,9 +82,14 @@ const menuAside: MenuAsideItem[] = [
     label: "Payment Summary",
   },
   {
-    label: "Mock Exam",
+    label: "Academic",
     icon: mdiNotebookEditOutline,
     menu: [
+      {
+        href: "/dashboard/class-management",
+        label: "Class Management",
+        icon: mdiAccountCircle,
+      },
       {
         href: "/dashboard/mock-exams",
         label: "Mock Control",

@@ -799,22 +799,31 @@ const classStats = useMemo((): ClassStats[] => {
                           </div>
                         </div>
                         
-                        {/* Mini Progress Bar */}
-                        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mb-4 overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-500 rounded-full transition-all duration-1000 ease-out"
-                            style={{ width: `${attendanceRate}%` }}
-                          ></div>
-                        </div>
-                        
-                        {/* Shift Breakdown */}
-                        <div className="space-y-2">
-                          {classStudents.map(shiftData => (
-                            <div key={shiftData.classShiftKey} className="flex justify-between items-center text-sm">
-                              <span className="text-gray-600 dark:text-gray-400">{shiftData.shift}:</span>
-                              <span className="font-semibold text-gray-900 dark:text-white">{shiftData.totalStudents}</span>
-                            </div>
-                          ))}
+                        {/* Progress Bars by Shift */}
+                        <div className="space-y-3 mb-4">
+                          {classStudents.map(shiftData => {
+                            const presentInShift = shiftData.presentToday + shiftData.lateToday;
+                            const shiftAttendanceRate = shiftData.totalStudents > 0 ? Math.round((presentInShift / shiftData.totalStudents) * 100) : 0;
+                            const hasAttendanceData = presentInShift > 0;
+                            return (
+                              <div key={shiftData.classShiftKey} className="text-start">
+                                <div className="text-base text-gray-600 dark:text-gray-400 mb-1">{shiftData.shift}</div>
+                                <div className={`w-full rounded-full h-2 mb-1 overflow-hidden border ${
+                                  hasAttendanceData
+                                    ? 'bg-gray-200 dark:bg-gray-600 border-gray-300 dark:border-gray-500'
+                                    : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 border-dashed'
+                                }`}>
+                                  <div
+                                    className="h-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-500 rounded-full transition-all duration-1000 ease-out"
+                                    style={{ width: `${shiftAttendanceRate}%` }}
+                                  ></div>
+                                </div>
+                                <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                                  {presentInShift}/{shiftData.totalStudents}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                         
                         {/* Subtle Glow Effect */}

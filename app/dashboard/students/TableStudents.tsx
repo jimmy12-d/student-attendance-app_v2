@@ -15,7 +15,7 @@ import { db } from "../../../firebase-config";
 import { doc, writeBatch, collection, getDocs, setDoc } from "firebase/firestore";
 
 // Attendance logic imports
-import { getStudentDailyStatus } from '../_lib/attendanceLogic';
+import { getStudentDailyStatus, markAttendance, calculateShiftRankings } from '../_lib/attendanceLogic';
 import { AllClassConfigs } from '../_lib/configForAttendanceLogic';
 import { PermissionRecord } from '../../_interfaces';
 
@@ -37,12 +37,12 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
     { id: 'number', label: '#N', enabled: true },
     { id: 'name', label: 'Name', enabled: true },
     { id: 'phone', label: 'Phone', enabled: true },
-  { id: 'faceEnrollment', label: 'Face Enrollment', enabled: false },
-    { id: 'registerQR', label: 'Register QR', enabled: false },
+    { id: 'portal', label: 'Portal', enabled: false },
     { id: 'paymentStatus', label: 'Payment', enabled: false },
     { id: 'scheduleType', label: 'Type', enabled: false },
     { id: 'warning', label: 'Warning', enabled: false },
     { id: 'todayAttendance', label: 'Attendance', enabled: false },
+    { id: 'averageArrivalTime', label: 'Avg Arrival', enabled: false },
   ];
 
   // Column configuration state - will be loaded from localStorage
@@ -50,6 +50,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
   // Attendance data state
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [monthlyAttendance, setMonthlyAttendance] = useState<any[]>([]);
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs | null>(null);
   const [permissions, setPermissions] = useState<PermissionRecord[]>([]);
   const [loadingAttendanceData, setLoadingAttendanceData] = useState(true);
@@ -82,6 +83,10 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           // Validate that the saved columns match our expected structure
           const mergedColumns = defaultColumns.map(defaultCol => {
             const savedCol = parsedColumns.find(col => col.id === defaultCol.id);
+            // Always ensure name column is enabled
+            if (defaultCol.id === 'name') {
+              return { ...defaultCol, enabled: true };
+            }
             return savedCol ? { ...defaultCol, enabled: savedCol.enabled } : defaultCol;
           });
           
@@ -149,6 +154,19 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
             return { id: doc.id, ...doc.data() };
           })
           .filter((record: any) => record.date === todayStr);
+
+        // Fetch current month's attendance for average calculations
+        const currentMonth = today.toISOString().slice(0, 7); // "2025-09"
+        const monthlyAttendanceData = attendanceSnapshot.docs
+          .map(doc => {
+            return { id: doc.id, ...doc.data() };
+          })
+          .filter((record: any) => 
+            record.date && 
+            record.date.startsWith(currentMonth) &&
+            record.timeIn &&
+            (record.status === 'present' || record.status === 'late')
+          );
         
         // Fetch all class configs from 'classes' collection
         const classConfigSnapshot = await getDocs(collection(db, 'classes'));
@@ -175,6 +193,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           ) as PermissionRecord[];
         
         setAttendance(attendanceData);
+        setMonthlyAttendance(monthlyAttendanceData);
         setAllClassConfigs(allConfigs);
         setPermissions(permissionsData);
         setLoadingAttendanceData(false);
@@ -271,6 +290,91 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
     } catch (error) {
       console.error('Error calculating today attendance status for', student.fullName, ':', error);
       return { status: "Unknown" };
+    }
+  };
+
+  // Calculate average arrival time for a student in the current month with ranking
+  const calculateAverageArrivalTime = (student: Student): string => {
+    if (!allClassConfigs || loadingAttendanceData || !monthlyAttendance.length) {
+      return "Loading...";
+    }
+
+    try {
+      // Get current month's attendance records for this student
+      const currentMonth = new Date().toISOString().slice(0, 7); // "2025-09"
+      const studentAttendance = monthlyAttendance.filter((record: any) => 
+        record.studentId === student.id && 
+        record.date && 
+        record.date.startsWith(currentMonth) &&
+        record.timeIn && 
+        (record.status === 'present' || record.status === 'late')
+      );
+
+      if (studentAttendance.length === 0) {
+        return "No data";
+      }
+
+      // Get student's class config for start time
+      const classId = student.class?.replace(/^Class\s+/i, '') || '';
+      const classConfig = allClassConfigs[classId];
+      
+      if (!classConfig?.shifts || !student.shift) {
+        return "No config";
+      }
+
+      const shiftConfig = classConfig.shifts[student.shift];
+      if (!shiftConfig?.startTime) {
+        return "No schedule";
+      }
+
+      // Calculate differences for each day
+      const differences: number[] = [];
+      
+      studentAttendance.forEach((record: any) => {
+        const timeIn = record.timeIn;
+        const startTime = shiftConfig.startTime;
+        
+        if (timeIn && startTime) {
+          const [timeInHour, timeInMinute] = timeIn.split(':').map(Number);
+          const [startHour, startMinute] = startTime.split(':').map(Number);
+          
+          const timeInMinutes = timeInHour * 60 + timeInMinute;
+          const startMinutes = startHour * 60 + startMinute;
+          
+          differences.push(timeInMinutes - startMinutes);
+        }
+      });
+
+      if (differences.length === 0) {
+        return "No data";
+      }
+
+      // Calculate average difference
+      const avgDifferenceMinutes = differences.reduce((sum, diff) => sum + diff, 0) / differences.length;
+      
+      // Format the result
+      if (Math.abs(avgDifferenceMinutes) < 1) {
+        return "on time";
+      } else if (avgDifferenceMinutes > 0) {
+        const hours = Math.floor(avgDifferenceMinutes / 60);
+        const minutes = Math.round(avgDifferenceMinutes % 60);
+        if (hours > 0) {
+          return `+${hours}h ${minutes}m late`;
+        } else {
+          return `+${minutes}m late`;
+        }
+      } else {
+        const hours = Math.floor(Math.abs(avgDifferenceMinutes) / 60);
+        const minutes = Math.round(Math.abs(avgDifferenceMinutes) % 60);
+        if (hours > 0) {
+          return `-${hours}h ${minutes}m early`;
+        } else {
+          return `-${minutes}m early`;
+        }
+      }
+    } catch (error) {
+      console.error('Error calculating average arrival time for', student.fullName, ':', error);
+      return "Error";
     }
   };
 
@@ -400,6 +504,11 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       return;
     }
     
+    // Prevent disabling name column - it should always be visible
+    if (columnId === 'name') {
+      return;
+    }
+    
     setColumns(prev => {
       const newColumns = prev.map(col => 
         col.id === columnId ? { ...col, enabled: !col.enabled } : col
@@ -421,6 +530,11 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       console.warn('Failed to clear column configuration from localStorage:', error);
     }
   };
+
+  // Calculate rankings for top performers (earliest and latest) by shift with minimum 5 data points
+  const shiftRankings = React.useMemo(() => {
+    return calculateShiftRankings(students, monthlyAttendance, allClassConfigs);
+  }, [students, monthlyAttendance, allClassConfigs]);
 
   // Get enabled columns
   const enabledColumns = columns.filter(col => col.enabled);
@@ -561,47 +675,77 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
     setSavingAttendance(true);
     try {
-      const batch = writeBatch(db);
       const todayStr = new Date().toISOString().split('T')[0];
       const currentTime = new Date();
+      const successfulMarks: string[] = [];
+      const failedMarks: string[] = [];
       
       for (const [studentId, isPresent] of attendanceChanges.entries()) {
         const student = students.find(s => s.id === studentId);
-        if (!student) continue;
+        if (!student) {
+          failedMarks.push(`Student not found for ID: ${studentId}`);
+          continue;
+        }
 
-        // Check if attendance record already exists for today
-        const existingRecord = attendance.find(record => 
-          record.studentId === studentId && record.date === todayStr
-        );
+        try {
+          if (isPresent) {
+            // For present students, use the main markAttendance function to get proper late/present logic
+            // and 12NKGS Saturday handling
+            const status = await markAttendance(
+              student,
+              student.shift || 'Morning', // Default to Morning if shift is not set
+              allClassConfigs || {},
+              () => {} // Empty sound function
+            );
+            successfulMarks.push(`${student.fullName}: ${status}`);
+          } else {
+            // For absent students, create manual record since markAttendance doesn't handle absent
+            // Check if attendance record already exists for today
+            const existingRecord = attendance.find(record => 
+              record.studentId === studentId && record.date === todayStr
+            );
 
-        if (existingRecord) {
-          // Update existing record
-          const attendanceRef = doc(db, "attendance", existingRecord.id);
-          batch.update(attendanceRef, {
-            status: isPresent ? 'present' : 'absent',
-            timestamp: currentTime,
-            method: 'manual'
-          });
-        } else {
-          // Create new record
-          const attendanceRef = doc(collection(db, "attendance"));
-          batch.set(attendanceRef, {
-            authUid: student.authUid || null, // Use student's authUid if available
-            class: student.class,
-            date: todayStr,
-            method: 'manual',
-            shift: student.shift,
-            status: isPresent ? 'present' : 'absent',
-            studentId: studentId,
-            studentName: student.fullName,
-            timestamp: currentTime
-          });
+            if (existingRecord) {
+              // Update existing record to absent
+              const attendanceRef = doc(db, "attendance", existingRecord.id);
+              await setDoc(attendanceRef, {
+                ...existingRecord,
+                status: 'absent',
+                timestamp: currentTime,
+                method: 'manual'
+              }, { merge: true });
+            } else {
+              // Create new absent record
+              const attendanceRef = doc(collection(db, "attendance"));
+              await setDoc(attendanceRef, {
+                authUid: student.authUid || null,
+                class: student.class,
+                date: todayStr,
+                method: 'manual',
+                shift: student.shift,
+                status: 'absent',
+                studentId: studentId,
+                studentName: student.fullName,
+                timestamp: currentTime
+              });
+            }
+            successfulMarks.push(`${student.fullName}: absent`);
+          }
+        } catch (error) {
+          console.error(`Error marking attendance for ${student.fullName}:`, error);
+          failedMarks.push(`${student.fullName}: ${error.message || 'Unknown error'}`);
         }
       }
-
-      await batch.commit();
       
-      toast.success(`Saved attendance for ${attendanceChanges.size} students`);
+      // Show results
+      if (successfulMarks.length > 0) {
+        toast.success(`Saved attendance for ${successfulMarks.length} students`);
+      }
+      if (failedMarks.length > 0) {
+        toast.error(`Failed to save attendance for ${failedMarks.length} students`);
+        console.error('Failed marks:', failedMarks);
+      }
+      
       setAttendanceChanges(new Map());
       
       // Refresh attendance data
@@ -1007,7 +1151,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
       {/* Column Selection Panel */}
       <ColumnToggle 
-        columns={columns} 
+        columns={columns.filter(col => col.id !== 'name')} 
         onToggleColumn={toggleColumn}
         onResetColumns={resetColumnsToDefault}
         isBatchEditMode={isBatchEditMode}
@@ -1085,6 +1229,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   getTodayAttendanceStatus={getTodayAttendanceStatus}
                   isStudentCurrentlyPresent={isStudentCurrentlyPresent}
                   onAttendanceChange={handleAttendanceChange}
+                  calculateAverageArrivalTime={calculateAverageArrivalTime}
+                  shiftRankings={shiftRankings}
                   forceCollapsed={isClassCollapsed(className)}
                   onClassToggle={handleClassToggle}
                   expandedClasses={expandedClasses}
@@ -1110,6 +1256,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   getTodayAttendanceStatus={getTodayAttendanceStatus}
                   isStudentCurrentlyPresent={isStudentCurrentlyPresent}
                   onAttendanceChange={handleAttendanceChange}
+                  calculateAverageArrivalTime={calculateAverageArrivalTime}
+                  shiftRankings={shiftRankings}
                   forceCollapsed={isClassCollapsed(className)}
                   onClassToggle={handleClassToggle}
                   expandedClasses={expandedClasses}
@@ -1169,6 +1317,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 getTodayAttendanceStatus={getTodayAttendanceStatus}
                 isStudentCurrentlyPresent={isStudentCurrentlyPresent}
                 onAttendanceChange={handleAttendanceChange}
+                calculateAverageArrivalTime={calculateAverageArrivalTime}
+                shiftRankings={shiftRankings}
                 forceCollapsed={isClassCollapsed(className)}
                 onClassToggle={handleClassToggle}
                 expandedClasses={expandedClasses}

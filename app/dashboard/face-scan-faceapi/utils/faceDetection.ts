@@ -1,4 +1,5 @@
-import { Student, filterStudentsByShift } from './attendanceLogic';
+import { Student } from '../../../_interfaces';
+import { filterStudentsByShift } from '../../_lib/attendanceLogic';
 
 // Import face-api.js for browser use only
 let faceapi: any = null;

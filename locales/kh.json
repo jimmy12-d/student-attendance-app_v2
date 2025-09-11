@@ -105,6 +105,19 @@
     "sickness": "ឈី",
     "familyEvent": "ព្រឹត្តិការណ៍គ្រួសារ",
     "appointment": "ណាត់ជួប"
+  },
+  "shiftInfo": {
+    "morning": "ព្រឹក",
+    "afternoon": "រសៀល",
+    "evening": "ល្ងាច",
+    "shift": "វេន",
+    "classStarts": "ថ្នាក់រៀនចាប់ផ្តើមម៉ោង",
+    "avgArrival": "មធយម មកដល់",
+    "calculating": "កំពុងគណនា...",
+    "onTime": "ត្រឹមម៉ោង",
+    "early": "មុនម៉ោង",
+    "late": "យឺត",
+    "reallyLate": "យឺតខ្លាំង"
   }
 },
 "mockExam": {

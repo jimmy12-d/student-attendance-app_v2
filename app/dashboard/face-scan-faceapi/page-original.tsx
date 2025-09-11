@@ -14,7 +14,8 @@ import CustomDropdown from '../students/components/CustomDropdown';
 import Icon from '../../_components/Icon';
 
 // Import utilities
-import { Student, filterStudentsByShift, markAttendance } from './utils/attendanceLogic';
+import { Student } from '../../_interfaces';
+import { filterStudentsByShift, markAttendance } from '../_lib/attendanceLogic';
 import { TrackedFace, initializeFaceApi, detectAllFaces, calculateFaceDistance } from './utils/faceDetection';
 
 const FaceApiAttendanceScanner = () => {

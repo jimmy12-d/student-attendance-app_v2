@@ -13,7 +13,6 @@ import { useRouter } from 'next/navigation';
 import { usePWANavigation } from '@/app/_hooks/usePWANavigation';
 import { usePWAInstall } from '@/app/_hooks/usePWAInstall';
 import { useTranslations, useLocale } from 'next-intl';
-import { motion } from 'framer-motion';
 
 // --- Import components for settings ---
 import NotificationSettings from '../_components/NotificationSettings';
@@ -79,13 +78,13 @@ const SettingsListItem = ({
     </>
   );
 
-  const itemClassName = "flex items-center justify-between p-5 transition-all duration-200 touch-manipulation";
+  const itemClassName = "flex items-center justify-between p-5 touch-manipulation";
 
   if (href) {
     return (
       <Link 
         href={href} 
-        className={`${itemClassName} hover:bg-gray-50 dark:hover:bg-slate-700/50 active:scale-[0.99]`}
+        className={`${itemClassName} hover:bg-gray-50 dark:hover:bg-slate-700/50`}
         style={{ WebkitTapHighlightColor: 'transparent' }}
       >
         {content}
@@ -96,7 +95,7 @@ const SettingsListItem = ({
   return (
     <div 
       onClick={onClick} 
-      className={`${itemClassName} ${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 active:scale-[0.99]' : ''}`}
+      className={`${itemClassName} ${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50' : ''}`}
       style={{ WebkitTapHighlightColor: 'transparent' }}
     >
       {content}
@@ -168,72 +167,47 @@ const AccountPage = () => {
         onConfirm={() => setShowIOSInstructions(false)}
         onCancel={() => setShowIOSInstructions(false)}
       >
-        <motion.div 
+        <div 
           key={locale}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
           className={khmerFont('space-y-3 text-sm')}
         >
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
+          <p>
             {t('installIOSIntro')}
-          </motion.p>
-          <motion.ol 
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
+          </p>
+          <ol 
             className="list-decimal list-inside space-y-2 text-gray-600 dark:text-gray-300"
           >
-            <motion.li 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
+            <li 
               className={khmerFont()}
             >
               {t.rich('installIOSStep1', {
                 strong: (chunks) => <strong>{chunks}</strong>
               })}
-            </motion.li>
-            <motion.li 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.4 }}
+            </li>
+            <li 
               className={khmerFont()}
             >
               {t.rich('installIOSStep2', {
                 strong: (chunks) => <strong>{chunks}</strong>
               })}
-            </motion.li>
-            <motion.li 
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: 0.5 }}
+            </li>
+            <li 
               className={khmerFont()}
             >
               {t.rich('installIOSStep3', {
                 strong: (chunks) => <strong>{chunks}</strong>
               })}
-            </motion.li>
-          </motion.ol>
-        </motion.div>
+            </li>
+          </ol>
+        </div>
       </CardBoxModal>
 
-      <motion.div 
+      <div 
         key={locale}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeInOut" }}
         className="px-1"
       >
         {/* Modern Header */}
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
+        <div 
           className="text-center mb-6"
         >
             <div className="flex items-center justify-center space-x-3 mb-2">
@@ -247,20 +221,13 @@ const AccountPage = () => {
           <p className={khmerFont('text-gray-500 dark:text-gray-400 text-sm')}>
             {t('pageDescription')}
           </p>
-        </motion.div>
+        </div>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+        <div 
           className="space-y-6"
         >
           {/* Preferences Group */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
+          <div>
             <h2 className={khmerFont('text-base font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4')}>
               {t('preferencesHeading')}
             </h2>
@@ -298,14 +265,10 @@ const AccountPage = () => {
                 <DarkModeToggle />
               </SettingsListItem>
             </SettingsGroup>
-          </motion.div>
+          </div>
           
           {/* App Installation Group */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: 0.4 }}
-          >
+          <div>
             <h2 className={khmerFont('text-base font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4')}>
               {t('installationHeading')}
             </h2>
@@ -333,7 +296,7 @@ const AccountPage = () => {
                   titleClassName={khmerFont()}
                   subtitleClassName={khmerFont()}
                 >
-                  <div className={khmerFont('bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors')}>
+                  <div className={khmerFont('bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg')}>
                     {t('installButton')}
                   </div>
                 </SettingsListItem>
@@ -352,14 +315,10 @@ const AccountPage = () => {
                 </SettingsListItem>
               )}
             </SettingsGroup>
-          </motion.div>
+          </div>
           
           {/* Account Actions Group */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.4, delay: 0.5 }}
-          >
+          <div>
             <h2 className={khmerFont('text-base font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4')}>
               {t('accountHeading')}
             </h2>
@@ -375,9 +334,9 @@ const AccountPage = () => {
                 subtitleClassName={khmerFont()}
               />
             </SettingsGroup>
-          </motion.div>
-        </motion.div>
-      </motion.div>
+          </div>
+        </div>
+      </div>
     </>
   );
 };

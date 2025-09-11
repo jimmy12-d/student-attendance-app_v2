@@ -1,52 +1,287 @@
-# [Admin One &mdash; Free React Tailwind 4.x Admin Dashboard with dark mode](https://justboil.me/tailwind-admin-templates/free-react-dashboard/)
+# Student Attendance Management System
 
-[![version](https://img.shields.io/github/v/release/justboil/admin-one-react-tailwind)](https://justboil.me/tailwind-admin-templates/free-react-dashboard/)  [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://justboil.me/tailwind-admin-templates/free-react-dashboard/)
+A comprehensive web-based attendance management system built with Next.js, React, TypeScript, and Firebase. The system features face recognition technology, real-time attendance tracking, and advanced reporting capabilities.
 
-### Tailwind 4.x React with Next.js and TypeScript
+## 🌟 Features
 
-[![Free React Tailwind TypeScript admin dashboard with dark mode](https://static.justboil.me/templates/one/repo-tailwind-react.png?v=4)](https://justboil.github.io/admin-one-react-tailwind/)
+### Core Functionality
+- **Face Recognition Attendance**: Automated attendance marking using face-api.js
+- **Manual Attendance**: Teachers can manually mark attendance for students
+- **Real-time Dashboard**: Live attendance monitoring and statistics
+- **Multi-shift Support**: Morning, Afternoon, and Evening shifts
+- **Class Management**: Support for multiple classes with individual configurations
 
-[![React TypeScript Tailwind white & dark styles](https://static.justboil.me/templates/one/repo-styles.png)](https://justboil.github.io/admin-one-react-tailwind/)
+### Advanced Features
+- **Smart Late Detection**: Configurable grace periods and late cutoff times
+- **Attendance Analytics**: Monthly reports, consecutive absence tracking
+- **Average Arrival Time**: Calculate student punctuality patterns
+- **Permission Management**: Handle approved absences and permissions
+- **Timestamp Editing**: Retroactive attendance corrections
+- **Data Export**: Print-friendly attendance reports
 
-### Tailwind 4.x React with Next.js and TypeScript
+### User Roles
+- **Admin**: Full system access and configuration
+- **Teacher**: Class-specific attendance management
+- **Student**: Personal attendance history (via student portal)
 
-**Admin One** is fast, beautiful and free React Next Tailwind CSS 4.x admin dashboard with TypeScript. 
+## 🏗️ Tech Stack
 
-* Built with **TypeScript**, **React**, **Tailwind CSS 4** framework & **Next.js** with **app router**
-* **React Redux** state library &mdash; [Info](https://react-redux.js.org/)
-* **Dark mode**
-* **Production CSS** is only **&thickapprox;38kb**
-* Reusable components
-* Free under MIT License
-* [Premium version](https://justboil.me/tailwind-admin-templates/react-dashboard/) available
+- **Frontend**: Next.js 14, React 18, TypeScript
+- **Styling**: Tailwind CSS
+- **Authentication**: Firebase Auth
+- **Database**: Firebase Firestore
+- **Face Recognition**: face-api.js
+- **UI Components**: Custom components with MDI icons
+- **State Management**: React Context API
+- **Deployment**: Vercel (recommended)
 
-## Table of Contents
+## 📁 Project Structure
 
-* [Vue version](#looking-for-vue-version)
-* [Responsive layout](#responsive-layout)
-  * [Mobile & tablet](#mobile--tablet)
-  * [Small laptops](#small-laptops-1024px)
-  * [Laptops & desktops](#laptops--desktops)
-* [Demo](#demo)
-  * [Free dashboard demo](#free-dashboard-demo)
-  * [Premium dashboard demo](#premium-dashboard-demo)
-* [Quick Start](#quick-start)
-  * [Get code & install](#get-code--install)
-  * [Builds](#builds)
-  * [Linting and formatting](#linting-and-formatting)
-* [Docs](#docs)
-* [Browser Support](#browser-support)
-* [Reporting Issues](#reporting-issues)
-* [Licensing](#licensing)
-* [Useful Links](#useful-links)
+```
+student-attendance-app-main_v2/
+├── app/                          # Next.js App Router
+│   ├── dashboard/               # Main dashboard application
+│   │   ├── _components/         # Reusable UI components
+│   │   ├── _contexts/          # React contexts
+│   │   ├── _hooks/             # Custom React hooks
+│   │   ├── _interfaces/        # TypeScript interfaces
+│   │   ├── _lib/               # Utility functions and logic
+│   │   │   ├── attendanceLogic.ts  # Core attendance calculations
+│   │   │   └── configForAttendanceLogic.ts  # Class configurations
+│   │   ├── _stores/            # State management
+│   │   ├── admin/              # Admin panel
+│   │   ├── students/           # Student management
+│   │   ├── teacher/            # Teacher dashboard
+│   │   └── api/                # API routes
+│   ├── login/                  # Authentication pages
+│   └── layout.tsx              # Root layout
+├── scripts/                    # Database scripts and utilities
+├── face-recognition-service/   # Python face recognition service
+├── public/                     # Static assets
+├── firestore-upload/          # Database seeding scripts
+└── database-backups/          # Backup storage
+```
 
-## Looking for Vue version?
+## 🚀 Getting Started
 
-This is **Tailwind React TypeScript** version
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Firebase project
+- Git
 
-Looking for **Tailwind Vue**? Check [Admin One - Vue Tailwind dashboard](https://github.com/justboil/admin-one-vue-tailwind) version
+### Installation
 
-## Responsive layout
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/jimmy12-d/student-attendance-app_v2.git
+   cd student-attendance-app_v2
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   Create a `.env.local` file in the root directory:
+   ```env
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   ```
+
+4. **Set up Firebase**
+   - Create a Firebase project
+   - Enable Authentication and Firestore
+   - Download service account key to `firestore-upload/serviceAccountKey.json`
+
+5. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open your browser**
+   Navigate to `http://localhost:3000`
+
+## 📊 Core Features
+
+### Attendance Logic
+The system uses sophisticated attendance calculations defined in `attendanceLogic.ts`:
+
+- **Daily Status Calculation**: Determines if a student is Present, Late, Absent, or has Permission
+- **Monthly Statistics**: Tracks absences, late arrivals, and attendance patterns
+- **Average Arrival Time**: Calculates how early/late students typically arrive
+- **Consecutive Absences**: Monitors attendance streaks for early intervention
+
+### Average Arrival Time Calculation
+```typescript
+// Example usage in attendanceLogic.ts
+const avgArrival = calculateAverageArrivalTime(
+  student,
+  attendanceRecords,
+  '2025-09',
+  classConfigs
+);
+// Returns: { averageTime: "+5m late", details: "Avg arrival: +5m late (15 days in September 2025)" }
+```
+
+### Face Recognition
+- Uses face-api.js for browser-based face detection
+- Stores face descriptors securely in Firestore
+- Real-time recognition with confidence scoring
+- Fallback to manual attendance when needed
+
+### Class Configuration
+Each class can have custom settings:
+- Study days (which days of the week)
+- Shift schedules with start times
+- Grace periods for late marking
+- Special rules (e.g., Saturday schedules for specific classes)
+
+## 🎯 Key Components
+
+### TableAttendance.tsx
+- Main attendance display and editing interface
+- Shows warning rows for large time discrepancies
+- Uses `timeIn` field for display and editing
+- Calculates differences between arrival and start times
+
+### TableStudents.tsx
+- Student management with column toggling
+- Always shows student name (non-toggleable)
+- Calculates and displays average arrival times
+- Filters students by enrollment status
+
+### StudentRow.tsx
+- Individual student record display
+- Handles various data columns (name, stats, enrollment)
+- Supports average arrival time display
+
+### ColumnToggle.tsx
+- UI for toggling column visibility
+- Locks essential columns during special modes
+- Clean interface without showing always-visible columns
+
+## 📈 Attendance Analytics
+
+### Monthly Reports
+- Absence counts and trends
+- Late arrival statistics
+- Attendance percentage calculations
+- Permission tracking
+
+### Time Difference Analysis
+- Monitors discrepancies between `timeIn` and `startTime`
+- Flags records with differences > 90 minutes
+- Provides data for attendance accuracy improvements
+
+## 🔧 Configuration
+
+### Class Setup
+Classes are configured in `configForAttendanceLogic.ts`:
+```typescript
+export const AllClassConfigs = {
+  "12A": {
+    studyDays: [1, 2, 3, 4, 5], // Monday to Friday
+    shifts: {
+      "Morning": { startTime: "07:00" },
+      "Afternoon": { startTime: "13:00" }
+    }
+  }
+  // ... more classes
+};
+```
+
+### Environment Configuration
+- Development: `http://localhost:3000`
+- Production: Configure in Vercel or your hosting platform
+- Database: Firebase Firestore with security rules
+
+## 🛠️ Scripts and Utilities
+
+### Database Scripts
+Located in `/scripts/`:
+- `find-timein-starttime-differences.js`: Analyze time discrepancies
+- `update-attendance-starttime.js`: Bulk update start times
+- `check-september6-records.js`: Query specific date records
+- `list-attendance-records.js`: General database exploration
+
+### Face Recognition Service
+Python-based service in `/face-recognition-service/`:
+- Flask API for advanced face processing
+- Docker containerization
+- Requirements optimization for deployment
+
+## 📱 Responsive Design
+
+The application is fully responsive and works across:
+- Desktop computers (primary interface)
+- Tablets (teacher mobile interface)
+- Smartphones (student portal access)
+
+## 🔐 Security
+
+- Firebase Authentication for user management
+- Firestore security rules for data protection
+- Role-based access control
+- Secure face descriptor storage
+- Environment variable protection
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+1. Connect your GitHub repository to Vercel
+2. Set environment variables in Vercel dashboard
+3. Deploy automatically on push to main branch
+
+### Manual Deployment
+```bash
+npm run build
+npm start
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+For support and questions:
+- Create an issue on GitHub
+- Contact the development team
+- Check the documentation in `/docs/` (if available)
+
+## 🔄 Version History
+
+- **v2.0**: Major refactor with TypeScript and improved analytics
+- **v1.5**: Added face recognition capabilities
+- **v1.0**: Initial release with basic attendance tracking
+
+## 🎯 Future Roadmap
+
+- [ ] Mobile app for iOS/Android
+- [ ] Advanced analytics dashboard
+- [ ] Integration with school management systems
+- [ ] Automated reporting and notifications
+- [ ] Multi-language support
+- [ ] Enhanced face recognition accuracy
+- [ ] Offline mode support
+
+---
+
+**Built with ❤️ for educational institutions**
 
 ### Mobile & tablet
 

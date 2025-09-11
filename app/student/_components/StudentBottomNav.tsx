@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import Icon from '@/app/_components/Icon';
 import { mdiHome, mdiFileDocumentEdit, mdiAccountCircle } from '@mdi/js';
 import { useEffect, useState } from 'react';
@@ -51,11 +50,7 @@ export default function StudentBottomNav() {
   }
 
   return (
-    <motion.nav
-      initial={{ y: 100 }}
-      animate={{ y: 0 }}
-      exit={{ y: 100 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+    <nav
       // Use iOS safe area inset to keep the nav clearly separated from any system UI
       style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
       className="fixed left-1/2 -translate-x-1/2 w-[280px] sm:w-[320px] mx-auto z-40"
@@ -70,41 +65,31 @@ export default function StudentBottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className="relative z-10 flex flex-col items-center justify-center flex-1 h-14 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
+              className="relative z-10 flex flex-col items-center justify-center flex-1 h-14 text-sm font-medium text-gray-700 dark:text-gray-300"
             >
                 {isActive && (
-                    <motion.div
-                        layoutId="active-nav-highlight"
+                    <div
                         className="absolute inset-1 bg-white dark:bg-gray-700 rounded-full shadow-inner"
-                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                 )}
               <div className="flex flex-col items-center">
-                <motion.div 
-                  animate={{ scale: isActive ? 1.5 : 1, y: isActive ? -5 : 0 }} 
-                  transition={{ type: 'spring', stiffness: 300, damping: 20 }} 
+                <div 
                   className={`relative ${isActive ? 'pt-2.5' : 'pb-2'}` }
                   >
                   <Icon path={item.icon} size="24" className={isActive ? 'text-company-purple' : ''} />
-                </motion.div>
-                <AnimatePresence>
+                </div>
                   {!isActive && (
-                    <motion.span
+                    <span
                       className={`absolute bottom-1 text-xs ${locale === 'kh' ? 'khmer-font' : ''}`}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
                     >
                   {t(item.translationKey)}
-                    </motion.span>
+                    </span>
                   )}
-                </AnimatePresence>
               </div>
             </Link>
           );
         })}
       </div>
-    </motion.nav>
+    </nav>
   );
 } 

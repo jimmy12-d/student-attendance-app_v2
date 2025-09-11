@@ -60,6 +60,7 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {columns.map((column) => {
           const isLocked = (isBatchEditMode || isTakeAttendanceMode) && column.id === 'number';
+          
           return (
             <button
               key={column.id}
@@ -72,6 +73,7 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
                   ? 'border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                   : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-500 dark:text-gray-400'
               } ${!isLocked ? 'hover:shadow-md hover:scale-105' : ''}`}
+              title={isLocked ? 'Required for this mode' : undefined}
             >
               <span className="font-medium text-sm flex items-center">
                 {column.label}

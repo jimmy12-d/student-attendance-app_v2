@@ -1,5 +1,5 @@
 /**
- * Script to count and analyze shift field values in September 2025 attendance records
+ * Script to count and analyze startTime field values in September 2025 attendance records
  */
 
 const admin = require('firebase-admin');
@@ -29,9 +29,9 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-async function countSeptemberShiftField() {
+async function countSeptemberStartTimeField() {
   try {
-    console.log('🚀 Counting and analyzing shift field values for September 2025...\n');
+    console.log('🚀 Counting and analyzing startTime field values for September 2025...\n');
 
     // Query for records in September 2025
     const septemberQuery = db.collection('attendance')
@@ -47,86 +47,152 @@ async function countSeptemberShiftField() {
 
     console.log(`📊 Found ${septemberSnapshot.size} total attendance records for September 2025...\n`);
 
-    let recordsWithShift = [];
-    let recordsWithoutShift = [];
-    let shiftCounts = {};
-    let uniqueShifts = new Set();
+    let recordsWithStartTime = [];
+    let recordsWithoutStartTime = [];
+    let recordsWithoutStartTimeWithCutoff = [];
+    let recordsWithoutStartTimeWithoutCutoff = [];
+    let class12NKGSSaturdayRecords = [];
+    let startTimeCounts = {};
+    let uniqueStartTimes = new Set();
 
     // Process each record
     septemberSnapshot.docs.forEach((doc) => {
       const data = doc.data();
 
-      if (data.shift !== undefined && data.shift !== null && data.shift !== '') {
-        const shift = data.shift;
-        recordsWithShift.push({
+      if (data.startTime !== undefined && data.startTime !== null && data.startTime !== '') {
+        const startTime = data.startTime;
+        recordsWithStartTime.push({
           id: doc.id,
           studentName: data.studentName || 'Unknown',
           date: data.date,
-          shift: shift,
+          startTime: startTime,
           method: data.method || 'Unknown',
           timeIn: data.timeIn || 'N/A'
         });
 
-        // Count shifts
-        if (!shiftCounts[shift]) {
-          shiftCounts[shift] = 0;
+        // Count startTimes
+        if (!startTimeCounts[startTime]) {
+          startTimeCounts[startTime] = 0;
         }
-        shiftCounts[shift]++;
+        startTimeCounts[startTime]++;
 
-        // Track unique shifts
-        uniqueShifts.add(shift);
+        // Track unique startTimes
+        uniqueStartTimes.add(startTime);
       } else {
-        recordsWithoutShift.push({
+        // Check if record has cutoffTime
+        const hasCutoffTime = data.cutoffTime !== undefined && data.cutoffTime !== null && data.cutoffTime !== '';
+        
+        const record = {
           id: doc.id,
           studentName: data.studentName || 'Unknown',
           date: data.date,
-          method: data.method || 'Unknown'
-        });
+          method: data.method || 'Unknown',
+          cutoffTime: data.cutoffTime || 'N/A',
+          class: data.class || 'N/A',
+          shift: data.shift || 'N/A'
+        };
+
+        recordsWithoutStartTime.push(record);
+        
+        if (hasCutoffTime) {
+          recordsWithoutStartTimeWithCutoff.push(record);
+          
+          // Check for Class 12NKGS on Saturday
+          if (data.class && data.class.includes('12NKGS')) {
+            const recordDate = new Date(data.date);
+            const dayOfWeek = recordDate.getDay(); // 0 = Sunday, 6 = Saturday
+            
+            if (dayOfWeek === 6) { // Saturday
+              class12NKGSSaturdayRecords.push({
+                ...record,
+                dayOfWeek: 'Saturday'
+              });
+            }
+          }
+        } else {
+          recordsWithoutStartTimeWithoutCutoff.push(record);
+        }
       }
     });
 
-    console.log('📈 September 2025 Shift Field Analysis:');
+    console.log('📈 September 2025 StartTime Field Analysis:');
     console.log(`   📊 Total September records: ${septemberSnapshot.size}`);
-    console.log(`   ✅ Records with shift field: ${recordsWithShift.length}`);
-    console.log(`   ❌ Records without shift field: ${recordsWithoutShift.length}`);
-    console.log(`   🎯 Unique shift values: ${uniqueShifts.size}`);
+    console.log(`   ✅ Records with startTime field: ${recordsWithStartTime.length}`);
+    console.log(`   ❌ Records without startTime field: ${recordsWithoutStartTime.length}`);
+    console.log(`   🎯 Unique startTime values: ${uniqueStartTimes.size}`);
 
-    const withShiftPercentage = ((recordsWithShift.length / septemberSnapshot.size) * 100).toFixed(1);
-    const withoutShiftPercentage = ((recordsWithoutShift.length / septemberSnapshot.size) * 100).toFixed(1);
+    const withStartTimePercentage = ((recordsWithStartTime.length / septemberSnapshot.size) * 100).toFixed(1);
+    const withoutStartTimePercentage = ((recordsWithoutStartTime.length / septemberSnapshot.size) * 100).toFixed(1);
 
-    console.log(`   📈 Coverage: ${withShiftPercentage}% have shift, ${withoutShiftPercentage}% missing shift`);
+    console.log(`   📈 Coverage: ${withStartTimePercentage}% have startTime, ${withoutStartTimePercentage}% missing startTime`);
 
-    if (recordsWithShift.length > 0) {
-      console.log('\n📋 September Shift Distribution:');
-      const sortedShifts = Object.entries(shiftCounts)
+    // Add cutoffTime analysis for records without startTime
+    if (recordsWithoutStartTime.length > 0) {
+      const withCutoffPercentage = ((recordsWithoutStartTimeWithCutoff.length / recordsWithoutStartTime.length) * 100).toFixed(1);
+      const withoutCutoffPercentage = ((recordsWithoutStartTimeWithoutCutoff.length / recordsWithoutStartTime.length) * 100).toFixed(1);
+
+      console.log(`   🔍 CutoffTime Analysis (for records without startTime):`);
+      console.log(`      ✅ Have cutoffTime: ${recordsWithoutStartTimeWithCutoff.length} (${withCutoffPercentage}%)`);
+      console.log(`      ❌ Missing cutoffTime: ${recordsWithoutStartTimeWithoutCutoff.length} (${withoutCutoffPercentage}%)`);
+    }
+
+    if (recordsWithStartTime.length > 0) {
+      console.log('\n📋 September StartTime Distribution:');
+      const sortedStartTimes = Object.entries(startTimeCounts)
         .sort(([,a], [,b]) => b - a)
-        .forEach(([shift, count], index) => {
-          const percentage = ((count / recordsWithShift.length) * 100).toFixed(1);
-          console.log(`   ${index + 1}. "${shift}": ${count} records (${percentage}%)`);
+        .forEach(([startTime, count], index) => {
+          const percentage = ((count / recordsWithStartTime.length) * 100).toFixed(1);
+          console.log(`   ${index + 1}. "${startTime}": ${count} records (${percentage}%)`);
         });
 
-      console.log('\n📋 Sample September records with shift:');
-      recordsWithShift.slice(0, 15).forEach((record, index) => {
-        console.log(`   ${index + 1}. ${record.studentName} (${record.date}) - Shift: ${record.shift} - Method: ${record.method}`);
+      console.log('\n📋 Sample September records with startTime:');
+      recordsWithStartTime.slice(0, 15).forEach((record, index) => {
+        console.log(`   ${index + 1}. ${record.studentName} (${record.date}) - StartTime: ${record.startTime} - Method: ${record.method}`);
       });
 
-      if (recordsWithShift.length > 15) {
-        console.log(`   ... and ${recordsWithShift.length - 15} more records`);
+      if (recordsWithStartTime.length > 15) {
+        console.log(`   ... and ${recordsWithStartTime.length - 15} more records`);
       }
     }
 
-    if (recordsWithoutShift.length > 0) {
-      console.log('\n📋 Sample September records without shift:');
-      recordsWithoutShift.slice(0, 5).forEach((record, index) => {
-        console.log(`   ${index + 1}. ${record.studentName} (${record.date}) - Method: ${record.method}`);
+    if (recordsWithoutStartTime.length > 0) {
+      console.log('\n📋 All September records without startTime (44 records):');
+      recordsWithoutStartTime.forEach((record, index) => {
+        console.log(`   ${index + 1}. ${record.studentName} (${record.date}) - Method: ${record.method} - Status: ${record.status || 'N/A'}`);
       });
 
-      if (recordsWithoutShift.length > 5) {
-        console.log(`   ... and ${recordsWithoutShift.length - 5} more records`);
+      // Show breakdown of records with and without cutoffTime
+      if (recordsWithoutStartTimeWithCutoff.length > 0) {
+        console.log('\n📋 Sample records without startTime BUT with cutoffTime:');
+        recordsWithoutStartTimeWithCutoff.slice(0, 5).forEach((record, index) => {
+          console.log(`   ${index + 1}. ${record.studentName} (${record.date}) - CutoffTime: ${record.cutoffTime}`);
+        });
+      }
+
+      if (recordsWithoutStartTimeWithoutCutoff.length > 0) {
+        console.log('\n📋 Sample records without startTime AND without cutoffTime:');
+        recordsWithoutStartTimeWithoutCutoff.slice(0, 5).forEach((record, index) => {
+          console.log(`   ${index + 1}. ${record.studentName} (${record.date}) - No cutoffTime`);
+        });
       }
     }
 
-    console.log('\n🎉 September shift field analysis complete!');
+    // Special analysis for Class 12NKGS on Saturday
+    if (class12NKGSSaturdayRecords.length > 0) {
+      console.log('\n🎯 SPECIAL ANALYSIS: Class 12NKGS Saturday Records (with cutoffTime but no startTime):');
+      console.log(`   📊 Found ${class12NKGSSaturdayRecords.length} Class 12NKGS Saturday records with cutoffTime but missing startTime`);
+      
+      console.log('\n📋 All Class 12NKGS Saturday records:');
+      class12NKGSSaturdayRecords.forEach((record, index) => {
+        console.log(`   ${index + 1}. ${record.studentName} (${record.date}) - ${record.dayOfWeek}`);
+        console.log(`      Class: ${record.class} | Shift: ${record.shift} | CutoffTime: ${record.cutoffTime} | Method: ${record.method}`);
+      });
+    } else {
+      console.log('\n🎯 SPECIAL ANALYSIS: Class 12NKGS Saturday Records');
+      console.log('   📊 No Class 12NKGS Saturday records found with cutoffTime but missing startTime');
+    }
+
+    console.log('\n🎉 September startTime field analysis complete!');
 
   } catch (error) {
     console.error('❌ Error during analysis:', error);
@@ -136,7 +202,7 @@ async function countSeptemberShiftField() {
 
 // Main execution
 if (require.main === module) {
-  countSeptemberShiftField()
+  countSeptemberStartTimeField()
     .then(() => {
       console.log('\n✨ Script completed successfully!');
       process.exit(0);
@@ -147,4 +213,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { countSeptemberShiftField };
+module.exports = { countSeptemberStartTimeField };

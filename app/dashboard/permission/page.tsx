@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { mdiFileDocumentCheckOutline, mdiMagnify } from "@mdi/js";
+import { mdiFileDocumentCheckOutline, mdiMagnify, mdiChevronLeft, mdiChevronRight } from "@mdi/js";
 import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
 import PermissionCard from "./PermissionCard";
@@ -28,6 +28,10 @@ export default function ManagePermissionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(9); // 3x3 grid
   
   const fetchPermissions = useCallback(async () => {
     setLoading(true);
@@ -113,7 +117,26 @@ export default function ManagePermissionsPage() {
     });
 
     setFilteredPermissions(sorted);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [permissions, searchQuery, statusFilter, sortBy]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredPermissions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPermissions = filteredPermissions.slice(startIndex, endIndex);
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     fetchPermissions();
@@ -197,11 +220,29 @@ export default function ManagePermissionsPage() {
         </div>
 
         {/* Results Summary */}
-        <div className="mt-3 text-sm text-gray-600 dark:text-slate-400">
-          Showing {filteredPermissions.length} of {permissions.length} requests
-          {searchQuery && ` matching "${searchQuery}"`}
-          {statusFilter !== 'all' && ` with status "${statusFilter}"`}
-          {sortBy !== 'newest' && ` (sorted by ${sortBy.replace('_', ' ')})`}
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="text-sm text-gray-600 dark:text-slate-400">
+            Showing {startIndex + 1}-{Math.min(endIndex, filteredPermissions.length)} of {filteredPermissions.length} requests
+            {searchQuery && ` matching "${searchQuery}"`}
+            {statusFilter !== 'all' && ` with status "${statusFilter}"`}
+            {sortBy !== 'newest' && ` (sorted by ${sortBy.replace('_', ' ')})`}
+          </div>
+          
+          {/* Items per page selector */}
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-600 dark:text-slate-400">Show:</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+              className="px-2 py-1 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value={6}>6</option>
+              <option value={9}>9</option>
+              <option value={12}>12</option>
+              <option value={18}>18</option>
+            </select>
+            <span className="text-gray-600 dark:text-slate-400">per page</span>
+          </div>
         </div>
       </div>
       
@@ -230,15 +271,83 @@ export default function ManagePermissionsPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-          {filteredPermissions.map((permission) => (
-            <PermissionCard
-              key={permission.id}
-              permission={permission}
-              onUpdateRequest={handleUpdateRequest}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+            {currentPermissions.map((permission) => (
+              <PermissionCard
+                key={permission.id}
+                permission={permission}
+                onUpdateRequest={handleUpdateRequest}
+                allPermissions={permissions}
+              />
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-600 dark:text-slate-400">
+                Page {currentPage} of {totalPages}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {/* Previous Button */}
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                >
+                  <Icon path={mdiChevronLeft} size={16} />
+                  Previous
+                </button>
+
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          currentPage === pageNum
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Next Button */}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-2 text-sm font-medium text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                >
+                  Next
+                  <Icon path={mdiChevronRight} size={16} />
+                </button>
+              </div>
+              
+              <div className="text-sm text-gray-600 dark:text-slate-400">
+                {filteredPermissions.length} total requests
+              </div>
+            </div>
+          )}
+        </>
       )}
     </SectionMain>
   );
