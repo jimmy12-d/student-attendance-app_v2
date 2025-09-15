@@ -104,7 +104,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
               color: #111827 !important;
             }
             html.dark body {
-              background: linear-gradient(135deg, rgb(2 6 23) 0%, rgb(15 23 42) 50%, rgb(30 41 59) 100%) !important;
+              background: linear-gradient(135deg, rgb(12 16 35) 0%, rgb(15 23 42) 30%, rgb(30 41 59) 100%) !important;
               color: #f1f5f9 !important;
             }
           `}</style>

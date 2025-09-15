@@ -541,8 +541,8 @@ const AttendancePage = () => {
             <div className="relative overflow-hidden mx-1">
               {todayRecord && (
                 <div className={`${getStatusStyles(todayRecord.status).cardBg} rounded-2xl px-6 py-4 shadow-xl relative`}>
-                  {/* Date at top right */}
-                  <div className="absolute top-4 right-4">
+                  {/* Date at bottom right */}
+                  <div className="absolute bottom-3 right-4">
                     <p className={khmerFont('text-white-900 text-sm font-medium')}>
                       {new Date(todayRecord.date).toLocaleDateString('en-US', { 
                         month: 'long', 
@@ -587,7 +587,7 @@ const AttendancePage = () => {
 
         {/* Quick Actions - Mobile Enhanced */}
         <div className="space-y-6 px-2">
-          <h2 className={khmerFont('pt-2 font-bold text-2xl text-gray-900 dark:text-white')}>{t('quickActions')}</h2>
+          <h2 className={khmerFont('font-bold mb-4 text-2xl text-gray-900 dark:text-white')}>{t('quickActions')}</h2>
              {/* Mobile-optimized Action Cards */}
              <div className="space-y-5">
                {/* Request Attendance Card - Mobile Enhanced */}
@@ -677,7 +677,7 @@ const AttendancePage = () => {
              </div>
            </div>
 
-           {/* Summary Stats - Mobile Enhanced */}
+           {/* Summary Stats - Mobile Enhanced
            <div className="space-y-5 px-2">
              <div className="flex items-center justify-between">
                 <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('lastDaysSummary')}</h2>
@@ -758,11 +758,11 @@ const AttendancePage = () => {
                  </>
                )}
              </div>
-           </div>
+           </div> */}
 
            {/* Permissions History - Mobile Enhanced */}
            <div className="space-y-5 px-2">
-             <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('recentPermissions')}</h2>
+             <h2 className={khmerFont('font-bold mb-4 text-2xl text-gray-900 dark:text-white')}>{t('recentPermissions')}</h2>
              <div className="overflow-hidden">
                <OngoingPermissions permissions={ongoingPermissions} isLoading={loadingPermissions} />
              </div>

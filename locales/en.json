@@ -17,7 +17,10 @@
     "open": "Open",
     "yes": "Yes",
     "no": "No",
-    "logout": "Sign Out"
+    "logout": "Sign Out",
+    "morningShift": "Morning",
+    "afternoonShift": "Afternoon",
+    "eveningShift": "Evening"
   },
   "navigation": {
     "home": "Home",
@@ -106,17 +109,23 @@
       "requestSuccess": "Request sent successfully!",
       "noRecentActivity": "No recent activity.",
       "shiftInfo": {
-        "morning": "Morning",
-        "afternoon": "Afternoon", 
-        "evening": "Evening",
+        "morningShift": "Morning",
+        "afternoonShift": "Afternoon",
+        "eveningShift": "Evening",
         "shift": "Shift",
         "classStarts": "Class starts at",
-        "avgArrival": "Avg Arrival",
+        "avgArrival": "Average Arrival Time",
         "calculating": "Calculating...",
         "onTime": "On Time",
         "early": "Early",
         "late": "Late",
         "reallyLate": "Really Late"
+      },
+      "chart": {
+        "loadingData": "Loading chart data...",
+        "loadingDescription": "Please wait while we prepare your attendance chart.",
+        "noData": "No data available",
+        "notAvailable": "N/A"
       }
     },
     "mockExam": {

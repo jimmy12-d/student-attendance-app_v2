@@ -17,7 +17,10 @@
     "open": "បើក",
     "yes": "បាទ/ចាស",
     "no": "ទេ",
-    "logout": "ចាកចេញ"
+    "logout": "ចាកចេញ",
+    "morningShift": "វេនព្រឹក",
+    "afternoonShift": "វេនរសៀល",
+    "eveningShift": "វេនល្ងាច"
   },
   "navigation": {
     "home": "ទំព័រដើម",
@@ -59,7 +62,7 @@
       "present": "វត្តមាន",
       "absent": "អវត្តមាន",
       "late": "មកយឺត",
-      "permission": "ការអនុញ្ញាត",
+      "permission": "សុំច្បាប់",
       "permissionForm": "សុំច្បាប់",
       "quickActions": "សកម្មភាព",
       "requestAttendance": "ស្នើសុំវត្តមាន",
@@ -107,17 +110,23 @@
     "appointment": "ណាត់ជួប"
   },
   "shiftInfo": {
-    "morning": "ព្រឹក",
-    "afternoon": "រសៀល",
-    "evening": "ល្ងាច",
+    "morningShift": "ព្រឹក",
+    "afternoonShift": "រសៀល",
+    "eveningShift": "ល្ងាច",
     "shift": "វេន",
     "classStarts": "ថ្នាក់រៀនចាប់ផ្តើមម៉ោង",
-    "avgArrival": "មធយម មកដល់",
+    "avgArrival": "មធ្យមភាគ ពេលមកដល់",
     "calculating": "កំពុងគណនា...",
     "onTime": "ត្រឹមម៉ោង",
     "early": "មុនម៉ោង",
     "late": "យឺត",
     "reallyLate": "យឺតខ្លាំង"
+  },
+  "chart": {
+    "loadingData": "កំពុងផ្ទុកទិន្នន័យក្រាប...",
+    "loadingDescription": "សូមរង់ចាំខណៈពេលដែលយើងរៀបចំក្រាបវត្តមានរបស់អ្នក។",
+    "noData": "គ្មានទិន្នន័យ",
+    "notAvailable": "មិនមាន"
   }
 },
 "mockExam": {

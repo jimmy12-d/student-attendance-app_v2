@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { useLocale, useTranslations } from 'next-intl';
-import { calculateAverageArrivalTime } from '@/app/dashboard/_lib/attendanceLogic';
+import { calculateAverageArrivalTime, isSchoolDay } from '@/app/dashboard/_lib/attendanceLogic';
 import type { RawAttendanceRecord } from '@/app/dashboard/_lib/attendanceLogic';
 
 interface StudentData {
@@ -42,16 +42,17 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
   const [chartDimensions, setChartDimensions] = useState({ width: 1200, height: 320 });
   const [maxDaysToShow, setMaxDaysToShow] = useState(14); // Default for desktop
   const [initialScrollSet, setInitialScrollSet] = useState(false);
+  
+  // Drag scrolling state
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
 
   // Calculate average arrival time using the correct logic
-  const averageArrivalTime = React.useMemo(() => {
+  const { averageTime, averageDifference } = React.useMemo(() => {
     if (!studentData || !recentRecords || recentRecords.length === 0) {
-      return { averageTime: 'N/A', details: 'No data available' };
+      return { averageTime: t('chart.notAvailable'), details: t('chart.noData'), averageDifference: null };
     }
-    
-    // Debug: Log the data structure
-    console.log('HealthArrivalChart - recentRecords sample:', recentRecords[0]);
-    console.log('HealthArrivalChart - studentData:', studentData);
     
     // Get current month in YYYY-MM format
     const now = new Date();
@@ -67,8 +68,6 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
         }) : undefined),
       startTime: record.startTime || getShiftInfo(studentData.shift || '').startTime
     }));
-    
-    console.log('HealthArrivalChart - transformedRecords sample:', transformedRecords[0]);
     
     return calculateAverageArrivalTime(
       studentData as any, // Cast to match the Student interface from attendanceLogic
@@ -90,6 +89,8 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
     late: '#f97316', // orange-500
     onTime: '#3b82f6', // blue-500
     absent: '#ef4444', // red-500
+    pending: '#6b7280', // gray-500
+    permission: '#8b5cf6', // purple-500
     startLine: '#475569', // slate-600
     text: '#1e293b', // slate-800
     textLight: '#64748b', // slate-500
@@ -98,7 +99,7 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
   };
 
   // Chart configuration - reduced margins for bigger graph
-  const margin = { top: 40, right: 20, bottom: 60, left: 20 };
+  const margin = { top: 20, right: 120, bottom: 60, left: 20 };
   const innerWidth = chartDimensions.width - margin.left - margin.right;
   const innerHeight = chartDimensions.height - margin.top - margin.bottom;
 
@@ -115,24 +116,33 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
         const maxDays = getMaxDaysToShow(containerWidth);
-        
-        console.log('Container width:', containerWidth, 'Max days:', maxDays); // Debug log
-        
+                
         setMaxDaysToShow(maxDays);
         
-        // Calculate width based on all current month records for scrolling
+        // Calculate width based on all current month school day records for scrolling
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
         
-        const currentMonthRecords = recentRecords.filter(record => {
+        const currentMonthSchoolDayRecords = recentRecords.filter(record => {
           const recordDate = new Date(record.date);
-          return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+          const isCurrentMonth = recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+          
+          if (isCurrentMonth) {
+            // Get student's class config for study days
+            const classId = studentData?.class?.replace(/^Class\s+/i, '') || '';
+            const classConfig = classConfigs[classId];
+            const studyDays = classConfig?.studyDays;
+            
+            return isSchoolDay(recordDate, studyDays);
+          }
+          
+          return false;
         });
         
         // Add extra space for the average label on the right with padding for scrolling
-        const avgLabelSpace = 200; // Extra space for average label with padding
-        const requiredWidth = (currentMonthRecords.length * 40) + avgLabelSpace; // 40px per record + space for label
+        const avgLabelSpace = 450; // Increased space for average label
+        const requiredWidth = (currentMonthSchoolDayRecords.length * 40) + avgLabelSpace; // 40px per record + space for label
         
         setChartDimensions({
           width: Math.max(requiredWidth, containerWidth),
@@ -160,10 +170,78 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
       }
       window.removeEventListener('resize', handleResize);
     };
-  }, [recentRecords.length]);
+  }, [recentRecords.length, studentData, classConfigs]);
+
+  // Mouse drag scrolling functionality for desktop
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only enable drag scrolling on desktop (screen width > 768px)
+      if (window.innerWidth <= 768) return;
+      
+      setIsDragging(true);
+      setStartX(e.pageX - container.offsetLeft);
+      setScrollLeft(container.scrollLeft);
+      container.style.cursor = 'grabbing';
+      container.style.userSelect = 'none';
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      
+      const x = e.pageX - container.offsetLeft;
+      const walk = (x - startX) * 2; // Scroll speed multiplier
+      container.scrollLeft = scrollLeft - walk;
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      if (container) {
+        container.style.cursor = 'grab';
+        container.style.userSelect = 'auto';
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        container.style.cursor = 'grab';
+        container.style.userSelect = 'auto';
+      }
+    };
+
+    // Add event listeners
+    container.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    container.addEventListener('mouseleave', handleMouseLeave);
+
+    // Set initial cursor style for desktop
+    if (window.innerWidth > 768) {
+      container.style.cursor = 'grab';
+    }
+
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [isDragging, startX, scrollLeft]);
 
   useEffect(() => {
-    if (!svgRef.current || !studentData?.shift || !recentRecords.length) return;
+    if (!svgRef.current || !studentData?.shift || !recentRecords.length) {
+      console.log('Chart render skipped:', {
+        hasSvgRef: !!svgRef.current,
+        hasStudentData: !!studentData,
+        hasShift: !!studentData?.shift,
+        recordsLength: recentRecords.length
+      });
+      return;
+    }
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
@@ -177,23 +255,44 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
     const currentMonthRecords = recentRecords
       .filter(record => {
         const recordDate = new Date(record.date);
-        return recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+        const isCurrentMonth = recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear;
+        
+        // Only include dates that are school days
+        if (isCurrentMonth) {
+          // Get student's class config for study days
+          const classId = studentData?.class?.replace(/^Class\s+/i, '') || '';
+          const classConfig = classConfigs[classId];
+          const studyDays = classConfig?.studyDays;
+          
+          return isSchoolDay(recordDate, studyDays);
+        }
+        
+        return false;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Sort ascending: oldest first (left), newest last (right)
 
-    console.log('Total recentRecords:', recentRecords.length);
-    console.log('Current month records:', currentMonthRecords.length);
-    console.log('maxDaysToShow:', maxDaysToShow);
+    console.log('Chart data processing:', {
+      totalRecentRecords: recentRecords.length,
+      currentMonthRecords: currentMonthRecords.length,
+      studentClass: studentData?.class,
+      studentShift: studentData?.shift,
+      maxDaysToShow,
+      hasClassConfigs: !!classConfigs
+    });
 
-    if (currentMonthRecords.length === 0) return;
+    if (currentMonthRecords.length === 0) {
+      console.log('No current month records found, chart will be empty');
+      return;
+    }
 
     const shiftStartTime = getShiftInfo(studentData.shift).startTime;
 
     // Create scales
+    const avgLabelWidth = 35; // Reserve 30px for the average label
     const xScale = d3.scaleBand()
       .domain(currentMonthRecords.map((_, i) => i.toString()))
-      .range([margin.left, chartDimensions.width - margin.right])
-      .padding(0.2); // Reduced padding for less space
+      .range([0, innerWidth - avgLabelWidth]) // Leave space on the right for the label
+      .padding(0.2);
 
     const yScale = d3.scaleLinear()
       .domain([-35, 35]) // Early (-30) to Late (30)
@@ -247,11 +346,28 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
     absentGradient.append('stop').attr('offset', '0%').attr('stop-color', colors.absent).attr('stop-opacity', 0.9);
     absentGradient.append('stop').attr('offset', '100%').attr('stop-color', d3.color(colors.absent)?.darker(0.5).toString()).attr('stop-opacity', 0.7);
 
+    // Pending gradient - gray
+    const pendingGradient = defs.append('linearGradient')
+      .attr('id', 'pendingGradient')
+      .attr('x1', '0%').attr('y1', '0%')
+      .attr('x2', '0%').attr('y2', '100%');
+    pendingGradient.append('stop').attr('offset', '0%').attr('stop-color', colors.pending).attr('stop-opacity', 0.8);
+    pendingGradient.append('stop').attr('offset', '100%').attr('stop-color', colors.pending).attr('stop-opacity', 0.4);
+
+    // Permission gradient - purple
+    const permissionGradient = defs.append('linearGradient')
+      .attr('id', 'permissionGradient')
+      .attr('x1', '0%').attr('y1', '0%')
+      .attr('x2', '0%').attr('y2', '100%');
+    permissionGradient.append('stop').attr('offset', '0%').attr('stop-color', colors.permission).attr('stop-opacity', 0.7);
+    permissionGradient.append('stop').attr('offset', '100%').attr('stop-color', d3.color(colors.permission)?.darker(0.5).toString()).attr('stop-opacity', 0.3);
+
+
     // Add enhanced start time line (center line)
     g.append('line')
       .attr('class', 'start-line')
       .attr('x1', 0)
-      .attr('x2', innerWidth)
+      .attr('x2', innerWidth - avgLabelWidth)
       .attr('y1', yScale(0))
       .attr('y2', yScale(0))
       .attr('stroke', colors.startLine)
@@ -269,139 +385,158 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
       .attr('font-weight', '600')
       .attr('text-anchor', 'end')
       .attr('alignment-baseline', 'middle')
-      .text('On Time');
+      .style('font-family', locale === 'kh' ? 'var(--font-khmer), sans-serif' : 'inherit')
+      .text(t('shiftInfo.onTime'));
 
-    // Add enhanced average line if available
-    if (averageArrivalTime?.averageTime && averageArrivalTime.averageTime !== 'N/A') {
-      let avgMinutesFromStart = 0;
-      const avgTimeString = averageArrivalTime.averageTime;
+    // Draw average arrival time line if available
+    if (averageDifference !== null) {
+      const avgY = yScale(averageDifference);
+      const isLate = averageDifference > 0;
 
-      if (avgTimeString.includes('early')) {
-        const timeValue = parseFloat(avgTimeString.replace(/[^0-9.-]+/g, ''));
-        avgMinutesFromStart = -timeValue;
-      } else if (avgTimeString.includes('late')) {
-        const timeValue = parseFloat(avgTimeString.replace(/[^0-9.-]+/g, ''));
-        avgMinutesFromStart = timeValue;
-      }
+      const avgLine = g.append('line')
+        .attr('x1', 0)
+        .attr('x2', innerWidth - avgLabelWidth + 15) // Reduced extension to connect cleanly to badge
+        .attr('y1', avgY)
+        .attr('y2', avgY)
+        .attr('stroke', isLate ? colors.late : colors.present)
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '6,4') // Dashed line for average
+        .style('cursor', 'pointer');
 
-      const clampedAvg = Math.max(-30, Math.min(30, avgMinutesFromStart));
-      const avgLineY = yScale(clampedAvg);
-      const isLate = clampedAvg > 0;
+      // Add a creative label for the average line
+      const avgLabelGroup = g.append('g')
+        .attr('transform', `translate(${innerWidth - avgLabelWidth + 15}, ${avgY})`) // Position inside the reserved space
+        .style('cursor', 'pointer');
 
-      const avgLine = g.append('g').attr('class', 'avg-line');
+      // Add hover and click effects for average line and badge
+      const showAvgTooltip = function(event?: any) {
+        // Format the average time to replace 'm' with ' min' for better readability
+        const formattedAverageTime = averageTime.replace(/(\d+)m/g, '$1 min');
+        
+        const avgTooltipContent = `
+          <div style="text-align: center;">
+            <div style="font-weight: bold; margin-bottom: 4px; color: #E5E7EB;">${t('shiftInfo.avgArrival')}</div>
+            <div style="color: ${isLate ? '#FCD34D' : '#86EFAC'}; font-size: 11px;">${formattedAverageTime}</div>
 
-      // Enhanced average line with gradient
-      const avgLineGradient = defs.append('linearGradient')
-        .attr('id', 'avgLineGradient')
+          </div>
+        `;
+        
+        // Position tooltip below the average badge
+        const svgRect = svgRef.current!.getBoundingClientRect();
+        const tooltipX = svgRect.left + (innerWidth - avgLabelWidth + 30); // Position below the badge
+        const tooltipY = svgRect.top + avgY + 40;
+        
+        tooltip
+          .style('opacity', 1)
+          .html(avgTooltipContent)
+          .style('left', tooltipX + 'px')
+          .style('top', tooltipY + 'px');
+      };
+
+      const hideAvgTooltip = function() {
+        tooltip.style('opacity', 0);
+      };
+
+      // Add hover effects to average line
+      avgLine
+        .on('mouseenter', function() {
+          avgLine
+            .transition()
+            .duration(200)
+            .attr('stroke-width', 3);
+          showAvgTooltip();
+        })
+        .on('mouseleave', function() {
+          avgLine
+            .transition()
+            .duration(200)
+            .attr('stroke-width', 2);
+          hideAvgTooltip();
+        })
+        .on('click', function(event) {
+          showAvgTooltip(event);
+          // Auto-hide after 3 seconds
+          setTimeout(hideAvgTooltip, 3000);
+        });
+
+      // Add hover effects to average badge
+      avgLabelGroup
+        .on('mouseenter', function() {
+          avgLabelGroup
+            .transition()
+            .duration(200)
+            .attr('transform', `translate(${innerWidth - avgLabelWidth + 15}, ${avgY}) scale(1.05)`);
+          showAvgTooltip();
+        })
+        .on('mouseleave', function() {
+          avgLabelGroup
+            .transition()
+            .duration(200)
+            .attr('transform', `translate(${innerWidth - avgLabelWidth + 15}, ${avgY}) scale(1)`);
+          hideAvgTooltip();
+        })
+        .on('click', function(event) {
+          showAvgTooltip(event);
+          // Auto-hide after 3 seconds
+          setTimeout(hideAvgTooltip, 3000);
+        });
+
+      // Label background with gradient
+      const labelText = `Avg: ${averageTime}`;
+      const labelWidth = labelText.length * 6.5 + 40; // Increased padding for better visibility
+      
+      const avgGradientId = `avg-gradient-${isLate ? 'late' : 'early'}`;
+      
+      const avgGradient = defs.append('linearGradient')
+        .attr('id', avgGradientId)
         .attr('x1', '0%').attr('y1', '0%')
         .attr('x2', '100%').attr('y2', '0%');
-      avgLineGradient.append('stop').attr('offset', '0%').attr('stop-color', isLate ? colors.late : colors.present).attr('stop-opacity', 0.8);
-      avgLineGradient.append('stop').attr('offset', '50%').attr('stop-color', isLate ? colors.late : colors.present).attr('stop-opacity', 0.4);
-      avgLineGradient.append('stop').attr('offset', '100%').attr('stop-color', isLate ? colors.late : colors.present).attr('stop-opacity', 0.8);
+      
+      avgGradient.append('stop')
+        .attr('offset', '0%')
+        .attr('stop-color', isLate ? d3.color(colors.late)?.brighter(1.5).toString() : d3.color(colors.present)?.brighter(1.5).toString())
+        .attr('stop-opacity', 0.3);
+      avgGradient.append('stop')
+        .attr('offset', '100%')
+        .attr('stop-color', isLate ? colors.late : colors.present)
+        .attr('stop-opacity', 0.1);
 
-      // Main average line
-      avgLine.append('line')
-        .attr('x1', 0)
-        .attr('x2', innerWidth)
-        .attr('y1', avgLineY)
-        .attr('y2', avgLineY)
-        .attr('stroke', 'url(#avgLineGradient)')
-        .attr('stroke-width', 3)
-        .attr('stroke-dasharray', '8,4')
-        .attr('opacity', 0)
-        .transition()
-        .duration(1000)
-        .attr('opacity', 0.9);
-
-      // Average line markers at ends
-      avgLine.append('circle')
-        .attr('cx', 0)
-        .attr('cy', avgLineY)
-        .attr('r', 4)
-        .attr('fill', isLate ? colors.late : colors.present)
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2)
-        .attr('opacity', 0)
-        .transition()
-        .delay(500)
-        .duration(800)
-        .attr('opacity', 1);
-
-      avgLine.append('circle')
-        .attr('cx', innerWidth)
-        .attr('cy', avgLineY)
-        .attr('r', 4)
-        .attr('fill', isLate ? colors.late : colors.present)
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2)
-        .attr('opacity', 0)
-        .transition()
-        .delay(500)
-        .duration(800)
-        .attr('opacity', 1);
-
-      // Enhanced average label with background - moved to right side
-      const labelGroup = avgLine.append('g').attr('class', 'avg-label');
-
-      // Create a more prominent and readable average display
-      const labelText = `📊 Average: ${avgTimeString}`;
-      const labelWidth = labelText.length * 7 + 30; // Increased width for better readability
-      const labelHeight = 32; // Increased height
-      const labelX = innerWidth + 15; // Position closer to chart edge for easier scrolling
-      const labelY = avgLineY - labelHeight/2 + 16; // Center vertically on the line
-
-      // Enhanced background with better styling
-      labelGroup.append('rect')
-        .attr('x', labelX)
-        .attr('y', labelY)
+      avgLabelGroup.append('rect')
+        .attr('x', 0)
+        .attr('y', -16)
         .attr('width', labelWidth)
-        .attr('height', labelHeight)
-        .attr('fill', 'rgba(255, 255, 255, 0.98)')
-        .attr('stroke', isLate ? colors.late : colors.present)
-        .attr('stroke-width', 2.5)
+        .attr('height', 32)
         .attr('rx', 16)
         .attr('ry', 16)
-        .style('filter', 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))')
-        .attr('opacity', 0)
-        .transition()
-        .delay(800)
-        .duration(600)
-        .attr('opacity', 1);
-
-      // Enhanced text with better typography
-      labelGroup.append('text')
-        .attr('x', labelX + labelWidth/2)
-        .attr('y', labelY + labelHeight/2)
-        .attr('fill', isLate ? colors.late : colors.present)
-        .attr('font-size', '13px')
-        .attr('font-weight', '600')
-        .attr('text-anchor', 'middle')
-        .attr('alignment-baseline', 'middle')
-        .style('font-family', 'system-ui, -apple-system, sans-serif')
-        .text(labelText)
-        .attr('opacity', 0)
-        .transition()
-        .delay(1000)
-        .duration(600)
-        .attr('opacity', 1);
-
-      // Add a connecting line from the average line to the label
-      labelGroup.append('line')
-        .attr('x1', innerWidth)
-        .attr('y1', avgLineY)
-        .attr('x2', labelX)
-        .attr('y2', labelY + labelHeight/2)
+        .attr('fill', `url(#${avgGradientId})`)
         .attr('stroke', isLate ? colors.late : colors.present)
-        .attr('stroke-width', 2)
-        .attr('stroke-dasharray', '4,3')
-        .attr('opacity', 0)
-        .transition()
-        .delay(600)
-        .duration(800)
-        .attr('opacity', 0.7);
+        .attr('stroke-width', 1);
+        
+      // Icon
+      const iconPath = isLate 
+        ? "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z" // Clock outline
+        : "M7 2v11h3v9l7-12h-4l4-8z"; // Lightning bolt
+      
+      avgLabelGroup.append('path')
+        .attr('d', iconPath)
+        .attr('stroke', isLate ? colors.late : colors.present)
+        .attr('stroke-width', isLate ? '0' : '1.5') // No stroke for filled clock, stroke for lightning
+        .attr('stroke-linecap', 'round')
+        .attr('stroke-linejoin', 'round')
+        .attr('fill', isLate ? colors.late : 'none') // Fill clock, no fill for lightning
+        .attr('transform', `translate(10, -8) scale(0.7)`);
 
-      // Add subtle glow effect to the average line
-      avgLine.attr('filter', 'url(#glow)');
+      // Label text
+      avgLabelGroup.append('text')
+        .attr('x', 30)
+        .attr('y', 0) // Centered vertically
+        .attr('text-anchor', 'start')
+        .attr('alignment-baseline', 'middle') // Ensure vertical centering
+        .attr('fill', isLate ? colors.late : colors.present)
+        .style('font-size', '13px')
+        .style('font-weight', '600')
+        .style('font-family', locale === 'kh' ? 'var(--font-khmer), sans-serif' : 'inherit')
+        .text(labelText);
     }
 
     // Create enhanced tooltip
@@ -415,6 +550,7 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
       .style('padding', '10px 14px')
       .style('border-radius', '10px')
       .style('font-size', '12px')
+      .style('font-family', locale === 'kh' ? 'var(--font-khmer), sans-serif' : 'inherit')
       .style('pointer-events', 'none')
       .style('opacity', 0)
       .style('z-index', '1000')
@@ -445,21 +581,38 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
       const isLate = clampedMinutes > 0;   // Positive = late (after start time)
       const isOnTime = Math.abs(clampedMinutes) <= 2;
       const isAbsent = record.status === 'absent';
+      const isPermission = record.status === 'permission';
+      const isPending = record.status === 'pending' || record.status === 'requested';
       const isToday = record.date === todayString;
       
       const dayOfMonth = new Date(record.date).getDate();
-      const displayTime = isAbsent ? 'ABS' : (arrivalTime ? arrivalTime.substring(0, 5) : 'N/A');
+      const displayTime = isPending ? t('pending').toUpperCase().substring(0, 6) :
+                         isPermission ? t('permission').toUpperCase().substring(0, 4) :
+                         isAbsent ? t('absent').toUpperCase().substring(0, 3) : 
+                         (arrivalTime ? arrivalTime.substring(0, 5) : t('chart.notAvailable'));
       
       // --- NEW SOPHISTICATED RENDER LOGIC ---
+      const movableGroup = g.append('g').attr('class', 'movable-group');
       let shape;
 
-      if (isAbsent) {
+      if (isPending || isPermission) {
+        // Pending or Permission status - gray circle for pending, purple for permission
+        shape = movableGroup.append('circle')
+          .attr('cx', x + barWidth / 2)
+          .attr('cy', yScale(0))
+          .attr('r', barWidth / 4)
+          .attr('fill', `url(#${isPermission ? 'permissionGradient' : 'pendingGradient'})`)
+          .attr('stroke', isPermission ? colors.permission : colors.pending)
+          .attr('stroke-width', 2)
+          .attr('stroke-dasharray', '3,2'); // Dashed border for pending/permission
+
+      } else if (isAbsent) {
         const centerX = x + barWidth / 2;
         const centerY = yScale(0);
         const size = barWidth / 8; // Control the size of the 'X'
         
         // Draw an 'X' mark
-        shape = g.append('g')
+        shape = movableGroup.append('g')
           .attr('class', 'absent-x')
           .attr('transform', `translate(${centerX}, ${centerY})`);
           
@@ -481,7 +634,7 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
           .attr('stroke-linecap', 'round');
 
       } else if (isOnTime) {
-        shape = g.append('rect')
+        shape = movableGroup.append('rect')
           .attr('x', x)
           .attr('y', yScale(0) - 3)
           .attr('width', barWidth)
@@ -496,7 +649,7 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
         const yBase = yScale(0);
         const yValue = yScale(clampedMinutes);
         
-        shape = g.append('rect')
+        shape = movableGroup.append('rect')
           .attr('x', x)
           .attr('y', isLate ? yBase : yValue)
           .attr('width', barWidth)
@@ -517,14 +670,64 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
         .duration(500)
         .attr('opacity', 0.8);
 
-      // Add today's indicator - a subtle dot
+      // Add click event to the shape (bar) to show tooltip
+      shape.on('click', function(event) {
+        // Show tooltip for this bar
+        const statusText = isPending ? t('pending') :
+                          isPermission ? t('permission') :
+                          isAbsent ? t('absent') : 
+                          isOnTime ? t('shiftInfo.onTime') : 
+                          isEarly ? `${Math.abs(clampedMinutes)} min ${t('shiftInfo.early').toLowerCase()}` : 
+                          `${clampedMinutes} min ${t('shiftInfo.late').toLowerCase()}`;
+        const tooltipContent = `
+          <div style="text-align: center;">
+            <div style="font-weight: bold; margin-bottom: 4px; color: #E5E7EB;">${new Date(record.date).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}</div>
+            <div style="color: ${isPending ? '#9CA3AF' : isPermission ? '#A78BFA' : isAbsent ? '#FCA5A5' : isOnTime ? '#93C5FD' : isEarly ? '#86EFAC' : '#FCD34D'}; font-size: 11px;">${statusText}</div>
+          </div>
+        `;
+        
+        // Position tooltip next to the bar
+        const barCenterX = x + barWidth / 2;
+        const barCenterY = yScale(0);
+        const svgRect = svgRef.current!.getBoundingClientRect();
+        const tooltipX = svgRect.left + barCenterX + 15;
+        const tooltipY = svgRect.top + barCenterY - 15;
+        
+        tooltip
+          .style('opacity', 1)
+          .html(tooltipContent)
+          .style('left', tooltipX + 'px')
+          .style('top', tooltipY + 'px');
+        
+        // Subtle highlight for the bar
+        movableGroup
+          .transition()
+          .duration(200)
+          .attr('transform', 'scale(1.02)')
+          .style('filter', 'brightness(1.1)');
+          
+        // Auto-hide tooltip after 3 seconds
+        setTimeout(() => {
+          tooltip.style('opacity', 0);
+          movableGroup
+            .transition()
+            .duration(200)
+            .attr('transform', 'scale(1)')
+            .style('filter', 'brightness(1)');
+        }, 3000);
+      });
+
+      // Add today's indicator - circle background for the date
       if (isToday) {
+        // Circle background for today's date
         g.append('circle')
           .attr('cx', x + barWidth / 2)
-          .attr('y', innerHeight + 20)
-          .attr('r', 3)
+          .attr('cy', innerHeight + 40)
+          .attr('r', 14)
           .attr('fill', colors.onTime)
-          .attr('filter', 'url(#glow)')
+          .attr('fill-opacity', 0.15)
+          .attr('stroke', colors.onTime)
+          .attr('stroke-width', 2)
           .attr('opacity', 0)
           .transition()
           .delay(i * 30)
@@ -532,63 +735,160 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
           .attr('opacity', 1);
       }
       
-      // Add enhanced hover effects
-      g.on('mouseenter', function(event) {
+      // Add hover effects to the shape (bar) only
+      shape.on('mouseenter', function(event) {
         // Enhance the visual feedback
+        movableGroup
+          .transition()
+          .duration(200)
+          .attr('transform', 'scale(1.05)');
+        
         shape
           .transition()
           .duration(200)
           .attr('opacity', 1)
-          .attr('stroke-width', isAbsent ? 3 : 2.5)
-          .attr('transform', isAbsent ? `translate(${x + barWidth / 2}, ${yScale(0)}) scale(1.1)` : `translate(0, 0) scale(1.05)`);
+          .attr('stroke-width', isAbsent ? 3 : 2.5);
         
-        // Simplified Tooltip Content
-        const statusText = isAbsent ? 'Absent' : 
-                          isOnTime ? 'On Time' : 
-                          isEarly ? `${Math.abs(clampedMinutes)} min early` : 
-                          `${clampedMinutes} min late`;
+        // Show tooltip next to the bar
+        const statusText = isPending ? t('pending') :
+                          isPermission ? t('permission') :
+                          isAbsent ? t('absent') : 
+                          isOnTime ? t('shiftInfo.onTime') : 
+                          isEarly ? `${Math.abs(clampedMinutes)} min ${t('shiftInfo.early').toLowerCase()}` : 
+                          `${clampedMinutes} min ${t('shiftInfo.late').toLowerCase()}`;
         const tooltipContent = `
           <div style="text-align: center;">
             <div style="font-weight: bold; margin-bottom: 4px; color: #E5E7EB;">${new Date(record.date).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}</div>
-            <div style="color: ${isAbsent ? '#FCA5A5' : isOnTime ? '#93C5FD' : isEarly ? '#86EFAC' : '#FCD34D'}; font-size: 11px;">${statusText}</div>
+            <div style="color: ${isPending ? '#9CA3AF' : isPermission ? '#A78BFA' : isAbsent ? '#FCA5A5' : isOnTime ? '#93C5FD' : isEarly ? '#86EFAC' : '#FCD34D'}; font-size: 11px;">${statusText}</div>
           </div>
         `;
+        
+        // Position tooltip next to the bar
+        const barCenterX = x + barWidth / 2;
+        const barCenterY = yScale(0);
+        const svgRect = svgRef.current!.getBoundingClientRect();
+        const tooltipX = svgRect.left + barCenterX + 15;
+        const tooltipY = svgRect.top + barCenterY - 15;
         
         tooltip
           .style('opacity', 1)
           .html(tooltipContent)
-          .style('left', (event.pageX + 15) + 'px')
-          .style('top', (event.pageY - 15) + 'px');
+          .style('left', tooltipX + 'px')
+          .style('top', tooltipY + 'px');
       })
       .on('mouseleave', function() {
+        movableGroup
+          .transition()
+          .duration(200)
+          .attr('transform', 'scale(1)');
+
         shape
           .transition()
           .duration(200)
           .attr('opacity', 0.8)
-          .attr('stroke-width', isAbsent ? 2.5 : 1.5)
-          .attr('transform', isAbsent ? `translate(${x + barWidth / 2}, ${yScale(0)}) scale(1)` : 'translate(0, 0) scale(1)');
+          .attr('stroke-width', isAbsent ? 2.5 : 1.5);
         
         tooltip.style('opacity', 0);
       });
       
       // Day label at the bottom
-      g.append('text')
+      const dayLabel = g.append('text')
         .attr('x', x + barWidth / 2)
         .attr('y', innerHeight + 40)
         .attr('text-anchor', 'middle')
-        .attr('fill', isToday ? colors.onTime : colors.textLight)
+        .attr('alignment-baseline', 'middle')
+        .attr('fill', isToday ? 'white' : colors.textLight)
         .attr('font-size', '11px')
         .attr('font-weight', isToday ? 'bold' : '500')
+        .style('font-family', locale === 'kh' ? 'var(--font-khmer), sans-serif' : 'inherit')
         .style('pointer-events', 'none')
         .text(dayOfMonth)
-        .attr('opacity', 0)
-        .transition()
+        .attr('opacity', 0);
+      
+      // Animate the label
+      dayLabel.transition()
         .delay(i * 30 + 200)
         .duration(400)
         .attr('opacity', 1);
+      
+      // Ensure today's text appears above the circle
+      if (isToday) {
+        dayLabel.raise();
+      }
+
+      // Add clickable area for date labels
+      const dateClickArea = g.append('rect')
+        .attr('x', x)
+        .attr('y', innerHeight + 25)
+        .attr('width', barWidth)
+        .attr('height', 30)
+        .attr('fill', 'transparent')
+        .attr('cursor', 'pointer')
+        .attr('opacity', 0)
+        .on('mouseenter', function() {
+          // Highlight the date label on hover
+          dayLabel
+            .transition()
+            .duration(150)
+            .style('font-weight', '600')
+            .attr('fill', isToday ? '#ffffff' : colors.onTime);
+        })
+        .on('mouseleave', function() {
+          // Reset the date label
+          dayLabel
+            .transition()
+            .duration(150)
+            .style('font-weight', isToday ? 'bold' : '500')
+            .attr('fill', isToday ? 'white' : colors.textLight);
+        })
+        .on('click', function(event) {
+          // Show tooltip for this date
+          const statusText = isPending ? t('pending') :
+                            isPermission ? t('permission') :
+                            isAbsent ? t('absent') : 
+                            isOnTime ? t('shiftInfo.onTime') : 
+                            isEarly ? `${Math.abs(clampedMinutes)} min ${t('shiftInfo.early').toLowerCase()}` : 
+                            `${clampedMinutes} min ${t('shiftInfo.late').toLowerCase()}`;
+          const tooltipContent = `
+            <div style="text-align: center;">
+              <div style="font-weight: bold; margin-bottom: 4px; color: #E5E7EB;">${new Date(record.date).toLocaleDateString(locale, { month: 'short', day: 'numeric' })}</div>
+              <div style="color: ${isPending ? '#9CA3AF' : isPermission ? '#A78BFA' : isAbsent ? '#FCA5A5' : isOnTime ? '#93C5FD' : isEarly ? '#86EFAC' : '#FCD34D'}; font-size: 11px;">${statusText}</div>
+            </div>
+          `;
+          
+          // Position tooltip next to the bar
+          const barCenterX = x + barWidth / 2;
+          const barCenterY = yScale(0);
+          const svgRect = svgRef.current!.getBoundingClientRect();
+          const tooltipX = svgRect.left + barCenterX + 15;
+          const tooltipY = svgRect.top + barCenterY - 15;
+          
+          tooltip
+            .style('opacity', 1)
+            .html(tooltipContent)
+            .style('left', tooltipX + 'px')
+            .style('top', tooltipY + 'px');
+          
+          // Subtle highlight for the corresponding attendance bar
+          movableGroup
+            .transition()
+            .duration(200)
+            .attr('transform', 'scale(1.02)')
+            .style('filter', 'brightness(1.1)');
+            
+          // Auto-hide tooltip after 3 seconds
+          setTimeout(() => {
+            tooltip.style('opacity', 0);
+            movableGroup
+              .transition()
+              .duration(200)
+              .attr('transform', 'scale(1)')
+              .style('filter', 'brightness(1)');
+          }, 3000);
+        });
 
       // TimeIn label positioning based on arrival status
-      if (!isAbsent) {
+      if (!isAbsent && !isPending && !isPermission) {
         let timeInY;
         let arrowSymbol;
         let arrowColor;
@@ -610,7 +910,7 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
 
         // Add minimal modern arrow indicator next to timeIn text (only for early/late)
         if (isLate || isEarly) {
-          g.append('text')
+          movableGroup.append('text')
             .attr('x', x + barWidth / 2 - 12)
             .attr('y', timeInY)
             .attr('text-anchor', 'middle')
@@ -627,13 +927,14 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
             .attr('opacity', 0.8);
         }
 
-        g.append('text')
+        movableGroup.append('text')
           .attr('x', x + barWidth / 2 + 6)
           .attr('y', timeInY)
           .attr('text-anchor', 'middle')
           .attr('fill', isOnTime ? colors.onTime : isEarly ? colors.present : colors.late)
           .attr('font-size', '10px')
           .attr('font-weight', '500')
+          .style('font-family', locale === 'kh' ? 'var(--font-khmer), sans-serif' : 'inherit')
           .style('pointer-events', 'none')
           .text(displayTime)
           .attr('opacity', 0)
@@ -649,7 +950,7 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
       d3.select('body').selectAll('.d3-attendance-tooltip').remove();
     };
 
-  }, [recentRecords, studentData, chartDimensions, calculateMinutesFromStartTime, getShiftInfo, averageArrivalTime, locale, maxDaysToShow]);
+  }, [recentRecords, studentData, chartDimensions, calculateMinutesFromStartTime, getShiftInfo, averageTime, averageDifference, locale, maxDaysToShow, classConfigs]);
 
   // Auto-scroll to rightmost position (latest dates) on initial load
   useEffect(() => {
@@ -666,23 +967,25 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
     }
   }, [recentRecords.length, initialScrollSet]);
 
-  const hasData = averageArrivalTime?.averageTime && 
-                  averageArrivalTime.averageTime !== 'N/A' && 
-                  recentRecords.length > 0;
+  const hasData = averageTime && 
+                  averageTime !== t('chart.notAvailable') && 
+                  recentRecords.length > 0 &&
+                  studentData?.shift &&
+                  classConfigs;
 
   return (
     <div className={`w-full ${className}`}>
       {hasData ? (
         <div 
           ref={containerRef}
-          className="overflow-x-auto scrollbar-hide" // Better mobile scrolling
+          className="overflow-x-auto scrollbar-hide chart-container" // Better mobile scrolling
           style={{ 
             scrollBehavior: 'smooth', 
             scrollbarWidth: 'none', // Hide scrollbar for Firefox
             msOverflowStyle: 'none', // Hide scrollbar for IE/Edge
             WebkitOverflowScrolling: 'touch', // Better iOS scrolling
             touchAction: 'pan-x', // Allow horizontal scrolling on touch
-            paddingRight: '20px' // Add padding for better scrolling to average label
+            paddingRight: '20' // Add padding for better scrolling to average label
           }}
         >
           <style jsx>{`
@@ -692,13 +995,40 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
           `}</style>
           <style>
             {`
-              .scrollbar-hide {
-                -ms-overflow-style: none;  /* IE and Edge */
-                scrollbar-width: none;  /* Firefox */
+              /* Show scrollbars on desktop/laptop, hide on mobile */
+              @media (min-width: 769px) {
+                .scrollbar-hide {
+                  -ms-overflow-style: auto;  /* IE and Edge */
+                  scrollbar-width: auto;  /* Firefox */
+                }
+                .scrollbar-hide::-webkit-scrollbar {
+                  display: block; /* Chrome, Safari and Opera */
+                  height: 8px;
+                }
+                .scrollbar-hide::-webkit-scrollbar-track {
+                  background: rgba(0, 0, 0, 0.1);
+                  border-radius: 4px;
+                }
+                .scrollbar-hide::-webkit-scrollbar-thumb {
+                  background: rgba(0, 0, 0, 0.3);
+                  border-radius: 4px;
+                }
+                .scrollbar-hide::-webkit-scrollbar-thumb:hover {
+                  background: rgba(0, 0, 0, 0.5);
+                }
               }
-              .scrollbar-hide::-webkit-scrollbar {
-                display: none; /* Chrome, Safari and Opera */
+              
+              /* Hide scrollbars on mobile */
+              @media (max-width: 768px) {
+                .scrollbar-hide {
+                  -ms-overflow-style: none;  /* IE and Edge */
+                  scrollbar-width: none;  /* Firefox */
+                }
+                .scrollbar-hide::-webkit-scrollbar {
+                  display: none; /* Chrome, Safari and Opera */
+                }
               }
+              
               /* Improve touch scrolling on mobile */
               @media (max-width: 768px) {
                 .overflow-x-auto {
@@ -709,6 +1039,16 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
                   scroll-snap-align: start;
                 }
               }
+              
+              /* Drag cursor for desktop */
+              @media (min-width: 769px) {
+                .chart-container {
+                  cursor: grab;
+                }
+                .chart-container:active {
+                  cursor: grabbing;
+                }
+              }
             `}
           </style>
           <svg
@@ -716,6 +1056,23 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
             width={chartDimensions.width}
             height={chartDimensions.height}
           />
+        </div>
+      ) : !studentData || !classConfigs ? (
+        // Loading state when data dependencies are missing
+        <div className="flex flex-col items-center py-12">
+          <div className="relative">
+            <div className="w-24 h-24 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 rounded-full flex items-center justify-center mb-6 shadow-lg">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-400 dark:border-slate-500"></div>
+            </div>
+          </div>
+          <div className="text-center max-w-md">
+            <p className={khmerFont('text-gray-700 dark:text-gray-300 font-semibold text-lg mb-1')}>
+              {t('chart.loadingData')}
+            </p>
+            <p className={khmerFont('text-gray-500 dark:text-gray-400 text-sm leading-relaxed')}>
+              {t('chart.loadingDescription')}
+            </p>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center py-12">

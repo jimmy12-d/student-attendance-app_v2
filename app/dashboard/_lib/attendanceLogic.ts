@@ -259,7 +259,7 @@ export const calculateAverageArrivalTime = (
   attendanceForStudentInMonth: RawAttendanceRecord[],
   selectedMonthValue: string,
   allClassConfigs: AllClassConfigs | null
-): { averageTime: string; details: string } => {
+): { averageTime: string; details:string; averageDifference: number | null } => {
     const [year, monthIndex] = selectedMonthValue.split('-').map(Number).map((n, i) => i === 1 ? n - 1 : n);
     const monthLabel = new Date(year, monthIndex).toLocaleString('default', { month: 'long', year: 'numeric' });
     
@@ -272,7 +272,8 @@ export const calculateAverageArrivalTime = (
     if (year !== currentYear || monthIndex !== currentMonth) {
         return { 
             averageTime: 'N/A', 
-            details: `Only current month data is calculated (${new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long', year: 'numeric' })})` 
+            details: `Only current month data is calculated (${new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long', year: 'numeric' })})`,
+            averageDifference: null
         };
     }
     
@@ -289,7 +290,8 @@ export const calculateAverageArrivalTime = (
     if (validRecords.length === 0) {
         return { 
             averageTime: 'N/A', 
-            details: `No valid arrival times in current month (${monthLabel})` 
+            details: `No valid arrival times in current month (${monthLabel})`,
+            averageDifference: null
         };
     }
 
@@ -317,7 +319,8 @@ export const calculateAverageArrivalTime = (
     if (arrivalDifferences.length === 0) {
         return { 
             averageTime: 'N/A', 
-            details: `No parseable arrival times in current month (${monthLabel})` 
+            details: `No parseable arrival times in current month (${monthLabel})`,
+            averageDifference: null
         };
     }
 
@@ -330,7 +333,8 @@ export const calculateAverageArrivalTime = (
     
     return { 
         averageTime: averageTimeFormatted, 
-        details 
+        details,
+        averageDifference
     };
 };
 
