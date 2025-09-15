@@ -4,6 +4,7 @@ import { ColumnConfig } from './ColumnToggle';
 import { toast } from 'sonner';
 import { AbsentStatusTracker } from './AbsentStatusTracker';
 import { getStatusStyles } from '../../_lib/statusStyles';
+import { getPaymentStatus, getPaymentStatusDisplayText } from '../../_lib/paymentLogic';
 
 // Phone formatting utility
 const formatPhoneNumber = (phone: string | undefined | null): string => {
@@ -271,12 +272,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               </td>
             );
           case 'paymentStatus':
-            const currentYearMonth = new Date().toISOString().slice(0, 7); // "2025-07"
-            let paymentStatus: 'paid' | 'unpaid' | 'no-record' = 'no-record';
-            
-            if (student.lastPaymentMonth) {
-              paymentStatus = student.lastPaymentMonth >= currentYearMonth ? 'paid' : 'unpaid';
-            }
+            const paymentStatus = getPaymentStatus(student.lastPaymentMonth);
 
             return (
               <td key="paymentStatus" className="p-3 whitespace-nowrap">

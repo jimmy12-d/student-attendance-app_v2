@@ -3,6 +3,9 @@ import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../../../firebase-config";
 import { toast } from "sonner";
+import { getPaymentStatus } from "../../_lib/paymentLogic";
+import Icon from "../../../_components/Icon";
+import { mdiClockOutline } from "@mdi/js";
 
 // Phone formatting utility (matching StudentRow)
 const formatPhoneNumber = (phone: string | undefined | null): string => {
@@ -43,6 +46,7 @@ interface UnpaidStudent {
   telegramUsername?: string;
   hasTelegramUsername: boolean;
   lateFeePermission: boolean;
+  isNewStudent: boolean;
 }
 
 interface UnpaidStudentsTabProps {
@@ -131,12 +135,12 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
 
         if (payments.length > 0) {
           const lastPayment = payments[0];
-          lastPaymentDate = lastPayment.date.toLocaleDateString();
+          lastPaymentDate = lastPayment.date.toLocaleDateString('en-GB'); // dd/mm/yyyy format
           lastPaymentAmount = lastPayment.amount || 0;
           
-          // Check if student has paid for current month
-          // If lastPaymentMonth is not current month, they're unpaid
-          if (studentData.lastPaymentMonth !== currentMonthString) {
+          // Use new payment logic to determine if student is unpaid
+          const paymentStatus = getPaymentStatus(studentData.lastPaymentMonth);
+          if (paymentStatus !== 'paid') {
             isUnpaid = true;
             daysOverdue = Math.floor((now.getTime() - lastPayment.date.getTime()) / (1000 * 60 * 60 * 24));
           }
@@ -147,6 +151,109 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
         }
 
         if (isUnpaid) {
+          // Debug logging for the specific student
+          if (studentData.fullName === 'សុខ លីហួរ') {
+            console.log('Debug for សុខ លីហួរ:', {
+              paymentsLength: payments.length,
+              lastPaymentMonth: studentData.lastPaymentMonth,
+              createdAt: studentData.createdAt,
+              registeredAt: studentData.registeredAt,
+              hasCreatedAt: !!studentData.createdAt,
+              createdAtType: typeof studentData.createdAt,
+              createdAtRaw: JSON.stringify(studentData.createdAt)
+            });
+          }
+
+          // Determine display date based on payment history
+          let displayDate = lastPaymentDate;
+          let isTrialPeriod = false;
+
+          if (studentData.createdAt) {
+            // Handle Firebase timestamp format properly
+            let createdDate;
+            try {
+              if (typeof studentData.createdAt === 'object' && studentData.createdAt.toDate) {
+                // Firebase Timestamp object
+                createdDate = studentData.createdAt.toDate();
+                if (studentData.fullName === 'សុខ លីហួរ') {
+                  console.log('Using Firebase Timestamp object:', createdDate);
+                }
+              } else if (typeof studentData.createdAt === 'string') {
+                // Handle Firebase string format: "September 15, 2025 at 5:19:43 PM UTC+7"
+                let dateStr = studentData.createdAt;
+                
+                // Remove the UTC+7 part and clean up
+                dateStr = dateStr.replace(' UTC+7', '').replace(' ', ' ');
+                
+                // Try parsing the full string first
+                createdDate = new Date(dateStr);
+                
+                if (isNaN(createdDate.getTime())) {
+                  // If that fails, try parsing just the date part
+                  const dateOnly = dateStr.split(' at ')[0];
+                  createdDate = new Date(dateOnly);
+                  
+                  if (isNaN(createdDate.getTime())) {
+                    // Try manual parsing for "Month DD, YYYY at HH:MM:SS AM/PM" format
+                    const match = dateStr.match(/(\w+)\s+(\d+),\s+(\d+)\s+at\s+(\d+):(\d+):(\d+)\s*(AM|PM)/i);
+                    if (match) {
+                      const [, month, day, year, hour, minute, second, ampm] = match;
+                      const hour24 = ampm.toUpperCase() === 'PM' ? (parseInt(hour) % 12) + 12 : parseInt(hour) % 12;
+                      createdDate = new Date(parseInt(year), new Date(`${month} 1`).getMonth(), parseInt(day), hour24, parseInt(minute), parseInt(second));
+                    }
+                  }
+                }
+                
+                if (studentData.fullName === 'សុខ លីហួរ') {
+                  console.log('Parsed string date:', dateStr, 'Result:', createdDate, 'Is valid:', !isNaN(createdDate.getTime()));
+                }
+              } else {
+                // Fallback to direct Date constructor
+                createdDate = new Date(studentData.createdAt);
+                if (studentData.fullName === 'សុខ លីហួរ') {
+                  console.log('Using fallback Date constructor:', createdDate);
+                }
+              }
+              
+              // Validate the date
+              if (isNaN(createdDate.getTime())) {
+                throw new Error('Invalid date after all parsing attempts');
+              }
+              
+              if (studentData.fullName === 'សុខ លីហួរ') {
+                console.log('Final parsed date:', createdDate.toLocaleDateString('en-GB')); // dd/mm/yyyy format
+              }
+              
+              const daysSinceCreation = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+
+              // Condition 3: Check if in trial period (created < 3 days ago)
+              isTrialPeriod = daysSinceCreation < 3;
+
+              // Condition 1 & 2: Show appropriate date
+              if (payments.length > 0) {
+                // Has previous payments - show last payment date (already set above)
+                displayDate = lastPaymentDate;
+              } else {
+                // No previous payments - show enrollment date (createdAt) in dd/mm/yyyy format
+                // This covers cases where lastPaymentMonth is "" or null or "Never"
+                displayDate = createdDate.toLocaleDateString('en-GB'); // dd/mm/yyyy format
+                if (studentData.fullName === 'សុខ លីហួរ') {
+                  console.log('Setting enrollment date for សុខ លីហួរ:', displayDate, 'because payments.length =', payments.length);
+                }
+              }
+            } catch (error) {
+              console.error('Error parsing createdAt for student:', studentData.fullName, studentData.createdAt, error);
+              // Keep the default "Never" if date parsing fails
+              displayDate = lastPaymentDate;
+            }
+          } else {
+            // No createdAt field - keep the default "Never"
+            displayDate = lastPaymentDate;
+            if (studentData.fullName === 'សុខ លីហួរ') {
+              console.log('No createdAt for សុខ លីហួរ, keeping Never');
+            }
+          }
+
           unpaidList.push({
             id: studentId,
             fullName: studentData.fullName || 'Unknown Student',
@@ -154,14 +261,15 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
             class: studentData.class || 'Unknown Class',
             shift: studentData.shift || 'Unknown',
             lastPaymentMonth: studentData.lastPaymentMonth || 'Never',
-            lastPaymentDate,
+            lastPaymentDate: displayDate,
             lastPaymentAmount,
             daysOverdue,
             phone: studentData.phone || '',
             photoUrl: studentData.photoUrl || '',
             telegramUsername: studentData.telegramUsername || '',
             hasTelegramUsername: studentData.hasTelegramUsername || false,
-            lateFeePermission: studentData.lateFeePermission || false
+            lateFeePermission: studentData.lateFeePermission || false,
+            isNewStudent: isTrialPeriod
           });
         }
       });
@@ -242,7 +350,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
       ['Unpaid Students Report'],
       [`Generated on: ${new Date().toLocaleDateString()}`],
       [''],
-      ['Student Name', 'Khmer Name', 'Class', 'Shift', 'Schedule', 'Phone', 'Father Name', 'Father Phone', 'Mother Name', 'Mother Phone', 'Last Payment Date', 'Last Payment Amount', 'Days Overdue', 'Late Fee Permission', 'Telegram Username'],
+      ['Student Name', 'Khmer Name', 'Class', 'Shift', 'Schedule', 'Phone', 'Father Name', 'Father Phone', 'Mother Name', 'Mother Phone', 'Payment Date', 'Payment Amount', 'Days Overdue', 'Late Fee Permission', 'Telegram Username'],
       ...filteredStudents.map(student => [
         student.fullName,
         student.nameKhmer,
@@ -404,6 +512,8 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
                 className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-md ${
                   student.lateFeePermission 
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700 shadow-green-100 dark:shadow-green-900/20' 
+                    : student.lastPaymentAmount > 0
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700 shadow-red-100 dark:shadow-red-900/20'
                     : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600'
                 }`}
               >
@@ -444,17 +554,25 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
                           Late Fee Allow
                         </span>
                       )}
+                      {student.isNewStudent && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700 group-hover:bg-purple-200 dark:group-hover:bg-purple-800/50 transition-colors duration-200">
+                          <Icon path={mdiClockOutline} size={12} className="mr-1" />
+                          Trial Period
+                        </span>
+                      )}
                     </div>
                   </div>
                   
-                  {/* Last Payment - Moved to top right */}
+                  {/* Payment Info - Moved to top right */}
                   <div className="text-right min-w-0 flex-shrink-0">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Last Payment</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {student.lastPaymentDate === 'Never' || student.lastPaymentAmount === 0 ? 'Enrollment Date' : 'Last Payment'}
+                    </div>
                     <div className="font-medium text-gray-900 dark:text-white">
                       {student.lastPaymentDate}
                     </div>
-                    <div className="text-sm text-green-600 dark:text-green-400">
-                      ${student.lastPaymentAmount.toFixed(2)}
+                    <div className={`text-sm ${student.lastPaymentDate === 'Never' || student.lastPaymentAmount === 0 ? 'text-gray-600 dark:text-gray-400' : 'text-green-600 dark:text-green-400'}`}>
+                      {student.lastPaymentDate === 'Never' || student.lastPaymentAmount === 0 ? 'No record' : `$${student.lastPaymentAmount.toFixed(2)}`}
                     </div>
                   </div>
                 </div>

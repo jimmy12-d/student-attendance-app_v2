@@ -18,7 +18,6 @@ import { useTouchGesture } from '../../_hooks/useTouchGesture';
 import { toast } from 'sonner';
 import OngoingPermissions from '../_components/OngoingPermissions';
 import HealthArrivalChart from '../_components/HealthArrivalChart';
-import AttendanceSummaryCardSkeleton from '../_components/AttendanceSummaryCardSkeleton';
 import Button from '../../_components/Button';
 
 const AttendancePage = () => {
@@ -575,51 +574,63 @@ const AttendancePage = () => {
 
           {/* Health App Style Arrival Chart */}
           {!loading && studentData?.shift && (
-            <HealthArrivalChart
-              recentRecords={recentRecords}
-              studentData={studentData}
-              selectedDate={new Date().toISOString().split('T')[0]}
-              classConfigs={allClassConfigs}
-              calculateMinutesFromStartTime={calculateMinutesFromStartTime}
-              getShiftInfo={getShiftInfo}
-            />
+            <>
+              <div className="flex items-center pt-2 gap-4 mb-4">
+                <div className="relative group">
+                  <div className="w-5 h-5 bg-gradient-to-br from-purple-500 via-indigo-500 to-violet-500 rounded-full shadow-xl transform group-hover:scale-110 transition-transform duration-300"></div>
+                  <div className="absolute inset-0 w-5 h-5 bg-gradient-to-br from-purple-400/40 via-indigo-400/40 to-violet-400/40 rounded-full blur-md animate-pulse"></div>
+                  <div className="absolute inset-1 w-3 h-3 bg-white/30 rounded-full"></div>
+                </div>
+                <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('shiftInfo.avgArrivalGraph')}</h2>
+              </div>
+              <HealthArrivalChart
+                 recentRecords={recentRecords}
+                 studentData={studentData}
+                 selectedDate={new Date().toISOString().split('T')[0]}
+                 classConfigs={allClassConfigs}
+                 calculateMinutesFromStartTime={calculateMinutesFromStartTime}
+                 getShiftInfo={getShiftInfo} />
+            </>
           )}
 
         {/* Quick Actions - Mobile Enhanced */}
         <div className="space-y-6 px-2">
-          <h2 className={khmerFont('font-bold mb-4 text-2xl text-gray-900 dark:text-white')}>{t('quickActions')}</h2>
+          <div className="flex items-center gap-4 mb-4">
+            <div className="relative group">
+              <div className="w-5 h-5 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-full shadow-xl transform group-hover:scale-110 transition-transform duration-300"></div>
+              <div className="absolute inset-0 w-5 h-5 bg-gradient-to-br from-blue-400/40 via-purple-400/40 to-pink-400/40 rounded-full blur-md animate-pulse"></div>
+              <div className="absolute inset-1 w-3 h-3 bg-white/30 rounded-full"></div>
+            </div>
+            <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('quickActions')}</h2>
+          </div>
              {/* Mobile-optimized Action Cards */}
-             <div className="space-y-5">
+             <div className="grid grid-cols-1 gap-3">
                {/* Request Attendance Card - Mobile Enhanced */}
                <div className="group relative overflow-hidden touch-manipulation">
                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-opacity duration-150"></div>
                  <button
                    onClick={() => setIsRequestConfirmOpen(true)}
                    disabled={['present', 'late', 'permission', 'requested'].includes(todayRecord?.status)}
-                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-5 py-4 rounded-3xl shadow-xl border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed min-h-[140px] flex items-center active:scale-[0.98] transition-transform duration-150"
+                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-3 rounded-3xl shadow-xl border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed min-h-[80px] flex items-center active:scale-[0.98] transition-transform duration-150"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
-                   <div className="flex items-center w-full space-x-5">
+                   <div className="flex items-center w-full space-x-4">
                      {/* Icon Section */}
                      <div className="relative flex-shrink-0">
-                       <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg">
+                       <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg">
                          <div className="absolute inset-0 bg-white/15 rounded-2xl backdrop-blur-sm"></div>
-                         <Icon path={mdiFaceRecognition} size={44} className="text-white relative z-10" />
-                       </div>
-                       {/* Status Dot */}
-                       <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-orange-400 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
-                         <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                         <Icon path={mdiFaceRecognition} size={28} className="text-white relative z-10" />
                        </div>
                      </div>
 
                      {/* Content Section */}
                      <div className="text-left flex-1 min-w-0">
-                       <p className={khmerFont('text-xl font-bold text-gray-900 dark:text-white mb-2')}>
+                       <p className={khmerFont('text-base font-bold text-gray-900 dark:text-white mb-1')}>
                          {t('requestAttendance')}
                        </p>
                        <div className="flex items-center space-x-2">
-                         <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse"></div>
-                         <span className={khmerFont('text-sm text-blue-600 dark:text-blue-400 font-medium')}>
+                         <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                         <span className={khmerFont('text-xs text-blue-600 dark:text-blue-400 font-medium')}>
                            {t('faceUnavailable')}
                          </span>
                        </div>
@@ -627,7 +638,7 @@ const AttendancePage = () => {
 
                      {/* Arrow */}
                      <div className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                       <Icon path={mdiChevronRight} size={32} />
+                       <Icon path={mdiChevronRight} size={24} />
                      </div>
                    </div>
                  </button>
@@ -638,30 +649,26 @@ const AttendancePage = () => {
                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-opacity duration-150"></div>
                  <button
                    onClick={() => setIsPermissionPanelOpen(true)}
-                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-5 py-4 rounded-3xl shadow-xl border border-gray-100/80 dark:border-slate-600/80 min-h-[140px] flex items-center active:scale-[0.98] transition-transform duration-150"
+                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-3 rounded-3xl shadow-xl border border-gray-100/80 dark:border-slate-600/80 min-h-[80px] flex items-center active:scale-[0.98] transition-transform duration-150"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
-                   <div className="flex items-center w-full space-x-5">
+                   <div className="flex items-center w-full space-x-4">
                      {/* Icon Section */}
                      <div className="relative flex-shrink-0">
-                       <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
+                       <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
                          <div className="absolute inset-0 bg-white/15 rounded-2xl backdrop-blur-sm"></div>
-                         <Icon path={mdiFileDocumentEditOutline} size={42} className="text-white relative z-10" />
-                       </div>
-                       {/* Status Dot */}
-                       <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-sm">
-                         <div className="w-3 h-3 bg-white rounded-full"></div>
+                         <Icon path={mdiFileDocumentEditOutline} size={26} className="text-white relative z-10" />
                        </div>
                      </div>
 
                      {/* Content Section */}
                      <div className="text-left flex-1 min-w-0">
-                       <h3 className={khmerFont('text-xl font-bold text-gray-900 dark:text-white mb-2')}>
+                       <h3 className={khmerFont('text-base font-bold text-gray-900 dark:text-white mb-1')}>
                         {t('permissionForm')}
                        </h3>
                        <div className="flex items-center space-x-2">
-                         <div className="w-2.5 h-2.5 bg-purple-500 rounded-full"></div>
-                         <span className={khmerFont('text-sm text-purple-600 dark:text-purple-400 font-medium')}>
+                         <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                         <span className={khmerFont('text-xs text-purple-600 dark:text-purple-400 font-medium')}>
                            {t('plannedAbsences')}
                          </span>
                        </div>
@@ -669,7 +676,7 @@ const AttendancePage = () => {
 
                      {/* Arrow */}
                      <div className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                       <Icon path={mdiChevronRight} size={32} />
+                       <Icon path={mdiChevronRight} size={24} />
                      </div>
                    </div>
                  </button>
@@ -677,92 +684,15 @@ const AttendancePage = () => {
              </div>
            </div>
 
-           {/* Summary Stats - Mobile Enhanced
-           <div className="space-y-5 px-2">
-             <div className="flex items-center justify-between">
-                <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('lastDaysSummary')}</h2>
-               <button
-                 onClick={() => setIsDetailsPanelOpen(true)}
-                 className={khmerFont('flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 active:scale-95 transition-transform duration-150 px-3 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20')}
-               >
-                 {t('viewDetails')}
-                 <Icon path={mdiChevronRight} size={20} className="ml-1" />
-               </button>
+           <div className="space-y-5 pt-4 pb-2">
+             <div className="flex items-center gap-4 mb-4">
+               <div className="relative group">
+                 <div className="w-5 h-5 bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 rounded-full shadow-xl transform group-hover:scale-110 transition-transform duration-300"></div>
+                 <div className="absolute inset-0 w-5 h-5 bg-gradient-to-br from-blue-400/40 via-blue-500/40 to-cyan-400/40 rounded-full blur-md animate-pulse"></div>
+                 <div className="absolute inset-1 w-3 h-3 bg-white/30 rounded-full"></div>
+               </div>
+               <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('recentPermissions')}</h2>
              </div>
-
-             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-               {loading ? (
-                 <>
-                   <AttendanceSummaryCardSkeleton />
-                   <AttendanceSummaryCardSkeleton />
-                   <AttendanceSummaryCardSkeleton />
-                 </>
-               ) : (
-                 <>
-                   <div
-                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                     onClick={(e) => createRipple(e, 'rgba(34, 197, 94, 0.3)')}
-                   >
-                     <div className="flex items-center justify-between mb-4">
-                       <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                         <Icon path={mdiAccountCheckOutline} size={24} className="text-green-600 dark:text-green-400" />
-                       </div>
-                       <span className="text-3xl font-bold text-gray-900 dark:text-white">{presentCount}</span>
-                     </div>
-                     <h3 className={khmerFont('font-semibold text-gray-900 dark:text-white text-lg')}>{t('present')}</h3>
-                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 mt-3">
-                       <div
-                         className="bg-green-500 h-3 rounded-full transition-all duration-1000 ease-out"
-                         style={{ width: `${(presentCount / totalDays) * 100}%` }}
-                       ></div>
-                     </div>
-                   </div>
-
-                   <div
-                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                     onClick={(e) => createRipple(e, 'rgba(234, 179, 8, 0.3)')}
-                   >
-                     <div className="flex items-center justify-between mb-4">
-                       <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
-                         <Icon path={mdiClockAlertOutline} size={24} className="text-yellow-600 dark:text-yellow-400" />
-                       </div>
-                       <span className="text-3xl font-bold text-gray-900 dark:text-white">{lateCount}</span>
-                     </div>
-                     <h3 className={khmerFont('font-semibold text-gray-900 dark:text-white text-lg')}>{t('late')}</h3>
-                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 mt-3">
-                       <div
-                         className="bg-yellow-500 h-3 rounded-full transition-all duration-1000 ease-out"
-                         style={{ width: `${(lateCount / totalDays) * 100}%` }}
-                       ></div>
-                     </div>
-                   </div>
-
-                   <div
-                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 cursor-pointer active:scale-[0.98] transition-all duration-150"
-                     onClick={(e) => createRipple(e, 'rgba(239, 68, 68, 0.3)')}
-                   >
-                     <div className="flex items-center justify-between mb-4">
-                       <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                         <Icon path={mdiAccountOffOutline} size={24} className="text-red-600 dark:text-red-400" />
-                       </div>
-                       <span className="text-3xl font-bold text-gray-900 dark:text-white">{absentCount}</span>
-                     </div>
-                     <h3 className={khmerFont('font-semibold text-gray-900 dark:text-white text-lg')}>{t('absent')}</h3>
-                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 mt-3">
-                       <div
-                         className="bg-red-500 h-3 rounded-full transition-all duration-1000 ease-out"
-                         style={{ width: `${(absentCount / totalDays) * 100}%` }}
-                       ></div>
-                     </div>
-                   </div>
-                 </>
-               )}
-             </div>
-           </div> */}
-
-           {/* Permissions History - Mobile Enhanced */}
-           <div className="space-y-5 px-2">
-             <h2 className={khmerFont('font-bold mb-4 text-2xl text-gray-900 dark:text-white')}>{t('recentPermissions')}</h2>
              <div className="overflow-hidden">
                <OngoingPermissions permissions={ongoingPermissions} isLoading={loadingPermissions} />
              </div>

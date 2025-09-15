@@ -67,7 +67,7 @@ export default function AsideMenuLayer({
             {/* Main content with improved layout */}
             <div className="flex items-start space-x-3">
               {/* Logo container with enhanced styling */}
-              <div className="flex-shrink-0 p-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20 shadow-lg mt-1">
+              <div className="flex-shrink-0 p-2 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20 shadow-lg mt-1 cursor-pointer" onClick={() => window.location.reload()}>
                 <RodwellLogo />
               </div>
               

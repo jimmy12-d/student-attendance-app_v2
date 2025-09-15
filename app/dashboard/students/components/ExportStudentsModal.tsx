@@ -6,6 +6,7 @@ import Button from '../../../_components/Button';
 import CardBoxModal from '../../../_components/CardBox/Modal';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+import { getPaymentStatus, getPaymentStatusDisplayText } from '../../_lib/paymentLogic';
 
 interface ExportField {
   id: string;
@@ -100,14 +101,9 @@ export const ExportStudentsModal: React.FC<ExportStudentsModalProps> = ({
     return phone;
   };
 
-  const getPaymentStatus = (student: Student): string => {
-    const currentYearMonth = new Date().toISOString().slice(0, 7);
-    
-    if (!student.lastPaymentMonth) {
-      return 'No Record';
-    }
-    
-    return student.lastPaymentMonth >= currentYearMonth ? 'Paid' : 'Unpaid';
+  const getPaymentStatusForExport = (student: Student): string => {
+    const status = getPaymentStatus(student.lastPaymentMonth);
+    return getPaymentStatusDisplayText(status);
   };
 
   const handleExport = async () => {
@@ -144,7 +140,7 @@ export const ExportStudentsModal: React.FC<ExportStudentsModalProps> = ({
               row[field.label] = student.scheduleType || '';
               break;
             case 'paymentStatus':
-              row[field.label] = getPaymentStatus(student);
+              row[field.label] = getPaymentStatusForExport(student);
               break;
             case 'lastPaymentMonth':
               row[field.label] = student.lastPaymentMonth || '';

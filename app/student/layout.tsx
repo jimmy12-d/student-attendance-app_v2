@@ -110,7 +110,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
           `}</style>
           <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800" />
           <Toaster richColors position="top-center" />
-          <div className="relative min-h-screen md:ml-64 lg:ml-0 xl:ml-0 bg-transparent">
+          <div className="relative min-h-screen lg:ml-64 xl:ml-0 bg-transparent">
             <StudentTopNav />
             <main className="relative pb-24 bg-transparent">
                 <div className="p-6 max-w-2xl mx-auto">

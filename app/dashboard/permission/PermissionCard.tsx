@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Timestamp } from "firebase/firestore";
-import { mdiCheck, mdiClose, mdiCalendarRange, mdiAccount, mdiBookOpenPageVariant, mdiClockTimeEight, mdiClockTimeFour, mdiClockTimeTwelve, mdiCalendarClock } from "@mdi/js";
+import { mdiCheck, mdiClose, mdiCalendarRange, mdiAccount, mdiBookOpenPageVariant, mdiClockTimeEight, mdiClockTimeFour, mdiClockTimeTwelve, mdiCalendarClock, mdiEye, mdiEyeOff } from "@mdi/js";
 import Icon from "../../_components/Icon";
 import Button from "../../_components/Button";
 import { EnrichedPermissionRecord } from "./page";
@@ -154,6 +154,7 @@ const getDurationVisualProps = (duration: number) => {
 
 const PermissionCard: React.FC<Props> = ({ permission, onUpdateRequest, allPermissions = [] }) => {
   const isPending = permission.status === 'pending';
+  const [showFullDetails, setShowFullDetails] = useState(false);
   const monthlyPermissionDays = calculateMonthlyPermissionDays(permission, allPermissions);
   const isHighPermissionUsage = monthlyPermissionDays >= 5;
   
@@ -266,9 +267,19 @@ const PermissionCard: React.FC<Props> = ({ permission, onUpdateRequest, allPermi
               {isPending ? (
                 permission.details
               ) : (
-                permission.details.length > 60 
-                  ? `${permission.details.substring(0, 60)}...` 
-                  : permission.details
+                <div className="flex items-start gap-2">
+                  <span className="flex-1">
+                    {showFullDetails ? permission.details : (permission.details.length > 60 ? `${permission.details.substring(0, 60)}...` : permission.details)}
+                  </span>
+                  {permission.details.length > 60 && (
+                    <button 
+                      onClick={() => setShowFullDetails(!showFullDetails)}
+                      className="cursor-pointer text-blue-500 hover:text-blue-700 flex-shrink-0 mt-0.5 p-0 bg-transparent border-none"
+                    >
+                      <Icon path={showFullDetails ? mdiEyeOff : mdiEye} size={14} />
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -298,14 +309,14 @@ const PermissionCard: React.FC<Props> = ({ permission, onUpdateRequest, allPermi
               icon={mdiCheck}
               label="Approve"
               onClick={() => onUpdateRequest(permission.id, 'approved')}
-              className="w-full sm:w-auto bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-medium px-4 py-3 sm:px-4 sm:py-2 rounded-lg shadow-sm hover:shadow-md active:shadow-lg transition-all duration-200 text-sm min-h-[44px] sm:min-h-[36px] flex items-center justify-center"
+              className="w-full sm:w-auto bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-medium px-4 py-3 sm:px-2 sm:py-2 rounded-lg shadow-sm hover:shadow-md active:shadow-lg transition-all duration-200 text-sm min-h-[44px] sm:min-h-[36px] flex items-center justify-center"
             />
             <Button
               color="danger"
               icon={mdiClose}
               label="Reject"
               onClick={() => onUpdateRequest(permission.id, 'rejected')}
-              className="w-full sm:w-auto bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-medium px-4 py-3 sm:px-4 sm:py-2 rounded-lg shadow-sm hover:shadow-md active:shadow-lg transition-all duration-200 text-sm min-h-[44px] sm:min-h-[36px] flex items-center justify-center"
+              className="w-full sm:w-auto bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-medium px-4 py-3 sm:px-2 sm:py-2 rounded-lg shadow-sm hover:shadow-md active:shadow-lg transition-all duration-200 text-sm min-h-[44px] sm:min-h-[36px] flex items-center justify-center"
             />
           </div>
         )}

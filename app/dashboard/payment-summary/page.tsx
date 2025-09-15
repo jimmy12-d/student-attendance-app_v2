@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, getDoc, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc} from "firebase/firestore";
 import { db } from "../../../firebase-config";
 import { toast } from "sonner";
+import { getPaymentStatus } from "../_lib/paymentLogic";
 import PaymentSummaryHeader from "./components/PaymentSummaryHeader";
 import AuthenticationCard from "./components/AuthenticationCard";
 import ControlsPanel from "./components/ControlsPanel";
@@ -21,6 +22,7 @@ interface SummaryData {
   totalTransactions: number;
   averagePayment: number;
   dailyAverage: number;
+  unpaidStudentsCount: number;
   classTypeBreakdown: { classType: string; count: number; revenue: number; }[];
   comparisonData?: { classType: string; previousCount: number; previousRevenue: number; }[];
   dailyBreakdown: { date: string; revenue: number; count: number; }[];
@@ -33,6 +35,8 @@ const PaymentSummaryPage = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [activeTab, setActiveTab] = useState<'summary' | 'unpaid'>('summary');
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [studentsData, setStudentsData] = useState<any[]>([]);
+  const [classesData, setClassesData] = useState<{ [classId: string]: { type: string } }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [dateInterval, setDateInterval] = useState<DateInterval>({ type: 'monthly', value: '0' });
   
@@ -117,6 +121,10 @@ const PaymentSummaryPage = () => {
       
       // Get all transactions first, then filter appropriately
       const querySnapshot = await getDocs(transactionsRef);
+      
+      // Fetch all students to calculate unpaid count
+      const studentsRef = collection(db, "students");
+      const studentsSnapshot = await getDocs(studentsRef);
       const transactions: any[] = [];
 
       if (dateInterval.type === 'monthly') {
@@ -165,6 +173,22 @@ const PaymentSummaryPage = () => {
       const totalRevenue = transactions.reduce((sum, t) => sum + t.amount, 0);
       const totalTransactions = transactions.length;
       const averagePayment = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+      
+      // Calculate unpaid students count (excluding onBreak, waitlist, and dropped students)
+      let unpaidStudentsCount = 0;
+      studentsSnapshot.forEach((doc) => {
+        const studentData = doc.data();
+
+        // Skip students who are on break, waitlist, or dropped
+        if (studentData.onBreak || studentData.onWaitlist || studentData.dropped) {
+          return; // Skip this student
+        }
+
+        const paymentStatus = getPaymentStatus(studentData.lastPaymentMonth);
+        if (paymentStatus === 'unpaid' || paymentStatus === 'no-record') {
+          unpaidStudentsCount++;
+        }
+      });
       
       // Calculate daily average based on the date range
       let dailyAverage = 0;
@@ -267,11 +291,30 @@ const PaymentSummaryPage = () => {
         }
       }
 
+      // Store student data for class type analysis
+      const students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setStudentsData(students);
+
+      // Fetch classes data for proper class type mapping
+      try {
+        const classesSnapshot = await getDocs(collection(db, "classes"));
+        const classesMap: { [classId: string]: { type: string } } = {};
+        classesSnapshot.forEach((doc) => {
+          const classData = doc.data();
+          classesMap[doc.id] = { type: classData.type || '' };
+        });
+        setClassesData(classesMap);
+      } catch (error) {
+        console.error("Error fetching classes data:", error);
+        // Don't show error toast for classes data as it's not critical
+      }
+
       setSummaryData({
         totalRevenue,
         totalTransactions,
         averagePayment,
         dailyAverage,
+        unpaidStudentsCount,
         classTypeBreakdown,
         comparisonData,
         dailyBreakdown
@@ -449,7 +492,8 @@ const PaymentSummaryPage = () => {
                 totalRevenue: 0,
                 totalTransactions: 0,
                 averagePayment: 0,
-                dailyAverage: 0
+                dailyAverage: 0,
+                unpaidStudentsCount: 0
               }}
               isLoading={isLoading}
             />
@@ -460,6 +504,8 @@ const PaymentSummaryPage = () => {
                   classTypeBreakdown: [],
                   comparisonData: []
                 }}
+                studentsData={studentsData}
+                classesData={classesData}
                 dateInterval={dateInterval}
                 isLoading={isLoading}
               />

@@ -3,18 +3,23 @@ import React from "react";
 import { mdiChartPie, mdiTrendingUp, mdiAccountGroup } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import CardBox from "../../../_components/CardBox";
+import { getPaymentStatus } from "../../_lib/paymentLogic";
 
 interface ClassTypeAnalysisProps {
   summaryData: {
     classTypeBreakdown: { classType: string; count: number; revenue: number; }[];
     comparisonData?: { classType: string; previousCount: number; previousRevenue: number; }[];
   };
+  studentsData?: any[]; // Array of student data
+  classesData?: { [classId: string]: { type: string } }; // Mapping of class ID to class data
   dateInterval: { type: 'interval' | 'monthly'; value: string; };
   isLoading: boolean;
 }
 
 const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({ 
   summaryData, 
+  studentsData = [],
+  classesData = {},
   dateInterval, 
   isLoading 
 }) => {
@@ -45,6 +50,45 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
       icon: isPositive ? "↗" : "↘",
       color: isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
     };
+  };
+
+    const getClassTypePaymentStats = (classType: string) => {
+    if (!studentsData || studentsData.length === 0) {
+      return { paid: 0, unpaid: 0, total: 0 };
+    }
+
+    let paid = 0;
+    let unpaid = 0;
+
+    studentsData.forEach((student) => {
+      // Skip inactive students
+      if (student.onBreak || student.onWaitlist || student.dropped) {
+        return;
+      }
+
+      // Extract class ID from student.class (e.g., "Class 12M" -> "12M")
+      const classIdMatch = student.class?.match(/Class\s*(.*)/);
+      const classId = classIdMatch ? classIdMatch[1] : student.class;
+      
+      // Get the actual class type from classesData
+      const studentClassData = classId ? classesData[classId] : null;
+      const studentClassType = studentClassData?.type || '';
+      
+      const matchesClassType = studentClassType === classType ||
+                              student.class === classType ||
+                              student.class?.includes(classType);
+
+      if (matchesClassType) {
+        const paymentStatus = getPaymentStatus(student.lastPaymentMonth);
+        if (paymentStatus === 'paid') {
+          paid++;
+        } else if (paymentStatus === 'unpaid' || paymentStatus === 'no-record') {
+          unpaid++;
+        }
+      }
+    });
+
+    return { paid, unpaid, total: paid + unpaid };
   };
 
   if (isLoading) {
@@ -118,7 +162,9 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
         </div>
 
         <div className="grid gap-4">
-          {summaryData.classTypeBreakdown.map((classData, index) => {
+          {[...summaryData.classTypeBreakdown]
+            .sort((a, b) => b.count - a.count)
+            .map((classData, index) => {
             const comparison = getComparisonData(classData.classType);
             const revenueChange = comparison ? calculatePercentageChange(classData.revenue, comparison.previousRevenue) : null;
             const countChange = comparison ? calculatePercentageChange(classData.count, comparison.previousCount) : null;
@@ -138,17 +184,14 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
                         {classData.classType}
                       </h4>
                       <div className="flex items-center gap-4 mt-1">
-                        <div className="flex items-center gap-2">
-                          <Icon path={mdiAccountGroup} size={0.8} className="text-gray-500" />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {classData.count} transactions
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {classData.count} transactions
+                        </span>
+                        {countFormat && dateInterval.type === 'monthly' && (
+                          <span className={`text-xs font-semibold ${countFormat.color} bg-white dark:bg-gray-800 px-2 py-1 rounded-full shadow-sm`}>
+                            {countFormat.icon} {countFormat.value}%
                           </span>
-                          {countFormat && dateInterval.type === 'monthly' && (
-                            <span className={`text-xs font-semibold ${countFormat.color} bg-white dark:bg-gray-800 px-2 py-1 rounded-full shadow-sm`}>
-                              {countFormat.icon} {countFormat.value}%
-                            </span>
-                          )}
-                        </div>
+                        )}
                         <div className="flex items-center gap-2">
                           <Icon path={mdiTrendingUp} size={0.8} className="text-gray-500" />
                           <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -181,6 +224,56 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
 
                 {/* Decorative gradient bar */}
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400/20 via-indigo-400/20 to-purple-400/20 rounded-b-2xl group-hover:from-purple-400/40 group-hover:via-indigo-400/40 group-hover:to-purple-400/40 transition-all duration-300"></div>
+
+                {/* Payment Status Breakdown */}
+                {(() => {
+                  const paymentStats = getClassTypePaymentStats(classData.classType);
+                  if (paymentStats.total > 0) {
+                    const paidPercentage = (paymentStats.paid / paymentStats.total) * 100;
+                    const unpaidPercentage = (paymentStats.unpaid / paymentStats.total) * 100;
+
+                    return (
+                      <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-700/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Payment Status ({paymentStats.total} students)
+                          </span>
+                          <div className="flex gap-4 text-xs">
+                            <span className="flex items-center gap-1">
+                              <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+                              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                {paymentStats.paid} paid
+                              </span>
+                            </span>
+                            {paymentStats.unpaid > 0 && (
+                              <span className="flex items-center gap-1">
+                                <div className="w-2 h-2 bg-rose-400 rounded-full"></div>
+                                <span className="text-rose-600 dark:text-rose-400 font-medium">
+                                  {paymentStats.unpaid} unpaid
+                                </span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                          <div className="flex h-full">
+                            <div
+                              className="bg-emerald-400 transition-all duration-500 ease-out"
+                              style={{ width: `${paidPercentage}%` }}
+                            ></div>
+                            {paymentStats.unpaid > 0 && (
+                              <div
+                                className="bg-rose-400 transition-all duration-500 ease-out"
+                                style={{ width: `${unpaidPercentage}%` }}
+                              ></div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             );
           })}

@@ -115,6 +115,7 @@
         "shift": "Shift",
         "classStarts": "Class starts at",
         "avgArrival": "Average Arrival Time",
+        "avgArrivalGraph": "Average Arrival Time Graph",
         "calculating": "Calculating...",
         "onTime": "On Time",
         "early": "Early",
