@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAppSelector } from '../../_stores/hooks';
 import { db } from '../../../firebase-config';
@@ -9,13 +9,15 @@ import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord, markAttendance, calculateAverageArrivalTime } from '../../dashboard/_lib/attendanceLogic';
 import { AllClassConfigs } from '../../dashboard/_lib/configForAttendanceLogic';
 import { getStatusStyles } from '../../dashboard/_lib/statusStyles';
-import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight } from '@mdi/js';
+import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight, mdiLightningBolt, mdiCheckCircle, mdiCalendar } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
 import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
+import { useTouchGesture } from '../../_hooks/useTouchGesture';
 import { toast } from 'sonner';
 import OngoingPermissions from '../_components/OngoingPermissions';
+import HealthArrivalChart from '../_components/HealthArrivalChart';
 import AttendanceSummaryCardSkeleton from '../_components/AttendanceSummaryCardSkeleton';
 import Button from '../../_components/Button';
 
@@ -48,6 +50,15 @@ const AttendancePage = () => {
   const [isRequestConfirmOpen, setIsRequestConfirmOpen] = useState(false);
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs | null>(null);
   const [averageArrivalTime, setAverageArrivalTime] = useState<{ averageTime: string; details: string } | null>(null);
+  const [chartScrollPosition, setChartScrollPosition] = useState(0);
+
+  // Touch gesture for chart scrolling
+  const chartGestureRef = useTouchGesture({
+    onScroll: (scrollLeft) => {
+      setChartScrollPosition(scrollLeft);
+    },
+    threshold: 30
+  });
 
 
   // Ripple effect hook
@@ -88,99 +99,32 @@ const AttendancePage = () => {
   const getShiftInfo = (shift: string) => {
     switch (shift?.toLowerCase()) {
       case 'morning':
-        return {
-          icon: mdiWeatherSunny,
-          bgGradient: 'from-blue-400 to-blue-600',
-          textColor: 'text-white',
-          name: t('shiftInfo.morning'),
-          time: '7:00 AM'
-        };
+        return { startTime: '07:00', name: tCommon('morningShift'), icon: mdiWeatherSunny };
       case 'afternoon':
-        return {
-          icon: mdiWeatherSunset,
-          bgGradient: 'from-yellow-400 to-orange-500',
-          textColor: 'text-white',
-          name: t('shiftInfo.afternoon'),
-          time: '1:00 PM'
-        };
+        return { startTime: '13:00', name: tCommon('afternoonShift'), icon: mdiWeatherSunset };
       case 'evening':
-        return {
-          icon: mdiWeatherNight,
-          bgGradient: 'from-purple-500 to-purple-700',
-          textColor: 'text-white',
-          name: t('shiftInfo.evening'),
-          time: '5:30 PM'
-        };
+        return { startTime: '17:30', name: tCommon('eveningShift'), icon: mdiWeatherNight };
       default:
-        return {
-          icon: mdiClockTimeThreeOutline,
-          bgGradient: 'from-gray-400 to-gray-600',
-          textColor: 'text-white',
-          name: 'Unknown',
-          time: 'N/A'
-        };
+        return { startTime: '00:00', name: t('unknownShift'), icon: mdiClockAlertOutline };
     }
   };
 
-  // Function to parse and format average arrival time for better UI display
-  const formatAverageArrivalForUI = (averageTime: string) => {
-    if (!averageTime || averageTime === 'N/A') {
-      return { 
-        text: t('shiftInfo.calculating'), 
-        color: 'text-white/80',
-        icon: '⏱️'
-      };
-    }
-
-    // Check if it contains "on time"
-    if (averageTime.includes('on time')) {
-      return {
-        text: t('shiftInfo.onTime'),
-        color: 'text-green-200',
-        icon: '✅'
-      };
-    }
-
-    // Check if it contains "early"
-    if (averageTime.includes('early')) {
-      const timeMatch = averageTime.match(/-(.+?) early/);
-      const timeValue = timeMatch ? timeMatch[1] : averageTime.replace('-', '').replace(' early', '');
-      return {
-        text: `${t('shiftInfo.early')} ${timeValue}`,
-        color: 'text-green-200',
-        icon: '🌟'
-      };
-    }
-
-    // Check if it contains "late"
-    if (averageTime.includes('late')) {
-      const timeMatch = averageTime.match(/\+(.+?) late/);
-      const timeValue = timeMatch ? timeMatch[1] : averageTime.replace('+', '').replace(' late', '');
+  const calculateMinutesFromStartTime = (arrivalTime: string, startTime: string): number => {
+    if (!arrivalTime || !startTime) return 0;
+    try {
+      const [arrivalHour, arrivalMinute] = arrivalTime.split(':').map(Number);
+      const [startHour, startMinute] = startTime.split(':').map(Number);
       
-      // Determine if it's "really late" (more than 30 minutes)
-      const isReallyLate = averageTime.includes('h') || (timeValue.includes('m') && parseInt(timeValue) > 30);
+      const arrivalTotalMinutes = arrivalHour * 60 + arrivalMinute;
+      const startTotalMinutes = startHour * 60 + startMinute;
       
-      if (isReallyLate) {
-        return {
-          text: `${t('shiftInfo.reallyLate')} ${timeValue}`,
-          color: 'text-red-200',
-          icon: '🚨'
-        };
-      } else {
-        return {
-          text: `${t('shiftInfo.late')} ${timeValue}`,
-          color: 'text-orange-200',
-          icon: '⚠️'
-        };
-      }
+      // Corrected logic: arrival - start
+      // Positive result means late, negative means early
+      return arrivalTotalMinutes - startTotalMinutes;
+    } catch (error) {
+      console.error("Error calculating minutes from start time:", error);
+      return 0;
     }
-
-    // Fallback
-    return {
-      text: averageTime,
-      color: 'text-white/80',
-      icon: '⏱️'
-    };
   };
 
   const handleRequestAttendance = async () => {
@@ -589,170 +533,143 @@ const AttendancePage = () => {
            </div>
        </SlideInPanel>
 
-       <div className="space-y-2">
-          {/* Header with Date */}
-          <div className="text-center">
-            <p className={khmerFont('text-gray-600 dark:text-gray-300')}>
-              {new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </p>
-          </div>
-
-          {/* Shift & Average Arrival Time Card */}
-          {!loading && studentData?.shift && (
-            <div className="mb-4">
-              <div className={`bg-gradient-to-r ${getShiftInfo(studentData.shift).bgGradient} rounded-2xl px-6 py-4 shadow-xl border border-white/20`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                      <Icon path={getShiftInfo(studentData.shift).icon} size={28} className="text-white" />
-                    </div>
-                    <div>
-                      <h3 className={khmerFont('text-white text-lg font-bold')}>
-                        {getShiftInfo(studentData.shift).name} {t('shiftInfo.shift')}
-                      </h3>
-                      <p className={khmerFont('text-white/90 text-sm')}>
-                        {t('shiftInfo.classStarts')} {getShiftInfo(studentData.shift).time}
-                      </p>
-                    </div>
+       <div className="space-y-3 px-2 pb-6 mt-4">
+          {/* Today's Status Card - Mobile Enhanced */}
+          {loading ? (
+            <div className="animate-pulse bg-gray-200 dark:bg-slate-700 h-36 rounded-2xl mx-1"></div>
+          ) : (
+            <div className="relative overflow-hidden mx-1">
+              {todayRecord && (
+                <div className={`${getStatusStyles(todayRecord.status).cardBg} rounded-2xl px-6 py-4 shadow-xl relative`}>
+                  {/* Date at top right */}
+                  <div className="absolute top-4 right-4">
+                    <p className={khmerFont('text-white-900 text-sm font-medium')}>
+                      {new Date(todayRecord.date).toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </p>
                   </div>
-                  <div className="text-right">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
-                      <p className={khmerFont('text-white/80 text-xs font-medium mb-1')}>
-                        {t('shiftInfo.avgArrival')}
-                      </p>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-sm">
-                          {formatAverageArrivalForUI(averageArrivalTime?.averageTime || '').icon}
-                        </span>
-                        <p className={`${khmerFont('text-sm font-bold')} ${formatAverageArrivalForUI(averageArrivalTime?.averageTime || '').color}`}>
-                          {formatAverageArrivalForUI(averageArrivalTime?.averageTime || '').text}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4 flex-1 min-w-0">
+                      <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Icon path={getStatusStyles(todayRecord.status).icon} size={28} className="text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className={khmerFont('text-white text-xl font-semibold leading-tight')}>{t('status')}</h3>
+                        <p className={khmerFont('text-white/80 text-base leading-tight')}>
+                          { t(todayRecord.status)}
+                          {todayRecord.timestamp && (
+                            <span className="ml-2 block sm:inline text-sm">at {formatTime(todayRecord.timestamp)}</span>
+                          )}
                         </p>
                       </div>
                     </div>
                   </div>
+                  {/* Mobile touch feedback */}
+                  <div className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 active:opacity-100 transition-opacity duration-150 pointer-events-none"></div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-           {/* Today's Status Card */}
-           {loading ? (
-             <div className="animate-pulse bg-gray-200 dark:bg-slate-700 h-32 rounded-2xl"></div>
-           ) : (
-             <div className="relative overflow-hidden">
-               {todayRecord && (
-                 <div className={`${getStatusStyles(todayRecord.status).cardBg} rounded-2xl px-6 py-4 shadow-xl`}>
-                   <div className="flex items-center justify-between">
-                     <div className="flex items-center space-x-4">
-                       <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                         <Icon path={getStatusStyles(todayRecord.status).icon} size={24} className="text-white" />
-                       </div>
-                       <div>
-                         <h3 className={khmerFont('text-white text-lg font-semibold')}>{t('status')}</h3>
-                         <p className={khmerFont('text-white/80 text-sm')}>
-                           {getStatusText(todayRecord.status)}
-                           {todayRecord.timestamp && (
-                             <span className="ml-2">at {formatTime(todayRecord.timestamp)}</span>
-                           )}
-                         </p>
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-               )}
-             </div>
-           )}
+          {/* Health App Style Arrival Chart */}
+          {!loading && studentData?.shift && (
+            <HealthArrivalChart
+              recentRecords={recentRecords}
+              studentData={studentData}
+              selectedDate={new Date().toISOString().split('T')[0]}
+              classConfigs={allClassConfigs}
+              calculateMinutesFromStartTime={calculateMinutesFromStartTime}
+              getShiftInfo={getShiftInfo}
+            />
+          )}
 
-        {/* Quick Actions */}
-        <div className="space-y-5">
-          <h2 className={khmerFont('pt-4 ml-2 font-bold text-xl text-gray-900 dark:text-white mb-2')}>{t('quickActions')}</h2>
+        {/* Quick Actions - Mobile Enhanced */}
+        <div className="space-y-6 px-2">
+          <h2 className={khmerFont('pt-2 font-bold text-2xl text-gray-900 dark:text-white')}>{t('quickActions')}</h2>
              {/* Mobile-optimized Action Cards */}
-             <div className="space-y-4">
-               {/* Request Attendance Card - Mobile First */}
+             <div className="space-y-5">
+               {/* Request Attendance Card - Mobile Enhanced */}
                <div className="group relative overflow-hidden touch-manipulation">
-                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-3xl opacity-0 group-active:opacity-100"></div>
-                 <button 
+                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-opacity duration-150"></div>
+                 <button
                    onClick={() => setIsRequestConfirmOpen(true)}
                    disabled={['present', 'late', 'permission', 'requested'].includes(todayRecord?.status)}
-                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed min-h-[120px] flex items-center"
+                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-5 py-4 rounded-3xl shadow-xl border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed min-h-[140px] flex items-center active:scale-[0.98] transition-transform duration-150"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
-                   <div className="flex items-center w-full space-x-4">
+                   <div className="flex items-center w-full space-x-5">
                      {/* Icon Section */}
                      <div className="relative flex-shrink-0">
-                       <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg">
+                       <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg">
                          <div className="absolute inset-0 bg-white/15 rounded-2xl backdrop-blur-sm"></div>
-                         <Icon path={mdiFaceRecognition} size={40} className="text-white relative z-10" />
+                         <Icon path={mdiFaceRecognition} size={44} className="text-white relative z-10" />
                        </div>
                        {/* Status Dot */}
-                       <div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-r from-orange-400 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
-                         <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+                       <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-orange-400 to-pink-500 rounded-full flex items-center justify-center shadow-sm">
+                         <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
                        </div>
                      </div>
-                     
+
                      {/* Content Section */}
                      <div className="text-left flex-1 min-w-0">
-                       <p className={khmerFont('text-lg font-bold text-gray-900 dark:text-white mb-1.5')}>
+                       <p className={khmerFont('text-xl font-bold text-gray-900 dark:text-white mb-2')}>
                          {t('requestAttendance')}
                        </p>
                        <div className="flex items-center space-x-2">
-                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                         <span className={khmerFont('text-xs text-blue-600 dark:text-blue-400 font-medium')}>
+                         <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-pulse"></div>
+                         <span className={khmerFont('text-sm text-blue-600 dark:text-blue-400 font-medium')}>
                            {t('faceUnavailable')}
                          </span>
                        </div>
                      </div>
-                     
+
                      {/* Arrow */}
                      <div className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                       <Icon path={mdiChevronRight} size={28} />
+                       <Icon path={mdiChevronRight} size={32} />
                      </div>
                    </div>
                  </button>
                </div>
 
-               {/* Request Permission Card - Mobile First */}
+               {/* Request Permission Card - Mobile Enhanced */}
                <div className="group relative overflow-hidden touch-manipulation">
-                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-active:opacity-100"></div>
-                 <button 
+                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-opacity duration-150"></div>
+                 <button
                    onClick={() => setIsPermissionPanelOpen(true)}
-                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-2 rounded-3xl shadow-lg border border-gray-100/80 dark:border-slate-600/80 min-h-[120px] flex items-center"
+                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-5 py-4 rounded-3xl shadow-xl border border-gray-100/80 dark:border-slate-600/80 min-h-[140px] flex items-center active:scale-[0.98] transition-transform duration-150"
                    style={{ WebkitTapHighlightColor: 'transparent' }}
                  >
-                   <div className="flex items-center w-full space-x-4">
+                   <div className="flex items-center w-full space-x-5">
                      {/* Icon Section */}
                      <div className="relative flex-shrink-0">
-                       <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
+                       <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg">
                          <div className="absolute inset-0 bg-white/15 rounded-2xl backdrop-blur-sm"></div>
-                         <Icon path={mdiFileDocumentEditOutline} size={38} className="text-white relative z-10" />
+                         <Icon path={mdiFileDocumentEditOutline} size={42} className="text-white relative z-10" />
                        </div>
                        {/* Status Dot */}
-                       <div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-sm">
-                         <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+                       <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center shadow-sm">
+                         <div className="w-3 h-3 bg-white rounded-full"></div>
                        </div>
                      </div>
-                     
+
                      {/* Content Section */}
                      <div className="text-left flex-1 min-w-0">
-                       <h3 className={khmerFont('text-lg font-bold text-gray-900 dark:text-white mb-1.5')}>
+                       <h3 className={khmerFont('text-xl font-bold text-gray-900 dark:text-white mb-2')}>
                         {t('permissionForm')}
                        </h3>
                        <div className="flex items-center space-x-2">
-                         <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                         <span className={khmerFont('text-xs text-purple-600 dark:text-purple-400 font-medium')}>
+                         <div className="w-2.5 h-2.5 bg-purple-500 rounded-full"></div>
+                         <span className={khmerFont('text-sm text-purple-600 dark:text-purple-400 font-medium')}>
                            {t('plannedAbsences')}
                          </span>
                        </div>
                      </div>
-                     
+
                      {/* Arrow */}
                      <div className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                       <Icon path={mdiChevronRight} size={28} />
+                       <Icon path={mdiChevronRight} size={32} />
                      </div>
                    </div>
                  </button>
@@ -760,20 +677,20 @@ const AttendancePage = () => {
              </div>
            </div>
 
-           {/* Summary Stats */}
-           <div className="space-y-4">
-             <div className="flex items-center justify-between mb-0">
-                <h2 className={khmerFont('pt-4 ml-2 font-bold text-xl text-gray-900 dark:text-white mb-2')}>{t('lastDaysSummary')}</h2>
-               <button 
-                 onClick={() => setIsDetailsPanelOpen(true)} 
-                 className={khmerFont('flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300')}
+           {/* Summary Stats - Mobile Enhanced */}
+           <div className="space-y-5 px-2">
+             <div className="flex items-center justify-between">
+                <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('lastDaysSummary')}</h2>
+               <button
+                 onClick={() => setIsDetailsPanelOpen(true)}
+                 className={khmerFont('flex items-center text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 active:scale-95 transition-transform duration-150 px-3 py-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20')}
                >
                  {t('viewDetails')}
-                 <Icon path={mdiChevronRight} size={16} className="ml-1" />
+                 <Icon path={mdiChevronRight} size={20} className="ml-1" />
                </button>
              </div>
-             
-             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                {loading ? (
                  <>
                    <AttendanceSummaryCardSkeleton />
@@ -782,58 +699,58 @@ const AttendancePage = () => {
                  </>
                ) : (
                  <>
-                   <div 
-                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 cursor-pointer"
+                   <div
+                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 cursor-pointer active:scale-[0.98] transition-all duration-150"
                      onClick={(e) => createRipple(e, 'rgba(34, 197, 94, 0.3)')}
                    >
-                     <div className="flex items-center justify-between mb-3">
-                       <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                         <Icon path={mdiAccountCheckOutline} size={20} className="text-green-600 dark:text-green-400" />
+                     <div className="flex items-center justify-between mb-4">
+                       <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                         <Icon path={mdiAccountCheckOutline} size={24} className="text-green-600 dark:text-green-400" />
                        </div>
-                       <span className="text-2xl font-bold text-gray-900 dark:text-white">{presentCount}</span>
+                       <span className="text-3xl font-bold text-gray-900 dark:text-white">{presentCount}</span>
                      </div>
-                     <h3 className={khmerFont('font-medium text-gray-900 dark:text-white')}>{t('present')}</h3>
-                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mt-2">
-                       <div 
-                         className="bg-green-500 h-2 rounded-full"
+                     <h3 className={khmerFont('font-semibold text-gray-900 dark:text-white text-lg')}>{t('present')}</h3>
+                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 mt-3">
+                       <div
+                         className="bg-green-500 h-3 rounded-full transition-all duration-1000 ease-out"
                          style={{ width: `${(presentCount / totalDays) * 100}%` }}
                        ></div>
                      </div>
                    </div>
 
-                   <div 
-                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 cursor-pointer"
+                   <div
+                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 cursor-pointer active:scale-[0.98] transition-all duration-150"
                      onClick={(e) => createRipple(e, 'rgba(234, 179, 8, 0.3)')}
                    >
-                     <div className="flex items-center justify-between mb-3">
-                       <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
-                         <Icon path={mdiClockAlertOutline} size={20} className="text-yellow-600 dark:text-yellow-400" />
+                     <div className="flex items-center justify-between mb-4">
+                       <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
+                         <Icon path={mdiClockAlertOutline} size={24} className="text-yellow-600 dark:text-yellow-400" />
                        </div>
-                       <span className="text-2xl font-bold text-gray-900 dark:text-white">{lateCount}</span>
+                       <span className="text-3xl font-bold text-gray-900 dark:text-white">{lateCount}</span>
                      </div>
-                     <h3 className={khmerFont('font-medium text-gray-900 dark:text-white')}>{t('late')}</h3>
-                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mt-2">
-                       <div 
-                         className="bg-yellow-500 h-2 rounded-full"
+                     <h3 className={khmerFont('font-semibold text-gray-900 dark:text-white text-lg')}>{t('late')}</h3>
+                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 mt-3">
+                       <div
+                         className="bg-yellow-500 h-3 rounded-full transition-all duration-1000 ease-out"
                          style={{ width: `${(lateCount / totalDays) * 100}%` }}
                        ></div>
                      </div>
                    </div>
 
-                   <div 
-                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 cursor-pointer"
+                   <div
+                     className="relative overflow-hidden bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 cursor-pointer active:scale-[0.98] transition-all duration-150"
                      onClick={(e) => createRipple(e, 'rgba(239, 68, 68, 0.3)')}
                    >
-                     <div className="flex items-center justify-between mb-3">
-                       <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                         <Icon path={mdiAccountOffOutline} size={20} className="text-red-600 dark:text-red-400" />
+                     <div className="flex items-center justify-between mb-4">
+                       <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                         <Icon path={mdiAccountOffOutline} size={24} className="text-red-600 dark:text-red-400" />
                        </div>
-                       <span className="text-2xl font-bold text-gray-900 dark:text-white">{absentCount}</span>
+                       <span className="text-3xl font-bold text-gray-900 dark:text-white">{absentCount}</span>
                      </div>
-                     <h3 className={khmerFont('font-medium text-gray-900 dark:text-white')}>{t('absent')}</h3>
-                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 mt-2">
-                       <div 
-                         className="bg-red-500 h-2 rounded-full"
+                     <h3 className={khmerFont('font-semibold text-gray-900 dark:text-white text-lg')}>{t('absent')}</h3>
+                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3 mt-3">
+                       <div
+                         className="bg-red-500 h-3 rounded-full transition-all duration-1000 ease-out"
                          style={{ width: `${(absentCount / totalDays) * 100}%` }}
                        ></div>
                      </div>
@@ -843,9 +760,9 @@ const AttendancePage = () => {
              </div>
            </div>
 
-           {/* Permissions History */}
-           <div className="space-y-4">
-             <h2 className={khmerFont('pt-4 ml-2 font-bold text-xl text-gray-900 dark:text-white mb-2')}>{t('recentPermissions')}</h2>
+           {/* Permissions History - Mobile Enhanced */}
+           <div className="space-y-5 px-2">
+             <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('recentPermissions')}</h2>
              <div className="overflow-hidden">
                <OngoingPermissions permissions={ongoingPermissions} isLoading={loadingPermissions} />
              </div>

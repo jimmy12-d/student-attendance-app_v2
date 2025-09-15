@@ -45,7 +45,9 @@ const FaceApiAttendanceScanner = () => {
   const [showRecognitionControls, setShowRecognitionControls] = useState(false); // Collapsible Recognition Controls
   const [minFaceSize, setMinFaceSize] = useState(130); // Minimum face width/height in pixels - default to 130
   const [maxFaceSize, setMaxFaceSize] = useState(350); // Maximum face width/height in pixels - default to 350
+  const [detectionInterval, setDetectionInterval] = useState(1000); // Detection interval in milliseconds - default to 1000ms
   const [selectedShift, setSelectedShift] = useState<string>(''); // Selected shift/session
+  const [isInitialized, setIsInitialized] = useState(false); // Flag to prevent overwriting localStorage on initial mount
   const [availableShifts] = useState([
     { value: 'All', label: 'All Shifts' },
     { value: 'Morning', label: 'Morning Session' },
@@ -60,9 +62,10 @@ const FaceApiAttendanceScanner = () => {
   const studentsUnsubRef = useRef<(() => void) | null>(null);
   const lastFaceDetectionTimeRef = useRef<number>(Date.now()); // Track last face detection time
   const shutdownTimerRef = useRef<NodeJS.Timeout | null>(null);
-const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);  const DWELL_TIME_BEFORE_RECOGNIZE = 1500; // 1.5 seconds
+const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);  
+  const DWELL_TIME_BEFORE_RECOGNIZE = 500; // 0.8 seconds
   const RECOGNITION_COOLDOWN = 10000; // 10 seconds (was 1 millisecond!)
-  const DETECTION_INTERVAL = 1000; // 1 second
+  // DETECTION_INTERVAL is now configurable via state: detectionInterval
   const NO_FACE_TIMEOUT = 60000; // 60 seconds before camera shutdown (changed from 30s for easier debugging)
   const COUNTDOWN_START = 5; // Start countdown 5 seconds before shutdown
 
@@ -209,6 +212,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);  const DWELL_TIME
     const savedMinFaceSize = localStorage.getItem('faceapi-min-face-size');
     const savedMaxFaceSize = localStorage.getItem('faceapi-max-face-size');
     const savedRecognitionThreshold = localStorage.getItem('faceapi-recognition-threshold');
+    const savedDetectionInterval = localStorage.getItem('faceapi-detection-interval');
     // Note: We don't load savedSelectedShift anymore - always auto-select based on time
     
     if (savedMinFaceSize) {
@@ -220,19 +224,29 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);  const DWELL_TIME
     if (savedRecognitionThreshold) {
       setRecognitionThreshold(Number(savedRecognitionThreshold));
     }
+    if (savedDetectionInterval) {
+      setDetectionInterval(Number(savedDetectionInterval));
+    }
     // Auto-select shift based on current time when component loads
     autoSelectShift();
+    
+    // Mark as initialized to allow localStorage saving
+    setIsInitialized(true);
   }, [autoSelectShift]);
 
   // Save face size settings to localStorage whenever they change
   useEffect(() => {
+    // Only save to localStorage after initial loading is complete
+    if (!isInitialized) return;
+    
     localStorage.setItem('faceapi-min-face-size', minFaceSize.toString());
     localStorage.setItem('faceapi-max-face-size', maxFaceSize.toString());
     localStorage.setItem('faceapi-recognition-threshold', recognitionThreshold.toString());
+    localStorage.setItem('faceapi-detection-interval', detectionInterval.toString());
     if (selectedShift) {
       localStorage.setItem('faceapi-selected-shift', selectedShift);
     }
-  }, [minFaceSize, maxFaceSize, recognitionThreshold, selectedShift]);
+  }, [minFaceSize, maxFaceSize, recognitionThreshold, detectionInterval, selectedShift, isInitialized]);
 
   // Initialize success sound
   useEffect(() => {
@@ -723,8 +737,8 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);  const DWELL_TIME
           }
         }
       }
-    }, DETECTION_INTERVAL);
-  }, [detectFaces, isZoomMode, isCameraActive, isCameraShutdown, handleCameraShutdown, getStudentStartTime, students]);
+    }, detectionInterval);
+  }, [detectFaces, isZoomMode, isCameraActive, isCameraShutdown, handleCameraShutdown, getStudentStartTime, students, detectionInterval]);
 
   // Stop detection
   const stopDetection = useCallback(() => {
@@ -1130,6 +1144,8 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);  const DWELL_TIME
             setMinFaceSize={setMinFaceSize}
             maxFaceSize={maxFaceSize}
             setMaxFaceSize={setMaxFaceSize}
+            detectionInterval={detectionInterval}
+            setDetectionInterval={setDetectionInterval}
           />
         )}
 

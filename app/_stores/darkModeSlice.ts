@@ -49,9 +49,9 @@ export const styleSlice = createSlice({
 
         // Apply the 'dark' class to the main <html> element
         if (state.isEnabled) {
-          document.documentElement.classList.add('dark');
+          document.documentElement.classList.add('dark', 'dark-scrollbars-compat');
         } else {
-          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.remove('dark', 'dark-scrollbars-compat');
         }
       }
     },
