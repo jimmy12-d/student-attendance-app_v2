@@ -15,11 +15,16 @@ import NotificationPermissionPrompt from "./_components/NotificationPermissionPr
 import RouteGuard from "../_components/RouteGuard";
 import LocaleProvider from "../_components/LocaleProvider";
 import StudentLayoutContent from "./_components/StudentLayoutContent";
+import { usePathname } from "next/navigation";
+import { PWACache } from "../_utils/pwaCache";
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const { navigateWithinPWA } = usePWANavigation();
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+
+  const showTopNav = !pathname.includes('/student/payment-history');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -49,6 +54,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                 setLoading(false); // Allow rendering of the page
             } else {
                 // FAILURE: User has a record, but it's incomplete. Force them to link.
+                PWACache.clearUserState(); // Clear invalid cache
                 dispatch(
                   setUser({
                     name: user.displayName, // Use Google name as fallback
@@ -63,6 +69,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
             }
         } else {
              // FAILURE: Authenticated, but no student record at all. Force them to link.
+             PWACache.clearUserState(); // Clear invalid cache
              dispatch(
                 setUser({
                   name: user.displayName,
@@ -77,6 +84,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
         }
       } else {
         // User is not authenticated at all. Send them to the login page.
+        PWACache.clearUserState(); // Clear invalid cache
         navigateWithinPWA('/login');
       }
     });
@@ -111,9 +119,9 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
           <div className="fixed inset-0 -z-10 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800" />
           <Toaster richColors position="top-center" />
           <div className="relative min-h-screen lg:ml-64 xl:ml-0 bg-transparent">
-            <StudentTopNav />
-            <main className="relative pb-24 bg-transparent">
-                <div className="p-6 max-w-2xl mx-auto">
+            {showTopNav && <StudentTopNav />}
+            <main className={`relative pb-24 bg-transparent ${showTopNav ? '' : 'pt-0'}`}>
+                <div className={`max-w-2xl mx-auto ${showTopNav ? 'p-6' : 'p-0'}`}>
                     {children}
                 </div>
               <InstallPWA as_banner={true} />
@@ -125,4 +133,4 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
       </StudentLayoutContent>
     </LocaleProvider>
   );
-} 
+}

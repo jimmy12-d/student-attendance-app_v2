@@ -16,7 +16,7 @@ import { useTranslations, useLocale } from 'next-intl';
 
 // --- Import components for settings ---
 import NotificationSettings from '../_components/NotificationSettings';
-import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle, mdiWeb } from '@mdi/js';
+import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle, mdiWeb, mdiCreditCard } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
 
 // --- Reusable UI Components for the new design ---
@@ -120,6 +120,7 @@ const AccountPage = () => {
   const { canInstallPWA, isStandalone, isIOS, triggerInstall } = usePWAInstall();
   const t = useTranslations('student.account');
   const tCommon = useTranslations('common');
+  const tPayment = useTranslations('payment');
   const locale = useLocale();
 
   // Utility function for Khmer font styling
@@ -130,6 +131,10 @@ const AccountPage = () => {
 
   const [isLogoutModalActive, setIsLogoutModalActive] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+
+  const handlePaymentModalOpen = () => {
+    router.push('/student/payment-history');
+  };
 
   const handlePWAInstall = () => {
     if (isIOS) {
@@ -264,6 +269,24 @@ const AccountPage = () => {
               >
                 <DarkModeToggle />
               </SettingsListItem>
+            </SettingsGroup>
+          </div>
+          
+          {/* Payment History Group */}
+          <div>
+            <h2 className={khmerFont('text-base font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 px-4')}>
+              {tPayment('paymentHistoryTitle')}
+            </h2>
+            <SettingsGroup>
+              <SettingsListItem
+                iconPath={mdiCreditCard}
+                iconBgColor="bg-gradient-to-br from-green-500 to-emerald-600"
+                title={tPayment('viewPayments')}
+                subtitle={tPayment('viewPaymentsSubtitle')}
+                onClick={handlePaymentModalOpen}
+                titleClassName={khmerFont()}
+                subtitleClassName={khmerFont()}
+              />
             </SettingsGroup>
           </div>
           

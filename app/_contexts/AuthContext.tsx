@@ -92,6 +92,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         dispatch(setUser(null));
       }
       
+      // Reduce loading time by setting loading to false faster
+      setIsLoading(false);
+    }, (error) => {
+      // Handle auth errors by setting loading to false
+      console.error('Auth state change error:', error);
       setIsLoading(false);
     });
 

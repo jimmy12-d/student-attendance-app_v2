@@ -37,14 +37,9 @@ export function middleware(request: NextRequest) {
     response.headers.set('X-Protected-Route', 'true');
   }
   
-  // Handle PWA-specific routing - avoid redirects that break standalone mode
-  if (pathname === '/') {
-    // For PWA, we'll let the client-side navigation handle this
-    // Server-side redirects can break the PWA standalone mode
-    const response = NextResponse.rewrite(new URL('/login', request.url));
-    response.headers.set('X-PWA-Rewrite', 'true');
-    return response;
-  }
+  // Handle PWA-specific routing - let client-side handle root navigation
+  // Removed server-side rewrite to /login to prevent double redirects
+  // The main page component will handle authentication-based routing
   
   // Ensure certain paths are accessible within PWA context
   const pwaProtectedPaths = ['/login', '/student/attendance', '/student', '/teacher', '/dashboard'];

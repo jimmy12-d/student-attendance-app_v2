@@ -3,23 +3,59 @@ import { useEffect, useState } from 'react';
 import { usePWANavigation } from './_hooks/usePWANavigation';
 import { useAuthContext } from './_contexts/AuthContext';
 import { getDefaultRouteForRole } from './_lib/authUtils';
+import { PWACache } from './_utils/pwaCache';
 
 export default function HomePage() {
   const { navigateWithinPWA } = usePWANavigation();
   const { isAuthenticated, userRole, isLoading } = useAuthContext();
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   useEffect(() => {
-    if (!isLoading) {
+    // For PWA users, try to use cached route for immediate navigation
+    const handlePWAQuickStart = () => {
+      if (!PWACache.isPWA() || hasNavigated) return false;
+
+      const cachedState = PWACache.getUserState();
+      if (cachedState && cachedState.hasValidSession && cachedState.lastRole) {
+        // Navigate immediately to last known route for better UX
+        setHasNavigated(true);
+        navigateWithinPWA(cachedState.lastRoute);
+        return true;
+      }
+      return false;
+    };
+
+    // Try quick PWA start first
+    if (handlePWAQuickStart()) {
+      return;
+    }
+
+    // If auth has finished loading, navigate based on auth state
+    if (!isLoading && !hasNavigated) {
       if (isAuthenticated && userRole) {
         // User is authenticated and we have role info, redirect to appropriate dashboard
         const defaultRoute = getDefaultRouteForRole(userRole);
+        setHasNavigated(true);
+        
+        // Cache the user state for future PWA starts
+        if (PWACache.isPWA()) {
+          PWACache.saveUserState(userRole, defaultRoute);
+        }
+        
         navigateWithinPWA(defaultRoute);
       } else {
         // User is not authenticated or we don't have role info, go to login
+        setHasNavigated(true);
+        
+        // Clear cache since user is not authenticated
+        if (PWACache.isPWA()) {
+          PWACache.clearUserState();
+        }
+        
         navigateWithinPWA('/login');
       }
     }
-  }, [isAuthenticated, userRole, isLoading, navigateWithinPWA]);
+  }, [isAuthenticated, userRole, isLoading, navigateWithinPWA, hasNavigated]);
 
   if (isLoading) {
     return (
@@ -73,10 +109,10 @@ export default function HomePage() {
               
               <div className="space-y-2">
                 <p className="text-lg font-medium text-gray-800 dark:text-gray-200 animate-pulse">
-                  {isAuthenticated ? 'Preparing your dashboard...' : 'Authenticating...'}
+                  {isAuthenticated ? 'Preparing your dashboard...' : PWACache.isPWA() ? 'Opening your workspace...' : 'Checking your session...'}
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {isAuthenticated && userRole ? `Welcome back! Redirecting to ${userRole} dashboard` : 'Verifying your credentials'}
+                  {isAuthenticated && userRole ? `Welcome back! Redirecting to ${userRole} dashboard` : PWACache.isPWA() ? 'Loading your personalized attendance portal' : 'Verifying credentials and loading your workspace'}
                 </p>
               </div>
             </div>

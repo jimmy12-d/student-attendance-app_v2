@@ -9,6 +9,8 @@ import {
     mdiCurrencyUsd,
     mdiClose,
     mdiClockAlert,
+    mdiQrcodeScan,
+    mdiCashMultiple,
 } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import Button from "../../../_components/Button";
@@ -474,32 +476,32 @@ export const TransactionManager = ({
 
                 {/* Payment Method Selection */}
                 <div className="mt-6">
-                    <h3 className="pb-2">Payment Method</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <h3 className="pb-4 text-lg font-semibold text-gray-800 dark:text-gray-200">Payment Method</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <button
                             onClick={() => onPaymentMethodChange('QR Payment')}
-                            className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
+                            className={`flex-1 p-6 rounded-lg border-2 transition-all duration-200 ${
                                 paymentMethod === 'QR Payment'
-                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105'
-                                    : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10'
                             }`}
                         >
                             <div className="text-center">
-                                <img src="/scan.png" alt="QR Payment" className="h-12 w-auto mx-auto mb-2" />
-                                <div className="font-medium">QR Payment</div>
+                                <Icon path={mdiQrcodeScan} size={58} w="w-10" h="h-10" className="mx-auto mb-3 text-current" />
+                                <div className="font-medium text-sm">QR Payment</div>
                             </div>
                         </button>
                         <button
                             onClick={() => onPaymentMethodChange('Cash')}
-                            className={`flex-1 p-4 rounded-xl border-2 transition-all duration-200 ${
+                            className={`flex-1 p-6 rounded-lg border-2 transition-all duration-200 ${
                                 paymentMethod === 'Cash'
-                                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 shadow-lg transform scale-105'
-                                    : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'
+                                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
+                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/10'
                             }`}
                         >
                             <div className="text-center">
-                                <img src="/cash.png" alt="Cash" className="h-14 w-auto mx-auto mb-2" />
-                                <div className="font-medium">Cash</div>
+                                <Icon path={mdiCashMultiple} size={64} w="w-12" h="h-12" className="mx-auto mb-3 text-current" />
+                                <div className="font-medium text-sm">Cash</div>
                             </div>
                         </button>
                     </div>

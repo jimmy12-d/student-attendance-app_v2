@@ -18,6 +18,9 @@ const LoginClient = () => {
 
   useEffect(() => {
     const checkUserProfile = async () => {
+      // Only check profile if we're not currently loading auth state
+      if (isLoading) return;
+      
       if (isAuthenticated && currentUser && !userRole) {
         // User is authenticated but we don't know their role yet
         // Check if they are a student with a complete profile
@@ -55,9 +58,10 @@ const LoginClient = () => {
       }
     };
 
-    if (!isLoading) {
-      checkUserProfile();
-    }
+    // Add a small delay to prevent race conditions with main page navigation
+    const timeoutId = setTimeout(checkUserProfile, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [isAuthenticated, currentUser, userRole, isLoading, navigateWithinPWA]);
 
   if (isLoading || checkingProfile) {

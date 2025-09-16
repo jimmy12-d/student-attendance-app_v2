@@ -28,8 +28,10 @@
   "dependencies": {
     "@mdi/js": "^7.0.96",
     "@reduxjs/toolkit": "^2.5.1",
+    "@types/html2canvas": "^1.0.0",
     "@types/react-timeago": "^4.1.7",
     "chart.js": "^4.5.0",
+    "d3": "^7.9.0",
     "dotenv": "^17.2.1",
     "face-api.js": "^0.22.2",
     "firebase": "^11.8.1",
@@ -37,6 +39,7 @@
     "formik": "^2.4.2",
     "framer-motion": "^12.19.2",
     "glob": "^11.0.3",
+    "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.525.0",
     "next": "15.1.7",

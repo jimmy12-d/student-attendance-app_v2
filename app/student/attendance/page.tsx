@@ -581,7 +581,7 @@ const AttendancePage = () => {
                   <div className="absolute inset-0 w-5 h-5 bg-gradient-to-br from-purple-400/40 via-indigo-400/40 to-violet-400/40 rounded-full blur-md animate-pulse"></div>
                   <div className="absolute inset-1 w-3 h-3 bg-white/30 rounded-full"></div>
                 </div>
-                <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('shiftInfo.avgArrivalGraph')}</h2>
+                <h2 className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>{t('shiftInfo.avgArrivalGraph')}</h2>
               </div>
               <HealthArrivalChart
                  recentRecords={recentRecords}
@@ -601,7 +601,7 @@ const AttendancePage = () => {
               <div className="absolute inset-0 w-5 h-5 bg-gradient-to-br from-blue-400/40 via-purple-400/40 to-pink-400/40 rounded-full blur-md animate-pulse"></div>
               <div className="absolute inset-1 w-3 h-3 bg-white/30 rounded-full"></div>
             </div>
-            <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('quickActions')}</h2>
+            <h2 className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>{t('quickActions')}</h2>
           </div>
              {/* Mobile-optimized Action Cards */}
              <div className="grid grid-cols-1 gap-3">
@@ -691,7 +691,7 @@ const AttendancePage = () => {
                  <div className="absolute inset-0 w-5 h-5 bg-gradient-to-br from-blue-400/40 via-blue-500/40 to-cyan-400/40 rounded-full blur-md animate-pulse"></div>
                  <div className="absolute inset-1 w-3 h-3 bg-white/30 rounded-full"></div>
                </div>
-               <h2 className={khmerFont('font-bold text-2xl text-gray-900 dark:text-white')}>{t('recentPermissions')}</h2>
+               <h2 className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>{t('recentPermissions')}</h2>
              </div>
              <div className="overflow-hidden">
                <OngoingPermissions permissions={ongoingPermissions} isLoading={loadingPermissions} />
