@@ -207,12 +207,12 @@
     "receipts": "វិក្កយបត្រ",
     "found": "រកឃើញ",
     "totalReceipts": "វិក្កយបត្រសរុប",
-    "upToDate": "ធ្វើបច្ចុប្បន្នភាព"
+    "upToDate": "បច្ចុប្បន្នភាព"
   },
   "payment": {
     "paymentHistoryTitle": "ប្រវត្តិបង់ប្រាក់",
     "viewPayments": "មើលប្រវត្តិបង់ប្រាក់",
-    "viewPaymentsSubtitle": "មើលវិក្កយបត្រនិងប្រវត្តិប្រតិបត្តិការទាំងអស់របស់អ្នក",
+    "viewPaymentsSubtitle": "មើលវិក្កយបត្រទាំងអស់",
     "loadingPayments": "កំពុងផ្ទុកការបង់ប្រាក់...",
     "noPaymentsTitle": "រកមិនឃើញការបង់ប្រាក់",
     "noPaymentsDescription": "អ្នកមិនទាន់បានធ្វើការបង់ប្រាក់នៅឡើយទេ។ ប្រវត្តិបង់ប្រាក់របស់អ្នកនឹងបង្ហាញនៅទីនេះ។",
@@ -220,10 +220,26 @@
     "qrPayment": "បង់ប្រាក់តាម QR",
     "receipt": "វិក្កយបត្រ",
     "receipts": "វិក្កយបត្រ",
-    "found": "រកឃើញ"
+    "found": "រកឃើញ",
+    "months": {
+      "january": "មករា",
+      "february": "កុម្ភៈ",
+      "march": "មីនា",
+      "april": "មេសា",
+      "may": "ឧសភា",
+      "june": "មិថុនា",
+      "july": "កក្កដា",
+      "august": "សីហា",
+      "september": "កញ្ញា",
+      "october": "តុលា",
+      "november": "វិច្ឆិកា",
+      "december": "ធ្នូ"
+    }
   },
   "receipt": {
     "title": "វិក្កយបត្របង់ប្រាក់",
+    "schoolName": "សាលាបង្រៀនគួររ៉ដវែល",
+    "receiptTitle": "វិក្កយបត្របង់ប្រាក់",
     "receiptNotFound": "រកមិនឃើញវិក្កយបត្រ",
     "invalidTransaction": "ប្រតិបត្តិការ ឬលេខសិស្សមិនត្រឹមត្រូវ",
     "accessDenied": "ការចូលប្រើត្រូវបានបដិសេធ៖ វិក្កយបត្រនេះមិនមែនជារបស់អ្នកទេ",
@@ -245,11 +261,14 @@
     "subjectsIncluded": "មុខវិជ្ជារួមបញ្ចូល",
     "totalPaid": "សរុបបង់",
     "thankYou": "អរគុណ!",
+    "thankYouMessage": "អរគុណសម្រាប់ការបង់ប្រាក់",
     "processedBy": "ត្រូវបានដំណើរការដោយ",
     "download": "ទាញយក",
     "downloading": "កំពុងទាញយក...",
     "share": "ចែករំលែក",
     "sharing": "កំពុងចែករំលែក...",
+    "saveAsImage": "រក្សាទុកជារូបភាព",
+    "saving": "កំពុងរក្សាទុក...",
     "downloadSuccess": "បានទាញយកវិក្កយបត្រដោយជោគជ័យ!",
     "downloadError": "បរាជ័យក្នុងការទាញយកវិក្កយបត្រ",
     "shareSuccess": "បានចែករំលែកវិក្កយបត្រដោយជោគជ័យ!",
@@ -257,7 +276,18 @@
     "clipboardSuccess": "បានចម្លងវិក្កយបត្រទៅក្ដារឃ្លីប!",
     "shareNotSupported": "ការចែករំលែកមិនត្រូវបានគាំទ្រលើឧបករណ៍នេះទេ",
     "cashPayment": "ការបង់ប្រាក់សាច់ប្រាក់",
-    "qrPayment": "ការបង់ប្រាក់ QR"
+    "qrPayment": "ការបង់ប្រាក់ QR",
+    "subjects": {
+      "math": "គណិតវិទ្យា",
+      "chemistry": "គីមីវិទ្យា",
+      "physics": "រូបវិទ្យា",
+      "khmer": "ភាសាខ្មែរ",
+      "biology": "ជីវវិទ្យា",
+      "history": "ប្រវត្តិវិទ្យា",
+      "geography": "ភូមិវិទ្យា",
+      "moral": "សីលធម៌",
+      "earth": "ផែនដីវិទ្យា"
+    }
   },
   "notifications": {
     "title": "ការជូនដំណឹង",

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Nokora } from "next/font/google";
 import "../css/main.css";
@@ -25,13 +25,6 @@ export const metadata: Metadata = {
   title: "Rodwell Portal",
   description: "Rodwell Learning Center Student Attendance App",
   manifest: "/manifest.json",
-  themeColor: "#0f172a",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",
@@ -43,6 +36,14 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-status-bar-style": "black-translucent",
     "apple-mobile-web-app-title": "Rodwell Portal",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({

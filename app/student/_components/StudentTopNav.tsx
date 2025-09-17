@@ -12,6 +12,7 @@ import { useTranslations, useLocale } from 'next-intl';
 
 const StudentTopNav = () => {
     const t = useTranslations('student.dashboard');
+    const tAccount = useTranslations('student.account');
     const locale = useLocale();
     const { studentDocId, authUserName, unreadNotificationCount } = useAppSelector((state) => ({
         studentDocId: state.main.studentDocId,
@@ -79,7 +80,7 @@ const StudentTopNav = () => {
                             )}
                             {userClass && (
                                 <span className={`text-xs text-gray-500 dark:text-slate-400 truncate ${locale === 'kh' ? 'khmer-font' : ''}`}>
-                                    {userClass}
+                                    {userClass.replace('Class', tAccount('class'))}
                                 </span>
                             )}
                         </div>

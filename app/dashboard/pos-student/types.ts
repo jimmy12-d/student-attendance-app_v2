@@ -21,6 +21,8 @@ export interface Student {
 export interface Transaction {
     studentId: string;
     studentName: string;
+    nameKhmer?: string; // Khmer name for the student
+    fullName?: string; // Full English name for the student
     className: string;
     classType: string;
     subjects: string[];

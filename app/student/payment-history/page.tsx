@@ -10,29 +10,27 @@ import Icon from '../../_components/Icon';
 import { 
   mdiArrowLeft, 
   mdiDownload, 
-  mdiShare, 
   mdiReceipt,
-  mdiCalendar,
-  mdiCurrencyUsd,
-  mdiAccount,
-  mdiSchool,
+  mdiReceiptTextCheck,
   mdiCash,
   mdiQrcode,
-  mdiClose,
   mdiLoading
 } from '@mdi/js';
 import { Transaction } from '../../dashboard/pos-student/types';
-import html2canvas from 'html2canvas';
+import html2canvas from 'html2canvas-pro';
 import { toast } from 'sonner';
+import { Transition } from '@headlessui/react';
 
 const PaymentHistoryPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showShareButton, setShowShareButton] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [studentDetails, setStudentDetails] = useState<{[key: string]: {nameKhmer?: string, fullName?: string, studentName: string}}>({});
   
   const router = useRouter();
   const studentDocId = useAppSelector((state) => state.main.studentDocId);
@@ -47,6 +45,55 @@ const PaymentHistoryPage = () => {
   const khmerFont = (additionalClasses: string = '') => {
     const baseClasses = locale === 'kh' ? 'khmer-font' : '';
     return additionalClasses ? `${baseClasses} ${additionalClasses}`.trim() : baseClasses;
+  };
+
+  // Function to fetch student details for a transaction
+  const fetchStudentDetails = async (studentId: string) => {
+    if (studentDetails[studentId]) return; // Already fetched
+    
+    try {
+      const studentRef = doc(db, 'students', studentId);
+      const studentSnap = await getDoc(studentRef);
+      
+      if (studentSnap.exists()) {
+        const studentData = studentSnap.data();
+        setStudentDetails(prev => ({
+          ...prev,
+          [studentId]: {
+            nameKhmer: studentData.nameKhmer,
+            fullName: studentData.fullName,
+            studentName: studentData.fullName || studentData.nameKhmer || 'Unknown Student'
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching student details:', error);
+    }
+  };
+
+  // Function to translate subject names
+  const translateSubject = (subject: string) => {
+    const subjectKey = subject.toLowerCase();
+    try {
+      return tReceipt(`subjects.${subjectKey}`);
+    } catch {
+      return subject; // Fallback to original subject name if translation not found
+    }
+  };
+
+  // Function to translate month names
+  const translateMonth = (month: string) => {
+    // Extract month name and year from strings like "September 2025"
+    const parts = month.split(' ');
+    const monthName = parts[0].toLowerCase();
+    const year = parts[1] || '';
+    
+    try {
+      const translatedMonth = t(`months.${monthName}`);
+      return year ? `${translatedMonth} ${year}` : translatedMonth;
+    } catch {
+      return month; // Fallback to original month name if translation not found
+    }
   };
 
   useEffect(() => {
@@ -70,6 +117,13 @@ const PaymentHistoryPage = () => {
           querySnapshot.forEach((doc) => {
             transactionData.push({ id: doc.id, ...doc.data() } as unknown as Transaction);
           });
+          
+          // Fetch student details for each unique student
+          const uniqueStudentIds = [...new Set(transactionData.map(t => t.studentId))];
+          uniqueStudentIds.forEach(studentId => {
+            if (studentId) fetchStudentDetails(studentId);
+          });
+          
           setTransactions(transactionData);
           setLoading(false);
         }, (error) => {
@@ -89,22 +143,21 @@ const PaymentHistoryPage = () => {
     fetchTransactions();
   }, [studentDocId]);
 
+  useEffect(() => {
+    // Check if the user is on an iOS device
+    const iosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    setIsIOS(iosDevice);
+    
+    // We don't need a separate share button state anymore since we'll handle it in the download button
+    setShowShareButton(false);
+  }, []);
+
   const formatDate = (timestamp: any) => {
     if (!timestamp) return '';
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString(locale === 'kh' ? 'km-KH' : 'en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const formatFullDate = (timestamp: any) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString(locale === 'kh' ? 'km-KH' : 'en-US', {
-      year: 'numeric',
-      month: 'long',
       day: 'numeric'
     });
   };
@@ -134,155 +187,96 @@ const PaymentHistoryPage = () => {
     }
   };
 
-  const handleDownloadReceipt = async () => {
+  const handleSaveReceipt = async () => {
     if (!receiptRef.current || !selectedTransaction) return;
 
-    setIsDownloading(true);
+    setIsSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // A small delay can help ensure the UI is updated before the heavy canvas operation
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const canvas = await html2canvas(receiptRef.current, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
-          const allElements = clonedDoc.querySelectorAll('*');
-          allElements.forEach((el) => {
-            const element = el as HTMLElement;
-            const style = window.getComputedStyle(element);
-
-            const colorProps = ['color', 'backgroundColor', 'borderColor', 'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor'];
-            colorProps.forEach(prop => {
-              const value = style.getPropertyValue(prop);
-              if (value.includes('oklch')) {
-                // Force a safe, non-oklch color
-                if (prop.includes('Color')) {
-                  element.style.setProperty(prop, 'black', 'important');
-                } else if (prop.includes('background')) {
-                  element.style.setProperty(prop, 'white', 'important');
-                }
-              }
-            });
-
-            // Also check inline style attribute
-            if (element.getAttribute('style')?.includes('oklch')) {
-              element.setAttribute('style', element.getAttribute('style')!.replace(/oklch\([^)]+\)/g, 'black'));
-            }
-          });
+        ignoreElements: (element) => {
+          // This class is on the container for the action buttons
+          return element.classList.contains('receipt-actions');
         }
       });
 
+      // Use the download link method for all devices, as it provides a better
+      // user experience on modern iOS than opening a new tab.
       const link = document.createElement('a');
       link.download = `receipt-${selectedTransaction.receiptNumber}.png`;
-      link.href = canvas.toDataURL('image/png', 1.0);
+      link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
       link.click();
-
+      document.body.removeChild(link);
+      
       toast.success(tReceipt('downloadSuccess'));
+
     } catch (error) {
-      console.error('Error downloading receipt:', error);
+      console.error('Error saving receipt:', error);
       toast.error(tReceipt('downloadError'));
     } finally {
-      setIsDownloading(false);
+      setIsSaving(false);
     }
   };
 
   const handleShareReceipt = async () => {
     if (!receiptRef.current || !selectedTransaction) return;
 
-    setIsSharing(true);
+    setIsSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
       const canvas = await html2canvas(receiptRef.current, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
-          const allElements = clonedDoc.querySelectorAll('*');
-          allElements.forEach((el) => {
-            const element = el as HTMLElement;
-            const style = window.getComputedStyle(element);
-
-            const colorProps = ['color', 'backgroundColor', 'borderColor', 'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor'];
-            colorProps.forEach(prop => {
-              const value = style.getPropertyValue(prop);
-              if (value.includes('oklch')) {
-                // Force a safe, non-oklch color
-                if (prop.includes('Color')) {
-                  element.style.setProperty(prop, 'black', 'important');
-                } else if (prop.includes('background')) {
-                  element.style.setProperty(prop, 'white', 'important');
-                }
-              }
-            });
-
-            // Also check inline style attribute
-            if (element.getAttribute('style')?.includes('oklch')) {
-              element.setAttribute('style', element.getAttribute('style')!.replace(/oklch\([^)]+\)/g, 'black'));
-            }
-          });
-        }
+        ignoreElements: (element) => element.classList.contains('receipt-actions'),
       });
 
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          toast.error(tReceipt('shareError'));
-          setIsSharing(false);
-          return;
-        }
+      const dataUrl = canvas.toDataURL('image/png');
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `receipt-${selectedTransaction.receiptNumber}.png`, {
+        type: 'image/png',
+      });
 
-        if (navigator.share && navigator.canShare) {
-          const file = new File([blob], `receipt-${selectedTransaction.receiptNumber}.png`, {
-            type: 'image/png',
-          });
+      const shareData: ShareData = {
+        title: tReceipt('receiptTitle', { receiptNumber: selectedTransaction.receiptNumber }),
+        text: tReceipt('receiptText'),
+      };
 
-          if (navigator.canShare({ files: [file] })) {
-            try {
-              await navigator.share({
-                title: `Payment Receipt - ${selectedTransaction.receiptNumber}`,
-                text: `Payment receipt for ${selectedTransaction.paymentMonth}`,
-                files: [file],
-              });
-              toast.success(tReceipt('shareSuccess'));
-            } catch (error: any) {
-              if (error.name !== 'AbortError') {
-                throw error;
-              }
-            }
-          } else {
-            // Fallback for browsers that support Web Share API but not file sharing
-            if (navigator.clipboard) {
-              await navigator.clipboard.write([
-                new ClipboardItem({
-                  'image/png': blob
-                })
-              ]);
-              toast.success(tReceipt('clipboardSuccess'));
-            } else {
-              toast.error(tReceipt('shareNotSupported'));
-            }
-          }
-        } else {
-          // Fallback for browsers without Web Share API
-          if (navigator.clipboard) {
-            await navigator.clipboard.write([
-              new ClipboardItem({
-                'image/png': blob
-              })
-            ]);
-            toast.success(tReceipt('clipboardSuccess'));
-          } else {
-            toast.error(tReceipt('shareNotSupported'));
-          }
-        }
-      }, 'image/png');
+      // Check if files can be shared
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        shareData.files = [file];
+      }
+
+      if (navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        toast.success(tReceipt('shareSuccess'));
+      } else {
+        toast.error(tReceipt('shareNotSupported'));
+      }
     } catch (error) {
-      console.error('Error sharing receipt:', error);
-      toast.error(tReceipt('shareError'));
+      if ((error as DOMException).name !== 'AbortError') {
+        console.error('Error sharing receipt:', error);
+        toast.error(tReceipt('shareError'));
+      }
     } finally {
-      setIsSharing(false);
+      setIsSaving(false);
+    }
+  };
+
+  const handleDownloadOrShare = async () => {
+    if (isIOS && navigator.share) {
+      // On iOS, use the share API
+      await handleShareReceipt();
+    } else {
+      // On other devices, use direct download
+      await handleSaveReceipt();
     }
   };
 
@@ -329,7 +323,7 @@ const PaymentHistoryPage = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+      <div className="min-h-screen">
         {/* Custom Animated Header */}
         <div className="relative">
           {/* Background with gradient and animation */}
@@ -362,7 +356,7 @@ const PaymentHistoryPage = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                      <Icon path={mdiReceipt} size="24" className="text-white" />
+                      <Icon path={mdiReceiptTextCheck} size="24" className="text-white" />
                     </div>
                     <div>
                       <p className={`text-white/90 text-sm ${khmerFont()}`}>
@@ -430,7 +424,7 @@ const PaymentHistoryPage = () => {
                       </div>
                       <div>
                         <h3 className={`font-bold text-gray-900 dark:text-white text-lg ${khmerFont()}`}>
-                          {transaction.paymentMonth}
+                          {translateMonth(transaction.paymentMonth)}
                         </h3>
                         <p className={`text-sm text-gray-500 dark:text-gray-400 ${khmerFont()}`}>
                           {formatDate(transaction.date)}
@@ -455,17 +449,39 @@ const PaymentHistoryPage = () => {
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {transaction.subjects && transaction.subjects.slice(0, 3).map((subject, index) => (
+                      {transaction.subjects && transaction.subjects.slice(0, 2).map((subject, index) => (
                         <span 
                           key={index}
                           className={`inline-block bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 text-xs px-2 py-1 rounded-full ${khmerFont()}`}
                         >
-                          {subject}
+                          {translateSubject(subject)}
                         </span>
                       ))}
-                      {transaction.subjects && transaction.subjects.length > 3 && (
-                        <span className={`inline-block text-gray-500 dark:text-gray-400 text-xs px-1 ${khmerFont()}`}>
-                          +{transaction.subjects.length - 3}
+                      {transaction.subjects && transaction.subjects.length >= 3 && (
+                        <>
+                          {/* 3rd subject - hidden on mobile, visible on sm and up */}
+                          <span 
+                            className={`hidden sm:inline-block bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 text-xs px-2 py-1 rounded-full ${khmerFont()}`}
+                          >
+                            {translateSubject(transaction.subjects[2])}
+                          </span>
+                          {/* +X more - show on mobile when > 2, show on sm+ when > 3 */}
+                          {transaction.subjects.length > 3 && (
+                            <span className={`inline-block sm:hidden text-gray-500 dark:text-gray-400 text-xs px-1 ${khmerFont()}`}>
+                              +{transaction.subjects.length - 2}
+                            </span>
+                          )}
+                          {transaction.subjects.length > 3 && (
+                            <span className={`hidden sm:inline-block text-gray-500 dark:text-gray-400 text-xs px-1 ${khmerFont()}`}>
+                              +{transaction.subjects.length - 3}
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {/* Show +X more on mobile when exactly 3 subjects */}
+                      {transaction.subjects && transaction.subjects.length === 3 && (
+                        <span className={`inline-block sm:hidden text-gray-500 dark:text-gray-400 text-xs px-1 ${khmerFont()}`}>
+                          +1
                         </span>
                       )}
                     </div>
@@ -481,192 +497,189 @@ const PaymentHistoryPage = () => {
       <div 
         className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out ${showReceiptModal ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
       >
-        {/* Blurred Backdrop */}
-        <div
-          className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300 ease-out ${showReceiptModal ? 'opacity-100' : 'opacity-0'}`}
-          onClick={closeModal}
-        />
-        
-        {/* Receipt Content */}
-        <div 
-          className={`relative w-full max-w-sm transition-all duration-500 ease-out transform ${showReceiptModal ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-8 scale-95 opacity-0'}`}
+        <Transition
+          show={showReceiptModal}
+          as={React.Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
         >
-          {selectedTransaction && (
-            <div className="relative">
-              {/* Close Button - Floating */}
-              <div className="absolute -top-3 -right-3 z-10">
-                <button
-                  onClick={closeModal}
-                  className="p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-full transition-colors shadow-lg border-2 border-white"
-                >
-                  <Icon path={mdiClose} size="18" className="text-white" />
-                </button>
-              </div>
-
-              {/* Paper-style Receipt Container */}
-              <div 
-                ref={receiptRef} 
-                className="bg-white shadow-2xl rounded-t-lg overflow-hidden border-t border-x border-gray-200"
-                style={{
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                  boxShadow: '0 -25px 50px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.05)',
-                  maxHeight: '90vh'
-                }}
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+              <Transition.Child
+                as={React.Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0"
+                enterTo="opacity-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
               >
-                {/* School Logo and Header */}
-                <div className="relative px-4 py-2 bg-white border-b-2 border-dashed border-gray-300">
-                  {/* Paper texture overlay */}
-                  <div 
-                    className="absolute inset-0 opacity-5"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000000' fill-opacity='0.03'%3E%3Cpath d='m0 40l40-40h-40v40zm40 0v-40h-40l40 40z'/%3E%3C/g%3E%3C/svg%3E")`
-                    }}
-                  />
-                  <div className="relative text-center">
-                    {/* School Logo */}
-                    <div className="mb-2 flex justify-center">
-                      <div className="w-24 h-24 rounded-full p-1">
-                        <img 
-                          src="/rodwell_logo.png" 
-                          alt="Rodwell Learning Center" 
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            // Fallback to receipt icon if logo fails to load
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const fallback = target.nextElementSibling as HTMLElement;
-                            if (fallback) {
-                              fallback.style.display = 'flex';
-                            }
-                          }}
-                        />
-                        <div className="w-full h-full items-center justify-center bg-gray-100 rounded-full" style={{ display: 'none' }}>
-                          <Icon path={mdiReceipt} size="32" className="text-gray-600" />
+                <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+                  <div className="absolute inset-0 bg-gray-500 opacity-75" onClick={closeModal}></div>
+                </div>
+              </Transition.Child>
+
+              {/* This element is to trick the browser into centering the modal contents. */}
+              <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+              <Transition.Child
+                as={React.Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                enterTo="opacity-100 translate-y-0 sm:scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
+                leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+              >
+                <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full">
+                  {selectedTransaction && (
+                    <div ref={receiptRef}>
+                      {/* School Logo and Header */}
+                      <div className="relative px-4 py-2 bg-white border-b-2 border-dashed border-gray-300">
+                        <div className="relative text-center">
+                          <div className="mb-2 flex justify-center">
+                            <div className="w-24 h-24 rounded-full p-1">
+                              <img 
+                                src="/rodwell_logo.png" 
+                                alt="Rodwell Learning Center" 
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  const fallback = target.nextElementSibling as HTMLElement;
+                                  if (fallback) {
+                                    fallback.style.display = 'flex';
+                                  }
+                                }}
+                              />
+                              <div className="w-full h-full items-center justify-center bg-gray-100 rounded-full" style={{ display: 'none' }}>
+                                <Icon path={mdiReceipt} size="32" className="text-gray-600" />
+                              </div>
+                            </div>
+                          </div>
+                          <h2 className={`text-lg font-bold mb-1 tracking-wide text-gray-800 ${khmerFont()}`}>
+                            {tReceipt('schoolName')}
+                          </h2>
+                          <p className={`text-gray-600 text-sm font-medium ${khmerFont()}`}>
+                            {tReceipt('receiptTitle')}
+                          </p>
                         </div>
                       </div>
-                    </div>
-                    <h2 className="text-lg font-bold mb-1 tracking-wide text-gray-800">RODWELL LEARNING CENTER</h2>
-                    <p className="text-gray-600 text-sm font-medium">RECEIPT OF PAYMENT</p>
 
-                  </div>
-                </div>
+                      {/* Receipt Body */}
+                      <div className="p-6 space-y-4">
+                        {/* Receipt Details - Minimal Style */}
+                          <div className="flex flex-col space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
+                                {tReceipt('receiptNumber')}:
+                              </span>
+                              <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
+                                {selectedTransaction.receiptNumber}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
+                                {tReceipt('student')}:
+                              </span>
+                              <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
+                                {(() => {
+                                  const studentDetail = studentDetails[selectedTransaction.studentId];
+                                  const nameKhmer = studentDetail?.nameKhmer;
+                                  const fullName = studentDetail?.fullName;
+                                  const studentName = selectedTransaction.studentName;
 
-                {/* Receipt Body - Scrollable */}
-                <div className="overflow-y-auto max-h-[60vh] pb-4 p-6 space-y-4">
-                  {/* Receipt Details - Minimal Style */}
-                  <div className="bg-gray-50 rounded-xl">
-                    <p className={`text-xs text-gray-600 uppercase tracking-wide font-semibold mb-3 ${khmerFont()}`}>
-                      {tReceipt('receiptContent')}:
-                    </p>
-                    <div className="flex flex-col space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
-                          {tReceipt('receiptNumber')}:
-                        </span>
-                        <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
-                          {selectedTransaction.receiptNumber}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
-                          Student:
-                        </span>
-                        <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
-                          {selectedTransaction.studentName}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
-                          Class:
-                        </span>
-                        <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
-                          {selectedTransaction.className}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
-                          Payment For:
-                        </span>
-                        <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
-                          {selectedTransaction.paymentMonth}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
-                          {tReceipt('date')}:
-                        </span>
-                        <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
-                          {formatDate(selectedTransaction.date)} {formatTime(selectedTransaction.date)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
-                          Payment Method:
-                        </span>
-                        <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
-                          {selectedTransaction.paymentMethod === 'Cash' ? t('cashPayment') : t('qrPayment')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                                  return locale === 'kh' 
+                                    ? (nameKhmer || fullName || studentName)
+                                    : (fullName || studentName);
+                                })()}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
+                                {tReceipt('class')}:
+                              </span>
+                              <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
+                                {selectedTransaction.className.replace('Class', tReceipt('class'))}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
+                                {tReceipt('paymentFor')}:
+                              </span>
+                              <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
+                                {translateMonth(selectedTransaction.paymentMonth)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
+                                {tReceipt('date')}:
+                              </span>
+                              <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
+                                {formatDate(selectedTransaction.date)} {formatTime(selectedTransaction.date)}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className={`text-sm font-semibold text-gray-600 ${khmerFont()}`}>
+                                {tReceipt('paymentMethod')}:
+                              </span>
+                              <span className={`text-sm font-bold text-gray-900 ${khmerFont()}`}>
+                                {selectedTransaction.paymentMethod === 'Cash' ? t('cashPayment') : t('qrPayment')}
+                              </span>
+                            </div>
+                          </div>
 
-                  {/* Subjects */}
-                  {selectedTransaction.subjects && selectedTransaction.subjects.length > 0 && (
-                    <div className="border-t border-dashed border-gray-300 pt-2">
-                      <p className={`text-xs text-gray-600 uppercase tracking-wide font-semibold mb-2 ${khmerFont()}`}>
-                        {tReceipt('subjectsIncluded')}
-                      </p>
-                      <div className="text-sm text-gray-700 font-medium">
-                        {selectedTransaction.subjects.join(', ')}
+                        {/* Subjects */}
+                        {selectedTransaction.subjects && selectedTransaction.subjects.length > 0 && (
+                          <div className="border-t border-dashed border-gray-300 pt-2">
+                            <p className={`text-xs text-gray-600 uppercase tracking-wide font-semibold mb-2 ${khmerFont()}`}>
+                              {tReceipt('subjectsIncluded')}
+                            </p>
+                            <div className="text-sm text-gray-700 font-medium">
+                              {selectedTransaction.subjects.map(subject => translateSubject(subject)).join(', ')}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Thank You Message */}
+                        <div className="text-center">
+                          <p className={`text-lg font-semibold text-gray-800 ${khmerFont()}`}>
+                            {tReceipt('thankYou')}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
-
-                  {/* Thank You Message */}
-                  <div className="text-center">
-                    <p className={`text-lg font-semibold text-gray-800 ${khmerFont()}`}>
-                      {tReceipt('thankYou')}
-                    </p>
-                  </div>
-
-                  {/* Action Buttons Section */}
-                  <div className="border-t-2 border-dashed border-gray-300">
-                    <div className="flex justify-around items-center text-center pt-2">
-                      {/* Share Button */}
+                  
+                  {/* Action Buttons */}
+                  <div className="receipt-actions bg-gray-50 px-6 py-5 border-t border-gray-200">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
                       <button
-                        onClick={handleShareReceipt}
-                        disabled={isSharing}
-                        className="flex flex-col items-center text-gray-600 hover:text-green-600 disabled:text-gray-400 transition-colors group"
+                        onClick={handleDownloadOrShare}
+                        disabled={isSaving}
+                        className="flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
                       >
-                        <div className="w-10 h-10 bg-gray-100 group-hover:bg-green-100 rounded-full flex items-center justify-center transition-colors border-2 border-gray-200 group-hover:border-green-300">
-                          <Icon path={mdiShare} size="20" className="text-gray-500 group-hover:text-green-600 transition-colors" />
-                        </div>
-                        <span className={`text-sm font-medium ${khmerFont()}`}>
-                          {isSharing ? 'Sharing...' : 'Share'}
-                        </span>
+                        <Icon path={isSaving ? mdiLoading : mdiDownload} size="18" className={`mr-2 ${isSaving ? 'animate-spin' : ''}`} />
+                        {isSaving ? tReceipt('saving') : tReceipt('download')}
                       </button>
-
-                      {/* Download Button */}
                       <button
-                        onClick={handleDownloadReceipt}
-                        disabled={isDownloading}
-                        className="flex flex-col items-center text-gray-600 hover:text-blue-600 disabled:text-gray-400 transition-colors group"
+                        type="button"
+                        onClick={closeModal}
+                        className="flex items-center justify-center px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors duration-200"
                       >
-                        <div className="w-10 h-10 bg-gray-100 group-hover:bg-blue-100 rounded-full flex items-center justify-center transition-colors border-2 border-gray-200 group-hover:border-blue-300">
-                          <Icon path={mdiDownload} size="20" className="text-gray-500 group-hover:text-blue-600 transition-colors" />
-                        </div>
-                        <span className={`text-sm font-medium ${khmerFont()}`}>
-                          {isDownloading ? 'Downloading...' : 'Download'}
-                        </span>
+                        {tCommon('close')}
                       </button>
                     </div>
                   </div>
                 </div>
-              </div>
+              </Transition.Child>
             </div>
-          )}
-        </div>
+          </div>
+        </Transition>
       </div>
     </>
   );

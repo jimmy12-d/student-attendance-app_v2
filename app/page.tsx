@@ -4,13 +4,43 @@ import { usePWANavigation } from './_hooks/usePWANavigation';
 import { useAuthContext } from './_contexts/AuthContext';
 import { getDefaultRouteForRole } from './_lib/authUtils';
 import { PWACache } from './_utils/pwaCache';
+import './_utils/pwaInstantRedirect'; // Import for immediate PWA redirect
 
 export default function HomePage() {
   const { navigateWithinPWA } = usePWANavigation();
-  const { isAuthenticated, userRole, isLoading } = useAuthContext();
+  const { isAuthenticated, userRole, isLoading, currentUser } = useAuthContext();
   const [hasNavigated, setHasNavigated] = useState(false);
+  const [initialCheck, setInitialCheck] = useState(false);
+
+  // Immediate check for PWA cache before any rendering
+  const performImmediateCheck = () => {
+    if (initialCheck) return false;
+    
+    setInitialCheck(true);
+    
+    // For PWA users, check cache immediately
+    if (PWACache.isPWA()) {
+      const cachedState = PWACache.getUserState();
+      if (cachedState && cachedState.hasValidSession && cachedState.lastRole) {
+        console.log('PWA Immediate: Using cached route', cachedState.lastRoute);
+        setHasNavigated(true);
+        // Use setTimeout to avoid hydration issues
+        setTimeout(() => {
+          navigateWithinPWA(cachedState.lastRoute);
+        }, 0);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Perform immediate check
+  const hasImmediateRedirect = performImmediateCheck();
 
   useEffect(() => {
+    // Skip if we already did an immediate redirect
+    if (hasImmediateRedirect) return;
+
     // For PWA users, try to use cached route for immediate navigation
     const handlePWAQuickStart = () => {
       if (!PWACache.isPWA() || hasNavigated) return false;
@@ -18,6 +48,7 @@ export default function HomePage() {
       const cachedState = PWACache.getUserState();
       if (cachedState && cachedState.hasValidSession && cachedState.lastRole) {
         // Navigate immediately to last known route for better UX
+        console.log('PWA Quick Start: Using cached route', cachedState.lastRoute);
         setHasNavigated(true);
         navigateWithinPWA(cachedState.lastRoute);
         return true;
@@ -25,39 +56,59 @@ export default function HomePage() {
       return false;
     };
 
-    // Try quick PWA start first
+    // Try quick PWA start first (immediate, no waiting)
     if (handlePWAQuickStart()) {
       return;
     }
 
-    // If auth has finished loading, navigate based on auth state
-    if (!isLoading && !hasNavigated) {
-      if (isAuthenticated && userRole) {
-        // User is authenticated and we have role info, redirect to appropriate dashboard
-        const defaultRoute = getDefaultRouteForRole(userRole);
-        setHasNavigated(true);
-        
-        // Cache the user state for future PWA starts
-        if (PWACache.isPWA()) {
-          PWACache.saveUserState(userRole, defaultRoute);
+    // Add a longer delay before defaulting to login to give auth more time
+    const authTimeout = setTimeout(() => {
+      if (!hasNavigated) {
+        if (isAuthenticated && userRole) {
+          // User is authenticated and we have role info, redirect to appropriate dashboard
+          const defaultRoute = getDefaultRouteForRole(userRole);
+          setHasNavigated(true);
+          
+          // Cache the user state for future PWA starts
+          if (PWACache.isPWA()) {
+            PWACache.saveUserState(userRole, defaultRoute, currentUser?.email || undefined);
+          }
+          
+          console.log('Auth Success: Navigating to', defaultRoute);
+          navigateWithinPWA(defaultRoute);
+        } else if (!isLoading) {
+          // Only redirect to login if we're definitely not loading and not authenticated
+          setHasNavigated(true);
+          
+          // Clear cache since user is not authenticated
+          if (PWACache.isPWA()) {
+            PWACache.clearUserState();
+          }
+          
+          console.log('No Auth: Navigating to login');
+          navigateWithinPWA('/login');
         }
-        
-        navigateWithinPWA(defaultRoute);
-      } else {
-        // User is not authenticated or we don't have role info, go to login
-        setHasNavigated(true);
-        
-        // Clear cache since user is not authenticated
-        if (PWACache.isPWA()) {
-          PWACache.clearUserState();
-        }
-        
-        navigateWithinPWA('/login');
       }
-    }
-  }, [isAuthenticated, userRole, isLoading, navigateWithinPWA, hasNavigated]);
+    }, isLoading ? 2000 : 800); // Wait even longer if still loading auth
 
-  if (isLoading) {
+    return () => clearTimeout(authTimeout);
+  }, [isAuthenticated, userRole, isLoading, navigateWithinPWA, hasNavigated, hasImmediateRedirect]);
+
+  if (hasImmediateRedirect) {
+    // Show minimal loading for immediate redirects
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+            Opening your workspace...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !initialCheck) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden">
         <div className="relative text-center max-w-md mx-auto px-8">
@@ -114,6 +165,12 @@ export default function HomePage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {isAuthenticated && userRole ? `Welcome back! Redirecting to ${userRole} dashboard` : PWACache.isPWA() ? 'Loading your personalized attendance portal' : 'Verifying credentials and loading your workspace'}
                 </p>
+                {/* Debug info in development */}
+                {process.env.NODE_ENV === 'development' && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Debug: Auth: {isAuthenticated ? 'Yes' : 'No'} | Role: {userRole || 'None'} | Loading: {isLoading ? 'Yes' : 'No'} | PWA: {PWACache.isPWA() ? 'Yes' : 'No'}
+                  </p>
+                )}
               </div>
             </div>
 

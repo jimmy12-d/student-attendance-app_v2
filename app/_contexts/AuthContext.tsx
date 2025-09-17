@@ -45,8 +45,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const userRole = useAppSelector((state) => state.main.userRole);
 
   useEffect(() => {
+    // Reduce initial loading time by starting with a shorter timeout
+    const initialTimeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 800); // Fallback to stop loading after 800ms
+
     // Single auth state listener for the entire app
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      clearTimeout(initialTimeout); // Clear fallback timeout since we got auth state
       setCurrentUser(user);
       
       if (user) {
@@ -97,10 +103,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, (error) => {
       // Handle auth errors by setting loading to false
       console.error('Auth state change error:', error);
+      clearTimeout(initialTimeout);
       setIsLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(initialTimeout);
+      unsubscribe();
+    };
   }, [dispatch, userRole]);
 
   const value: AuthContextType = {

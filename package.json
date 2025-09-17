@@ -26,6 +26,7 @@
     "fix:help": "echo 'Data Fix Commands:' && echo '  npm run fix:test     - Test Firebase Admin connection' && echo '  npm run fix:authuid  - Add authUid to face-api attendance records'"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.8",
     "@mdi/js": "^7.0.96",
     "@reduxjs/toolkit": "^2.5.1",
     "@types/html2canvas": "^1.0.0",
@@ -39,7 +40,7 @@
     "formik": "^2.4.2",
     "framer-motion": "^12.19.2",
     "glob": "^11.0.3",
-    "html2canvas": "^1.4.1",
+    "html2canvas-pro": "^1.5.11",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.525.0",
     "next": "15.1.7",

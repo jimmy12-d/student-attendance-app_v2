@@ -17,7 +17,9 @@ export const usePWANavigation = () => {
                     (window.navigator as any).standalone === true;
 
       // Force replace for attendance navigation to maintain PWA context
-      const shouldReplace = options?.replace || url.includes('/student/attendance');
+      const shouldReplace = options?.replace || url.includes('/student/attendance') || _isPWA;
+      
+      console.log('PWA Navigation:', { url, shouldReplace, isPWA: _isPWA });
       
       // Use Next.js router directly without setTimeout to avoid issues
       if (shouldReplace) {

@@ -51,6 +51,10 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
                     role: "student",
                   })
                 );
+                
+                // Cache successful student authentication for faster PWA startup
+                PWACache.saveUserState('student', '/student/attendance', user.email || undefined);
+                
                 setLoading(false); // Allow rendering of the page
             } else {
                 // FAILURE: User has a record, but it's incomplete. Force them to link.

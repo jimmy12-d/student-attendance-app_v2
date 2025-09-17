@@ -984,7 +984,7 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
             scrollbarWidth: 'none', // Hide scrollbar for Firefox
             msOverflowStyle: 'none', // Hide scrollbar for IE/Edge
             WebkitOverflowScrolling: 'touch', // Better iOS scrolling
-            touchAction: 'pan-x', // Allow horizontal scrolling on touch
+            touchAction: 'pan-x pan-y', // Allow horizontal and vertical scrolling on touch
             paddingRight: '20' // Add padding for better scrolling to average label
           }}
         >

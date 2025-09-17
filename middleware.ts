@@ -4,8 +4,18 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
+  // Check if this is a PWA request
+  const isPWARequest = request.headers.get('user-agent')?.includes('wv') || // WebView
+                       request.nextUrl.searchParams.has('source') && request.nextUrl.searchParams.get('source') === 'pwa' ||
+                       request.headers.get('x-requested-with') === 'PWA';
+  
   // Add PWA-related headers for all responses
   const response = NextResponse.next();
+  
+  // Add PWA detection header
+  if (isPWARequest) {
+    response.headers.set('X-PWA-Request', 'true');
+  }
   
   // Ensure proper headers for PWA navigation
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');

@@ -211,7 +211,7 @@
   "payment": {
     "paymentHistoryTitle": "Payment History",
     "viewPayments": "View Payment History",
-    "viewPaymentsSubtitle": "See all your payment receipts and transaction history",
+    "viewPaymentsSubtitle": "See all your payment receipts",
     "loadingPayments": "Loading payments...",
     "noPaymentsTitle": "No Payments Found",
     "noPaymentsDescription": "You haven't made any payments yet. Your payment history will appear here.",
@@ -219,10 +219,26 @@
     "qrPayment": "QR Payment",
     "receipt": "receipt",
     "receipts": "receipts",
-    "found": "found"
+    "found": "found",
+    "months": {
+      "january": "January",
+      "february": "February", 
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    }
   },
   "receipt": {
     "title": "Payment Receipt",
+    "schoolName": "RODWELL LEARNING CENTER",
+    "receiptTitle": "RECEIPT OF PAYMENT",
     "receiptNotFound": "Receipt Not Found",
     "invalidTransaction": "Invalid transaction or student ID",
     "accessDenied": "Access denied: This receipt does not belong to you",
@@ -244,19 +260,31 @@
     "subjectsIncluded": "Subjects Included",
     "totalPaid": "Total Paid",
     "thankYou": "Thank you!",
+    "thankYouMessage": "Thank you for your payment",
     "processedBy": "Processed by",
     "download": "Download",
     "downloading": "Downloading...",
     "share": "Share",
     "sharing": "Sharing...",
+    "saveAsImage": "Save as Image",
+    "saving": "Saving...",
     "downloadSuccess": "Receipt downloaded successfully!",
     "downloadError": "Failed to download receipt",
     "shareSuccess": "Receipt shared successfully!",
     "shareError": "Failed to share receipt",
     "clipboardSuccess": "Receipt copied to clipboard!",
     "shareNotSupported": "Sharing not supported on this device",
-    "cashPayment": "Cash Payment",
-    "qrPayment": "QR Payment"
+    "subjects": {
+      "math": "Math",
+      "chemistry": "Chemistry",
+      "physics": "Physics",
+      "khmer": "Khmer",
+      "biology": "Biology",
+      "history": "History",
+      "geography": "Geography",
+      "moral": "Moral",
+      "earth": "Earth"
+    }
   },
   "notifications": {
     "title": "Notifications",
