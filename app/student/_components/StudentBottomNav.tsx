@@ -60,6 +60,8 @@ export default function StudentBottomNav() {
           // Special handling for Home button (attendance page)
           const isActive = item.href === '/student/attendance' 
             ? (pathname === '/student' || pathname === '/student/attendance')
+            : item.href === '/student/account'
+            ? (pathname.startsWith(item.href) || pathname === '/student/payment-history')
             : pathname.startsWith(item.href);
           return (
             <Link

@@ -10,7 +10,8 @@ import {
   mdiCreditCard,
   mdiChartLine,
   mdiAccountPlus,
-  mdiStar
+  mdiStar,
+  mdiBellOutline
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -107,11 +108,11 @@ const menuAside: MenuAsideItem[] = [
   //   label: "Print Approvals",
   //   icon: mdiFileDocumentCheckOutline,
   // },
-  // {
-  //   href: "/dashboard/notification",
-  //   label: "Notification",
-  //   icon: mdiBellOutline,
-  // },
+  {
+    href: "/dashboard/notification",
+    label: "Notification",
+    icon: mdiBellOutline,
+  },
 ];
 
 export default menuAside;

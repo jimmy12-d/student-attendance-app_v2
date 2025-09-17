@@ -16,7 +16,7 @@ import { useTranslations, useLocale } from 'next-intl';
 
 // --- Import components for settings ---
 import NotificationSettings from '../_components/NotificationSettings';
-import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle, mdiWeb, mdiCreditCard } from '@mdi/js';
+import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle, mdiWeb, mdiHistory } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
 
 // --- Reusable UI Components for the new design ---
@@ -279,7 +279,7 @@ const AccountPage = () => {
             </h2>
             <SettingsGroup>
               <SettingsListItem
-                iconPath={mdiCreditCard}
+                iconPath={mdiHistory}
                 iconBgColor="bg-gradient-to-br from-green-500 to-emerald-600"
                 title={tPayment('viewPayments')}
                 subtitle={tPayment('viewPaymentsSubtitle')}

@@ -1,15 +1,15 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAppSelector } from '../../_stores/hooks';
 import { db } from '../../../firebase-config';
 import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Student, PermissionRecord } from '../../_interfaces';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
-import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord, markAttendance, calculateAverageArrivalTime } from '../../dashboard/_lib/attendanceLogic';
+import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord, calculateAverageArrivalTime } from '../../dashboard/_lib/attendanceLogic';
 import { AllClassConfigs } from '../../dashboard/_lib/configForAttendanceLogic';
 import { getStatusStyles } from '../../dashboard/_lib/statusStyles';
-import { mdiChevronRight, mdiAccountCheckOutline, mdiClockAlertOutline, mdiAccountOffOutline, mdiClockTimeThreeOutline, mdiFaceRecognition, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight, mdiLightningBolt, mdiCheckCircle, mdiCalendar } from '@mdi/js';
+import { mdiChevronRight, mdiClockAlertOutline, mdiFaceRecognition, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from '../_components/PermissionRequestForm';
 import SlideInPanel from '../../_components/SlideInPanel';
@@ -37,7 +37,7 @@ const AttendancePage = () => {
     studentDocId: state.main.studentDocId,
   }));
   const [recentRecords, setRecentRecords] = useState<any[]>([]);
-  const prevRecentRecords = usePrevious(recentRecords);
+  const _ = usePrevious(recentRecords);
   const [loading, setLoading] = useState(true);
   const [isPermissionPanelOpen, setIsPermissionPanelOpen] = useState(false);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
@@ -48,17 +48,8 @@ const AttendancePage = () => {
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [isRequestConfirmOpen, setIsRequestConfirmOpen] = useState(false);
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs | null>(null);
-  const [averageArrivalTime, setAverageArrivalTime] = useState<{ averageTime: string; details: string } | null>(null);
-  const [chartScrollPosition, setChartScrollPosition] = useState(0);
-
-  // Touch gesture for chart scrolling
-  const chartGestureRef = useTouchGesture({
-    onScroll: (scrollLeft) => {
-      setChartScrollPosition(scrollLeft);
-    },
-    threshold: 30
-  });
-
+  const [__, setAverageArrivalTime] = useState<{ averageTime: string; details: string } | null>(null);
+  const [___, setChartScrollPosition] = useState(0);
 
   // Ripple effect hook
   const useRipple = () => {
