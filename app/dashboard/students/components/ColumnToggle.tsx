@@ -27,6 +27,9 @@ interface ColumnToggleProps {
     class?: string;
   }>; // Add filtered students list
   onStudentSelect?: (studentId: string) => void; // Add student selection callback
+  // Modal tab selection
+  defaultModalTab?: 'basic' | 'actions' | 'requests';
+  onDefaultModalTabChange?: (tab: 'basic' | 'actions' | 'requests') => void;
 }
 
 export const ColumnToggle: React.FC<ColumnToggleProps> = ({ 
@@ -42,7 +45,9 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
   filteredStudentsCount = 0,
   totalStudentsCount = 0,
   filteredStudents = [], // Add filtered students list
-  onStudentSelect // Add student selection callback
+  onStudentSelect, // Add student selection callback
+  defaultModalTab = 'basic',
+  onDefaultModalTabChange
 }) => {
   const enabledColumns = columns.filter(col => col.enabled);
 
@@ -116,45 +121,93 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
         })}
       </div>
       
-      {/* Global Class Controls */}
-      {onToggleAllClasses && (
+      {/* Global Class Controls and Modal Tab Selection */}
+      {(onToggleAllClasses || onDefaultModalTabChange) && (
         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-600">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
-              <svg className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              Class Visibility
-            </h3>
+          <div className="flex items-start justify-between gap-8">
+            {/* Class Visibility - Left Side */}
+            {onToggleAllClasses && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Class Visibility
+                  </h3>
+                </div>
+                <button
+                  onClick={onToggleAllClasses}
+                  className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 w-full ${
+                    allClassesCollapsed
+                      ? 'border-red-300 dark:border-red-600 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
+                      : 'border-green-300 dark:border-green-600 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                  } hover:shadow-md hover:scale-105`}
+                >
+                  <span className="font-medium text-sm flex items-center">
+                    {/* Arrow icon for class visibility toggle */}
+                    <svg
+                      className={`w-4 h-4 mr-3 transition-transform duration-200 ${
+                        allClassesCollapsed
+                          ? 'transform rotate-180 text-red-600 dark:text-red-400'
+                          : 'transform rotate-0 text-green-600 dark:text-green-400'
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                    {allClassesCollapsed ? 'Show All Classes' : 'Hide All Classes'}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* Modal Tab Selection - Right Side */}
+            {onDefaultModalTabChange && (
+              <div className="ml-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Default Modal Tab
+                  </h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'basic', label: 'Basic Info', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+                    { key: 'actions', label: 'Actions', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+                    { key: 'requests', label: 'Requests', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => onDefaultModalTabChange(tab.key as 'basic' | 'actions' | 'requests')}
+                      className={`flex items-center px-3 py-2 rounded-lg border-2 transition-all duration-200 ${
+                        defaultModalTab === tab.key
+                          ? 'border-indigo-300 dark:border-indigo-600 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300'
+                          : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-gray-400 hover:border-indigo-200 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
+                      } hover:shadow-md hover:scale-105`}
+                    >
+                      <svg className="w-3.5 h-3.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tab.icon} />
+                      </svg>
+                      <span className="font-medium text-xs">{tab.label}</span>
+                      {defaultModalTab === tab.key && (
+                        <svg className="w-3.5 h-3.5 ml-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <button
-            onClick={onToggleAllClasses}
-            className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 w-full md:w-auto ${
-              allClassesCollapsed
-                ? 'border-red-300 dark:border-red-600 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
-                : 'border-green-300 dark:border-green-600 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
-            } hover:shadow-md hover:scale-105`}
-          >
-            <span className="font-medium text-sm flex items-center">
-              {/* Arrow icon for class visibility toggle */}
-              <svg 
-                className={`w-4 h-4 mr-3 transition-transform duration-200 ${
-                  allClassesCollapsed 
-                    ? 'transform rotate-180 text-red-600 dark:text-red-400' 
-                    : 'transform rotate-0 text-green-600 dark:text-green-400'
-                }`} 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-              </svg>
-              {allClassesCollapsed ? 'Show All Classes' : 'Hide All Classes'}
-            </span>
-          </button>
         </div>
       )}
-      
+
       {/* Student Search */}
       {onSearchChange && (
         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-600">

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import ExamTabs from '../_components/ExamTabs';
-import CircularProgress from '../_components/CircularProgress';
+import CircularProgress from '../../_components/CircularProgress';
 import ScoreCard from '../_components/ScoreCard';
 import { motion } from 'framer-motion';
 

@@ -1,7 +1,8 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Student, PermissionRecord } from '../../../../_interfaces';
 import Icon from '../../../../_components/Icon';
 import PermissionCard from './PermissionCard';
+import LeaveEarlyCard from './LeaveEarlyCard';
 import { mdiClockAlertOutline, mdiCheck, mdiClose, mdiCalendarCheck, mdiCalendarMonth, mdiAlertCircle, mdiChevronLeft, mdiChevronRight } from '@mdi/js';
 
 interface RequestsTabProps {
@@ -29,9 +30,8 @@ export const RequestsTab: React.FC<RequestsTabProps> = ({
   handleRejectPermission,
   isLoadingPermissions = false,
 }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [currentPermissionPage, setCurrentPermissionPage] = useState(0);
+  const [currentLeaveEarlyPage, setCurrentLeaveEarlyPage] = useState(0);
   const getCurrentMonthPermissionDays = () => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -66,36 +66,67 @@ export const RequestsTab: React.FC<RequestsTabProps> = ({
   const currentMonthPermissionDays = getCurrentMonthPermissionDays();
   const isOverLimit = currentMonthPermissionDays > 5;
   const totalPermissions = [...approvedPermissions, ...pendingPermissions].length;
+  const totalLeaveEarlyRequests = leaveEarlyRequests.length;
+  
+  // Pagination constants
+  const PERMISSIONS_PER_PAGE = 3;
+  const LEAVE_EARLY_PER_PAGE = 3;
+  const totalPermissionPages = Math.ceil(totalPermissions / PERMISSIONS_PER_PAGE);
+  const totalLeaveEarlyPages = Math.ceil(totalLeaveEarlyRequests / LEAVE_EARLY_PER_PAGE);
 
-  const scrollLeft = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: -320, behavior: 'smooth' });
-    }
+  // Pagination functions
+  const nextPermissionPage = () => {
+    setCurrentPermissionPage((prev) => Math.min(prev + 1, totalPermissionPages - 1));
   };
 
-  const scrollRight = () => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: 320, behavior: 'smooth' });
-    }
+  const prevPermissionPage = () => {
+    setCurrentPermissionPage((prev) => Math.max(prev - 1, 0));
   };
 
-  // Check scroll position and update arrow states
-  const checkScrollPosition = () => {
-    if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
-    }
+  const goToPermissionPage = (page: number) => {
+    setCurrentPermissionPage(Math.max(0, Math.min(page, totalPermissionPages - 1)));
   };
 
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (container && totalPermissions > 1) {
-      checkScrollPosition();
-      container.addEventListener('scroll', checkScrollPosition);
-      return () => container.removeEventListener('scroll', checkScrollPosition);
-    }
-  }, [totalPermissions]);
+  const nextLeaveEarlyPage = () => {
+    setCurrentLeaveEarlyPage((prev) => Math.min(prev + 1, totalLeaveEarlyPages - 1));
+  };
+
+  const prevLeaveEarlyPage = () => {
+    setCurrentLeaveEarlyPage((prev) => Math.max(prev - 1, 0));
+  };
+
+  const goToLeaveEarlyPage = (page: number) => {
+    setCurrentLeaveEarlyPage(Math.max(0, Math.min(page, totalLeaveEarlyPages - 1)));
+  };
+
+  // Get current page permissions
+  const getCurrentPagePermissions = () => {
+    const allPermissions = [...approvedPermissions, ...pendingPermissions]
+      .sort((a, b) => {
+        // Sort by most recent first
+        const dateA = a.requestedAt?.toDate?.() || new Date(0);
+        const dateB = b.requestedAt?.toDate?.() || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+    
+    const startIndex = currentPermissionPage * PERMISSIONS_PER_PAGE;
+    return allPermissions.slice(startIndex, startIndex + PERMISSIONS_PER_PAGE);
+  };
+
+  // Get current page leave early requests
+  const getCurrentPageLeaveEarly = () => {
+    const sortedRequests = leaveEarlyRequests
+      .sort((a, b) => {
+        // Sort by most recent first
+        const dateA = a.requestedAt?.toDate?.() || new Date(0);
+        const dateB = b.requestedAt?.toDate?.() || new Date(0);
+        return dateB.getTime() - dateA.getTime();
+      });
+    
+    const startIndex = currentLeaveEarlyPage * LEAVE_EARLY_PER_PAGE;
+    return sortedRequests.slice(startIndex, startIndex + LEAVE_EARLY_PER_PAGE);
+  };
+
   return (
     <div className="space-y-6">
       {/* Unified Permission Requests Section */}
@@ -147,79 +178,106 @@ export const RequestsTab: React.FC<RequestsTabProps> = ({
               <p className="text-sm text-gray-500 dark:text-gray-400">No permissions found</p>
             </div>
           ) : (
-            <div className="pb-2 overflow-hidden">
-              <div 
-                ref={scrollContainerRef}
-                className={`flex gap-4 flex-nowrap ${totalPermissions > 2 ? 'overflow-x-scroll scrollbar-visible' : 'overflow-x-auto'} pb-3`} 
-                style={{ 
-                  scrollbarWidth: 'auto',
-                  scrollbarColor: '#6b7280 #e5e7eb',
-                  WebkitOverflowScrolling: 'touch'
-                }}
-              >
-                {[...approvedPermissions, ...pendingPermissions]
-                  .sort((a, b) => {
-                    // Sort by most recent first
-                    const dateA = a.requestedAt?.toDate?.() || new Date(0);
-                    const dateB = b.requestedAt?.toDate?.() || new Date(0);
-                    return dateB.getTime() - dateA.getTime();
-                  })
-                  .map((permission: PermissionRecord) => (
-                    <div key={permission.id} className="flex-shrink-0 w-80">
-                      <PermissionCard
-                        permission={permission}
-                        onApprove={permission.status === 'pending' ? handleApprovePermission : undefined}
-                        onReject={permission.status === 'pending' ? handleRejectPermission : undefined}
-                        isLoading={isLoadingPermissions}
-                      />
-                    </div>
-                  ))}
+            <div className="space-y-4">
+              {/* Permission Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {getCurrentPagePermissions().map((permission: PermissionRecord) => (
+                  <div key={permission.id} className="flex-shrink-0">
+                    <PermissionCard
+                      permission={permission}
+                      onApprove={permission.status === 'pending' ? handleApprovePermission : undefined}
+                      onReject={permission.status === 'pending' ? handleRejectPermission : undefined}
+                      isLoading={isLoadingPermissions}
+                    />
+                  </div>
+                ))}
               </div>
+              
+              {/* Pagination Controls */}
+              {totalPermissionPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-600">
+                  <button
+                    onClick={prevPermissionPage}
+                    disabled={currentPermissionPage === 0}
+                    className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      currentPermissionPage === 0
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed bg-gray-100 dark:bg-slate-700'
+                        : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-500'
+                    }`}
+                  >
+                    <Icon path={mdiChevronLeft} size={16} className="mr-1" />
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center space-x-2">
+                    {Array.from({ length: totalPermissionPages }, (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => goToPermissionPage(i)}
+                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          i === currentPermissionPage
+                            ? 'bg-green-500 text-white'
+                            : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-500'
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <button
+                    onClick={nextPermissionPage}
+                    disabled={currentPermissionPage === totalPermissionPages - 1}
+                    className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      currentPermissionPage === totalPermissionPages - 1
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed bg-gray-100 dark:bg-slate-700'
+                        : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-500'
+                    }`}
+                  >
+                    Next
+                    <Icon path={mdiChevronRight} size={16} className="ml-1" />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-                  {/* Floating Navigation Arrows */}
-      {totalPermissions > 1 && (
-        <>
-          <button
-            onClick={scrollLeft}
-            disabled={!canScrollLeft}
-            className={`absolute left-4 top-[55%] transform -translate-y-1/2 z-20 rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-200 scale-100 hover:scale-105 ${
-              canScrollLeft
-                ? 'bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-500'
-                : 'bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
-            }`}
-            title={canScrollLeft ? "Scroll left" : "Already at the beginning"}
-          >
-            <Icon path={mdiChevronLeft} size={24} />
-          </button>
-          <button
-            onClick={scrollRight}
-            disabled={!canScrollRight}
-            className={`absolute right-4 top-[55%] transform -translate-y-1/2 z-20 rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-200 scale-100 hover:scale-105 ${
-              canScrollRight
-                ? 'bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-500'
-                : 'bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
-            }`}
-            title={canScrollRight ? "Scroll right" : "Already at the end"}
-          >
-            <Icon path={mdiChevronRight} size={24} />
-          </button>
-        </>
-      )}
-
       {/* Leave Early Requests Section */}
-      <div className="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden shadow-sm relative">
         <div className="px-6 py-4">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-            <Icon path={mdiClockAlertOutline} size={16} className="mr-2 text-blue-600 dark:text-blue-400" />
-            Leave Early Requests
-          </h4>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Icon path={mdiClockAlertOutline} size={16} className="mr-2 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Leave Early Requests</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold text-xs shadow-sm transition-all duration-200 ${
+                leaveEarlyRequests.length === 0
+                  ? 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 border border-gray-300 dark:from-gray-700 dark:to-gray-600 dark:text-gray-300 dark:border-gray-500'
+                  : 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border border-blue-400 hover:from-blue-600 hover:to-blue-700'
+              }`}>
+                <Icon
+                  path={mdiClockAlertOutline}
+                  size={14}
+                  className="flex-shrink-0"
+                />
+                <span className="opacity-90">
+                  request
+                </span>
+                <span className="font-bold">
+                  {leaveEarlyRequests.length}
+                </span>
+                <span className="opacity-90">
+                  total
+                </span>
+              </div>
+            </div>
+          </div>
 
           {isLoadingLeaveEarly ? (
-            <div className="flex items-center justify-center py-4">
+            <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
               <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading requests...</span>
             </div>
@@ -229,85 +287,67 @@ export const RequestsTab: React.FC<RequestsTabProps> = ({
               <p className="text-sm text-gray-500 dark:text-gray-400">No leave early requests</p>
             </div>
           ) : (
-            <div className="space-y-3 max-h-60 overflow-y-auto">
-              {leaveEarlyRequests.map((request: any) => (
-                <div key={request.id} className="bg-gray-50 dark:bg-slate-600 rounded-lg p-4 border border-gray-200 dark:border-slate-500">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          request.status === 'approved'
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                            : request.status === 'rejected'
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                            : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-                        }`}>
-                          {request.status === 'approved' && <Icon path={mdiCheck} size={12} className="mr-1" />}
-                          {request.status === 'rejected' && <Icon path={mdiClose} size={12} className="mr-1" />}
-                          {request.status === 'pending' && <Icon path={mdiClockAlertOutline} size={12} className="mr-1" />}
-                          {request.status || 'pending'}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {request.requestedAt?.toDate?.()
-                            ? new Date(request.requestedAt.toDate()).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })
-                            : 'Unknown time'
-                          }
-                        </span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Requested Time:</span>
-                          <span className="text-sm text-gray-900 dark:text-gray-100">
-                            {request.leaveTime || 'Not specified'}
-                          </span>
-                        </div>
-
-                        {request.reason && (
-                          <div>
-                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Reason:</span>
-                            <p className="text-sm text-gray-900 dark:text-gray-100 mt-1">{request.reason}</p>
-                          </div>
-                        )}
-
-                        {request.adminNote && (
-                          <div>
-                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Admin Note:</span>
-                            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 italic">{request.adminNote}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action buttons for pending requests */}
-                    {request.status === 'pending' && (
-                      <div className="flex flex-col space-y-2 ml-3">
-                        <button
-                          onClick={() => handleApproveLeaveEarly(request.id)}
-                          className="inline-flex items-center px-3 py-1 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 rounded hover:bg-green-200 dark:hover:bg-green-800/50 transition-colors"
-                          title="Approve request"
-                        >
-                          <Icon path={mdiCheck} size={14} className="mr-1" />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleRejectLeaveEarly(request.id)}
-                          className="inline-flex items-center px-3 py-1 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 rounded hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
-                          title="Reject request"
-                        >
-                          <Icon path={mdiClose} size={14} className="mr-1" />
-                          Reject
-                        </button>
-                      </div>
-                    )}
+            <div className="space-y-4">
+              {/* Leave Early Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {getCurrentPageLeaveEarly().map((request: any) => (
+                  <div key={request.id} className="flex-shrink-0">
+                    <LeaveEarlyCard
+                      request={request}
+                      onApprove={request.status === 'pending' ? handleApproveLeaveEarly : undefined}
+                      onReject={request.status === 'pending' ? handleRejectLeaveEarly : undefined}
+                      isLoading={isLoadingLeaveEarly}
+                    />
                   </div>
+                ))}
+              </div>
+              
+              {/* Pagination Controls */}
+              {totalLeaveEarlyPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-600">
+                  <button
+                    onClick={prevLeaveEarlyPage}
+                    disabled={currentLeaveEarlyPage === 0}
+                    className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      currentLeaveEarlyPage === 0
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed bg-gray-100 dark:bg-slate-700'
+                        : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-500'
+                    }`}
+                  >
+                    <Icon path={mdiChevronLeft} size={16} className="mr-1" />
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center space-x-2">
+                    {Array.from({ length: totalLeaveEarlyPages }, (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => goToLeaveEarlyPage(i)}
+                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          i === currentLeaveEarlyPage
+                            ? 'bg-blue-500 text-white'
+                            : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-500'
+                        }`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <button
+                    onClick={nextLeaveEarlyPage}
+                    disabled={currentLeaveEarlyPage === totalLeaveEarlyPages - 1}
+                    className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      currentLeaveEarlyPage === totalLeaveEarlyPages - 1
+                        ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed bg-gray-100 dark:bg-slate-700'
+                        : 'text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-600 border border-gray-300 dark:border-slate-500 hover:bg-gray-50 dark:hover:bg-slate-500'
+                    }`}
+                  >
+                    Next
+                    <Icon path={mdiChevronRight} size={16} className="ml-1" />
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>

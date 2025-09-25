@@ -58,6 +58,12 @@ const CustomCombobox: React.FC<Props> = ({
     setQuery('');
   };
 
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = event.target.value;
+    setQuery(newValue);
+    onChange(newValue); // Allow free text input
+  };
+
   const defaultInputClasses = "w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-left cursor-default focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm dark:bg-slate-800 dark:border-gray-600 dark:text-white";
   const finalInputClasses = fieldData?.className
     ? fieldData.className
@@ -70,9 +76,10 @@ const CustomCombobox: React.FC<Props> = ({
           <Combobox.Input
             id={id}
             className={`${finalInputClasses} ${getSelectedIcon() ? 'pl-8' : ''}`}
-            displayValue={displayValue}
-            onChange={(event) => setQuery(event.target.value)}
+            value={selectedValue}
+            onChange={handleInputChange}
             placeholder={placeholder}
+            displayValue={displayValue}
           />
           {getSelectedIcon() && (
             <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
@@ -92,9 +99,38 @@ const CustomCombobox: React.FC<Props> = ({
         >
           <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm dark:bg-gray-700">
             {filteredOptions.length === 0 && query !== '' ? (
-              <div className="relative cursor-default select-none py-2 px-4 text-gray-700 dark:text-gray-300">
-                Nothing found.
-              </div>
+              <Combobox.Option
+                key="custom-option"
+                className={({ active }) =>
+                  `relative cursor-default select-none py-2 pl-4 pr-4 ${
+                    active ? 'bg-indigo-600 text-white' : 'text-gray-900 dark:text-gray-100'
+                  }`
+                }
+                value={query}
+              >
+                {({ selected, active }) => (
+                  <>
+                    <div className="flex items-center">
+                      <span
+                        className={`block truncate ${
+                          selected ? 'font-medium' : 'font-normal'
+                        }`}
+                      >
+                        "{query}"
+                      </span>
+                    </div>
+                    {selectedValue === query ? (
+                      <span
+                        className={`absolute inset-y-0 right-0 flex items-center pr-3 ${
+                          active ? 'text-white' : 'text-indigo-600'
+                        }`}
+                      >
+                        <Icon path={mdiCheck} w="w-5 h-5" />
+                      </span>
+                    ) : null}
+                  </>
+                )}
+              </Combobox.Option>
             ) : (
               filteredOptions.map((option) => (
                                 <Combobox.Option

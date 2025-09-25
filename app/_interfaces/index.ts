@@ -163,6 +163,24 @@ export interface PermissionRecord {
   reviewedAt?: Timestamp;
 }
 
+// Leave Early Request System Interface
+export interface LeaveEarlyRequest {
+  id: string; // Firestore document ID
+  studentId: string;
+  studentName?: string; // Added for display purposes
+  studentClass?: string; // Added for display purposes
+  studentShift?: string; // Added for display purposes
+  leaveTime: string; // Time they want to leave early (e.g., "14:30")
+  reason: string;
+  details?: string; // Additional details
+  adminNote?: string; // Admin's note after review
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt: Timestamp;
+  requestedBy?: string; // User who requested it
+  reviewedBy?: string; // Admin who reviewed it
+  reviewedAt?: Timestamp; // When it was reviewed
+}
+
 // Absent Follow-up System Interface
 export type AbsentStatus = 'Absent' | 'Contacted' | 'Waiting for Response' | 'Resolved';
 

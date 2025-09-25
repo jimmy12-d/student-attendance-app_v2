@@ -1,7 +1,7 @@
 // app/dashboard/students/TableStudents.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Student } from "../../_interfaces";
 import { ColumnToggle, ColumnConfig } from "./components/ColumnToggle";
 import { ClassTable } from "./components/ClassTable";
@@ -66,6 +66,13 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   // Take attendance state
   const [attendanceChanges, setAttendanceChanges] = useState<Map<string, boolean>>(new Map());
   const [savingAttendance, setSavingAttendance] = useState(false);
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
+  
+  // Date picker state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const datePickerRef = useRef<HTMLDivElement>(null);
 
   // Global collapse state
   const [allClassesCollapsed, setAllClassesCollapsed] = useState(false);
@@ -507,6 +514,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [currentStudentList, setCurrentStudentList] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [defaultModalTab, setDefaultModalTab] = useState<'basic' | 'actions' | 'requests'>('basic');
 
   // QR Code Modal state for admin use (in case student lost receipt)
   const [selectedQRStudent, setSelectedQRStudent] = useState<Student | null>(null);
@@ -755,9 +763,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
     }
     
     // Otherwise check existing attendance records
-    const todayStr = new Date().toISOString().split('T')[0];
     const existingRecord = attendance.find(record => 
-      record.studentId === student.id && record.date === todayStr
+      record.studentId === student.id && record.date === selectedAttendanceDate
     );
     
     return existingRecord?.status === 'present';
@@ -771,7 +778,6 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
     setSavingAttendance(true);
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
       const currentTime = new Date();
       const successfulMarks: string[] = [];
       const failedMarks: string[] = [];
@@ -791,14 +797,16 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
               student,
               student.shift || 'Morning', // Default to Morning if shift is not set
               allClassConfigs || {},
-              () => {} // Empty sound function
+              () => {}, // Empty sound function
+              3, // maxRetries
+              selectedAttendanceDate // Pass the selected date
             );
             successfulMarks.push(`${student.fullName}: ${status}`);
           } else {
             // For absent students, create manual record since markAttendance doesn't handle absent
             // Check if attendance record already exists for today
             const existingRecord = attendance.find(record => 
-              record.studentId === studentId && record.date === todayStr
+              record.studentId === studentId && record.date === selectedAttendanceDate
             );
 
             if (existingRecord) {
@@ -816,7 +824,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
               await setDoc(attendanceRef, {
                 authUid: student.authUid || null,
                 class: student.class,
-                date: todayStr,
+                date: selectedAttendanceDate,
                 method: 'manual',
                 shift: student.shift,
                 status: 'absent',
@@ -862,13 +870,12 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   // Function to refresh attendance data
   const fetchAttendanceData = async () => {
     try {
-      const todayStr = new Date().toISOString().split('T')[0];
       const attendanceRef = collection(db, 'attendance');
       const attendanceSnapshot = await getDocs(attendanceRef);
       
       const attendanceData = attendanceSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((record: any) => record.date === todayStr);
+        .filter((record: any) => record.date === selectedAttendanceDate);
       
       setAttendance(attendanceData);
     } catch (error) {
@@ -889,6 +896,114 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       setAttendanceChanges(new Map());
     }
   }, [isTakeAttendanceMode]);
+
+  // Fetch attendance data when selected date changes
+  React.useEffect(() => {
+    if (isTakeAttendanceMode) {
+      fetchAttendanceData();
+      // Clear any pending changes when date changes
+      setAttendanceChanges(new Map());
+    }
+  }, [selectedAttendanceDate, isTakeAttendanceMode]);
+
+  // Update calendar month/year when selected date changes
+  React.useEffect(() => {
+    if (selectedAttendanceDate) {
+      const date = new Date(selectedAttendanceDate + 'T00:00:00');
+      setCurrentMonth(date.getMonth());
+      setCurrentYear(date.getFullYear());
+    }
+  }, [selectedAttendanceDate]);
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const getDaysInMonth = (month: number, year: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (month: number, year: number) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const handleDateSelect = (day: number) => {
+    const year = currentYear;
+    const month = String(currentMonth + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const dateString = `${year}-${month}-${dayStr}`;
+    setSelectedAttendanceDate(dateString);
+    setShowDatePicker(false);
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      if (currentMonth === 0) {
+        setCurrentMonth(11);
+        setCurrentYear(currentYear - 1);
+      } else {
+        setCurrentMonth(currentMonth - 1);
+      }
+    } else {
+      if (currentMonth === 11) {
+        setCurrentMonth(0);
+        setCurrentYear(currentYear + 1);
+      } else {
+        setCurrentMonth(currentMonth + 1);
+      }
+    }
+  };
+
+  const formatDisplayDate = (dateString: string) => {
+    if (!dateString) return 'Select date';
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short',
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      timeZone: 'Asia/Phnom_Penh'
+    });
+  };
+
+  const renderCalendar = () => {
+    const daysInMonth = getDaysInMonth(currentMonth, currentYear);
+    const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
+    const days = [];
+    const todayDate = new Date();
+    const selectedDateObj = selectedAttendanceDate ? new Date(selectedAttendanceDate + 'T00:00:00') : null;
+
+    // Empty cells for days before the first day of the month
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="w-8 h-8"></div>);
+    }
+
+    // Days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(currentYear, currentMonth, day);
+      const isToday = date.toDateString() === todayDate.toDateString();
+      const isSelected = selectedDateObj && date.toDateString() === selectedDateObj.toDateString();
+
+      days.push(
+        <button
+          key={day}
+          onClick={() => handleDateSelect(day)}
+          className={`w-8 h-8 text-sm rounded-xl transition-all duration-300 backdrop-blur-sm ${
+            isSelected
+              ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 scale-105'
+              : isToday
+              ? 'bg-gradient-to-br from-blue-100/80 to-blue-200/60 dark:from-blue-900/60 dark:to-blue-800/40 text-blue-600 dark:text-blue-400 font-medium shadow-md shadow-blue-500/10 hover:shadow-lg hover:shadow-blue-500/20'
+              : 'hover:bg-white/60 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-300 hover:shadow-md hover:shadow-black/5'
+          }`}
+        >
+          {day}
+        </button>
+      );
+    }
+
+    return days;
+  };
 
   // Add event listeners for QR functionality (admin use only)
   React.useEffect(() => {
@@ -1127,12 +1242,95 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           {/* Take Attendance Controls */}
           <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl relative z-30">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Attendance for {new Date().toLocaleDateString()}
-              </h3>
+              <div className="flex items-center space-x-4">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Attendance for {new Date(selectedAttendanceDate).toLocaleDateString()}
+                </h3>
+                <div className="flex items-center space-x-2">
+                  <label htmlFor="attendance-date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Select Date:
+                  </label>
+                  <div className="relative" ref={datePickerRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowDatePicker(!showDatePicker)}
+                      className="flex items-center gap-2 px-3 py-1 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm border border-gray-300 dark:border-slate-600 rounded-lg hover:bg-white/90 dark:hover:bg-slate-700/90 transition-all duration-300 shadow-sm hover:shadow-md"
+                    >
+                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {formatDisplayDate(selectedAttendanceDate)}
+                      </span>
+                    </button>
+                    
+                    {/* Date Picker Dropdown */}
+                    {showDatePicker && (
+                      <div className="absolute top-full right-0 mt-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl border border-white/30 dark:border-slate-600/30 rounded-2xl shadow-2xl shadow-black/10 z-50 p-4 min-w-[280px]">
+                        {/* Calendar Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <button
+                            onClick={() => navigateMonth('prev')}
+                            className="flex items-center justify-center w-8 h-8 hover:bg-white/80 dark:hover:bg-slate-700/80 backdrop-blur-md rounded-xl transition-all duration-300 border border-white/30 dark:border-slate-600/30 bg-white/60 dark:bg-slate-800/60 shadow-sm hover:shadow-md"
+                          >
+                            <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                          </button>
+                          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                            {months[currentMonth]} {currentYear}
+                          </h3>
+                          <button
+                            onClick={() => navigateMonth('next')}
+                            className="flex items-center justify-center w-8 h-8 hover:bg-white/80 dark:hover:bg-slate-700/80 backdrop-blur-md rounded-xl transition-all duration-300 border border-white/30 dark:border-slate-600/30 bg-white/60 dark:bg-slate-800/60 shadow-sm hover:shadow-md"
+                          >
+                            <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        {/* Days of Week Header */}
+                        <div className="grid grid-cols-7 mb-2">
+                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                            <div key={day} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1">
+                              {day}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Calendar Days */}
+                        <div className="grid grid-cols-7 gap-1">
+                          {renderCalendar()}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-3 pt-3 border-t border-white/30 dark:border-slate-600/30 flex justify-between">
+                          <button
+                            onClick={() => setShowDatePicker(false)}
+                            className="px-3 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-slate-700/80 backdrop-blur-sm rounded-lg transition-all duration-300"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => {
+                              const today = new Date().toISOString().split('T')[0];
+                              setSelectedAttendanceDate(today);
+                              setShowDatePicker(false);
+                            }}
+                            className="px-3 py-1 text-xs bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-300 shadow-sm hover:shadow-md"
+                          >
+                            Today
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
               <div className="flex items-center space-x-2">
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                   attendanceChanges.size > 0 
@@ -1296,6 +1494,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
               }, 3000); // Match the animation duration
             }
           }}
+          defaultModalTab={defaultModalTab}
+          onDefaultModalTabChange={setDefaultModalTab}
         />
 
       </div>      {/* Morning & Afternoon Section */}
@@ -1466,6 +1666,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         students={currentStudentList}
         currentIndex={selectedIndex}
         onNavigate={handleNavigate}
+        defaultTab={defaultModalTab}
       />
 
       {/* QR Code Modal for admin (lost receipt cases) */}

@@ -25,6 +25,7 @@ import TableStudents from "./TableStudents";
 import CardBoxModal from "../../_components/CardBox/Modal";
 import DroppedStudentsSection from "./components/DroppedStudentsSection";
 import WaitlistStudentsSection from "./components/WaitlistStudentsSection";
+import PendingRequestsSection from "./components/PendingRequestsSection";
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
 import { ExportStudentsModal } from "./components/ExportStudentsModal";
 import { AbsentFollowUpDashboard } from "./components/AbsentFollowUpDashboard";
@@ -46,6 +47,7 @@ export default function StudentsPage() {
   const [waitlistStudents, setWaitlistStudents] = useState<Student[]>([]);
   const [showDroppedStudents, setShowDroppedStudents] = useState(false);
   const [showWaitlistStudents, setShowWaitlistStudents] = useState(false);
+  const [showPendingRequests, setShowPendingRequests] = useState(false);
   const [showAbsentFollowUp, setShowAbsentFollowUp] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +80,7 @@ export default function StudentsPage() {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [currentStudentList, setCurrentStudentList] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalDefaultTab, setModalDefaultTab] = useState<'basic' | 'actions' | 'requests'>('basic');
 
   // Export modal state
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -464,13 +467,14 @@ export default function StudentsPage() {
   };
 
   // Modal functions for student details
-  const handleViewDetails = (student: Student) => {
+  const handleViewDetails = (student: Student, defaultTab: 'basic' | 'actions' | 'requests' = 'basic') => {
     // For dropped students, we'll use them as the list
     const studentList = droppedStudents;
     const index = studentList.findIndex(s => s.id === student.id);
     setSelectedStudent(student);
     setSelectedIndex(index);
     setCurrentStudentList(studentList);
+    setModalDefaultTab(defaultTab);
     setIsModalOpen(true);
   };
 
@@ -479,6 +483,7 @@ export default function StudentsPage() {
     setSelectedStudent(null);
     setSelectedIndex(-1);
     setCurrentStudentList([]);
+    setModalDefaultTab('basic');
   };
 
   const handleNavigate = (student: Student, index: number) => {
@@ -713,6 +718,21 @@ export default function StudentsPage() {
         />
       )}
 
+      {/* Pending Requests Section - Show above active students when not in specific modes */}
+      {!isFormActive && 
+       !isDeleteModalActive && 
+       !isTakeAttendanceMode && 
+       !isBatchEditMode && 
+       !studentToEdit &&
+       !showAbsentFollowUp && (
+        <PendingRequestsSection
+          students={students}
+          showPendingRequests={showPendingRequests}
+          onToggleShow={() => setShowPendingRequests(!showPendingRequests)}
+          onViewDetails={handleViewDetails}
+        />
+      )}
+
       {!isFormActive && ( // Use isFormActive here
         <>
           {loading ? (
@@ -813,6 +833,7 @@ export default function StudentsPage() {
         currentIndex={selectedIndex}
         onNavigate={handleNavigate}
         onBreak={() => {}} // No need to manually refresh - real-time listener handles updates
+        defaultTab={modalDefaultTab}
       />
 
       {/* Export Students Modal */}

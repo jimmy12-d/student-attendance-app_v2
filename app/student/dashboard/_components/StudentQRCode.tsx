@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from "qrcode.react";
-import RodwellLogo from '../../_components/JustboilLogo';
+import RodwellLogo from '../../../_components/JustboilLogo';
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { app as firebaseApp } from "../../../firebase-config";
+import { app as firebaseApp } from "../../../../firebase-config.js";
 
 interface Props {
   studentName?: string;

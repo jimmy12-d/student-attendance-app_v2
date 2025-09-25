@@ -26,6 +26,10 @@ interface SummaryData {
   classTypeBreakdown: { classType: string; count: number; revenue: number; }[];
   comparisonData?: { classType: string; previousCount: number; previousRevenue: number; }[];
   dailyBreakdown: { date: string; revenue: number; count: number; }[];
+  trendData: {
+    currentMonth: { date: string; revenue: number; count: number; }[];
+    previousMonth: { date: string; revenue: number; count: number; }[];
+  };
 }
 
 const PaymentSummaryPage = () => {
@@ -241,6 +245,197 @@ const PaymentSummaryPage = () => {
         count: data.count
       })).sort((a, b) => a.date.localeCompare(b.date));
 
+      // Generate trend data for current vs previous month comparison
+      let trendData = {
+        currentMonth: [] as { date: string; revenue: number; count: number; }[],
+        previousMonth: [] as { date: string; revenue: number; count: number; }[]
+      };
+
+      try {
+        if (dateInterval.type === 'monthly') {
+          // For monthly view, use fixed date ranges: 27th to 10th comparison
+          const now = new Date();
+          const currentMonth = now.getMonth();
+          const currentYear = now.getFullYear();
+
+          // Current period: 27th of previous month to 10th of current month
+          const currentPeriodStart = new Date(currentYear, currentMonth - 1, 27); // 27th of previous month
+          const currentPeriodEnd = new Date(currentYear, currentMonth, 10, 23, 59, 59, 999); // 10th of current month (end of day)
+
+          // Previous period: 27th of two months ago to 10th of previous month  
+          const previousPeriodStart = new Date(currentYear, currentMonth - 2, 27); // 27th of two months ago
+          const previousPeriodEnd = new Date(currentYear, currentMonth - 1, 10, 23, 59, 59, 999); // 10th of previous month (end of day)
+
+          console.log('Date Ranges:', {
+            currentPeriod: `${currentPeriodStart.toDateString()} to ${currentPeriodEnd.toDateString()}`,
+            previousPeriod: `${previousPeriodStart.toDateString()} to ${previousPeriodEnd.toDateString()}`,
+            currentMonth: currentMonth,
+            currentYear: currentYear
+          });
+
+          // Fetch all transactions 
+          const allTransactionsQuery = await getDocs(transactionsRef);
+          
+          const currentPeriodTransactions: any[] = [];
+          const previousPeriodTransactions: any[] = [];
+          
+          allTransactionsQuery.forEach((doc) => {
+            const data = doc.data();
+            const transactionDate = new Date(data.date);
+            
+            // Filter for current period (27th prev month to 10th current month)
+            if (transactionDate >= currentPeriodStart && transactionDate <= currentPeriodEnd) {
+              // Double check the day is within our range (27th to 10th)
+              const day = transactionDate.getDate();
+              const month = transactionDate.getMonth();
+              const isInCurrentPeriod = (
+                (month === currentMonth - 1 && day >= 27) || // 27th+ of previous month
+                (month === currentMonth && day <= 10) // 1st-10th of current month
+              );
+              
+              if (isInCurrentPeriod) {
+                currentPeriodTransactions.push({
+                  id: doc.id,
+                  ...data,
+                  transactionDate,
+                });
+              }
+            }
+            
+            // Filter for previous period (27th two months ago to 10th prev month)
+            if (transactionDate >= previousPeriodStart && transactionDate <= previousPeriodEnd) {
+              // Double check the day is within our range (27th to 10th)
+              const day = transactionDate.getDate();
+              const month = transactionDate.getMonth();
+              const isInPreviousPeriod = (
+                (month === currentMonth - 2 && day >= 27) || // 27th+ of two months ago
+                (month === currentMonth - 1 && day <= 10) // 1st-10th of previous month
+              );
+              
+              if (isInPreviousPeriod) {
+                previousPeriodTransactions.push({
+                  id: doc.id,
+                  ...data,
+                  transactionDate,
+                });
+              }
+            }
+          });
+
+          // Generate daily breakdown for current period
+          const currentDailyMap = new Map<string, { revenue: number; count: number }>();
+          currentPeriodTransactions.forEach(t => {
+            const date = t.transactionDate.toISOString().split('T')[0];
+            const existing = currentDailyMap.get(date) || { revenue: 0, count: 0 };
+            currentDailyMap.set(date, {
+              revenue: existing.revenue + t.amount,
+              count: existing.count + 1
+            });
+          });
+
+          // Fill in missing dates with zero values to show complete period
+          const currentPeriodDates: { date: string; revenue: number; count: number }[] = [];
+          for (let d = new Date(currentPeriodStart); d <= currentPeriodEnd; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const existing = currentDailyMap.get(dateStr);
+            currentPeriodDates.push({
+              date: dateStr,
+              revenue: existing?.revenue || 0,
+              count: existing?.count || 0
+            });
+          }
+
+          trendData.currentMonth = currentPeriodDates;
+
+          // Generate daily breakdown for previous period
+          const previousDailyMap = new Map<string, { revenue: number; count: number }>();
+          previousPeriodTransactions.forEach(t => {
+            const date = t.transactionDate.toISOString().split('T')[0];
+            const existing = previousDailyMap.get(date) || { revenue: 0, count: 0 };
+            previousDailyMap.set(date, {
+              revenue: existing.revenue + t.amount,
+              count: existing.count + 1
+            });
+          });
+
+          // Fill in missing dates with zero values to show complete period
+          const previousPeriodDates: { date: string; revenue: number; count: number }[] = [];
+          for (let d = new Date(previousPeriodStart); d <= previousPeriodEnd; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            const existing = previousDailyMap.get(dateStr);
+            previousPeriodDates.push({
+              date: dateStr,
+              revenue: existing?.revenue || 0,
+              count: existing?.count || 0
+            });
+          }
+
+          trendData.previousMonth = previousPeriodDates;
+
+          console.log('Trend Data Generated:', {
+            currentPeriod: `${trendData.currentMonth.length} days (${currentPeriodTransactions.length} transactions)`,
+            previousPeriod: `${trendData.previousMonth.length} days (${previousPeriodTransactions.length} transactions)`,
+            currentPeriodDates: trendData.currentMonth.map(d => d.date),
+            previousPeriodDates: trendData.previousMonth.map(d => d.date)
+          });
+        } else {
+          // For interval view, use the current period as "current month" and leave previous empty
+          // Or split the interval into two halves for comparison
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          const diffTime = end.getTime() - start.getTime();
+          const halfTime = diffTime / 2;
+          const midDate = new Date(start.getTime() + halfTime);
+
+          // Split transactions into first half and second half of the interval
+          const firstHalfTransactions = transactions.filter(t => t.transactionDate < midDate);
+          const secondHalfTransactions = transactions.filter(t => t.transactionDate >= midDate);
+
+          // Generate daily breakdown for second half (current period)
+          const currentDailyMap = new Map<string, { revenue: number; count: number }>();
+          secondHalfTransactions.forEach(t => {
+            const date = t.transactionDate.toISOString().split('T')[0];
+            const existing = currentDailyMap.get(date) || { revenue: 0, count: 0 };
+            currentDailyMap.set(date, {
+              revenue: existing.revenue + t.amount,
+              count: existing.count + 1
+            });
+          });
+
+          trendData.currentMonth = Array.from(currentDailyMap.entries()).map(([date, data]) => ({
+            date,
+            revenue: data.revenue,
+            count: data.count
+          })).sort((a, b) => a.date.localeCompare(b.date));
+
+          // Generate daily breakdown for first half (previous period)
+          const previousDailyMap = new Map<string, { revenue: number; count: number }>();
+          firstHalfTransactions.forEach(t => {
+            const date = t.transactionDate.toISOString().split('T')[0];
+            const existing = previousDailyMap.get(date) || { revenue: 0, count: 0 };
+            previousDailyMap.set(date, {
+              revenue: existing.revenue + t.amount,
+              count: existing.count + 1
+            });
+          });
+
+          trendData.previousMonth = Array.from(previousDailyMap.entries()).map(([date, data]) => ({
+            date,
+            revenue: data.revenue,
+            count: data.count
+          })).sort((a, b) => a.date.localeCompare(b.date));
+
+          console.log('Interval Trend Data Generated:', {
+            firstHalf: `${firstHalfTransactions.length} transactions`,
+            secondHalf: `${secondHalfTransactions.length} transactions`
+          });
+        }
+
+      } catch (error) {
+        console.error("Error generating trend data:", error);
+        // Keep empty arrays if there's an error
+      }
+
       // Get comparison data for monthly view
       let comparisonData: { classType: string; previousCount: number; previousRevenue: number; }[] | undefined;
       
@@ -317,7 +512,8 @@ const PaymentSummaryPage = () => {
         unpaidStudentsCount,
         classTypeBreakdown,
         comparisonData,
-        dailyBreakdown
+        dailyBreakdown,
+        trendData
       });
 
     } catch (error) {
@@ -511,10 +707,12 @@ const PaymentSummaryPage = () => {
               />
 
               <PaymentTrends
-                summaryData={summaryData || {
-                  dailyBreakdown: []
+                summaryData={summaryData?.trendData || {
+                  currentMonth: [],
+                  previousMonth: []
                 }}
                 isLoading={isLoading}
+                dateInterval={dateInterval}
               />
             </div>
           </>

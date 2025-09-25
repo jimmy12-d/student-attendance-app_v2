@@ -65,10 +65,10 @@ export const getStatusStyles = (status: string, useSvg: boolean = false): Status
     case 'pending':
       return {
         badge: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700',
-        cardBg: 'bg-gradient-to-br from-blue-500 to-cyan-600',
+        cardBg: 'bg-gradient-to-br from-gray-500 to-slate-600',
         icon: mdiClockTimeThreeOutline,
         textColor: 'text-white',
-        tableCell: 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200',
+        tableCell: 'bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
         svg: useSvg ? 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' : undefined
       };
     case 'requested':

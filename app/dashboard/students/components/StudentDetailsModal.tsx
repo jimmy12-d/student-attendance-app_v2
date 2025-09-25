@@ -74,6 +74,8 @@ interface StudentDetailsModalProps {
   onBreak?: () => void; // Callback for when a student is put on break
   // Control visibility of action buttons (edit, delete, break)
   hideActions?: boolean; // When true, hides edit/delete/break buttons
+  // Default tab to show when modal opens
+  defaultTab?: 'basic' | 'actions' | 'requests'; // Default tab selection
 }
 
 export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
@@ -87,11 +89,19 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   onNavigate,
   onBreak,
   hideActions = false,
+  defaultTab = 'basic',
 }) => {
   const webcamRef = useRef<Webcam>(null);
   
   // Tab state management
-  const [activeTab, setActiveTab] = useState<'basic' | 'actions' | 'requests'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'actions' | 'requests'>(defaultTab);
+  
+  // Update activeTab when defaultTab changes or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, isOpen]);
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBreakConfirm, setShowBreakConfirm] = useState(false);

@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 // Interface for raw attendance data structure from Firestore
 export interface RawAttendanceRecord {
   studentId: string;
-  date: string; // YYYY-MM-DD
+  date: string,
   status?: 'present' | 'late' | 'requested' | string; // Make status optional since some records might not have it
   timestamp?: Timestamp;
   class?: string;
@@ -614,9 +614,10 @@ export const markAttendance = async (
   selectedShift: string, 
   classConfigs: any, 
   playSuccessSound: () => void,
-  maxRetries: number = 3
+  maxRetries: number = 3,
+  selectedDate?: string
 ): Promise<string> => {
-  const today = new Date().toISOString().split('T')[0]; // Use ISO format: YYYY-MM-DD
+  const attendanceDate = selectedDate || new Date().toISOString().split('T')[0]; // Use provided date or default to today
   
   // Retry logic wrapper
   const attemptMarkAttendance = async (attempt: number): Promise<string> => {
@@ -628,7 +629,7 @@ export const markAttendance = async (
       const attendanceQuery = query(
         attendanceRef,
         where('studentId', '==', student.id),
-        where('date', '==', today),
+        where('date', '==', attendanceDate),
         where('shift', '==', selectedShift) // Check for specific shift
       );
       
@@ -636,8 +637,8 @@ export const markAttendance = async (
       
       if (!attendanceSnapshot.empty) {
         const existingRecord = attendanceSnapshot.docs[0].data();
-        console.log(`🚫 Duplicate attendance prevented for ${student.fullName} (${selectedShift} shift on ${today})`);
-        toast.warning(`${student.fullName} already marked ${existingRecord.status} for ${selectedShift} shift today`);
+        console.log(`🚫 Duplicate attendance prevented for ${student.fullName} (${selectedShift} shift on ${attendanceDate})`);
+        toast.warning(`${student.fullName} already marked ${existingRecord.status} for ${selectedShift} shift on ${attendanceDate}`);
         return existingRecord.status; // Return the existing status
       }
 
@@ -656,7 +657,7 @@ export const markAttendance = async (
         studentId: student.id,
         studentName: student.fullName,
         authUid: (student as any).authUid || null, // Add authUid for student portal access
-        date: today,
+        date: attendanceDate,
         timeIn: timeString,
         status: status,
         shift: selectedShift,
@@ -680,7 +681,7 @@ export const markAttendance = async (
       const verifyQuery = query(
         collection(db, 'attendance'),
         where('studentId', '==', student.id),
-        where('date', '==', today),
+        where('date', '==', attendanceDate),
         where('shift', '==', selectedShift)
       );
       
@@ -727,7 +728,7 @@ export const markAttendance = async (
             studentId: student.id,
             studentName: student.fullName,
             authUid: (student as any).authUid || null,
-            date: today,
+            date: attendanceDate,
             timeIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
             status: 'present', // Default to present for failed attempts
             shift: selectedShift,
@@ -742,7 +743,7 @@ export const markAttendance = async (
           };
           
           // Store in localStorage as fallback
-          const offlineKey = `failed_attendance_${student.id}_${today}_${selectedShift}`;
+          const offlineKey = `failed_attendance_${student.id}_${attendanceDate}_${selectedShift}`;
           localStorage.setItem(offlineKey, JSON.stringify(offlineRecord));
           console.log(`💾 Stored failed attendance in localStorage: ${offlineKey}`);
           

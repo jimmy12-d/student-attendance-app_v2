@@ -10,6 +10,8 @@
     "edit": "កែប្រែ",
     "add": "បន្ថែម",
     "next": "បន្ទាប់",
+    "submit": "បញ្ចូន",
+    "submitting": "កំពុងបញ្ចូន...",
     "previous": "មុន",
     "home": "ទំព័រដើម",
     "back": "ត្រលប់",
@@ -59,7 +61,7 @@
       "manualEntry": "បញ្ចូលដោយដៃ",
       "attendanceHistory": "ប្រវត្តិវត្តមាន",
       "markPresent": "ស្នើសុំវត្តមាន",
-      "status": "ស្ថានភាពថ្ងៃនេះ",
+      "status": "វត្តមានថ្ងៃនេះ",
       "present": "វត្តមាន",
       "absent": "អវត្តមាន",
       "late": "មកយឺត",
@@ -90,6 +92,7 @@
       "rejected": "បានបដិសេធ",
       "submittingRequest": "កំពុងផ្ញើការស្នើសុំ...",
       "startDate": "កាលបរិច្ឆេទចាប់ផ្តើម",
+      "leaveDate": "កាលបរិច្ឆេទចាកចេញ",
       "durationDays": "រយៈពេល (រៀងតាមថ្ងៃ)",
       "reasonLabel": "ហេតុផល",
       "detailsLabel": "ព័ត៌មានលម្អិត (តិចបំផុត 10 ពាក្យ)",
@@ -99,6 +102,8 @@
       "errorNotAuthenticated": "កំហុស៖ អ្នកប្រើមិនត្រូវបានផ្ទៀងផ្ទាត់ត្រឹមត្រូវ។",
       "validation": {
         "startDateRequired": "ត្រូវតែបញ្ចូលកាលបរិច្ឆេទចាប់ផ្តើម",
+        "leaveDateRequired": "ត្រូវតែបញ្ចូលកាលបរិច្ឆេទចាកចេញ",
+        "leaveTimeRequired": "ត្រូវតែបញ្ចូលពេលចាកចេញ",
         "durationMin": "រយៈពេលត្រូវបានយ៉ាងហោចណាស់ 1 ថ្ងៃ",
         "durationRequired": "ត្រូវបានបញ្ចូលរយៈពេល",
         "reasonRequired": "សូមជ្រើសរើស ឬ បញ្ជាក់ហេតុផល",
@@ -107,9 +112,10 @@
   },
   "reasons": {
     "sickness": "ឈី",
-    "familyEvent": "ព្រឹត្តិការណ៍គ្រួសារ",
+    "familyEvent": "កម្មវិធីគ្រួសារ",
     "appointment": "ណាត់ជួប",
-    "school": "សាលា"
+    "school": "សាលា",
+    "personalMatter": "កិច្ចការផ្ទាល់ខ្លួន"
   },
   "shiftInfo": {
     "morningShift": "ព្រឹក",
@@ -149,7 +155,12 @@
   "pendingMessage": "ស្នើសុំចាកចេញមុនរបស់អ្នកកំពុងរង់ចាំការពិនិត្យ។",
   "todayOnly": "សម្រាប់ថ្ងៃនេះតែប៉ុណ្ណោះ",
   "leaveEarlyRequestSuccess": "បានផ្ញើស្នើសុំចាកចេញមុនដោយជោគជ័យ!",
-  "fillAllFields": "សូមបំពេញប្រអប់ទាំងអស់ដែលត្រូវការ"
+  "fillAllFields": "សូមបំពេញប្រអប់ទាំងអស់ដែលត្រូវការ",
+  "leaveDetailsPlaceholder": "សូមផ្តល់ព័ត៌មានលម្អិតអំពីហេតុផលដែលអ្នកត្រូវចាកចេញមុន...",
+  "quickSelect": "ជ្រើសរើសលឿន",
+  "leaveEarly1Hour": "មុនម៉ោង ១ ម៉ោង ({time})",
+  "leaveEarly30Min": "មុន ៣០ នាទី ({time})",
+  "leaveEarly90Min": "មុន ១ ម៉ោង ៣០ នាទី ({time})"
 },
 "mockExam": {
       "title": "តេស្តសាកល្បង",

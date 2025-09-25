@@ -3,22 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAppSelector } from '../../_stores/hooks';
 import { db } from '../../../firebase-config';
-import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, addDoc, updateDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, Timestamp, getDocs } from 'firebase/firestore';
 import { Student, PermissionRecord } from '../../_interfaces';
 import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord, calculateAverageArrivalTime } from '../../dashboard/_lib/attendanceLogic';
 import { AllClassConfigs } from '../../dashboard/_lib/configForAttendanceLogic';
 import { getStatusStyles } from '../../dashboard/_lib/statusStyles';
-import { mdiChevronRight, mdiClockAlertOutline, mdiFaceRecognition, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight, mdiCheckCircle, mdiCalendar, mdiInformationOutline, mdiSend } from '@mdi/js';
+import { mdiChevronRight, mdiClockAlertOutline, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight, mdiCheckCircle, mdiCalendar, mdiInformationOutline, mdiTextBoxOutline } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from './_components/PermissionRequestForm';
+import { LeaveEarlyRequestForm } from './_components/LeaveEarlyRequestForm';
 import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
-import { useTouchGesture } from '../../_hooks/useTouchGesture';
-import { toast } from 'sonner';
 import OngoingPermissions from './_components/OngoingPermissions';
 import HealthArrivalChart from './_components/HealthArrivalChart';
-import Button from '../../_components/Button';
 
 const AttendancePage = () => {
   const t = useTranslations('student.attendance');
@@ -50,8 +48,6 @@ const AttendancePage = () => {
   const [__, setAverageArrivalTime] = useState<{ averageTime: string; details: string } | null>(null);
   const [___, setChartScrollPosition] = useState(0);
   const [isLeaveEarlyPanelOpen, setIsLeaveEarlyPanelOpen] = useState(false);
-  const [leaveEarlyTime, setLeaveEarlyTime] = useState<string>('');
-  const [leaveEarlyReason, setLeaveEarlyReason] = useState<string>('');
   const [existingLeaveEarlyRequest, setExistingLeaveEarlyRequest] = useState<any>(null);
 
   // Ripple effect hook
@@ -120,21 +116,6 @@ const AttendancePage = () => {
     }
   };
 
-  // Calculate leave early time options based on start time
-  const getLeaveEarlyOptions = (startTime: string) => {
-    if (!startTime) return [];
-    
-    const [hours, minutes] = startTime.split(':').map(Number);
-    
-    const options = [
-      { label: new Date(0, 0, 0, hours + 2, minutes).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), value: new Date(0, 0, 0, hours + 2, minutes).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) },
-      { label: new Date(0, 0, 0, hours + 2, minutes + 30).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), value: new Date(0, 0, 0, hours + 2, minutes + 30).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) },
-      { label: new Date(0, 0, 0, hours + 3, minutes).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), value: new Date(0, 0, 0, hours + 3, minutes).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) }
-    ];
-    
-    return options;
-  };
-
   // Check for existing leave early requests
   const checkExistingLeaveEarlyRequest = async () => {
     if (!studentUid) return;
@@ -156,45 +137,6 @@ const AttendancePage = () => {
       }
     } catch (error) {
       console.error("Error checking existing leave early request:", error);
-    }
-  };
-
-  // Handle leave early request submission
-  const handleLeaveEarlyRequest = async () => {
-    if (!studentData || !studentUid || !leaveEarlyTime || !leaveEarlyReason) {
-      toast.error(t('fillAllFields'));
-      return;
-    }
-
-    if (existingLeaveEarlyRequest) {
-      toast.info(t('alreadyRequested'));
-      return;
-    }
-
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const leaveEarlyData = {
-        authUid: studentUid,
-        studentName: studentData.fullName,
-        studentId: studentDocId,
-        class: studentData.class,
-        date: today,
-        leaveTime: leaveEarlyTime,
-        reason: leaveEarlyReason,
-        status: "pending",
-        requestedAt: serverTimestamp(),
-        shift: studentData.shift || null
-      };
-
-      await addDoc(collection(db, "leaveEarlyRequests"), leaveEarlyData);
-      toast.success(t('leaveEarlyRequestSuccess'));
-      setIsLeaveEarlyPanelOpen(false);
-      setLeaveEarlyTime('');
-      setLeaveEarlyReason('');
-      checkExistingLeaveEarlyRequest(); // Refresh the existing request
-    } catch (error) {
-      console.error("Error submitting leave early request:", error);
-      toast.error(t('requestError'));
     }
   };
 
@@ -290,7 +232,7 @@ const AttendancePage = () => {
                                       calculatedStatus.status === "No School" ? 'no-school' :
                                       calculatedStatus.status === "Present" ? 'present' :
                                       calculatedStatus.status === "Late" ? 'late' :
-                                      calculatedStatus.status === "Pending" ? 'absent' : 'absent';
+                                      calculatedStatus.status === "Pending" ? 'pending' : 'absent';
                   
                   return { 
                     id: dateStr, 
@@ -331,7 +273,7 @@ const AttendancePage = () => {
                                          todayCalculatedStatus.status === "No School" ? 'no-school' :
                                          todayCalculatedStatus.status === "Present" ? 'present' :
                                          todayCalculatedStatus.status === "Late" ? 'late' :
-                                         todayCalculatedStatus.status === "Pending" ? 'absent' : 'absent';
+                                         todayCalculatedStatus.status === "Pending" ? 'pending' : 'absent';
 
                 const todaysRecord = todaysAttendanceRecord || { 
                   id: today, 
@@ -444,11 +386,6 @@ const AttendancePage = () => {
     checkExistingLeaveEarlyRequest();
   }, [studentUid]);
 
-  const presentCount = recentRecords.filter(r => r.status === 'present' || r.status === 'permission').length;
-  const lateCount = recentRecords.filter(r => r.status === 'late').length;
-  const absentCount = recentRecords.filter(r => r.status === 'absent').length;
-  const totalDays = recentRecords.length > 0 ? recentRecords.length : 10;
-
   const handlePermissionSuccess = () => {
     setIsPermissionPanelOpen(false);
   };
@@ -463,6 +400,8 @@ const AttendancePage = () => {
         return t('late');
       case 'permission':
         return t('permission');
+      case 'pending':
+        return t('pending');
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
@@ -554,6 +493,16 @@ const AttendancePage = () => {
                    </div>
 
                    <div className="flex items-center space-x-3">
+                     <div className="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center">
+                       <Icon path={mdiTextBoxOutline} size={16} className="text-indigo-600 dark:text-indigo-400" />
+                     </div>
+                     <div>
+                       <p className={khmerFont('text-sm text-gray-600 dark:text-gray-400')}>Details</p>
+                       <p className={khmerFont('font-medium text-gray-900 dark:text-white')}>{existingLeaveEarlyRequest.details || 'No details provided'}</p>
+                     </div>
+                   </div>
+
+                   <div className="flex items-center space-x-3">
                      <div className="w-8 h-8 bg-gray-100 dark:bg-gray-900/50 rounded-full flex items-center justify-center">
                        <Icon path={mdiCalendar} size={16} className="text-gray-600 dark:text-gray-400" />
                      </div>
@@ -602,89 +551,11 @@ const AttendancePage = () => {
                </div>
              </div>
            ) : (
-             <div className="space-y-6">
-               {/* New Request Form */}
-               <div className="text-center mb-6">
-                 <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                   <Icon path={mdiClockAlertOutline} size={28} className="text-white" />
-                 </div>
-                 <h3 className={khmerFont('text-lg font-semibold text-gray-900 dark:text-white')}>
-                   {t('requestLeaveEarly')}
-                 </h3>
-                 <p className={khmerFont('text-sm text-gray-600 dark:text-gray-400 mt-1')}>
-                   {t('selectTimeAndReason')}
-                 </p>
-               </div>
-
-               <div>
-                 <label className={khmerFont('block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3')}>
-                   <Icon path={mdiClockAlertOutline} size={16} className="inline mr-2 text-blue-500" />
-                   {t('selectLeaveTime')}
-                 </label>
-                 <div className="grid grid-cols-2 gap-3 mb-4">
-                   {studentData?.shift && getLeaveEarlyOptions(getShiftInfo(studentData.shift).startTime).map((option, index) => (
-                     <button
-                       key={index}
-                       onClick={() => setLeaveEarlyTime(option.value)}
-                       className={`px-4 py-3 text-sm rounded-xl border-2 transition-all duration-200 transform hover:scale-105 ${
-                         leaveEarlyTime === option.value
-                           ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-lg'
-                           : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600 hover:border-blue-300'
-                       }`}
-                     >
-                       <div className="flex items-center justify-center space-x-2">
-                         <Icon path={mdiClockAlertOutline} size={14} />
-                         <span className="font-medium">{option.label}</span>
-                       </div>
-                     </button>
-                   ))}
-                 </div>
-                 <div className="mb-6">
-                   <label className={khmerFont('block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2')}>
-                     <Icon path={mdiCalendar} size={16} className="inline mr-2 text-green-500" />
-                     {t('manualTime')}
-                   </label>
-                   <input
-                     type="time"
-                     value={leaveEarlyTime}
-                     onChange={(e) => setLeaveEarlyTime(e.target.value)}
-                     className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-                   />
-                 </div>
-               </div>
-               
-               <div>
-                 <label className={khmerFont('block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3')}>
-                   <Icon path={mdiFileDocumentEditOutline} size={16} className="inline mr-2 text-purple-500" />
-                   {t('reason')}
-                 </label>
-                 <textarea
-                   value={leaveEarlyReason}
-                   onChange={(e) => setLeaveEarlyReason(e.target.value)}
-                   placeholder={t('enterReason')}
-                   className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white resize-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
-                   rows={4}
-                 />
-               </div>
-               
-               <div className="flex justify-end space-x-3 pt-4">
-                 <Button 
-                   onClick={() => setIsLeaveEarlyPanelOpen(false)} 
-                   color="whiteDark" 
-                   className={khmerFont('px-6 py-3 rounded-xl font-medium')}
-                 >
-                   {tCommon('cancel')}
-                 </Button>
-                 <Button 
-                   onClick={handleLeaveEarlyRequest} 
-                   color="company-purple" 
-                   className={khmerFont('px-6 py-3 rounded-xl font-medium shadow-lg')}
-                 >
-                   <Icon path={mdiSend} size={16} className="mr-2" />
-                   {t('submitRequest')}
-                 </Button>
-               </div>
-             </div>
+             <LeaveEarlyRequestForm 
+               onSuccess={() => { setIsLeaveEarlyPanelOpen(false); checkExistingLeaveEarlyRequest(); }}
+               studentData={studentData}
+               allClassConfigs={allClassConfigs}
+             />
            )}
          </div>
        </SlideInPanel>

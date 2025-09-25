@@ -13,13 +13,17 @@ import DurationSelector from './DurationSelector';
 import CustomCombobox from '@/app/_components/CustomCombobox';
 import { mdiHospital, mdiAccountGroup, mdiSchool } from '@mdi/js';
 import { mdiEmoticonSickOutline } from '@mdi/js';
+import { mdiCalendar, mdiClockOutline, mdiHelpCircleOutline, mdiTextBoxOutline, mdiSend } from '@mdi/js';
+import Icon from '@/app/_components/Icon';
 
 type Props = {
   onSuccess?: () => void;
 };
 
+
 export const PermissionRequestForm = ({ onSuccess }: Props) => {
   const t = useTranslations('student.attendance');
+  const tCommon = useTranslations('common');
   const studentDocId = useAppSelector((state) => state.main.studentDocId);
   const studentAuthUid = useAppSelector((state) => state.main.userUid);
   const userName = useAppSelector((state) => state.main.userName);
@@ -103,7 +107,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
         initialValues={{
           permissionStartDate: '',
           duration: 1,
-          reason: 'School',
+          reason: '',
           details: '',
         }}
         validationSchema={validationSchema}
@@ -113,39 +117,69 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
           
           <Form className="space-y-2">
             <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-              <FormField label={t('startDate')} labelFor="permissionStartDate">
+              <FormField labelFor="permissionStartDate">
                 {(fieldData) => (
-                  <Field id="permissionStartDate" name="permissionStartDate" type="date" {...fieldData} />
+                  <div>
+                    <label htmlFor="permissionStartDate" className="block mb-2 font-semibold text-gray-900 dark:text-white cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Icon path={mdiCalendar} className="w-5 h-5 text-blue-500" />
+                        <span>{t('startDate')}</span>
+                      </div>
+                    </label>
+                    <Field id="permissionStartDate" name="permissionStartDate" type="date" {...fieldData} />
+                  </div>
                 )}
               </FormField>
-              <FormField label={t('durationDays')} labelFor="duration">
+              <FormField labelFor="duration">
                 {() => (
-                  <DurationSelector
-                    value={values.duration}
-                    onChange={(value) => setFieldValue('duration', value)}
-                  />
+                  <div>
+                    <label htmlFor="duration" className="block mb-2 font-semibold text-gray-900 dark:text-white cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Icon path={mdiClockOutline} className="w-5 h-5 text-green-500" />
+                        <span>{t('durationDays')}</span>
+                      </div>
+                    </label>
+                    <DurationSelector
+                      value={values.duration}
+                      onChange={(value) => setFieldValue('duration', value)}
+                    />
+                  </div>
                 )}
               </FormField>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label={t('reasonLabel')} labelFor="reason">
+              <FormField labelFor="reason">
                 {(fieldData) => (
-                  <CustomCombobox
-                    options={reasonOptions}
-                    selectedValue={values.reason}
-                    onChange={(value) => setFieldValue('reason', value)}
-                    fieldData={fieldData}
-                    id="reason"
-                  />
+                  <div>
+                    <label htmlFor="reason" className="block mb-2 font-semibold text-gray-900 dark:text-white cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Icon path={mdiHelpCircleOutline} className="w-5 h-5 text-yellow-500" />
+                        <span>{t('reasonLabel')}</span>
+                      </div>
+                    </label>
+                    <CustomCombobox
+                      options={reasonOptions}
+                      selectedValue={values.reason}
+                      onChange={(value) => setFieldValue('reason', value)}
+                      fieldData={fieldData}
+                      id="reason"
+                    />
+                  </div>
                 )}
               </FormField>
 
-              <FormField label={t('detailsLabel')} labelFor="details" hasTextareaHeight>
+              <FormField labelFor="details" hasTextareaHeight>
                 {(fieldData) => (
-                  <>
+                  <div>
+                    <label htmlFor="details" className="block mb-2 font-semibold text-gray-900 dark:text-white cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Icon path={mdiTextBoxOutline} className="w-5 h-5 text-red-500" />
+                        <span>{t('detailsLabel')}</span>
+                      </div>
+                    </label>
                     <Field id="details" name="details" as="textarea" {...fieldData} placeholder={t('detailsPlaceholder')} />
                     <ErrorMessage name="details" component="div" className="text-red-500 text-sm mt-1" />
-                  </>
+                  </div>
                 )}
               </FormField>
             </div>
@@ -154,7 +188,8 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
               <Button
                 type="submit"
                 color="company-purple"
-                label={isSubmitting ? t('submitting') : t('submitRequest')}
+                label={isSubmitting ? t('submitting') : tCommon('submit')}
+                icon={mdiSend}
                 disabled={isSubmitting}
               />
             </div>

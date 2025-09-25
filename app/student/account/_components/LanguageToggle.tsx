@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useTransition } from 'react'
-import { useLocaleContext } from '../../_components/LocaleProvider'
+import { useLocaleContext } from '../../../_components/LocaleProvider'
 import { motion } from 'framer-motion'
 
 interface LanguageToggleProps {

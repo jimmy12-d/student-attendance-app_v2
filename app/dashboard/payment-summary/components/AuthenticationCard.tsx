@@ -57,7 +57,7 @@ const AuthenticationCard: React.FC<AuthenticationCardProps> = ({
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
                   >
-                    <Icon path={showPassword ? mdiEyeOff : mdiEye} size={1.2} />
+                    <Icon path={showPassword ? mdiEyeOff : mdiEye} size={16} />
                   </button>
                 </div>
               )}
