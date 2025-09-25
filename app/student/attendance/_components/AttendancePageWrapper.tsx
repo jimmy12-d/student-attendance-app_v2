@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import StudentTopNav from './StudentTopNav'
+import StudentTopNav from '../../_components/StudentTopNav'
 
 export default function AttendancePageWrapper() {
   const [AttendancePage, setAttendancePage] = useState<React.ComponentType | null>(null)
 
   // Dynamically import the attendance page
   useEffect(() => {
-    import('../attendance/page').then((module) => {
+    import('../page').then((module) => {
       setAttendancePage(() => module.default)
     })
   }, [])

@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import DarkModeToggle from '@/app/student/_components/DarkModeToggle';
-import LanguageToggle from '@/app/student/_components/LanguageToggle';
+import DarkModeToggle from './_components/DarkModeToggle';
+import LanguageToggle from './_components/LanguageToggle';
 import CardBoxModal from '@/app/_components/CardBox/Modal';
-import { useAppDispatch } from '@/app/_stores/hooks';
+import { useAppDispatch, useAppSelector } from '@/app/_stores/hooks';
 import { setUser } from '@/app/_stores/mainSlice';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/firebase-config';
@@ -15,8 +15,8 @@ import { usePWAInstall } from '@/app/_hooks/usePWAInstall';
 import { useTranslations, useLocale } from 'next-intl';
 
 // --- Import components for settings ---
-import NotificationSettings from '../_components/NotificationSettings';
-import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle, mdiWeb, mdiHistory } from '@mdi/js';
+import NotificationSettings from './_components/NotificationSettings';
+import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle, mdiWeb, mdiHistory, mdiShieldAccount } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
 
 // --- Reusable UI Components for the new design ---
@@ -122,6 +122,7 @@ const AccountPage = () => {
   const tCommon = useTranslations('common');
   const tPayment = useTranslations('payment');
   const locale = useLocale();
+  const userName = useAppSelector((state) => state.main.userName);
 
   // Utility function for Khmer font styling
   const khmerFont = (additionalClasses = '') => {
@@ -346,6 +347,20 @@ const AccountPage = () => {
               {t('accountHeading')}
             </h2>
             <SettingsGroup>
+              {userName === 'Test Testing' && (
+                <>
+                  <SettingsListItem
+                    iconPath={mdiShieldAccount}
+                    iconBgColor="bg-gradient-to-br from-purple-500 to-indigo-600"
+                    title="Admin"
+                    subtitle="Access admin panel"
+                    href="/admin"
+                    titleClassName={khmerFont()}
+                    subtitleClassName={khmerFont()}
+                  />
+                  <ListDivider />
+                </>
+              )}
               <SettingsListItem
                 iconPath={mdiLogout}
                 iconBgColor="bg-gradient-to-br from-red-500 to-rose-600"

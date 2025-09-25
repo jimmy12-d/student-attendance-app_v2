@@ -68,43 +68,59 @@ const UserDisplay: React.FC<UserDisplayProps> = ({ isMobile = false }) => {
 
   return (
     <>
-      {/* Desktop Version */}
+      {/* Desktop Version - Clean with subtle styling */}
       {!isMobile && (
-        <div className="hidden lg:flex items-center px-3 py-2 text-sm">
-          <div className="group flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 px-3 py-1.5 rounded-full border border-blue-200/50 dark:border-blue-700/50 shadow-sm hover:shadow-md hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-all duration-200">
-            <div className="p-1 bg-blue-100 dark:bg-blue-900/40 rounded-full group-hover:bg-blue-200 dark:group-hover:bg-blue-900/60 transition-colors duration-200">
-              <Icon 
-                path={mdiAccountCircle} 
-                size={20} 
-                className="text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors duration-200" 
-              />
+        <div className="flex items-center px-3 py-2">
+          <div className="flex items-center space-x-3 bg-gray-50 dark:bg-slate-700/50 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700/70 transition-colors duration-200 cursor-pointer">
+            {/* Avatar with subtle background */}
+            <div className="relative">
+              <div className="p-1 bg-gray-200 dark:bg-slate-600 rounded-full">
+                <Icon
+                  path={mdiAccountCircle}
+                  size={18}
+                  className="text-gray-600 dark:text-gray-400"
+                />
+              </div>
+              {/* Small online indicator */}
+              <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-white dark:border-slate-700"></div>
             </div>
-            <span className="font-medium text-blue-800 dark:text-blue-200 whitespace-nowrap group-hover:text-blue-900 dark:group-hover:text-blue-100 transition-colors duration-200">
-              {displayName}
-            </span>
-            <div className="w-2 h-2 bg-green-400 rounded-full opacity-75 animate-pulse"></div>
+
+            {/* User info */}
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {displayName}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                Administrator
+              </span>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Mobile Version */}
+      {/* Mobile Version - Clean with subtle styling */}
       {isMobile && (
-        <div className="lg:hidden px-3 py-2 border-b border-gray-200 dark:border-gray-600">
-          <div className="flex items-center space-x-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 px-4 py-3 rounded-lg border border-blue-200/50 dark:border-blue-700/50">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-full">
-              <Icon 
-                path={mdiAccountCircle} 
-                size={1.1} 
-                className="text-blue-600 dark:text-blue-400" 
-              />
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-slate-700/30">
+          <div className="flex items-center space-x-3 bg-white dark:bg-slate-600/50 px-3 py-2 rounded-lg">
+            {/* Avatar with subtle background */}
+            <div className="relative">
+              <div className="p-1.5 bg-gray-200 dark:bg-slate-500 rounded-full">
+                <Icon
+                  path={mdiAccountCircle}
+                  size={20}
+                  className="text-gray-600 dark:text-gray-400"
+                />
+              </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border border-white dark:border-slate-600"></div>
             </div>
+
+            {/* User info */}
             <div className="flex-1">
-              <div className="font-semibold text-blue-800 dark:text-blue-200">
+              <div className="font-medium text-gray-900 dark:text-gray-100">
                 {displayName}
               </div>
-              <div className="text-xs text-blue-600 dark:text-blue-400 flex items-center space-x-1">
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                <span>Online</span>
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Administrator
               </div>
             </div>
           </div>

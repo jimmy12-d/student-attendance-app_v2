@@ -100,7 +100,8 @@
       "reasons": {
         "sickness": "Sickness",
         "familyEvent": "Family Event",
-        "appointment": "Appointment"
+        "appointment": "Appointment",
+        "school": "School"
       },
       "lastDaysActivity": "Last 10 Days Activity",
       "alreadyMarked": "Attendance already marked as {status}.",
@@ -128,7 +129,26 @@
         "loadingDescription": "Please wait while we prepare your attendance chart.",
         "noData": "No data available",
         "notAvailable": "N/A"
-      }
+      },
+      "leaveEarly": "Leave Early",
+      "leaveEarlyRequest": "Leave Early Request",
+      "requestLeaveEarly": "Request Leave Early",
+      "selectTimeAndReason": "Select time and reason",
+      "selectLeaveTime": "Select Leave Time",
+      "manualTime": "Or enter manual time",
+      "enterReason": "Enter reason for leaving early...",
+      "leaveTime": "Leave Time",
+      "reason": "Reason",
+      "requestDetails": "Request Details",
+      "requestDate": "Request Date",
+      "pendingReview": "Pending Review",
+      "leaveEarlyApproved": "Leave Early Approved",
+      "leaveEarlyPending": "Leave Early Pending",
+      "approvedMessage": "Your leave early request has been approved.",
+      "pendingMessage": "Your leave early request is pending review.",
+      "todayOnly": "Today Only",
+      "leaveEarlyRequestSuccess": "Leave early request submitted successfully!",
+      "fillAllFields": "Please fill all required fields"
     },
     "mockExam": {
       "title": "Mock Exam",

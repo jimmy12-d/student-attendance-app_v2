@@ -38,8 +38,8 @@ export const useFirebaseMessaging = (userId: string | null) => {
 
             if (permissionResult === 'granted') {
                 // Wait for service worker to be ready
-                const registration = await navigator.serviceWorker.ready;
-                console.log('Service worker is ready:', registration);
+                const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}&authDomain=${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}&projectId=${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}&storageBucket=${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}&messagingSenderId=${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}&appId=${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}`);
+                console.log('Service worker registered:', registration);
 
                 // Initialize Firebase messaging
                 const messaging = getMessaging(app);

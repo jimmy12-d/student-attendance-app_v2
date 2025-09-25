@@ -1054,7 +1054,7 @@ export default function AttendanceRecordPage() {
     <SectionMain>
       <SectionTitleLineWithButton
         icon={mdiClipboardListOutline}
-        title={`Attendance Records`}
+        title={`Live Attendance`}
         main
       >
         <div className="flex items-center gap-4">

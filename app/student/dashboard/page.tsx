@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import ProgressBar from '../_components/ProgressBar';
+import ProgressBar from '../mock-exam/_components/ProgressBar';
 
 // Firebase and Data Handling
 import { db } from '../../../firebase-config';
@@ -18,8 +18,8 @@ import { useAppSelector } from '../../_stores/hooks';
 
 // UI Components & Icons
 import CardBoxModal from '../../_components/CardBox/Modal';
-import { PermissionRequestForm } from './../_components/PermissionRequestForm';
-import StudentQRPayment from './../_components/StudentQRCode';
+import { PermissionRequestForm } from '../attendance/_components/PermissionRequestForm';
+import StudentQRPayment from './_components/StudentQRCode';
 import useCountUp from '../../_hooks/useCountUp';
 
 // Define types for our data

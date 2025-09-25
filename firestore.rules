@@ -27,15 +27,6 @@ service cloud.firestore {
                       request.resource.data.authUid == request.auth.uid);
     }
 
-//     match /attendance/{attendanceId} {
-//       // Only admins can create or update attendance records.
-//       allow write: if isAuthorizedUser();
-      
-//       // An admin can read any record.
-//       // A student can read their OWN attendance records.
-//       // IMPORTANT: This requires your 'attendance' documents to have an 'authUid' field.
-//       allow read: if isAuthorizedUser() || (request.auth.uid == resource.data.authUid);
-//     }
     match /attendance/{attendanceId} {
       // Admins can do everything with attendance records
       allow read, write: if isAuthorizedUser();
@@ -48,9 +39,15 @@ service cloud.firestore {
       // Students can read their own attendance records
       allow read: if request.auth != null && request.auth.uid == resource.data.authUid;
     }
-
+    
     match /classes/{classId} {
       // Only admins can manage class data.
+      allow write: if isAuthorizedUser();
+      allow read: if request.auth != null;
+    }
+    
+    match /classConfigs/{classConfigId} {
+      // Only admins can manage class configuration data.
       allow write: if isAuthorizedUser();
       allow read: if request.auth != null;
     }
@@ -70,7 +67,7 @@ service cloud.firestore {
     match /examControls/{controlsId} {
       // Allow any authenticated user to read exam settings.
       allow write: if isAuthorizedUser();
-      allow read: if request.auth != null;
+      allow read: if true;
     }
     
     match /users/{userId}/notifications/{notificationId} {
@@ -96,11 +93,24 @@ service cloud.firestore {
       
       // An admin or the student who owns it can read a permission request.
       // IMPORTANT: This requires your 'permissions' documents to have an 'authUid' field.
-      allow read: if isAuthorizedUser() || (request.auth.uid == resource.data.authUid);
+      allow read: if isAuthorizedUser() || (request.auth != null && request.auth.uid == resource.data.authUid);
       
       // A student can create a permission request for themselves.
       // This rule ensures the 'authUid' in the new document matches the person creating it.
       allow create: if true;
+    }
+
+    match /leaveEarlyRequests/{requestId} {
+      // Admins can update leave early requests (approve/deny).
+      allow update: if isAuthorizedUser();
+      
+      // An admin or the student who owns it can read a leave early request.
+      // IMPORTANT: This requires your 'leaveEarlyRequests' documents to have an 'authUid' field.
+      allow read: if isAuthorizedUser() || (request.auth != null && request.auth.uid == resource.data.authUid);
+      
+      // A student can create a leave early request for themselves.
+      // This rule ensures the 'authUid' in the new document matches the person creating it.
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.authUid;
     }
 
     match /authorizedUsers/{userEmail} {
@@ -150,6 +160,26 @@ service cloud.firestore {
       allow write: if isAuthorizedUser();
     }
     
+    // --- STAR MANAGEMENT SYSTEM RULES ---
+    match /starRewards/{rewardId} {
+      // READ: Everyone can read star rewards to see available rewards
+      allow read: if request.auth != null;
+      
+      // WRITE: Only admins can create/update/delete star rewards
+      allow write: if isAuthorizedUser();
+    }
+    
+    // Sub-collection for claimed stars under students
+    match /students/{studentId}/claimedStars/{claimedStarId} {
+      // READ: Admins can read all, students can read their own
+      allow read: if isAuthorizedUser() || 
+                     (request.auth != null && 
+                      request.auth.uid == get(/databases/$(database)/documents/students/$(studentId)).data.authUid);
+      
+      // WRITE: Only admins can award stars
+      allow write: if isAuthorizedUser();
+    }
+    
     match /processedAbaTransactions/{transactionId} {
       allow read: if isAuthorizedUser() || request.auth == null;
       allow write: if false;
@@ -179,49 +209,24 @@ service cloud.firestore {
       allow read, write: if isAuthorizedUser();
     }
     
+    match /systemSettings/{systemSettingsId} {
+      // READ/WRITE: Only admins can access absent follow-up records.
+      allow read, write: if isAuthorizedUser();
+    }
+    
+    match /flipFlopTracking/{flipFlopTrackingId} {
+      // READ/WRITE: Only admins can access absent follow-up records.
+      allow read, write: if isAuthorizedUser();
+    }
+    
     match /mockResults/{phoneId} {
       // READ: Authenticated users (teachers/admins) can read student mock results
-      allow read: if request.auth != null;
+      allow read: if true;
       
       // WRITE: Authenticated users (teachers/admins) can update mock results
       allow write: if request.auth != null;
     }
     
-    // --- FLIP-FLOP SYSTEM RULES ---
-    match /flipFlopTracking/{trackingId} {
-      // READ: Only admins can read flip-flop tracking records
-      allow read: if isAuthorizedUser();
-      
-      // WRITE: Only admins can create/update flip-flop tracking records
-      allow write: if isAuthorizedUser();
-    }
     
-    match /systemSettings/{settingId} {
-      // READ: Only admins can read system settings
-      allow read: if isAuthorizedUser();
-      
-      // WRITE: Only admins can modify system settings
-      allow write: if isAuthorizedUser();
-    }
-
-    // --- STAR MANAGEMENT SYSTEM RULES ---
-    match /starRewards/{rewardId} {
-      // READ: Everyone can read star rewards to see available rewards
-      allow read: if request.auth != null;
-      
-      // WRITE: Only admins can create/update/delete star rewards
-      allow write: if isAuthorizedUser();
-    }
-    
-    // Sub-collection for claimed stars under students
-    match /students/{studentId}/claimedStars/{claimedStarId} {
-      // READ: Admins can read all, students can read their own
-      allow read: if isAuthorizedUser() || 
-                     (request.auth != null && 
-                      request.auth.uid == get(/databases/$(database)/documents/students/$(studentId)).data.authUid);
-      
-      // WRITE: Only admins can award stars
-      allow write: if isAuthorizedUser();
-    }
   }
 }

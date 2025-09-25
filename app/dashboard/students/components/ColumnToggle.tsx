@@ -16,6 +16,17 @@ interface ColumnToggleProps {
   isTakeAttendanceMode?: boolean;
   allClassesCollapsed?: boolean; // This actually means "all classes zoomed" when true
   onToggleAllClasses?: () => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  filteredStudentsCount?: number;
+  totalStudentsCount?: number;
+  filteredStudents?: Array<{
+    id: string;
+    fullName: string;
+    phone?: string;
+    class?: string;
+  }>; // Add filtered students list
+  onStudentSelect?: (studentId: string) => void; // Add student selection callback
 }
 
 export const ColumnToggle: React.FC<ColumnToggleProps> = ({ 
@@ -25,7 +36,13 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
   isBatchEditMode = false, 
   isTakeAttendanceMode = false,
   allClassesCollapsed = false, // This actually means "all classes zoomed" when true
-  onToggleAllClasses 
+  onToggleAllClasses,
+  searchQuery = '',
+  onSearchChange,
+  filteredStudentsCount = 0,
+  totalStudentsCount = 0,
+  filteredStudents = [], // Add filtered students list
+  onStudentSelect // Add student selection callback
 }) => {
   const enabledColumns = columns.filter(col => col.enabled);
 
@@ -135,6 +152,110 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
               {allClassesCollapsed ? 'Show All Classes' : 'Hide All Classes'}
             </span>
           </button>
+        </div>
+      )}
+      
+      {/* Student Search */}
+      {onSearchChange && (
+        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-slate-600">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg 
+                className="w-5 h-5 text-gray-400" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                />
+              </svg>
+            </div>
+            <input 
+              type="text"
+              placeholder="Search students by name, class, or phone..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white dark:placeholder-gray-400 text-base"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => onSearchChange('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <div className="mt-3">
+              {filteredStudentsCount === 0 ? (
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  No students found matching "{searchQuery}"
+                </div>
+              ) : (
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Found {filteredStudentsCount} student(s) matching "{searchQuery}"
+                  </div>
+                  
+                  {/* Show detailed list when fewer than 10 students */}
+                  {filteredStudentsCount > 0 && filteredStudentsCount < 10 && filteredStudents.length > 0 && (
+                    <div className="mt-3 max-h-48 overflow-y-auto">
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                        Matching Students:
+                      </div>
+                      <div className="p-2 grid grid-cols-2 gap-3">
+                        {filteredStudents.map((student) => (
+                          <div 
+                            key={student.id}
+                            onClick={() => onStudentSelect?.(student.id)}
+                            className={`flex flex-col p-3 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 cursor-pointer transition-all duration-200 hover:!bg-blue-50 dark:hover:!bg-blue-900/20 hover:!border-blue-300 dark:hover:!border-blue-600 hover:!shadow-md hover:!scale-[1.02] isolate`}
+                            title={onStudentSelect ? `Click to scroll to ${student.fullName}` : undefined}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate flex items-center">
+                                {student.fullName}
+                                {onStudentSelect && (
+                                  <svg className="w-3 h-3 ml-2 text-blue-500 dark:text-blue-400 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-4 mt-1">
+                                {student.phone && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                    {student.phone}
+                                  </div>
+                                )}
+                                {student.class && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                    </svg>
+                                    {student.class}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

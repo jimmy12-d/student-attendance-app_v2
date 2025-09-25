@@ -271,15 +271,6 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()); // Sort ascending: oldest first (left), newest last (right)
 
-    console.log('Chart data processing:', {
-      totalRecentRecords: recentRecords.length,
-      currentMonthRecords: currentMonthRecords.length,
-      studentClass: studentData?.class,
-      studentShift: studentData?.shift,
-      maxDaysToShow,
-      hasClassConfigs: !!classConfigs
-    });
-
     if (currentMonthRecords.length === 0) {
       console.log('No current month records found, chart will be empty');
       return;
@@ -373,20 +364,6 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
       .attr('stroke', colors.startLine)
       .attr('stroke-width', 2)
       .attr('opacity', 0.8);
-
-    // Add start time label with background
-    const startTimeLabel = g.append('g').attr('class', 'start-time-label');
-    
-    startTimeLabel.append('text')
-      .attr('x', -10)
-      .attr('y', yScale(0))
-      .attr('fill', colors.textLight)
-      .attr('font-size', '10px')
-      .attr('font-weight', '600')
-      .attr('text-anchor', 'end')
-      .attr('alignment-baseline', 'middle')
-      .style('font-family', locale === 'kh' ? 'var(--font-khmer), sans-serif' : 'inherit')
-      .text(t('shiftInfo.onTime'));
 
     // Draw average arrival time line if available
     if (averageDifference !== null) {

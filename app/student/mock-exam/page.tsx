@@ -14,15 +14,15 @@
 
 // // UI Components
 // import useCountUp from '../../_hooks/useCountUp';
-// import MockExamResults from './MockExamResults';
+// import MockExamResults from './_components/MockExamResults';
 // import ProgressBar from '../_components/ProgressBar';
 // import CardBoxModal from '../../_components/CardBox/Modal';
 // import { PermissionRequestForm } from '../_components/PermissionRequestForm';
-// import ExamInfoBoxes from './ExamInfoBoxes';
-// import PerformanceRadarChartSkeleton from './PerformanceRadarChartSkeleton';
+// import ExamInfoBoxes from './_components/ExamInfoBoxes';
+// import PerformanceRadarChartSkeleton from './_components/PerformanceRadarChartSkeleton';
 // import CardBox from '@/app/_components/CardBox';
 
-// const PerformanceRadarChart = dynamic(() => import('./PerformanceRadarChart'), {
+// const PerformanceRadarChart = dynamic(() => import('./_components/PerformanceRadarChart'), {
 //   ssr: false,
 //   loading: () => <PerformanceRadarChartSkeleton />
 // });

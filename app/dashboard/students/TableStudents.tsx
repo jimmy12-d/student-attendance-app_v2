@@ -29,9 +29,11 @@ type Props = {
   onBatchUpdate?: () => void;
   onExitBatchEdit?: () => void;
   onExitTakeAttendance?: () => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 };
 
-const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, isFlipFlopPreviewMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance }: Props) => {
+const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, isFlipFlopPreviewMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance, searchQuery = '', onSearchChange }: Props) => {
   // Default column configuration
   const defaultColumns: ColumnConfig[] = [
     { id: 'number', label: '#N', enabled: true },
@@ -71,6 +73,96 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   
   // Zoom state management
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+
+  // Filter students based on search query
+  const filteredStudents = React.useMemo(() => {
+    if (!searchQuery || !searchQuery.trim()) return students;
+
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return students;
+
+    return students.filter(student => {
+      // Determine search priority based on query pattern
+      const isClassQuery = query.match(/^\d+[a-zA-Z]$/) || query.match(/^class\s+\d+[a-zA-Z]$/i);
+      const isPhoneQuery = query.replace(/\D/g, '').length >= 3; // At least 3 digits suggest phone search
+      const isNameQuery = !isClassQuery && !isPhoneQuery;
+
+      // Search by class - highest priority for class-like queries
+      const classMatch = student.class && (() => {
+        const fullClass = student.class.toLowerCase();
+        const classId = student.class.replace(/^Class\s+/i, '').toLowerCase();
+
+        // Exact match for full class name
+        if (fullClass === query || fullClass.includes(`class ${query}`)) {
+          return true;
+        }
+
+        // Exact match for class ID
+        if (classId === query) {
+          return true;
+        }
+
+        // For class queries, be more restrictive
+        if (isClassQuery) {
+          return classId === query || fullClass.includes(`class ${query}`);
+        }
+
+        // For non-class queries, allow broader matching but still controlled
+        if (query.match(/^\d+$/) && classId.startsWith(query)) {
+          return true;
+        }
+
+        return false;
+      })();
+
+      // Search by phone - only for phone-like queries or when no other matches
+      const phoneMatch = student.phone && (() => {
+        if (isPhoneQuery) {
+          // For phone queries, require the digits to match exactly
+          const queryDigits = query.replace(/\D/g, '');
+          const phoneDigits = student.phone.replace(/\D/g, '');
+          return phoneDigits.includes(queryDigits);
+        }
+        // For non-phone queries, don't match phone unless it's a very specific case
+        return false;
+      })();
+
+      // Search by name - fallback for general queries
+      const nameMatch = student.fullName && (() => {
+        if (isNameQuery) {
+          // For name queries, allow substring matching
+          return student.fullName.toLowerCase().includes(query);
+        }
+        // For non-name queries, be more restrictive
+        return student.fullName.toLowerCase() === query;
+      })();
+
+      // Prioritize matches based on query type
+      if (isClassQuery) {
+        return classMatch;
+      } else if (isPhoneQuery) {
+        return phoneMatch;
+      } else {
+        return nameMatch || classMatch || phoneMatch;
+      }
+    });
+  }, [students, searchQuery]);
+
+  // Function to highlight matching text in student names
+  const highlightText = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => 
+      regex.test(part) ? (
+        <span key={index} className="bg-yellow-200 dark:bg-yellow-600 text-yellow-900 dark:text-yellow-100 font-semibold">
+          {part}
+        </span>
+      ) : part
+    );
+  };
 
   // Load column configuration from localStorage on component mount
   useEffect(() => {
@@ -359,17 +451,17 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         const hours = Math.floor(avgDifferenceMinutes / 60);
         const minutes = Math.round(avgDifferenceMinutes % 60);
         if (hours > 0) {
-          return `+${hours}h ${minutes}m late`;
+          return `-${hours}h ${minutes}m late`;
         } else {
-          return `+${minutes}m late`;
+          return `-${minutes}m late`;
         }
       } else {
         const hours = Math.floor(Math.abs(avgDifferenceMinutes) / 60);
         const minutes = Math.round(Math.abs(avgDifferenceMinutes) % 60);
         if (hours > 0) {
-          return `-${hours}h ${minutes}m early`;
+          return `+${hours}h ${minutes}m early`;
         } else {
-          return `-${minutes}m early`;
+          return `+${minutes}m early`;
         }
       }
     } catch (error) {
@@ -456,28 +548,32 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   const shiftOrder: ('Morning' | 'Afternoon' | 'Evening')[] = ['Morning', 'Afternoon', 'Evening'];
 
   // Filter out students who are missing a class property to prevent 'undefined' groups
-  const validStudents = students.filter(student => student.class);
+  const validStudents = filteredStudents.filter(student => student.class);
 
   // 1. Group students by class, then by shift
-  const groupedStudents = validStudents.reduce((acc, student) => {
-    const { class: studentClass, shift } = student;
-    if (!acc[studentClass]) {
-      acc[studentClass] = { Morning: [], Afternoon: [], Evening: [] };
-    }
-    if (shift && shiftOrder.includes(shift as any)) {
-      acc[studentClass][shift as 'Morning' | 'Afternoon' | 'Evening'].push(student);
-    }
-    return acc;
-  }, {} as Record<string, { Morning: Student[]; Afternoon: Student[]; Evening: Student[] }>);
-
-  // Sort students by fullName within each class and shift
-  for (const classGroup of Object.values(groupedStudents)) {
-    shiftOrder.forEach(shift => {
-      if (classGroup[shift]) {
-        classGroup[shift].sort((a, b) => a.fullName.localeCompare(b.fullName));
+  const groupedStudents = React.useMemo(() => {
+    const grouped = validStudents.reduce((acc, student) => {
+      const { class: studentClass, shift } = student;
+      if (!acc[studentClass]) {
+        acc[studentClass] = { Morning: [], Afternoon: [], Evening: [] };
       }
-    });
-  }
+      if (shift && shiftOrder.includes(shift as any)) {
+        acc[studentClass][shift as 'Morning' | 'Afternoon' | 'Evening'].push(student);
+      }
+      return acc;
+    }, {} as Record<string, { Morning: Student[]; Afternoon: Student[]; Evening: Student[] }>);
+
+    // Sort students by fullName within each class and shift
+    for (const classGroup of Object.values(grouped)) {
+      shiftOrder.forEach(shift => {
+        if (classGroup[shift]) {
+          classGroup[shift].sort((a, b) => a.fullName.localeCompare(b.fullName));
+        }
+      });
+    }
+
+    return grouped;
+  }, [validStudents, shiftOrder]);
 
   // 2. Partition classes into day (morning/afternoon) and evening lists
   const dayShiftClasses: string[] = [];
@@ -970,7 +1066,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-blue-800 dark:text-blue-300 truncate">
-                              {student.fullName}
+                              {highlightText(student.fullName, searchQuery)}
                             </p>
                             <p className="text-xs text-blue-600 dark:text-blue-400">
                               {student.class} - {student.shift}
@@ -1100,7 +1196,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                             }`}
                           >
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate mr-2">
-                              {student.fullName}
+                              {highlightText(student.fullName, searchQuery)}
                             </span>
                             <div className="flex items-center space-x-2">
                               <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
@@ -1149,35 +1245,60 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         </div>
       )}
 
-      {/* Column Selection Panel */}
-      <ColumnToggle 
-        columns={columns.filter(col => col.id !== 'name')} 
-        onToggleColumn={toggleColumn}
-        onResetColumns={resetColumnsToDefault}
-        isBatchEditMode={isBatchEditMode}
-        isTakeAttendanceMode={isTakeAttendanceMode}
-        allClassesCollapsed={allClassesCollapsed}
-        onToggleAllClasses={() => {
-          const newState = !allClassesCollapsed;
-          setAllClassesCollapsed(newState);
-          
-          if (newState) {
-            // When switching to "Hide All Classes" state, collapse ALL classes
-            const allClasses = sortedAllClasses;
-            setCollapsedClasses(new Set(allClasses));
-            // Clear expanded classes
-            setExpandedClasses(new Set());
-          } else {
-            // When switching to "Show All Classes" state, expand ALL classes
-            const allClasses = sortedAllClasses;
-            setExpandedClasses(new Set(allClasses));
-            // Clear individual collapsed classes so all are visible and expanded
-            setCollapsedClasses(new Set());
-          }
-        }}
-      />
+      {/* Controls Container */}
+      <div className="space-y-4 mb-6">
+        {/* Column Selection Panel */}
+        <ColumnToggle
+          columns={columns.filter(col => col.id !== 'name')}
+          onToggleColumn={toggleColumn}
+          onResetColumns={resetColumnsToDefault}
+          isBatchEditMode={isBatchEditMode}
+          isTakeAttendanceMode={isTakeAttendanceMode}
+          allClassesCollapsed={allClassesCollapsed}
+          onToggleAllClasses={() => {
+            const newState = !allClassesCollapsed;
+            setAllClassesCollapsed(newState);
 
-      {/* Morning & Afternoon Section */}
+            if (newState) {
+              // When switching to "Hide All Classes" state, collapse ALL classes
+              const allClasses = sortedAllClasses;
+              setCollapsedClasses(new Set(allClasses));
+              // Clear expanded classes
+              setExpandedClasses(new Set());
+            } else {
+              // When switching to "Show All Classes" state, expand ALL classes
+              const allClasses = sortedAllClasses;
+              setExpandedClasses(new Set(allClasses));
+              // Clear individual collapsed classes so all are visible and expanded
+              setCollapsedClasses(new Set());
+            }
+          }}
+          searchQuery={searchQuery}
+          onSearchChange={onSearchChange}
+          filteredStudentsCount={filteredStudents.length}
+          filteredStudents={filteredStudents}
+          onStudentSelect={(studentId: string) => {
+            // Scroll to the student row
+            const studentRow = document.querySelector(`[data-student-id="${studentId}"]`);
+            if (studentRow) {
+              studentRow.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'nearest' 
+              });
+              
+              // Add flash highlight effect
+              studentRow.classList.add('flash-highlight');
+              
+              // Remove the flash class after animation completes
+              setTimeout(() => {
+                studentRow.classList.remove('flash-highlight');
+              }, 3000); // Match the animation duration
+            }
+          }}
+        />
+
+      </div>      {/* Morning & Afternoon Section */}
       <div className="space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
@@ -1235,6 +1356,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   onClassToggle={handleClassToggle}
                   expandedClasses={expandedClasses}
                   onZoomToggle={handleZoomToggle}
+                  searchQuery={searchQuery}
+                  highlightText={highlightText}
                 />
                 <ClassTable 
                   studentList={groupedStudents[className]['Afternoon']} 
@@ -1262,11 +1385,13 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   onClassToggle={handleClassToggle}
                   expandedClasses={expandedClasses}
                   onZoomToggle={handleZoomToggle}
+                  searchQuery={searchQuery}
+                  highlightText={highlightText}
                 />
               </div>
             ))}
           </div>
-        ) : (
+        ) : (!searchQuery || searchQuery.trim() === '') ? (
           <div className="text-center py-12">
             <div className="w-20 h-20 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1275,7 +1400,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
             </div>
             <p className="text-gray-500 dark:text-gray-400">No students in Morning or Afternoon shifts.</p>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Evening Section */}
@@ -1323,6 +1448,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 onClassToggle={handleClassToggle}
                 expandedClasses={expandedClasses}
                 onZoomToggle={handleZoomToggle}
+                searchQuery={searchQuery}
+                highlightText={highlightText}
               />
             ))}
           </div>

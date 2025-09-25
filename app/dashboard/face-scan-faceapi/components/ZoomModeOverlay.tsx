@@ -55,11 +55,11 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
       {/* Dynamic Instructions */}
       <div className="absolute top-6 left-6 z-[10000] bg-black/70 backdrop-blur-sm rounded-xl p-4 max-w-md">
         <div className="text-white">
-          <h3 className="text-xl font-bold mb-2 flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span>Zoom Mode Active</span>
+          <h3 className="text-lg font-semibold text-blue-300 mb-3 flex items-center space-x-2">
+            <Icon path={mdiFaceRecognition} className="w-5 h-5" />
+            <span>Face Scanning Instructions</span>
           </h3>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-2 text-base">
             <p className="flex items-center space-x-2">
               <Icon path={mdiEye} className="w-4 h-4 text-blue-400" />
               <span>Look directly at the camera</span>

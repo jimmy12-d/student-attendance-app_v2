@@ -27,6 +27,18 @@
   animation: bounce-subtle 1.5s ease-in-out infinite;
 }
 
+.animation-delay-100 {
+  animation-delay: 0.1s;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-300 {
+  animation-delay: 0.3s;
+}
+
 @keyframes fade-out-left {
   from {
     opacity: 1;
@@ -227,3 +239,41 @@ td.sticky {
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.3);
 }
 
+/* Flash highlight animation for student selection */
+@keyframes flash-highlight {
+  0%, 33.33% {
+    background-color: rgb(254 240 138); /* yellow-100 */
+    box-shadow: 0 0 0 2px rgb(251 191 36); /* yellow-400 */
+  }
+  40%, 60% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+  80%, 100% {
+    background-color: rgb(254 240 138); /* yellow-100 */
+    box-shadow: 0 0 0 2px rgb(251 191 36); /* yellow-400 */
+  }
+}
+
+.dark .flash-highlight {
+  animation: flash-highlight-dark 3s ease-out;
+}
+
+@keyframes flash-highlight-dark {
+  0%, 33.33% {
+    background-color: rgb(113 63 18 / 0.3); /* yellow-900/30 */
+    box-shadow: 0 0 0 2px rgb(251 191 36); /* yellow-400 */
+  }
+  40%, 60% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+  80%, 100% {
+    background-color: rgb(113 63 18 / 0.3); /* yellow-900/30 */
+    box-shadow: 0 0 0 2px rgb(251 191 36); /* yellow-400 */
+  }
+}
+
+.flash-highlight {
+  animation: flash-highlight 3s ease-out;
+}

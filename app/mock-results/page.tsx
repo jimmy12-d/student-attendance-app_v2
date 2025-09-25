@@ -11,14 +11,14 @@ import dynamic from 'next/dynamic';
 // Reusable Components
 import CardBox from "@/app/_components/CardBox";
 import Button from "@/app/_components/Button";
-import MockExamResults from "@/app/student/mock-exam/MockExamResults";
-import PerformanceRadarChartSkeleton from "@/app/student/mock-exam/PerformanceRadarChartSkeleton";
+import MockExamResults from "@/app/student/mock-exam/_components/MockExamResults";
+import PerformanceRadarChartSkeleton from "@/app/student/mock-exam/_components/PerformanceRadarChartSkeleton";
 
 // Hooks
 import useCountUp from "@/app/_hooks/useCountUp";
 
 // Dynamic imports
-const PerformanceRadarChart = dynamic(() => import('@/app/student/mock-exam/PerformanceRadarChart'), {
+const PerformanceRadarChart = dynamic(() => import('@/app/student/mock-exam/_components/PerformanceRadarChart'), {
   ssr: false,
   loading: () => <PerformanceRadarChartSkeleton />
 });

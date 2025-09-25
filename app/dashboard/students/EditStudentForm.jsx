@@ -328,7 +328,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-7xl mx-auto">
       {/* Student Information Section */}
       <CollapsibleSection
         title="Student Information"

@@ -173,6 +173,7 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
           handleMenuClick();
         }
       }}
+      title={item.label} // Tooltip for accessibility
     >
       {asideMenuItemInnerContents}
       

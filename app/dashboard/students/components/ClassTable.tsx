@@ -31,6 +31,8 @@ interface ClassTableProps {
   onClassToggle?: (className: string, collapsed: boolean) => void;
   expandedClasses?: Set<string>;
   onZoomToggle?: (className: string, isExpanded: boolean) => void;
+  searchQuery?: string;
+  highlightText?: (text: string, query: string) => React.ReactNode;
 }
 
 export const ClassTable: React.FC<ClassTableProps> = ({ 
@@ -55,10 +57,12 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   onAttendanceChange,
   calculateAverageArrivalTime,
   shiftRankings,
-  forceCollapsed = false,
+  forceCollapsed,
   onClassToggle,
-  expandedClasses = new Set(),
-  onZoomToggle
+  expandedClasses,
+  onZoomToggle,
+  searchQuery = '',
+  highlightText
 }) => {
   const [isClassCollapsed, setIsClassCollapsed] = useState(forceCollapsed);
   
@@ -501,6 +505,8 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   onAttendanceChange={onAttendanceChange}
                   calculateAverageArrivalTime={calculateAverageArrivalTime}
                   shiftRankings={shiftRankings}
+                  searchQuery={searchQuery}
+                  highlightText={highlightText}
                 />
               ))}
             </tbody>

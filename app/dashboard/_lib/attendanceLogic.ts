@@ -352,9 +352,9 @@ function formatAverageDifference(minutes: number): string {
     }
     
     if (minutes > 0) {
-        return `+${timeStr} late`;
+        return `-${timeStr} late`;
     } else if (minutes < 0) {
-        return `-${timeStr} early`;
+        return `+${timeStr} early`;
     } else {
         return 'on time';
     }
@@ -608,72 +608,162 @@ export const calculateShiftRankings = (
   return rankings;
 };
 
-// Mark attendance for recognized student
-export const markAttendance = async (student: Student, selectedShift: string, classConfigs: any, playSuccessSound: () => void): Promise<string> => {
+// Mark attendance for recognized student with enhanced error handling and retry logic
+export const markAttendance = async (
+  student: Student, 
+  selectedShift: string, 
+  classConfigs: any, 
+  playSuccessSound: () => void,
+  maxRetries: number = 3
+): Promise<string> => {
+  const today = new Date().toISOString().split('T')[0]; // Use ISO format: YYYY-MM-DD
+  
+  // Retry logic wrapper
+  const attemptMarkAttendance = async (attempt: number): Promise<string> => {
+    try {
+      console.log(`📝 Attempting to mark attendance for ${student.fullName} (attempt ${attempt}/${maxRetries})`);
+      
+      // Check if already marked today for this shift
+      const attendanceRef = collection(db, 'attendance');
+      const attendanceQuery = query(
+        attendanceRef,
+        where('studentId', '==', student.id),
+        where('date', '==', today),
+        where('shift', '==', selectedShift) // Check for specific shift
+      );
+      
+      const attendanceSnapshot = await getDocs(attendanceQuery);
+      
+      if (!attendanceSnapshot.empty) {
+        const existingRecord = attendanceSnapshot.docs[0].data();
+        console.log(`🚫 Duplicate attendance prevented for ${student.fullName} (${selectedShift} shift on ${today})`);
+        toast.warning(`${student.fullName} already marked ${existingRecord.status} for ${selectedShift} shift today`);
+        return existingRecord.status; // Return the existing status
+      }
+
+      // Use advanced late marking logic
+      const { status, cutoffTime, startTime } = determineAttendanceStatus(student as any, selectedShift, classConfigs);
+      
+      const now = new Date();
+      const timeString = now.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: false 
+      });
+
+      // Create attendance record with advanced logic
+      const attendanceRecord = {
+        studentId: student.id,
+        studentName: student.fullName,
+        authUid: (student as any).authUid || null, // Add authUid for student portal access
+        date: today,
+        timeIn: timeString,
+        status: status,
+        shift: selectedShift,
+        method: 'face-api',
+        timestamp: new Date(),
+        startTime: startTime, // Add startTime in 24-hour format instead of cutoffTime
+        // Additional fields for advanced tracking
+        class: (student as any).class || null,
+        gracePeriodMinutes: (student as any).gracePeriodMinutes || 15,
+        // Add retry tracking
+        attemptNumber: attempt,
+        ...(attempt > 1 && { retryReason: 'Previous attempt failed' })
+      };
+
+      // Save to Firestore with enhanced error handling
+      console.log(`💾 Saving attendance record to Firestore for ${student.fullName}...`);
+      const docRef = await addDoc(collection(db, 'attendance'), attendanceRecord);
+      console.log(`✅ Attendance record saved successfully with ID: ${docRef.id}`);
+
+      // Verify the record was actually saved by reading it back
+      const verifyQuery = query(
+        collection(db, 'attendance'),
+        where('studentId', '==', student.id),
+        where('date', '==', today),
+        where('shift', '==', selectedShift)
+      );
+      
+      const verifySnapshot = await getDocs(verifyQuery);
+      if (verifySnapshot.empty) {
+        throw new Error('Attendance record verification failed - record not found after save');
+      }
+
+      // Show success message with shift information
+      const message = `${student.fullName} marked ${status} for ${selectedShift} shift at ${timeString}`;
+      
+      if (status === 'late') {
+        toast.warning(message);
+      } else {
+        toast.success(message);
+      }
+      
+      playSuccessSound();
+      console.log(`🎉 Attendance successfully marked for ${student.fullName} as ${status}`);
+      return status; // Return the attendance status
+      
+    } catch (error: any) {
+      console.error(`❌ Attendance marking failed for ${student.fullName} (attempt ${attempt}):`, error);
+      
+      // If this is not the last attempt, wait and retry
+      if (attempt < maxRetries) {
+        const retryDelay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+        console.log(`⏳ Retrying in ${retryDelay}ms...`);
+        
+        // Show retry notification to user
+        toast.info(`Retrying attendance for ${student.fullName}... (${attempt}/${maxRetries})`, {
+          duration: retryDelay
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return attemptMarkAttendance(attempt + 1);
+      } else {
+        // Final attempt failed
+        console.error(`💥 Final attempt failed for ${student.fullName}:`, error);
+        
+        // Try to save as offline record for manual processing
+        try {
+          const offlineRecord = {
+            studentId: student.id,
+            studentName: student.fullName,
+            authUid: (student as any).authUid || null,
+            date: today,
+            timeIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+            status: 'present', // Default to present for failed attempts
+            shift: selectedShift,
+            method: 'face-api-failed',
+            timestamp: new Date(),
+            startTime: '',
+            class: (student as any).class || null,
+            gracePeriodMinutes: (student as any).gracePeriodMinutes || 15,
+            errorReason: error.message,
+            requiresManualReview: true,
+            failedAttempts: maxRetries
+          };
+          
+          // Store in localStorage as fallback
+          const offlineKey = `failed_attendance_${student.id}_${today}_${selectedShift}`;
+          localStorage.setItem(offlineKey, JSON.stringify(offlineRecord));
+          console.log(`💾 Stored failed attendance in localStorage: ${offlineKey}`);
+          
+          toast.error(`Failed to mark attendance for ${student.fullName}. Saved for manual review.`, {
+            duration: 10000
+          });
+          
+        } catch (offlineError) {
+          console.error('Failed to save offline record:', offlineError);
+        }
+        
+        throw error; // Re-throw the original error
+      }
+    }
+  };
+
   try {
-    // Check if already marked today for this shift
-    const today = new Date().toISOString().split('T')[0]; // Use ISO format: YYYY-MM-DD
-    const attendanceRef = collection(db, 'attendance');
-    const attendanceQuery = query(
-      attendanceRef,
-      where('studentId', '==', student.id),
-      where('date', '==', today),
-      where('shift', '==', selectedShift) // Check for specific shift
-    );
-    
-    const attendanceSnapshot = await getDocs(attendanceQuery);
-    
-    if (!attendanceSnapshot.empty) {
-      const existingRecord = attendanceSnapshot.docs[0].data();
-      console.log(`🚫 Duplicate attendance prevented for ${student.fullName} (${selectedShift} shift on ${today})`);
-      toast.warning(`${student.fullName} already marked ${existingRecord.status} for ${selectedShift} shift today`);
-      return existingRecord.status; // Return the existing status
-    }
-
-    // Use advanced late marking logic
-    const { status, cutoffTime, startTime } = determineAttendanceStatus(student as any, selectedShift, classConfigs);
-    
-    const now = new Date();
-    const timeString = now.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      hour12: false 
-    });
-
-    // Create attendance record with advanced logic
-    const attendanceRecord = {
-      studentId: student.id,
-      studentName: student.fullName,
-      authUid: (student as any).authUid || null, // Add authUid for student portal access
-      date: today,
-      timeIn: timeString,
-      status: status,
-      shift: selectedShift,
-      method: 'face-api',
-      timestamp: new Date(),
-      startTime: startTime, // Add startTime in 24-hour format instead of cutoffTime
-      // Additional fields for advanced tracking
-      class: (student as any).class || null,
-      gracePeriodMinutes: (student as any).gracePeriodMinutes || 15
-    };
-
-    // Save to Firestore
-    await addDoc(collection(db, 'attendance'), attendanceRecord);
-
-    // Show success message with shift information
-    const message = `${student.fullName} marked ${status} for ${selectedShift} shift at ${timeString}`;
-    
-    if (status === 'late') {
-      toast.warning(message);
-    } else {
-      toast.success(message);
-    }
-    
-    playSuccessSound();
-    return status; // Return the attendance status
+    return await attemptMarkAttendance(1);
   } catch (error) {
-    console.error('Failed to mark attendance:', error);
-    toast.error('Failed to mark attendance');
+    console.error('All attendance marking attempts failed:', error);
+    toast.error(`Critical error: Unable to mark attendance for ${student.fullName}`);
     return 'present'; // Default fallback
   }
 };

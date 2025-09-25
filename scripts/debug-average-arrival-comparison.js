@@ -103,9 +103,9 @@ function formatAverageDifference(minutes) {
     }
     
     if (minutes > 0) {
-        return `+${timeStr} late`;
+        return `-${timeStr} late`;
     } else if (minutes < 0) {
-        return `-${timeStr} early`;
+        return `+${timeStr} early`;
     } else {
         return 'on time';
     }

@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { AbsentStatusTracker } from './AbsentStatusTracker';
 import { getStatusStyles } from '../../_lib/statusStyles';
 import { getPaymentStatus, getPaymentStatusDisplayText } from '../../_lib/paymentLogic';
-
+import { mdiTrophy, mdiMedal } from '@mdi/js';
+import Icon from "../../../_components/Icon";
 // Phone formatting utility
 const formatPhoneNumber = (phone: string | undefined | null): string => {
   if (!phone) return 'N/A';
@@ -48,22 +49,30 @@ interface StudentRowProps {
   onAttendanceChange?: (studentId: string, isPresent: boolean) => void;
   calculateAverageArrivalTime?: (student: Student) => string;
   shiftRankings?: { earliest: { [studentId: string]: number }, latest: { [studentId: string]: number } };
+  searchQuery?: string;
+  highlightText?: (text: string, query: string) => React.ReactNode;
 }
 
 export const StudentRow: React.FC<StudentRowProps> = ({ 
   student, 
   index, 
   enabledColumns, 
-  onViewDetails,
-  isBatchEditMode = false,
-  isTakeAttendanceMode = false,
-  isSelected = false,
-  onSelect,
-  getTodayAttendanceStatus,
-  isStudentCurrentlyPresent,
-  onAttendanceChange,
-  calculateAverageArrivalTime,
-  shiftRankings
+  onEdit, 
+  onDelete, 
+  onViewDetails, 
+  isBatchEditMode = false, 
+  isTakeAttendanceMode = false, 
+  onBatchUpdate, 
+  isSelected = false, 
+  onSelect, 
+  getAttendanceStatus, 
+  getTodayAttendanceStatus, 
+  isStudentCurrentlyPresent, 
+  onAttendanceChange, 
+  calculateAverageArrivalTime, 
+  shiftRankings,
+  searchQuery = '',
+  highlightText
 }) => {
   // Check if student has warning and is absent today
   const todayStatus = getTodayAttendanceStatus ? getTodayAttendanceStatus(student) : { status: 'Unknown' };
@@ -101,15 +110,17 @@ export const StudentRow: React.FC<StudentRowProps> = ({
 
   
   return (
-    <tr className={`group transition-all duration-200 ease-in-out hover:shadow-sm ${
-      isWarningAbsent 
-        ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 shadow-md animate-pulse' 
-        : isBatchEditMode && isSelected 
-        ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' 
-        : student.isFlipPreview && student.scheduleType?.toLowerCase() === 'flip-flop'
-        ? 'bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 shadow-sm' 
-        : 'hover:bg-gray-50 dark:hover:bg-slate-700/50'
-    }`}>
+    <tr 
+      data-student-id={student.id}
+      className={`group transition-all duration-200 ease-in-out hover:shadow-sm ${
+        isWarningAbsent 
+          ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 shadow-md animate-pulse' 
+          : isBatchEditMode && isSelected 
+          ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' 
+          : student.isFlipPreview && student.scheduleType?.toLowerCase() === 'flip-flop'
+          ? 'bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-400 shadow-sm' 
+          : 'hover:bg-gray-50 dark:hover:bg-slate-700/50'
+      }`}>
         {enabledColumns.map((column) => {
           switch (column.id) {
             case 'number':
@@ -196,7 +207,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                         onClick={handleCopyName}
                         title={`Click to copy "${student.fullName}"`}
                       >
-                        {student.fullName}
+                        {highlightText ? highlightText(student.fullName, searchQuery) : student.fullName}
                       </p>
                       {student.nameKhmer && (
                           <p 
@@ -454,11 +465,11 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                     }`}>
                       {/* Rank number for top 3 performers */}
                       {(earliestRank && earliestRank <= 3) && (
-                        <span className={`mr-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                        <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                           earliestRank === 1 
-                            ? 'bg-green-200 dark:bg-green-800 text-green-900 dark:text-green-100' 
-                            : earliestRank === 2
-                            ? 'bg-green-100 dark:bg-green-700 text-green-800 dark:text-green-200'
+                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200' // Silver for #1
+                            : (earliestRank === 2 || earliestRank === 3)
+                            ? 'bg-amber-200 dark:bg-amber-700 text-amber-800 dark:text-amber-200' // Bronze for #2 and #3
                             : 'bg-green-50 dark:bg-green-600 text-green-700 dark:text-green-200'
                         }`}>
                           #{earliestRank}
@@ -466,7 +477,7 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                       )}
                       
                       {(latestRank && latestRank <= 3) && (
-                        <span className={`mr-1.5 px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                        <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
                           latestRank === 1 
                             ? 'bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100' 
                             : latestRank === 2
@@ -477,13 +488,18 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                         </span>
                       )}
                       
-                      {/* Icon based on type - Trophy for all top 3 earliest */}
+                      {/* Icon based on type - Different icons for each rank */}
                       {showIcon && (earliestRank || latestRank) && (
-                        <span className="mr-1.5 flex-shrink-0">
-                          {earliestRank && earliestRank <= 3 ? (
-                            <svg className="w-3 h-3 text-yellow-600 dark:text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 2L7.5 4.5 4 4l.5 3.5L2 10l2.5 2.5L4 16l3.5-.5L10 18l2.5-2.5L16 16l-.5-3.5L18 10l-2.5-2.5L16 4l-3.5.5L10 2zM8 8a2 2 0 114 0 2 2 0 01-4 0zm4 6v1a1 1 0 01-1 1H9a1 1 0 01-1-1v-1a1 1 0 011-1h2a1 1 0 011 1z" clipRule="evenodd" />
-                            </svg>
+                        <span className="flex-shrink-0">
+                          {earliestRank === 1 ? (
+                            // Gold Trophy for #1
+                            <Icon path={mdiTrophy} className="w-5 h-5 text-yellow-500" />
+                          ) : earliestRank === 2 ? (
+                            // Silver Medal for #2
+                            <Icon path={mdiMedal} className="w-5 h-5 text-gray-400" />
+                          ) : earliestRank === 3 ? (
+                            // Bronze Medal for #3
+                            <Icon path={mdiMedal} className="w-5 h-5 text-orange-400" />
                           ) : latestRank && latestRank <= 3 ? (
                             <svg className="w-3 h-3 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />

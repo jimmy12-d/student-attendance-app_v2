@@ -22,11 +22,11 @@ export default function NavBarItem({ item, ...props }: Props) {
   const [isDropdownActive, setIsDropdownActive] = useState(false);
 
   const componentClass = [
-    "block lg:flex items-center relative cursor-pointer",
+    "block lg:flex items-center relative cursor-pointer transition-all duration-200",
     isDropdownActive
-      ? `navbar-item-label-active dark:text-slate-400`
-      : `navbar-item-label dark:text-white dark:hover:text-slate-400`,
-    item.menu ? "lg:py-2 lg:px-3" : "py-2 px-3",
+      ? `navbar-item-label-active dark:text-slate-400 bg-blue-50 dark:bg-blue-900/20 rounded-lg`
+      : `navbar-item-label dark:text-white dark:hover:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg`,
+    item.menu ? "lg:py-2 lg:px-3" : "py-3 px-4",
     item.isDesktopNoLabel ? "lg:w-16 lg:justify-center" : "",
   ].join(" ");
 
@@ -45,43 +45,28 @@ export default function NavBarItem({ item, ...props }: Props) {
   const NavBarItemComponentContents = (
     <>
       <div
-        className={`flex items-center ${
+        className={`flex items-center rounded-lg transition-all duration-200 ${
           item.menu
-            ? "bg-gray-100 dark:bg-slate-800 lg:bg-transparent lg:dark:bg-transparent p-3 lg:p-0"
-            : ""
+            ? "bg-gray-50 dark:bg-slate-700 lg:bg-transparent lg:dark:bg-transparent p-3 lg:p-0 hover:bg-gray-100 dark:hover:bg-slate-600"
+            : "hover:bg-gray-100 dark:hover:bg-slate-700"
         }`}
         onClick={handleMenuClick}
       >
-        {/* {item.isCurrentUser && (
-          <UserAvatarCurrentUser className="w-6 h-6 mr-3 inline-flex" />
-        )} */}
-        {item.icon && <Icon path={item.icon} className="transition-colors" />}
+        {item.icon && (
+          <Icon
+            path={item.icon}
+            className="transition-all duration-200 hover:scale-110"
+            size="20"
+          />
+        )}
         <span
-          className={`px-2 transition-colors ${
+          className={`px-2 transition-all duration-200 font-medium ${
             item.isDesktopNoLabel && item.icon ? "lg:hidden" : ""
           }`}
         >
           {itemLabel}
         </span>
-        {/* {item.menu && (
-          <Icon
-            path={isDropdownActive ? mdiChevronUp : mdiChevronDown}
-            className="hidden lg:inline-flex transition-colors"
-          />
-        )} */}
       </div>
-      {/* {item.menu && (
-        <div
-          className={`${
-            !isDropdownActive ? "lg:hidden" : ""
-          } text-sm border-b border-gray-100 lg:border lg:bg-white lg:absolute lg:top-full lg:left-0 lg:min-w-full lg:z-20 lg:rounded-lg lg:shadow-lg lg:dark:bg-slate-800 dark:border-slate-700`}
-        >
-          <NavBarMenuList
-            menu={item.menu}
-            onRouteChange={props.onRouteChange}
-          />
-        </div>
-      )} */}
     </>
   );
 

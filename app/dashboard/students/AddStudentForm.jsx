@@ -316,22 +316,22 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Timestamp Fetcher */}
-      <TimestampFetcher 
-        onDataFetched={handleSheetDataFetched}
-        onError={setError}
-      />
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-7xl mx-auto">
+        {/* Timestamp Fetcher */}
+        <TimestampFetcher 
+          onDataFetched={handleSheetDataFetched}
+          onError={setError}
+        />
 
-      {/* Student Information Section */}
-      <CollapsibleSection
-        title="Student Information"
-        isCollapsed={isStudentInfoCollapsed}
-        onToggle={() => setIsStudentInfoCollapsed(!isStudentInfoCollapsed)}
-        showOnlyInEditMode={false}
-        isEditMode={false}
-        className="mt-2"
-      >
+        {/* Student Information Section */}
+        <CollapsibleSection
+          title="Student Information"
+          isCollapsed={isStudentInfoCollapsed}
+          onToggle={() => setIsStudentInfoCollapsed(!isStudentInfoCollapsed)}
+          showOnlyInEditMode={false}
+          isEditMode={false}
+          className="mt-2"
+        >
         {/* Row 1: Full Name and Khmer Name */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0">

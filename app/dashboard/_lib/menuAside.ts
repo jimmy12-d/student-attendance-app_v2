@@ -47,7 +47,7 @@ const menuAside: MenuAsideItem[] = [
     menu: [
       {
         href: "/dashboard/record",
-        label: "Attendance Records",
+        label: "Records",
         icon: mdiClipboardListOutline,
       },
       // {
@@ -74,6 +74,11 @@ const menuAside: MenuAsideItem[] = [
         href: "/dashboard/manage-excuses",
         label: "Late Permission",
         icon: mdiAccountClockOutline,
+      },
+      {
+        href: "/dashboard/attendance-score",
+        label: "Attendance Score",
+        icon: mdiChartLine,
       },
     ]
   },

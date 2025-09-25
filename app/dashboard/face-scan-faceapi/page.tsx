@@ -22,6 +22,8 @@ import RecognitionControls from './components/RecognitionControls';
 import ShiftSelector from './components/ShiftSelector';
 import CameraShutdownHandler from './components/CameraShutdownHandler';
 import ShutdownTransition from './components/ShutdownTransition';
+import FailedAttendanceManager from './components/FailedAttendanceManager';
+import { failedAttendanceRetryManager, FailedAttendanceRecord } from './utils/failedAttendanceRetryManager';
 
 const FaceApiAttendanceScanner = () => {
   const webcamRef = useRef<Webcam>(null);
@@ -159,27 +161,47 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   const loadCameras = useCallback(async () => {
     try {
       setLoadingMessage('Loading available cameras...');
+
+      // First, request camera access to ensure permissions are granted and device labels are populated
+      let tempStream = null;
+      try {
+        tempStream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: undefined },
+          audio: false
+        });
+      } catch (permissionError) {
+        console.warn('Camera permission request failed, but continuing with device enumeration:', permissionError);
+      }
+
+      // Now enumerate devices - labels should be populated after permission request
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      
+
+      // Stop the temporary stream if it was created
+      if (tempStream) {
+        tempStream.getTracks().forEach(track => track.stop());
+      }
+
       const cameraOptions = videoDevices.map((device, index) => ({
         value: device.deviceId,
-        label: device.label || `Camera ${index + 1}`
+        label: device.label || `Camera ${index + 1} (${device.deviceId.slice(0, 8)}...)`
       }));
 
       setAvailableCameras(cameraOptions);
-      
+
       // Auto-select first camera if none selected
       if (cameraOptions.length > 0 && !selectedCamera) {
         setSelectedCamera(cameraOptions[0].value);
       }
+
+      console.log(`Loaded ${cameraOptions.length} cameras:`, cameraOptions);
     } catch (error) {
       console.error('Failed to load cameras:', error);
       toast.error('Failed to load available cameras');
     }
   }, [selectedCamera]);
 
-  // Initialize everything
+  // Initialize everything (only once)
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true);
@@ -206,6 +228,39 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     initialize();
   }, [loadStudents, loadClassConfigs, autoSelectShift, loadCameras]);
+
+  // Setup retry manager callback when students or classConfigs change
+  useEffect(() => {
+    if (students.length > 0 && classConfigs) {
+      // Setup failed attendance retry manager with current data
+      failedAttendanceRetryManager.setRetryCallback(async (record: FailedAttendanceRecord) => {
+        try {
+          // Find the student from the record
+          const student = students.find(s => s.id === record.studentId);
+          if (!student) {
+            console.error(`Student not found for retry: ${record.studentId}`);
+            return false;
+          }
+
+          // Use the enhanced markAttendance with retry logic
+          const result = await markAttendance(student, record.shift, classConfigs || {}, () => {}, 2); // 2 retry attempts for auto-retry
+          return result !== 'present'; // Return true if not default fallback
+        } catch (error) {
+          console.error('Retry callback failed:', error);
+          return false;
+        }
+      });
+      
+      console.log('🔄 Updated retry manager callback with current data');
+    }
+  }, [students, classConfigs]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      failedAttendanceRetryManager.stopRetryManager();
+    };
+  }, []);
 
   // Load saved face size settings from localStorage
   useEffect(() => {
@@ -381,6 +436,42 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       document.body.style.overflow = 'unset';
     }
   }, [isZoomMode, isCameraActive]);
+
+  // Handle click to reset countdown during shutdown countdown
+  useEffect(() => {
+    const handleClickReset = (event: MouseEvent) => {
+      // Only reset if we're in zoom mode, camera is active, and countdown is running
+      if (isZoomMode && isCameraActive && cameraShutdownCountdown !== null && cameraShutdownCountdown > 0) {
+        // Clear any existing timers
+        if (shutdownTimerRef.current) {
+          clearTimeout(shutdownTimerRef.current);
+          shutdownTimerRef.current = null;
+        }
+        if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
+        
+        // Reset countdown
+        setCameraShutdownCountdown(null);
+        
+        // Reset shutdown stage
+        setShutdownStage(null);
+        
+        // Update last face detection time to prevent immediate shutdown
+        lastFaceDetectionTimeRef.current = Date.now();
+        
+        toast.info('Camera shutdown cancelled');
+      }
+    };
+
+    if (isZoomMode) {
+      document.addEventListener('click', handleClickReset);
+      return () => {
+        document.removeEventListener('click', handleClickReset);
+      };
+    }
+  }, [isZoomMode, isCameraActive, cameraShutdownCountdown]);
 
   // Face detection and recognition
   const detectFaces = useCallback(async () => {
@@ -585,10 +676,12 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                 // Play success sound immediately when face is recognized
                 playSuccessSound();
                 
-                // Mark attendance for the recognized student (async)
+                // Mark attendance for the recognized student (async) with enhanced error handling
                 // Don't pass playSuccessSound since we already played it
-                markAttendance(bestMatch.student, selectedShift || '', classConfigs || {}, () => {})
+                markAttendance(bestMatch.student, selectedShift || '', classConfigs || {}, () => {}, 3) // 3 retry attempts
                   .then(attendanceStatus => {
+                    console.log(`✅ Attendance marking completed for ${bestMatch.student.fullName}: ${attendanceStatus}`);
+                    
                     // Notify other components that new attendance was marked
                     window.dispatchEvent(new CustomEvent('attendanceMarked', {
                       detail: {
@@ -609,32 +702,67 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                               ...f, 
                               attendanceStatus,
                               status: 'recognized' as const,
-                              message: `Attendance marked: ${bestMatch.student.fullName}`,
+                              message: `✅ Attendance marked: ${bestMatch.student.fullName} (${attendanceStatus})`,
                               isScanning: false // Stop scanning animation
                             } 
                           : f
                       )
                     );
                     
-                    // Wait 2 seconds before removing this face
+                    // Wait 3 seconds before removing this face to show success state
                     setTimeout(() => {
                       setTrackedFaces(prevFaces => 
                         prevFaces.filter(f => f.id !== face.id) // Remove this face after processing
                       );
-                    }, 2000);
+                    }, 3000); // Increased from 2s to 3s to show success state longer
                   })
                   .catch(error => {
-                    console.error('Attendance marking failed:', error);
-                    // Release scan lock even if attendance marking fails
+                    console.error('❌ All attendance marking attempts failed:', error);
+                    
+                    // Show detailed error information to user
+                    const errorMessage = error.message || 'Unknown error occurred';
+                    toast.error(`Failed to mark attendance for ${bestMatch.student.fullName}: ${errorMessage}`, {
+                      duration: 8000 // Show error longer
+                    });
+                    
+                    // Try to extract student info for manual fallback
+                    const failedAttendanceInfo = {
+                      studentName: bestMatch.student.fullName,
+                      studentId: bestMatch.student.id,
+                      shift: selectedShift || '',
+                      date: new Date().toISOString().split('T')[0],
+                      time: new Date().toLocaleTimeString(),
+                      confidence: finalConfidence,
+                      error: errorMessage
+                    };
+                    
+                    // Dispatch event for manual review system
+                    window.dispatchEvent(new CustomEvent('attendanceMarkingFailed', {
+                      detail: failedAttendanceInfo
+                    }));
+                    
+                    // Update face status to show failure with retry option
+                    setTrackedFaces(prevFaces => 
+                      prevFaces.map(f => 
+                        f.id === face.id 
+                          ? { 
+                              ...f, 
+                              isScanning: false, 
+                              scanMessage: '', 
+                              status: 'unknown' as const, 
+                              message: `⚠️ Attendance failed - saved for manual review`,
+                              attendanceStatus: 'failed'
+                            }
+                          : f
+                      )
+                    );
+                    
+                    // Keep the failed face visible longer for user awareness
                     setTimeout(() => {
                       setTrackedFaces(prevFaces => 
-                        prevFaces.map(f => 
-                          f.id === face.id 
-                            ? { ...f, isScanning: false, scanMessage: '', status: 'unknown' as const, message: 'Attendance failed' }
-                            : f
-                        )
+                        prevFaces.filter(f => f.id !== face.id)
                       );
-                    }, 1000);
+                    }, 8000); // Keep failed faces visible for 8 seconds
                   });
                 
                 return updatedFace;
@@ -1427,9 +1555,15 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                         </span>
                       </div>
                       <div className="flex justify-between items-center mt-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Recognition Mode</span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {selectedShift ? `${selectedShift} Only` : 'All Students'}
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Auto-Retry System</span>
+                        <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                          {failedAttendanceRetryManager.getFailedRecordsCount() > 0 ? 'Active' : 'Monitoring'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Failed Records</span>
+                        <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                          {failedAttendanceRetryManager.getFailedRecordsCount()}
                         </span>
                       </div>
                     </div>
@@ -1441,6 +1575,13 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         )}
         </div>
       </div>
+
+      {/* Failed Attendance Manager */}
+      <FailedAttendanceManager 
+        onRetryAttendance={(studentId, studentName) => {
+          toast.info(`Please position ${studentName} in front of the camera to retry attendance marking`);
+        }}
+      />
     </>
   );
 };

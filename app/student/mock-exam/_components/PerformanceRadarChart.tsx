@@ -25,11 +25,7 @@ ChartJS.register(
 // Define types for our data
 type ExamSettings = { [subject: string]: { maxScore: number } };
 type MockScores = { [subject: string]: number };
-type AllMockData = {
-  mock1?: MockScores;
-  mock2?: MockScores;
-  mock3?: MockScores;
-};
+type AllMockData = { [mockName: string]: MockScores };
 
 interface PerformanceRadarChartProps {
   allMockData: AllMockData;

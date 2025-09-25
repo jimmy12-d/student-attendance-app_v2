@@ -11,6 +11,7 @@ import {
   mdiAccountOff,
   mdiChevronDown,
   mdiChevronUp,
+  mdiMagnify,
 } from "@mdi/js";
 import Button from "../../_components/Button";
 import CardBox from "../../_components/CardBox";
@@ -83,6 +84,9 @@ export default function StudentsPage() {
 
   // Expand buttons state
   const [isButtonsExpanded, setIsButtonsExpanded] = useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Set up real-time listener for students
   useEffect(() => {
@@ -483,7 +487,7 @@ export default function StudentsPage() {
   };
 
   return (
-    <section className="bg-gray-100 dark:bg-slate-800 p-6 xl:max-w-auto xl:mx-auto">{/* Custom container for students page */}
+    <section className="p-6">{/* Custom container for students page */}
 
       <SectionTitleLineWithButton
         icon={mdiTableBorder}
@@ -607,7 +611,7 @@ export default function StudentsPage() {
       
       {isFormActive && ( 
         <CardBox className="mb-6">
-          <div className="p-6">
+          <div className="px-6 py-4">
             <h2 className="text-xl font-semibold mb-4">
               {studentToEdit ? "Edit Student" : "Add New Student"}
             </h2>
@@ -747,7 +751,7 @@ export default function StudentsPage() {
             </CardBox>
           ) : students.length === 0 && !error ? (
             <NotificationBar color="warning" icon={mdiMonitorCellphone}>
-              No students found. Add one to get started!
+              {searchQuery ? `No students found matching "${searchQuery}"` : "No students found. Add one to get started!"}
             </NotificationBar>
           ) : !showAbsentFollowUp ? (
             <CardBox className="mb-6" hasTable>
@@ -761,6 +765,8 @@ export default function StudentsPage() {
                 onBatchUpdate={() => {}} // No need to manually refresh - real-time listener handles updates
                 onExitBatchEdit={() => setIsBatchEditMode(false)}
                 onExitTakeAttendance={() => setIsTakeAttendanceMode(false)}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
               />
             </CardBox>
           ) : null}

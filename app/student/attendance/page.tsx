@@ -9,15 +9,15 @@ import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord, calculateAverageArrivalTime } from '../../dashboard/_lib/attendanceLogic';
 import { AllClassConfigs } from '../../dashboard/_lib/configForAttendanceLogic';
 import { getStatusStyles } from '../../dashboard/_lib/statusStyles';
-import { mdiChevronRight, mdiClockAlertOutline, mdiFaceRecognition, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight } from '@mdi/js';
+import { mdiChevronRight, mdiClockAlertOutline, mdiFaceRecognition, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight, mdiCheckCircle, mdiCalendar, mdiInformationOutline, mdiSend } from '@mdi/js';
 import Icon from '../../_components/Icon';
-import { PermissionRequestForm } from '../_components/PermissionRequestForm';
+import { PermissionRequestForm } from './_components/PermissionRequestForm';
 import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
 import { useTouchGesture } from '../../_hooks/useTouchGesture';
 import { toast } from 'sonner';
-import OngoingPermissions from '../_components/OngoingPermissions';
-import HealthArrivalChart from '../_components/HealthArrivalChart';
+import OngoingPermissions from './_components/OngoingPermissions';
+import HealthArrivalChart from './_components/HealthArrivalChart';
 import Button from '../../_components/Button';
 
 const AttendancePage = () => {
@@ -46,10 +46,13 @@ const AttendancePage = () => {
   const [loadingPermissions, setLoadingPermissions] = useState(true);
   const [todayRecord, setTodayRecord] = useState<any>(null);
   const [studentData, setStudentData] = useState<Student | null>(null);
-  const [isRequestConfirmOpen, setIsRequestConfirmOpen] = useState(false);
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs | null>(null);
   const [__, setAverageArrivalTime] = useState<{ averageTime: string; details: string } | null>(null);
   const [___, setChartScrollPosition] = useState(0);
+  const [isLeaveEarlyPanelOpen, setIsLeaveEarlyPanelOpen] = useState(false);
+  const [leaveEarlyTime, setLeaveEarlyTime] = useState<string>('');
+  const [leaveEarlyReason, setLeaveEarlyReason] = useState<string>('');
+  const [existingLeaveEarlyRequest, setExistingLeaveEarlyRequest] = useState<any>(null);
 
   // Ripple effect hook
   const useRipple = () => {
@@ -117,61 +120,80 @@ const AttendancePage = () => {
     }
   };
 
-  const handleRequestAttendance = async () => {
-    if (!studentData || !studentUid || !studentDocId) {
-      toast.error(t('studentInfoError'));
+  // Calculate leave early time options based on start time
+  const getLeaveEarlyOptions = (startTime: string) => {
+    if (!startTime) return [];
+    
+    const [hours, minutes] = startTime.split(':').map(Number);
+    
+    const options = [
+      { label: new Date(0, 0, 0, hours + 2, minutes).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), value: new Date(0, 0, 0, hours + 2, minutes).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) },
+      { label: new Date(0, 0, 0, hours + 2, minutes + 30).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), value: new Date(0, 0, 0, hours + 2, minutes + 30).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) },
+      { label: new Date(0, 0, 0, hours + 3, minutes).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }), value: new Date(0, 0, 0, hours + 3, minutes).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }) }
+    ];
+    
+    return options;
+  };
+
+  // Check for existing leave early requests
+  const checkExistingLeaveEarlyRequest = async () => {
+    if (!studentUid) return;
+    
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const leaveEarlyQuery = query(
+        collection(db, "leaveEarlyRequests"),
+        where("authUid", "==", studentUid),
+        where("date", "==", today)
+      );
+      
+      const snapshot = await getDocs(leaveEarlyQuery);
+      if (!snapshot.empty) {
+        const request = snapshot.docs[0].data();
+        setExistingLeaveEarlyRequest({ ...request, id: snapshot.docs[0].id });
+      } else {
+        setExistingLeaveEarlyRequest(null);
+      }
+    } catch (error) {
+      console.error("Error checking existing leave early request:", error);
+    }
+  };
+
+  // Handle leave early request submission
+  const handleLeaveEarlyRequest = async () => {
+    if (!studentData || !studentUid || !leaveEarlyTime || !leaveEarlyReason) {
+      toast.error(t('fillAllFields'));
       return;
     }
 
-    if (todayRecord) {
-      if (["present", "late", "permission"].includes(todayRecord.status)) {
-        toast.info(t('alreadyMarked', { status: todayRecord.status }));
-        return;
-      }
-      if (todayRecord.status === "requested") {
-        toast.info(t('alreadyRequested'));
-        return;
-      }
+    if (existingLeaveEarlyRequest) {
+      toast.info(t('alreadyRequested'));
+      return;
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const attendanceQuery = query(
-        collection(db, "attendance"),
-        where("authUid", "==", studentUid),
-        where("date", "==", today),
-        limit(1)
-      );
+      const today = new Date().toISOString().split('T')[0];
+      const leaveEarlyData = {
+        authUid: studentUid,
+        studentName: studentData.fullName,
+        studentId: studentDocId,
+        class: studentData.class,
+        date: today,
+        leaveTime: leaveEarlyTime,
+        reason: leaveEarlyReason,
+        status: "pending",
+        requestedAt: serverTimestamp(),
+        shift: studentData.shift || null
+      };
 
-      const attendanceSnap = await getDocs(attendanceQuery);
-
-      if (!attendanceSnap.empty) {
-        const docRef = attendanceSnap.docs[0].ref;
-        await updateDoc(docRef, { 
-          status: "requested", 
-          requestedAt: serverTimestamp(),
-          method: "request"
-        });
-      } else {
-        const newRecordData = {
-          authUid: studentUid,
-          studentName: studentData.fullName,
-          studentId: studentDocId,
-          class: studentData.class,
-          shift: studentData.shift || null,
-          date: today,
-          status: "requested",
-          timestamp: serverTimestamp(),
-          requestedAt: serverTimestamp(),
-          method: "request",
-        };
-        await addDoc(collection(db, "attendance"), newRecordData);
-      }
-
-      toast.success(t('requestSuccess'));
-      setIsRequestConfirmOpen(false);
+      await addDoc(collection(db, "leaveEarlyRequests"), leaveEarlyData);
+      toast.success(t('leaveEarlyRequestSuccess'));
+      setIsLeaveEarlyPanelOpen(false);
+      setLeaveEarlyTime('');
+      setLeaveEarlyReason('');
+      checkExistingLeaveEarlyRequest(); // Refresh the existing request
     } catch (error) {
-      console.error("Error sending attendance request: ", error);
+      console.error("Error submitting leave early request:", error);
       toast.error(t('requestError'));
     }
   };
@@ -207,8 +229,12 @@ const AttendancePage = () => {
             const studyDays = studentClassConfig?.studyDays;
 
             const schoolDays: string[] = [];
-            const currentDate = new Date();
-            while (schoolDays.length < 10) {
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            const currentDate = new Date(today); // Start from today
+
+            while (currentDate.getMonth() === currentMonth && currentDate.getFullYear() === currentYear) {
               if (isSchoolDay(currentDate, studyDays)) {
                 schoolDays.push(currentDate.toISOString().split('T')[0]);
               }
@@ -235,7 +261,7 @@ const AttendancePage = () => {
                   const rawAttendanceRecord: RawAttendanceRecord | undefined = fetchedRecords[dateStr] ? {
                     studentId: studentDataFromDb.studentId,
                     date: dateStr,
-                    status: fetchedRecords[dateStr].status as 'present' | 'late' | 'requested',
+                    status: fetchedRecords[dateStr].status as 'present' | 'late',
                     timestamp: fetchedRecords[dateStr].timestamp instanceof Date ? 
                               Timestamp.fromDate(fetchedRecords[dateStr].timestamp as Date) : 
                               fetchedRecords[dateStr].timestamp as Timestamp,
@@ -264,7 +290,7 @@ const AttendancePage = () => {
                                       calculatedStatus.status === "No School" ? 'no-school' :
                                       calculatedStatus.status === "Present" ? 'present' :
                                       calculatedStatus.status === "Late" ? 'late' :
-                                      calculatedStatus.status === "Pending" ? 'requested' : 'absent';
+                                      calculatedStatus.status === "Pending" ? 'absent' : 'absent';
                   
                   return { 
                     id: dateStr, 
@@ -283,7 +309,7 @@ const AttendancePage = () => {
                 const rawTodayRecord: RawAttendanceRecord | undefined = todaysAttendanceRecord ? {
                   studentId: studentDataFromDb.studentId,
                   date: today,
-                  status: todaysAttendanceRecord.status as 'present' | 'late' | 'requested',
+                  status: todaysAttendanceRecord.status as 'present' | 'late',
                   timestamp: todaysAttendanceRecord.timestamp instanceof Date ? 
                             Timestamp.fromDate(todaysAttendanceRecord.timestamp as Date) : 
                             todaysAttendanceRecord.timestamp as Timestamp,
@@ -305,7 +331,7 @@ const AttendancePage = () => {
                                          todayCalculatedStatus.status === "No School" ? 'no-school' :
                                          todayCalculatedStatus.status === "Present" ? 'present' :
                                          todayCalculatedStatus.status === "Late" ? 'late' :
-                                         todayCalculatedStatus.status === "Pending" ? 'requested' : 'absent';
+                                         todayCalculatedStatus.status === "Pending" ? 'absent' : 'absent';
 
                 const todaysRecord = todaysAttendanceRecord || { 
                   id: today, 
@@ -413,6 +439,11 @@ const AttendancePage = () => {
     calculateAverage();
   }, [studentData, allClassConfigs, studentUid]);
 
+  // Check for existing leave early requests
+  useEffect(() => {
+    checkExistingLeaveEarlyRequest();
+  }, [studentUid]);
+
   const presentCount = recentRecords.filter(r => r.status === 'present' || r.status === 'permission').length;
   const lateCount = recentRecords.filter(r => r.status === 'late').length;
   const absentCount = recentRecords.filter(r => r.status === 'absent').length;
@@ -432,8 +463,6 @@ const AttendancePage = () => {
         return t('late');
       case 'permission':
         return t('permission');
-      case 'requested':
-        return t('requested');
       default:
         return status.charAt(0).toUpperCase() + status.slice(1);
     }
@@ -461,20 +490,203 @@ const AttendancePage = () => {
          }
        `}</style>
 
-      <SlideInPanel title={t('confirmRequest')} isOpen={isRequestConfirmOpen} onClose={() => setIsRequestConfirmOpen(false)}>
-        <div className="">
-            <p className={khmerFont('text-gray-700 dark:text-gray-300 mb-6')}>
-                {t('requestDescription')}
-            </p>
-            <div className="flex justify-end space-x-3">
-                <Button onClick={() => setIsRequestConfirmOpen(false)} color="whiteDark" className={khmerFont()}>{tCommon('cancel')}</Button>
-                <Button onClick={handleRequestAttendance} color="company-purple" className={khmerFont()}>{t('confirmRequestBtn')}</Button>
-            </div>
-        </div>
-      </SlideInPanel>
-
        <SlideInPanel title={`${t('permissionForm')} - ${t('plannedAbsences')}`} isOpen={isPermissionPanelOpen} onClose={() => setIsPermissionPanelOpen(false)}>
          <PermissionRequestForm onSuccess={handlePermissionSuccess} />
+       </SlideInPanel>
+
+       <SlideInPanel 
+         title={
+           existingLeaveEarlyRequest 
+             ? `${t('leaveEarlyRequest')} - ${existingLeaveEarlyRequest.status === 'approved' ? t('approved') : t('pending')}`
+             : t('leaveEarlyRequest')
+         } 
+         isOpen={isLeaveEarlyPanelOpen} 
+         onClose={() => setIsLeaveEarlyPanelOpen(false)}
+       >
+         <div className="space-y-6">
+           {existingLeaveEarlyRequest ? (
+             <div className="space-y-4">
+               {/* Status Header */}
+               <div className="text-center">
+                 <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold shadow-lg ${
+                   existingLeaveEarlyRequest.status === 'approved' 
+                     ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                     : 'bg-gradient-to-r from-yellow-500 to-orange-600 text-white'
+                 }`}>
+                   <Icon 
+                     path={existingLeaveEarlyRequest.status === 'approved' ? mdiCheckCircle : mdiClockAlertOutline} 
+                     size={18} 
+                     className="mr-2" 
+                   />
+                   {existingLeaveEarlyRequest.status === 'approved' ? t('approved') : t('pendingReview')}
+                 </div>
+               </div>
+
+               {/* Request Details Card */}
+               <div className={`p-4 rounded-2xl border-2 shadow-lg ${
+                 existingLeaveEarlyRequest.status === 'approved'
+                   ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                   : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+               }`}>
+                 <h3 className={khmerFont('text-lg font-semibold mb-3 text-gray-900 dark:text-white')}>
+                   {t('requestDetails')}
+                 </h3>
+                 
+                 <div className="space-y-3">
+                   <div className="flex items-center space-x-3">
+                     <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center">
+                       <Icon path={mdiClockAlertOutline} size={16} className="text-blue-600 dark:text-blue-400" />
+                     </div>
+                     <div>
+                       <p className={khmerFont('text-sm text-gray-600 dark:text-gray-400')}>{t('leaveTime')}</p>
+                       <p className={khmerFont('font-medium text-gray-900 dark:text-white')}>{existingLeaveEarlyRequest.leaveTime}</p>
+                     </div>
+                   </div>
+
+                   <div className="flex items-center space-x-3">
+                     <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center">
+                       <Icon path={mdiFileDocumentEditOutline} size={16} className="text-purple-600 dark:text-purple-400" />
+                     </div>
+                     <div>
+                       <p className={khmerFont('text-sm text-gray-600 dark:text-gray-400')}>{t('reason')}</p>
+                       <p className={khmerFont('font-medium text-gray-900 dark:text-white')}>{existingLeaveEarlyRequest.reason}</p>
+                     </div>
+                   </div>
+
+                   <div className="flex items-center space-x-3">
+                     <div className="w-8 h-8 bg-gray-100 dark:bg-gray-900/50 rounded-full flex items-center justify-center">
+                       <Icon path={mdiCalendar} size={16} className="text-gray-600 dark:text-gray-400" />
+                     </div>
+                     <div>
+                       <p className={khmerFont('text-sm text-gray-600 dark:text-gray-400')}>{t('requestDate')}</p>
+                       <p className={khmerFont('font-medium text-gray-900 dark:text-white')}>
+                         {new Date(existingLeaveEarlyRequest.date).toLocaleDateString('en-US', { 
+                           weekday: 'long', 
+                           year: 'numeric', 
+                           month: 'long', 
+                           day: 'numeric' 
+                         })}
+                       </p>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Status Message */}
+               <div className={`p-4 rounded-xl ${
+                 existingLeaveEarlyRequest.status === 'approved'
+                   ? 'bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-800'
+                   : 'bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800'
+               }`}>
+                 <div className="flex items-start space-x-3">
+                   <Icon 
+                     path={existingLeaveEarlyRequest.status === 'approved' ? mdiCheckCircle : mdiInformationOutline} 
+                     size={20} 
+                     className={existingLeaveEarlyRequest.status === 'approved' ? 'text-green-600' : 'text-yellow-600'} 
+                   />
+                   <div>
+                     <p className={khmerFont(`font-medium ${
+                       existingLeaveEarlyRequest.status === 'approved' ? 'text-green-800 dark:text-green-200' : 'text-yellow-800 dark:text-yellow-200'
+                     }`)}>
+                       {existingLeaveEarlyRequest.status === 'approved' 
+                         ? t('leaveEarlyApproved') 
+                         : t('leaveEarlyPending')}
+                     </p>
+                     <p className={khmerFont('text-sm mt-1 text-gray-600 dark:text-gray-400')}>
+                       {existingLeaveEarlyRequest.status === 'approved' 
+                         ? t('approvedMessage') 
+                         : t('pendingMessage')}
+                     </p>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           ) : (
+             <div className="space-y-6">
+               {/* New Request Form */}
+               <div className="text-center mb-6">
+                 <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+                   <Icon path={mdiClockAlertOutline} size={28} className="text-white" />
+                 </div>
+                 <h3 className={khmerFont('text-lg font-semibold text-gray-900 dark:text-white')}>
+                   {t('requestLeaveEarly')}
+                 </h3>
+                 <p className={khmerFont('text-sm text-gray-600 dark:text-gray-400 mt-1')}>
+                   {t('selectTimeAndReason')}
+                 </p>
+               </div>
+
+               <div>
+                 <label className={khmerFont('block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3')}>
+                   <Icon path={mdiClockAlertOutline} size={16} className="inline mr-2 text-blue-500" />
+                   {t('selectLeaveTime')}
+                 </label>
+                 <div className="grid grid-cols-2 gap-3 mb-4">
+                   {studentData?.shift && getLeaveEarlyOptions(getShiftInfo(studentData.shift).startTime).map((option, index) => (
+                     <button
+                       key={index}
+                       onClick={() => setLeaveEarlyTime(option.value)}
+                       className={`px-4 py-3 text-sm rounded-xl border-2 transition-all duration-200 transform hover:scale-105 ${
+                         leaveEarlyTime === option.value
+                           ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-500 shadow-lg'
+                           : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600 hover:border-blue-300'
+                       }`}
+                     >
+                       <div className="flex items-center justify-center space-x-2">
+                         <Icon path={mdiClockAlertOutline} size={14} />
+                         <span className="font-medium">{option.label}</span>
+                       </div>
+                     </button>
+                   ))}
+                 </div>
+                 <div className="mb-6">
+                   <label className={khmerFont('block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2')}>
+                     <Icon path={mdiCalendar} size={16} className="inline mr-2 text-green-500" />
+                     {t('manualTime')}
+                   </label>
+                   <input
+                     type="time"
+                     value={leaveEarlyTime}
+                     onChange={(e) => setLeaveEarlyTime(e.target.value)}
+                     className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                   />
+                 </div>
+               </div>
+               
+               <div>
+                 <label className={khmerFont('block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3')}>
+                   <Icon path={mdiFileDocumentEditOutline} size={16} className="inline mr-2 text-purple-500" />
+                   {t('reason')}
+                 </label>
+                 <textarea
+                   value={leaveEarlyReason}
+                   onChange={(e) => setLeaveEarlyReason(e.target.value)}
+                   placeholder={t('enterReason')}
+                   className="w-full px-4 py-3 border-2 border-gray-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-gray-900 dark:text-white resize-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
+                   rows={4}
+                 />
+               </div>
+               
+               <div className="flex justify-end space-x-3 pt-4">
+                 <Button 
+                   onClick={() => setIsLeaveEarlyPanelOpen(false)} 
+                   color="whiteDark" 
+                   className={khmerFont('px-6 py-3 rounded-xl font-medium')}
+                 >
+                   {tCommon('cancel')}
+                 </Button>
+                 <Button 
+                   onClick={handleLeaveEarlyRequest} 
+                   color="company-purple" 
+                   className={khmerFont('px-6 py-3 rounded-xl font-medium shadow-lg')}
+                 >
+                   <Icon path={mdiSend} size={16} className="mr-2" />
+                   {t('submitRequest')}
+                 </Button>
+               </div>
+             </div>
+           )}
+         </div>
        </SlideInPanel>
 
        <SlideInPanel title={t('lastDaysActivity')} isOpen={isDetailsPanelOpen} onClose={() => setIsDetailsPanelOpen(false)}>
@@ -540,6 +752,23 @@ const AttendancePage = () => {
                       })}
                     </p>
                   </div>
+                  
+                  {/* Shift indicator at top right */}
+                  {studentData?.shift && (
+                    <div className="absolute top-3 right-4">
+                      <div className="flex items-center space-x-1 bg-white/15 backdrop-blur-sm rounded-full px-2 py-1">
+                        <Icon 
+                          path={getShiftInfo(studentData.shift).icon} 
+                          size={12} 
+                          className="text-white/90" 
+                        />
+                        <span className={khmerFont('text-white/90 text-xs font-medium')}>
+                          {getShiftInfo(studentData.shift).name}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 flex-1 min-w-0">
                       <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
@@ -567,11 +796,6 @@ const AttendancePage = () => {
           {!loading && studentData?.shift && (
             <>
               <div className="flex items-center pt-2 gap-4 mb-4">
-                <div className="relative group">
-                  <div className="w-5 h-5 bg-gradient-to-br from-purple-500 via-indigo-500 to-violet-500 rounded-full shadow-xl transform group-hover:scale-110 transition-transform duration-300"></div>
-                  <div className="absolute inset-0 w-5 h-5 bg-gradient-to-br from-purple-400/40 via-indigo-400/40 to-violet-400/40 rounded-full blur-md animate-pulse"></div>
-                  <div className="absolute inset-1 w-3 h-3 bg-white/30 rounded-full"></div>
-                </div>
                 <h2 className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>{t('shiftInfo.avgArrivalGraph')}</h2>
               </div>
               <HealthArrivalChart
@@ -586,56 +810,12 @@ const AttendancePage = () => {
 
         {/* Quick Actions - Mobile Enhanced */}
         <div className="space-y-6 px-2">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative group">
-              <div className="w-5 h-5 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-full shadow-xl transform group-hover:scale-110 transition-transform duration-300"></div>
-              <div className="absolute inset-0 w-5 h-5 bg-gradient-to-br from-blue-400/40 via-purple-400/40 to-pink-400/40 rounded-full blur-md animate-pulse"></div>
-              <div className="absolute inset-1 w-3 h-3 bg-white/30 rounded-full"></div>
-            </div>
+          <div className="flex items-center gap-4 pt-2 mb-4">
             <h2 className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>{t('quickActions')}</h2>
           </div>
              {/* Mobile-optimized Action Cards */}
              <div className="grid grid-cols-1 gap-3">
-               {/* Request Attendance Card - Mobile Enhanced */}
-               <div className="group relative overflow-hidden touch-manipulation">
-                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-opacity duration-150"></div>
-                 <button
-                   onClick={() => setIsRequestConfirmOpen(true)}
-                   disabled={['present', 'late', 'permission', 'requested'].includes(todayRecord?.status)}
-                   className="relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-3 rounded-3xl shadow-xl border border-gray-100/80 dark:border-slate-600/80 disabled:opacity-40 disabled:cursor-not-allowed min-h-[80px] flex items-center active:scale-[0.98] transition-transform duration-150"
-                   style={{ WebkitTapHighlightColor: 'transparent' }}
-                 >
-                   <div className="flex items-center w-full space-x-4">
-                     {/* Icon Section */}
-                     <div className="relative flex-shrink-0">
-                       <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg">
-                         <div className="absolute inset-0 bg-white/15 rounded-2xl backdrop-blur-sm"></div>
-                         <Icon path={mdiFaceRecognition} size={28} className="text-white relative z-10" />
-                       </div>
-                     </div>
-
-                     {/* Content Section */}
-                     <div className="text-left flex-1 min-w-0">
-                       <p className={khmerFont('text-base font-bold text-gray-900 dark:text-white mb-1')}>
-                         {t('requestAttendance')}
-                       </p>
-                       <div className="flex items-center space-x-2">
-                         <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-                         <span className={khmerFont('text-xs text-blue-600 dark:text-blue-400 font-medium')}>
-                           {t('faceUnavailable')}
-                         </span>
-                       </div>
-                     </div>
-
-                     {/* Arrow */}
-                     <div className="text-gray-400 dark:text-gray-500 flex-shrink-0">
-                       <Icon path={mdiChevronRight} size={24} />
-                     </div>
-                   </div>
-                 </button>
-               </div>
-
-               {/* Request Permission Card - Mobile Enhanced */}
+             {/* Request Permission Card - Mobile Enhanced */}
                <div className="group relative overflow-hidden touch-manipulation">
                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-opacity duration-150"></div>
                  <button
@@ -672,16 +852,64 @@ const AttendancePage = () => {
                    </div>
                  </button>
                </div>
+
+               {/* Leave Early Card - Mobile Enhanced */}
+               <div className="group relative overflow-hidden touch-manipulation">
+                 <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-red-500/5 rounded-3xl opacity-0 group-active:opacity-100 transition-opacity duration-150"></div>
+                 <button
+                   onClick={() => setIsLeaveEarlyPanelOpen(true)}
+                   disabled={existingLeaveEarlyRequest?.status === 'approved'}
+                   className={`relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-3 rounded-3xl shadow-xl border-2 min-h-[80px] flex items-center active:scale-[0.98] transition-transform duration-150 ${
+                     existingLeaveEarlyRequest?.status === 'approved' 
+                       ? 'border-green-200 dark:border-green-700 opacity-40 cursor-not-allowed' 
+                       : existingLeaveEarlyRequest?.status === 'pending'
+                       ? 'border-yellow-300 dark:border-yellow-600 shadow-yellow-100 dark:shadow-yellow-900/20'
+                       : 'border-gray-100/80 dark:border-slate-600/80'
+                   }`}
+                   style={{ WebkitTapHighlightColor: 'transparent' }}
+                 >
+                   <div className="flex items-center w-full space-x-4">
+                     {/* Icon Section */}
+                     <div className="relative flex-shrink-0">
+                       <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center shadow-lg">
+                         <div className="absolute inset-0 bg-white/15 rounded-2xl backdrop-blur-sm"></div>
+                         <Icon path={mdiClockAlertOutline} size={26} className="text-white relative z-10" />
+                       </div>
+                     </div>
+
+                     {/* Content Section */}
+                     <div className="text-left flex-1 min-w-0">
+                       <h3 className={khmerFont('text-base font-bold text-gray-900 dark:text-white mb-1')}>
+                         {t('leaveEarly')}
+                       </h3>
+                       <div className="flex items-center space-x-2">
+                         <div className={`w-1.5 h-1.5 rounded-full ${
+                           existingLeaveEarlyRequest?.status === 'approved' ? 'bg-green-500' :
+                           existingLeaveEarlyRequest?.status === 'pending' ? 'bg-yellow-500' : 'bg-orange-500'
+                         }`}></div>
+                         <span className={khmerFont(`text-xs font-medium ${
+                           existingLeaveEarlyRequest?.status === 'approved' ? 'text-green-600 dark:text-green-400' :
+                           existingLeaveEarlyRequest?.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' : 'text-orange-600 dark:text-orange-400'
+                         }`)}>
+                           {existingLeaveEarlyRequest?.status === 'approved' ? t('approved') :
+                            existingLeaveEarlyRequest?.status === 'pending' ? t('requested') : t('todayOnly')}
+                         </span>
+                       </div>
+                     </div>
+
+                     {/* Arrow */}
+                     <div className="text-gray-400 dark:text-gray-500 flex-shrink-0">
+                       <Icon path={mdiChevronRight} size={24} />
+                     </div>
+                   </div>
+                 </button>
+               </div>
              </div>
            </div>
 
            <div className="space-y-5 pt-4 pb-2">
              <div className="flex items-center gap-4 mb-4">
-               <div className="relative group">
-                 <div className="w-5 h-5 bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 rounded-full shadow-xl transform group-hover:scale-110 transition-transform duration-300"></div>
-                 <div className="absolute inset-0 w-5 h-5 bg-gradient-to-br from-blue-400/40 via-blue-500/40 to-cyan-400/40 rounded-full blur-md animate-pulse"></div>
-                 <div className="absolute inset-1 w-3 h-3 bg-white/30 rounded-full"></div>
-               </div>
+
                <h2 className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>{t('recentPermissions')}</h2>
              </div>
              <div className="overflow-hidden">

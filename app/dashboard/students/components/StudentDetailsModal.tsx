@@ -1,14 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Student } from '../../../_interfaces';
 import DailyStatusDetailsModal from '../../_components/DailyStatusDetailsModal';
 import StarManagementSection from './StarManagementSection';
 import ClaimedStarsHistory from './ClaimedStarsHistory';
+import BasicInfoTab from './detail-tabs/BasicInfoTab';
+import ActionsTab from './detail-tabs/ActionsTab';
+import RequestsTab from './detail-tabs/RequestsTab';
 import { Timestamp, collection, query, where, getDocs, doc, updateDoc, onSnapshot, deleteDoc, orderBy } from 'firebase/firestore';
 import { db } from '../../../../firebase-config';
 import { RawAttendanceRecord } from '../../_lib/attendanceLogic';
 import { PermissionRecord, ClaimedStar } from '../../../_interfaces';
 import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
 import { toast } from 'sonner';
+import { 
+  initializeFaceApi, 
+  generateFaceDescriptor
+} from '../../face-scan-faceapi/utils/faceDetection';
+import { 
+  analyzeImageQuality,
+  convertGoogleDriveUrl 
+} from '../../face-scan-faceapi/utils/imageQualityAnalysis';
+import Webcam from 'react-webcam';
+import Button from '../../../_components/Button';
+import Icon from '../../../_components/Icon';
+import CustomDropdown from './CustomDropdown';
+import { 
+  mdiFaceRecognition, 
+  mdiCamera, 
+  mdiCheckCircle,
+  mdiCalendar,
+  mdiClockAlertOutline,
+  mdiCheck,
+  mdiClose
+} from '@mdi/js';
 
 // Utility function to convert Google Drive share URL to thumbnail URL
 const getDisplayableImageUrl = (url: string): string | null => {
@@ -64,6 +88,11 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   onBreak,
   hideActions = false,
 }) => {
+  const webcamRef = useRef<Webcam>(null);
+  
+  // Tab state management
+  const [activeTab, setActiveTab] = useState<'basic' | 'actions' | 'requests'>('basic');
+  
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBreakConfirm, setShowBreakConfirm] = useState(false);
   const [expectedReturnMonth, setExpectedReturnMonth] = useState('');
@@ -74,6 +103,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   // Monthly attendance state
   const [attendanceRecords, setAttendanceRecords] = useState<RawAttendanceRecord[]>([]);
   const [approvedPermissions, setApprovedPermissions] = useState<PermissionRecord[]>([]);
+  const [pendingPermissions, setPendingPermissions] = useState<PermissionRecord[]>([]);
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs>({});
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(true);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
@@ -84,6 +114,24 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
 
   // Photo viewer state
   const [showPhotoInContainer, setShowPhotoInContainer] = useState(false);
+
+  // Face enrollment state
+  const [isFaceEnrolling, setIsFaceEnrolling] = useState(false);
+  const [faceModelsLoaded, setFaceModelsLoaded] = useState(false);
+  
+  // Photo capture states
+  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false);
+  
+  // Leave early requests state
+  const [leaveEarlyRequests, setLeaveEarlyRequests] = useState<any[]>([]);
+  const [isLoadingLeaveEarly, setIsLoadingLeaveEarly] = useState(true);
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
+  
+  // Camera device states
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
 
   // Navigation logic
   const canNavigatePrev = students.length > 1 && currentIndex > 0;
@@ -194,18 +242,24 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           return { id: doc.id, ...doc.data() };
         })
         .filter((record: any) => {
-          // Filter for permissions that belong to this student and are approved
-          return record.status === 'approved' && record.studentId === studentId;
+          // Filter for permissions that belong to this student
+          return record.studentId === studentId;
         }) as PermissionRecord[];
       
+      // Separate approved and pending permissions
+      const approvedPerms = permissionsData.filter(record => record.status === 'approved');
+      const pendingPerms = permissionsData.filter(record => record.status === 'pending');
+      
       setAttendanceRecords(attendanceData);
-      setApprovedPermissions(permissionsData);
+      setApprovedPermissions(approvedPerms);
+      setPendingPermissions(pendingPerms);
       setAllClassConfigs(classConfigsData);
   
     } catch (error) {
       console.error('Error fetching attendance data:', error);
       setAttendanceRecords([]);
       setApprovedPermissions([]);
+      setPendingPermissions([]);
       setAllClassConfigs({});
     } finally {
       setIsLoadingAttendance(false);
@@ -251,6 +305,35 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     return () => unsubscribe();
   }, [student?.id, isOpen]);
 
+  // Fetch leave early requests when student changes
+  useEffect(() => {
+    if (!student?.id || !isOpen) return;
+
+    setIsLoadingLeaveEarly(true);
+
+    const leaveEarlyQuery = query(
+      collection(db, 'leaveEarlyRequests'),
+      where('studentId', '==', student.id),
+      orderBy('requestedAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(leaveEarlyQuery, (snapshot) => {
+      const requests = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setLeaveEarlyRequests(requests);
+      setIsLoadingLeaveEarly(false);
+    }, (error) => {
+      console.error('Error fetching leave early requests:', error);
+      setLeaveEarlyRequests([]);
+      setIsLoadingLeaveEarly(false);
+    });
+
+    return () => unsubscribe();
+  }, [student?.id, isOpen]);
+
   // Reset photo state when student changes (but keep open if new student also has photo)
   useEffect(() => {
     if (student?.id) {
@@ -261,6 +344,58 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
       // If new student has photo and photo was open, keep it open for seamless navigation
     }
   }, [student?.id, student?.photoUrl]);
+
+  // Get available camera devices
+  const getAvailableCameras = useCallback(async () => {
+    try {
+      // Request permission first
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      setAvailableCameras(videoDevices);
+      
+      // Set default camera (first one or user-facing if available)
+      if (videoDevices.length > 0 && !selectedCameraId) {
+        const userFacingCamera = videoDevices.find(device => 
+          device.label.toLowerCase().includes('front') || 
+          device.label.toLowerCase().includes('user')
+        );
+        setSelectedCameraId(userFacingCamera?.deviceId || videoDevices[0].deviceId);
+      }
+      
+      console.log(`Found ${videoDevices.length} camera devices`);
+    } catch (error) {
+      console.error('Error getting camera devices:', error);
+      toast.error('Failed to access camera devices');
+    }
+  }, [selectedCameraId]);
+
+  // Initialize face detection models and camera when modal opens
+  useEffect(() => {
+    if (isOpen && student?.id) {
+      const initializeFaceDetection = async () => {
+        if (!faceModelsLoaded) {
+          const modelsLoaded = await initializeFaceApi();
+          if (modelsLoaded) {
+            setFaceModelsLoaded(true);
+          } else {
+            toast.error('Failed to load face detection models');
+          }
+        }
+      };
+      
+      initializeFaceDetection();
+    }
+  }, [isOpen, student?.id, faceModelsLoaded]);
+
+  // Initialize camera devices only when photo capture modal is opened
+  useEffect(() => {
+    if (showPhotoCapture && isOpen && student?.id) {
+      getAvailableCameras();
+    }
+  }, [showPhotoCapture, isOpen, student?.id, getAvailableCameras]);
 
   // Handle keyboard navigation
   React.useEffect(() => {
@@ -286,9 +421,16 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
         cancelBreak();
         return;
       }
+
+      // Handle photo capture modal ESC
+      if (showPhotoCapture && event.key === 'Escape') {
+        event.preventDefault();
+        cancelPhotoCapture();
+        return;
+      }
       
       // Disable arrow navigation when modals are open (but allow when photo is shown in container)
-      if (showBreakConfirm) {
+      if (showBreakConfirm || showPhotoCapture) {
         return;
       }
       
@@ -422,6 +564,189 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     setBreakReason('');
   };
 
+  // Leave early request handlers
+  const handleApproveLeaveEarly = async (requestId: string) => {
+    try {
+      const requestRef = doc(db, 'leaveEarlyRequests', requestId);
+      await updateDoc(requestRef, {
+        status: 'approved',
+        approvedAt: Timestamp.now(),
+        approvedBy: 'admin' // You might want to get the actual admin user
+      });
+      
+      toast.success('Leave early request approved');
+    } catch (error) {
+      console.error('Error approving leave early request:', error);
+      toast.error('Failed to approve request');
+    }
+  };
+
+  const handleRejectLeaveEarly = async (requestId: string) => {
+    try {
+      const requestRef = doc(db, 'leaveEarlyRequests', requestId);
+      await updateDoc(requestRef, {
+        status: 'rejected',
+        rejectedAt: Timestamp.now(),
+        rejectedBy: 'admin' // You might want to get the actual admin user
+      });
+      
+      toast.success('Leave early request rejected');
+    } catch (error) {
+      console.error('Error rejecting leave early request:', error);
+      toast.error('Failed to reject request');
+    }
+  };
+
+  // Permission request handlers
+  const handleApprovePermission = async (permissionId: string) => {
+    try {
+      setIsLoadingPermissions(true);
+      const permissionRef = doc(db, 'permissions', permissionId);
+      await updateDoc(permissionRef, {
+        status: 'approved',
+        approvedAt: Timestamp.now(),
+        approvedBy: 'admin' // You might want to get the actual admin user
+      });
+      
+      // Update local state
+      const approvedPermission = pendingPermissions.find(p => p.id === permissionId);
+      if (approvedPermission) {
+        setApprovedPermissions(prev => [...prev, { ...approvedPermission, status: 'approved' }]);
+      }
+      setPendingPermissions(prev => prev.filter(p => p.id !== permissionId));
+      
+      toast.success('Permission request approved');
+    } catch (error) {
+      console.error('Error approving permission request:', error);
+      toast.error('Failed to approve permission');
+    } finally {
+      setIsLoadingPermissions(false);
+    }
+  };
+
+  const handleRejectPermission = async (permissionId: string) => {
+    try {
+      setIsLoadingPermissions(true);
+      const permissionRef = doc(db, 'permissions', permissionId);
+      await updateDoc(permissionRef, {
+        status: 'rejected',
+        rejectedAt: Timestamp.now(),
+        rejectedBy: 'admin' // You might want to get the actual admin user
+      });
+      
+      // Remove from pending permissions
+      setPendingPermissions(prev => prev.filter(p => p.id !== permissionId));
+      
+      toast.success('Permission request rejected');
+    } catch (error) {
+      console.error('Error rejecting permission request:', error);
+      toast.error('Failed to reject permission');
+    } finally {
+      setIsLoadingPermissions(false);
+    }
+  };
+
+  // Face enrollment function - starts photo capture
+  const enrollStudentWithPhoto = async (studentToEnroll: Student) => {
+    setShowPhotoCapture(true);
+  };
+
+  // Capture photo for enrollment
+  const capturePhotoForEnrollment = () => {
+    if (!webcamRef.current) {
+      toast.error('Camera not available');
+      return;
+    }
+
+    try {
+      setIsCapturingPhoto(true);
+      const imageSrc = webcamRef.current.getScreenshot();
+      
+      if (!imageSrc) {
+        toast.error('Failed to capture photo');
+        return;
+      }
+
+      setCapturedPhoto(imageSrc);
+      toast.success('Photo captured! Review and confirm to enroll.');
+    } catch (error) {
+      console.error('Photo capture error:', error);
+      toast.error('Failed to capture photo');
+    } finally {
+      setIsCapturingPhoto(false);
+    }
+  };
+
+  // Confirm photo and enroll student
+  const confirmPhotoEnrollment = async () => {
+    if (!capturedPhoto || !student) {
+      toast.error('No photo captured or student not found');
+      return;
+    }
+
+    setIsFaceEnrolling(true);
+
+    try {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          // Analyze image quality
+          const qualityAnalysis = await analyzeImageQuality(img);
+          
+          if (!qualityAnalysis.pass) {
+            throw new Error(`Image quality check failed: ${qualityAnalysis.reason}`);
+          }
+
+          // Show quality score if there are minor issues
+          if (qualityAnalysis.reason && qualityAnalysis.score < 90) {
+            toast.warning(`Image quality: ${qualityAnalysis.score}% - ${qualityAnalysis.reason}`, {
+              duration: 5000
+            });
+          }
+
+          const descriptor = await generateFaceDescriptor(img);
+          if (!descriptor) {
+            throw new Error('Could not detect face in captured photo');
+          }
+
+          // Store descriptor in Firestore
+          const studentRef = doc(db, 'students', student.id);
+          await updateDoc(studentRef, {
+            faceDescriptor: Array.from(descriptor),
+            faceApiEnrolledAt: new Date(),
+            imageQualityScore: qualityAnalysis.score,
+            enrollmentMethod: 'photo_capture'
+          });
+
+          toast.success(`${student.fullName} enrolled successfully using captured photo (Quality: ${qualityAnalysis.score}%)`);
+          
+          // Reset photo capture state
+          setShowPhotoCapture(false);
+          setCapturedPhoto(null);
+          
+        } catch (error: any) {
+          console.error('Photo enrollment error:', error);
+          toast.error(error.message || 'Failed to enroll student with captured photo');
+        } finally {
+          setIsFaceEnrolling(false);
+        }
+      };
+
+      img.src = capturedPhoto;
+    } catch (error: any) {
+      console.error('Photo enrollment failed:', error);
+      toast.error(error.message || 'Photo enrollment failed');
+      setIsFaceEnrolling(false);
+    }
+  };
+
+  // Cancel photo capture
+  const cancelPhotoCapture = () => {
+    setShowPhotoCapture(false);
+    setCapturedPhoto(null);
+    setIsCapturingPhoto(false);
+  };
+
   return (
     <div className="fixed inset-0 z-115 overflow-y-auto mt-10">
       {/* Backdrop */}
@@ -436,7 +761,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
       
       {/* Modal */}
       <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className={`relative transform rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all duration-200 sm:my-8 sm:w-full sm:max-w-4xl ${
+        <div className={`relative transform rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all duration-200 sm:my-8 sm:w-full sm:max-w-4xl h-[90vh] max-h-[800px] flex flex-col ${
           isTransitioning 
             ? slideDirection === 'left' 
               ? 'translate-x-4 opacity-80' 
@@ -446,7 +771,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
             : 'translate-x-0 scale-100 opacity-100'
         }`} style={{ transform: isTransitioning && slideDirection ? `translateX(${slideDirection === 'left' ? '8px' : '-8px'}) scale(0.98)` : undefined }}>
           {/* Header with Navigation */}
-          <div className="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4 rounded-t-lg">
+          <div className="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4 rounded-t-lg flex-shrink-0">
             <div className="flex items-center justify-between mb-4">
               {/* Left Arrow */}
               <div className="relative group">
@@ -480,9 +805,12 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   Student Details
                 </h3>
                 {students.length > 1 && (
-                  <div className="flex items-center space-x-2 mt-1">
+                  <div className="flex flex-col items-center space-y-1">
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {currentIndex + 1} of {students.length} in {student.class} - {student.shift}
+                    </p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {student.fullName}
                     </p>
                     {/* Progress dots */}
                     <div className="flex space-x-1">
@@ -548,441 +876,113 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
               </svg>
             </button>
 
-            {/* Content */}
-            <div className={`flex flex-col sm:flex-row gap-6 transition-all duration-200 ${
-              isTransitioning 
-                ? slideDirection === 'left'
-                  ? 'transform translate-x-2 opacity-70'
-                  : slideDirection === 'right'
-                  ? 'transform -translate-x-2 opacity-70'
-                  : 'opacity-50'
-                : 'transform translate-x-0 opacity-100'
-            }`}>
-              {/* Student Photo and Academic Info */}
-              <div className="flex-shrink-0">
-                {/* Status Badges - Moved above photo */}
-                <div className="flex flex-wrap gap-2 justify-center sm:justify-start mb-4">
-                  {/* On Break Badge */}
-                  {student.onBreak && (
-                    <div className="group relative">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800 cursor-help">
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        On Break
-                      </span>
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
-                        Expected return: {student.expectedReturnMonth ? (() => {
-                          const [year, month] = student.expectedReturnMonth.split('-');
-                          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                          return `${monthNames[parseInt(month) - 1]} ${year}`;
-                        })() : 'Not specified'}
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Warning Badge */}
-                  {student.warning && (
-                    <div className="group relative">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800 cursor-help">
-                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        Warning
-                      </span>
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
-                        Requires close monitoring
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Scholarship Badge */}
-                  {student.discount > 0 && (
-                    <div className="group relative">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800 cursor-help">
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                        </svg>
-                        Scholarship
-                      </span>
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
-                        Scholarship Amount: ${student.discount.toFixed(2)}
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Last Payment Badge */}
-                  {student.lastPaymentMonth && (
-                    <div className="group relative">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 cursor-help">
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        {(() => {
-                          const [year, month] = student.lastPaymentMonth.split('-');
-                          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                          return `${monthNames[parseInt(month) - 1]} ${year}`;
-                        })()}
-                      </span>
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999]">
-                        Last Payment Month: {(() => {
-                          const [year, month] = student.lastPaymentMonth.split('-');
-                          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                            'July', 'August', 'September', 'October', 'November', 'December'];
-                          return `${monthNames[parseInt(month) - 1]} ${year}`;
-                        })()}
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
-                      </div>
-                    </div>
-                  )}
+            {/* Tab Navigation */}
+            <div className="flex space-x-1 bg-gray-100 dark:bg-slate-600 p-1 rounded-lg mb-6">
+              <button
+                onClick={() => setActiveTab('basic')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                  activeTab === 'basic'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span>Basic Info</span>
                 </div>
-
-                {/* Student Photo */}
-                <div className="relative group">
-                  <div className="w-58 h-58 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-800 mx-auto sm:mx-0 mb-4 shadow-lg border-2 border-gray-200 dark:border-slate-600 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]">
-                    {student.photoUrl ? (
-                      showPhotoInContainer ? (
-                        /* Show Actual Photo */
-                        <div className="relative w-full h-full">
-                          {student.photoUrl.includes("drive.google.com") ? (
-                            <iframe
-                              src={getDisplayableImageUrl(student.photoUrl) || ''}
-                              className="w-full h-full border-none"
-                              title={`${student.fullName} photo`}
-                              frameBorder="0"
-                            />
-                          ) : (
-                            <img
-                              src={getDisplayableImageUrl(student.photoUrl) || ''}
-                              alt={student.fullName}
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                          
-                          {/* Close button overlay */}
-                          <div className="absolute top-2 left-2">
-                            <button
-                              onClick={() => setShowPhotoInContainer(false)}
-                              className="p-1.5 bg-black/60 hover:bg-black/80 text-white rounded-full transition-all duration-200 backdrop-blur-sm"
-                              title="Hide photo (ESC)"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* Photo Available - Show placeholder with Open button */
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
-                          <div className="flex flex-col items-center space-y-4 p-6 text-center">
-                            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 rounded-full flex items-center justify-center shadow-lg">
-                              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                            </div>
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Photo Available</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">Click below to view student photo</p>
-                            </div>
-                            <button
-                              onClick={() => setShowPhotoInContainer(true)}
-                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center space-x-2"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              <span>Open Photo</span>
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    ) : (
-                      /* No Photo State */
-                      <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-700 dark:to-slate-800 border-2 border-dashed border-gray-300 dark:border-slate-600">
-                        <div className="flex flex-col items-center space-y-4 p-6 text-center">
-                          <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 dark:from-gray-600 dark:to-gray-700 rounded-full flex items-center justify-center">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No Photo Available</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Student photo not uploaded yet</p>
-                          </div>
-                          <div className="w-12 h-1 bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300 dark:from-gray-600 dark:via-gray-500 dark:to-gray-600 rounded-full"></div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('actions')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                  activeTab === 'actions'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span>Actions</span>
                 </div>
-
-                {/* Monthly Attendance Table */}
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    This Month's Attendance
-                  </h4>
-                  
-                  {isLoadingAttendance ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                      <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading attendance...</span>
-                    </div>
-                  ) : (
-                    <div className="bg-white dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 overflow-hidden">
-                      <div className="px-2 py-2 text-start">
-                        <div className="flex flex-col gap-2">
-                          <button
-                            onClick={() => setShowAttendanceModal(true)}
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
-                          >
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m6 0v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7h16zM9 11h6m-6 4h6" />
-                            </svg>
-                            View Attendance
-                          </button>
-                          
-                          <button
-                            onClick={() => {
-                              const baseUrl = window.location.origin;
-                              const permissionUrl = `${baseUrl}/permission-request?studentId=${encodeURIComponent(student.id)}&studentName=${encodeURIComponent(student.fullName)}&studentClass=${encodeURIComponent(student.class || '')}&studentShift=${encodeURIComponent(student.shift || '')}`;
-                              navigator.clipboard.writeText(permissionUrl).then(() => {
-                                toast.success('Permission link copied to clipboard!');
-                              }).catch(() => {
-                                // Fallback: show the URL in a modal or alert
-                                alert(`Permission URL: ${permissionUrl}`);
-                              });
-                            }}
-                            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors duration-200"
-                          >
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            Copy Permission Link
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Compact Claimed Stars History - Below Copy Permission Link */}
-                  <ClaimedStarsHistory 
-                    claimedStars={claimedStars}
-                    totalStars={totalStars}
-                    isCompact={true}
-                    onDelete={async (id: string) => {
-                      if (!student?.id) return;
-                      try {
-                        await deleteDoc(doc(db, 'students', student.id, 'claimedStars', id));
-                        toast.success('Claimed star deleted');
-                      } catch (error) {
-                        console.error('Failed to delete claimed star:', error);
-                        toast.error('Failed to delete claimed star');
-                      }
-                    }}
-                  />
+              </button>
+              <button
+                onClick={() => setActiveTab('requests')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                  activeTab === 'requests'
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>Requests</span>
                 </div>
+              </button>
+            </div>
+          </div>
 
-                {/* Academic Information */}
-                <div className="space-y-3">
-                  {/* <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">Academic Information</h4>
-                  {student.ay && (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Academic Year</label>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.ay}</p>
-                    </div>
-                  )}
-                  {student.school && (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">School</label>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.school}</p>
-                    </div>
-                  )} */}
-                </div>
-              </div>
-
-              {/* Student Information */}
-              <div className="flex-1 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Latin Name</label>
-                    <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.fullName}</p>
-                  </div>
-                  {student.nameKhmer && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Khmer Name</label>
-                      <p className="khmer-font mt-1 text-sm text-gray-900 dark:text-gray-100">{student.nameKhmer}</p>
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Class</label>
-                    <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.class}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Shift</label>
-                    <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.shift}</p>
-                  </div>
-                  {student.scheduleType && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Schedule Type</label>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.scheduleType}</p>
-                    </div>
-                  )}
-                  {student.createdAt && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Enrollment Date</label>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
-                        {(() => {
-                          const date = student.createdAt;
-                          if (date && typeof date === 'object' && 'toDate' in date) {
-                            return new Date(date.toDate()).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            });
-                          }
-                          return new Date(date as Date).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          });
-                        })()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Contact Information */}
-                <div className="border-t border-gray-200 dark:border-slate-600 pt-4">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Contact Information</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {student.phone && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
-                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{formatPhoneNumber(student.phone)}</p>
-                      </div>
-                    )}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400"></label>
-                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100"></p>
-                      </div>
-                
-                    {student.motherName && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Mother's Name</label>
-                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.motherName}</p>
-                      </div>
-                    )}
-                    {student.motherPhone && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Mother's Phone</label>
-                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{formatPhoneNumber(student.motherPhone)}</p>
-                      </div>
-                    )}
-                    {student.fatherName && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Father's Name</label>
-                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{student.fatherName}</p>
-                      </div>
-                    )}
-                    {student.fatherPhone && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Father's Phone</label>
-                        <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">{formatPhoneNumber(student.fatherPhone)}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Admin Note Section - Only show if note exists */}
-                {student.note && (
-                  <div className="border-t border-gray-200 dark:border-slate-600 pt-4">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Admin Note</h4>
-                    <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-3">
-                      <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{student.note}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Star Management Section */}
-                <div className="border-t border-gray-200 dark:border-slate-600 pt-4">
-                  <StarManagementSection 
-                    student={student}
-                    onStarUpdate={() => {
-                      // Optional: refresh any data if needed
-                      if (onBreak) {
-                        onBreak();
-                      }
-                    }}
-                  />
-                </div>
-
-                {/* Break Information Section - Only show if student is on break */}
-                {student.onBreak && (
-                  <div className="border-t border-gray-200 dark:border-slate-600 pt-4">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Break Information
-                    </h4>
-                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
-                      <div className="grid grid-cols-1 gap-2">
-                        {student.expectedReturnMonth && (
-                          <div>
-                            <span className="text-xs font-medium text-orange-700 dark:text-orange-300">Expected Return:</span>
-                            <span className="ml-2 text-sm text-orange-900 dark:text-orange-100">
-                              {(() => {
-                                const [year, month] = student.expectedReturnMonth.split('-');
-                                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                                  'July', 'August', 'September', 'October', 'November', 'December'];
-                                return `${monthNames[parseInt(month) - 1]} ${year}`;
-                              })()}
-                            </span>
-                          </div>
-                        )}
-                        {student.breakReason && (
-                          <div>
-                            <span className="text-xs font-medium text-orange-700 dark:text-orange-300">Reason:</span>
-                            <span className="ml-2 text-sm text-orange-900 dark:text-orange-100">{student.breakReason}</span>
-                          </div>
-                        )}
-                        {student.breakStartDate && (
-                          <div>
-                            <span className="text-xs font-medium text-orange-700 dark:text-orange-300">Break Started:</span>
-                            <span className="ml-2 text-sm text-orange-900 dark:text-orange-100">
-                              {(() => {
-                                const date = student.breakStartDate;
-                                if (date && typeof date === 'object' && 'toDate' in date) {
-                                  return new Date(date.toDate()).toLocaleDateString();
-                                }
-                                return new Date(date as Date).toLocaleDateString();
-                              })()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+          {/* Tab Content - Fixed Height Container */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto px-4 pb-4 sm:px-6">
+              {/* Tab Content */}
+              {activeTab === 'basic' ? (
+                <BasicInfoTab
+                  student={student}
+                  showPhotoInContainer={showPhotoInContainer}
+                  setShowPhotoInContainer={setShowPhotoInContainer}
+                  isTransitioning={isTransitioning}
+                  slideDirection={slideDirection}
+                />
+              ) : activeTab === 'actions' ? (
+                <ActionsTab
+                  student={student}
+                  attendanceRecords={attendanceRecords}
+                  approvedPermissions={approvedPermissions}
+                  allClassConfigs={allClassConfigs}
+                  isLoadingAttendance={isLoadingAttendance}
+                  setShowAttendanceModal={setShowAttendanceModal}
+                  claimedStars={claimedStars}
+                  totalStars={totalStars}
+                  onBreak={onBreak}
+                  isFaceEnrolling={isFaceEnrolling}
+                  enrollStudentWithPhoto={enrollStudentWithPhoto}
+                  showPhotoCapture={showPhotoCapture}
+                  setShowPhotoCapture={setShowPhotoCapture}
+                  capturedPhoto={capturedPhoto}
+                  setCapturedPhoto={setCapturedPhoto}
+                  isCapturingPhoto={isCapturingPhoto}
+                  capturePhotoForEnrollment={capturePhotoForEnrollment}
+                  confirmPhotoEnrollment={confirmPhotoEnrollment}
+                  cancelPhotoCapture={cancelPhotoCapture}
+                  webcamRef={webcamRef}
+                  availableCameras={availableCameras}
+                  selectedCameraId={selectedCameraId}
+                  setSelectedCameraId={setSelectedCameraId}
+                />
+              ) : (
+                <RequestsTab
+                  student={student}
+                  leaveEarlyRequests={leaveEarlyRequests}
+                  isLoadingLeaveEarly={isLoadingLeaveEarly}
+                  handleApproveLeaveEarly={handleApproveLeaveEarly}
+                  handleRejectLeaveEarly={handleRejectLeaveEarly}
+                  approvedPermissions={approvedPermissions}
+                  pendingPermissions={pendingPermissions}
+                  handleApprovePermission={handleApprovePermission}
+                  handleRejectPermission={handleRejectPermission}
+                  isLoadingPermissions={isLoadingPermissions}
+                />
+              )}
             </div>
           </div>
 
           {/* Footer */}
-          <div className="bg-gray-50 dark:bg-slate-700 px-4 py-3 sm:flex sm:justify-between sm:px-6 gap-3 rounded-b-lg">
+          <div className="bg-gray-50 dark:bg-slate-700 px-4 py-3 sm:flex sm:justify-between sm:px-6 gap-3 rounded-b-lg flex-shrink-0">
             {/* Delete and Break buttons on the left - hidden when hideActions is true */}
             {!hideActions && (
               <div className="flex gap-3">
@@ -1185,6 +1185,113 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           isActive={showAttendanceModal}
           onClose={() => setShowAttendanceModal(false)}
         />
+      )}
+
+      {/* Photo Capture Modal */}
+      {showPhotoCapture && (
+        <div className="fixed inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Capture Photo for Enrollment</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                {student?.fullName}
+              </p>
+            </div>
+            
+            <div className="p-6">
+              {!capturedPhoto ? (
+                <div className="space-y-4">
+                  {/* Camera Selection */}
+                  <div className="mb-4">
+                    <CustomDropdown
+                      id="camera-select"
+                      label="Select Camera"
+                      options={availableCameras.map(camera => ({
+                        value: camera.deviceId,
+                        label: camera.label
+                      }))}
+                      value={selectedCameraId || ''}
+                      onChange={(value) => setSelectedCameraId(value)}
+                      placeholder="Choose a camera"
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div className="relative bg-black rounded-lg overflow-hidden">
+                    <Webcam
+                      ref={webcamRef}
+                      audio={false}
+                      screenshotFormat="image/jpeg"
+                      videoConstraints={{
+                        width: 640,
+                        height: 480,
+                        facingMode: "user",
+                        deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined
+                      }}
+                      className="w-full h-auto"
+                      mirrored={true}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-center space-x-4">
+                    <Button 
+                      onClick={capturePhotoForEnrollment}
+                      disabled={isCapturingPhoto}
+                      color="company-purple"
+                      className="flex items-center space-x-2"
+                    >
+                      <Icon path={mdiCamera} size={20} />
+                      <span>{isCapturingPhoto ? 'Capturing...' : 'Capture Photo'}</span>
+                    </Button>
+                    
+                    <Button 
+                      onClick={cancelPhotoCapture}
+                      color="whiteDark"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative bg-black rounded-lg overflow-hidden">
+                    <img 
+                      src={capturedPhoto} 
+                      alt="Captured" 
+                      className="w-full h-auto"
+                    />
+                  </div>
+                  
+                  <div className="flex justify-center space-x-4">
+                    <Button 
+                      onClick={confirmPhotoEnrollment}
+                      disabled={isFaceEnrolling}
+                      color="company-purple"
+                      className="flex items-center space-x-2"
+                    >
+                      <Icon path={mdiCheckCircle} size={20} />
+                      <span>{isFaceEnrolling ? 'Enrolling...' : 'Confirm & Enroll'}</span>
+                    </Button>
+                    
+                    <Button 
+                      onClick={() => setCapturedPhoto(null)}
+                      color="whiteDark"
+                    >
+                      Retake
+                    </Button>
+                    
+                    <Button 
+                      onClick={cancelPhotoCapture}
+                      color="whiteDark"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

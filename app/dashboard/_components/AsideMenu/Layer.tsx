@@ -1,5 +1,5 @@
-import React from "react";
-import { mdiLogout, mdiClose } from "@mdi/js";
+import React, { useState, useMemo } from "react";
+import { mdiLogout, mdiClose, mdiMagnify, mdiCloseCircle } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import AsideMenuItem from "./Item";
 import AsideMenuList from "./List";
@@ -19,6 +19,7 @@ export default function AsideMenuLayer({
   className = "",
   ...props
 }: Props) {
+  const [searchTerm, setSearchTerm] = useState("");
   const _darkMode = useAppSelector((state) => state.darkMode.isEnabled);
 
   const logoutItem: MenuAsideItem = {
@@ -27,6 +28,37 @@ export default function AsideMenuLayer({
     isLogout: true,
     color: "danger"
   };
+
+  // Filter menu items based on search term
+  const filteredMenu = useMemo(() => {
+    if (!searchTerm.trim()) return menu;
+
+    const filterItems = (items: MenuAsideItem[]): MenuAsideItem[] => {
+      return items
+        .map(item => {
+          // Check if the item itself matches
+          const itemMatches = item.label.toLowerCase().includes(searchTerm.toLowerCase());
+
+          // If item has submenu, filter submenu
+          if (item.menu) {
+            const filteredSubMenu = filterItems(item.menu);
+            if (filteredSubMenu.length > 0 || itemMatches) {
+              return { ...item, menu: filteredSubMenu };
+            }
+          }
+
+          // Return item if it matches
+          if (itemMatches) {
+            return item;
+          }
+
+          return null;
+        })
+        .filter(Boolean) as MenuAsideItem[];
+    };
+
+    return filterItems(menu);
+  }, [menu, searchTerm]);
 
   const handleAsideLgCloseClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -84,8 +116,47 @@ export default function AsideMenuLayer({
 
         {/* Navigation Menu */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+          {/* Search Input */}
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Icon path={mdiMagnify} size="16" className="text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search navigation..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-10 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 dark:placeholder-gray-500"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  <Icon path={mdiCloseCircle} size="16" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                </button>
+              )}
+            </div>
+          </div>
+          
           <nav>
-            <AsideMenuList menu={menu} onRouteChange={props.onRouteChange} />
+            {filteredMenu.length > 0 ? (
+              <AsideMenuList menu={filteredMenu} onRouteChange={props.onRouteChange} />
+            ) : searchTerm.trim() ? (
+              <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                <Icon path={mdiMagnify} size="48" className="mx-auto mb-4 opacity-50" />
+                <p className="text-sm">No navigation items found for "{searchTerm}"</p>
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  Clear search
+                </button>
+              </div>
+            ) : (
+              <AsideMenuList menu={menu} onRouteChange={props.onRouteChange} />
+            )}
           </nav>
         </div>
 

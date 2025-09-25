@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import StudentQRPayment from './StudentQRPayment';
+import StudentQRPayment from '../dashboard/_components/StudentQRCode';
 import Icon from '../../_components/Icon';
 import { mdiClose } from '@mdi/js';
 

@@ -108,7 +108,8 @@
   "reasons": {
     "sickness": "ឈី",
     "familyEvent": "ព្រឹត្តិការណ៍គ្រួសារ",
-    "appointment": "ណាត់ជួប"
+    "appointment": "ណាត់ជួប",
+    "school": "សាលា"
   },
   "shiftInfo": {
     "morningShift": "ព្រឹក",
@@ -129,7 +130,26 @@
     "loadingDescription": "សូមរង់ចាំខណៈពេលដែលយើងរៀបចំក្រាបវត្តមានរបស់អ្នក។",
     "noData": "គ្មានទិន្នន័យ",
     "notAvailable": "មិនមាន"
-  }
+  },
+  "leaveEarly": "ចាកចេញមុន",
+  "leaveEarlyRequest": "ស្នើសុំចាកចេញមុន",
+  "requestLeaveEarly": "ស្នើសុំចាកចេញមុន",
+  "selectTimeAndReason": "ជ្រើសរើសពេល និងហេតុផល",
+  "selectLeaveTime": "ជ្រើសរើសពេលចាកចេញ",
+  "manualTime": "ឬបញ្ចូលពេលដោយដៃ",
+  "enterReason": "បញ្ចូលហេតុផលចាកចេញមុន...",
+  "leaveTime": "ពេលចាកចេញ",
+  "reason": "ហេតុផល",
+  "requestDetails": "ព័ត៌មានលម្អិតនៃស្នើសុំ",
+  "requestDate": "កាលបរិច្ឆេទស្នើសុំ",
+  "pendingReview": "កំពុងពិនិត្យ",
+  "leaveEarlyApproved": "បានអនុម័តចាកចេញមុន",
+  "leaveEarlyPending": "កំពុងរង់ចាំការអនុម័ត",
+  "approvedMessage": "ស្នើសុំចាកចេញមុនរបស់អ្នកត្រូវបានអនុម័ត។",
+  "pendingMessage": "ស្នើសុំចាកចេញមុនរបស់អ្នកកំពុងរង់ចាំការពិនិត្យ។",
+  "todayOnly": "សម្រាប់ថ្ងៃនេះតែប៉ុណ្ណោះ",
+  "leaveEarlyRequestSuccess": "បានផ្ញើស្នើសុំចាកចេញមុនដោយជោគជ័យ!",
+  "fillAllFields": "សូមបំពេញប្រអប់ទាំងអស់ដែលត្រូវការ"
 },
 "mockExam": {
       "title": "តេស្តសាកល្បង",
