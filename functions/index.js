@@ -193,6 +193,69 @@ exports.telegramWebhook = onRequest({
 });
 
 /**
+ * Handle /start command for parent registration
+ */
+const handleParentStartCommand = async (bot, chatId, userId, token) => {
+    try {
+        logger.info(`Parent registration attempt with token: ${token} for chatId: ${chatId}`);
+        
+        // Extract student ID from token
+        const decodedToken = Buffer.from(token.replace('parent_', ''), 'base64').toString();
+        const studentId = decodedToken.split('_')[1];
+        
+        if (!studentId) {
+            await bot.sendMessage(chatId, "❌ Invalid registration token. Please request a new link from your child's school.");
+            return;
+        }
+
+        // Get student information
+        const studentDoc = await db.collection('students').doc(studentId).get();
+        if (!studentDoc.exists) {
+            await bot.sendMessage(chatId, "❌ Student not found. Please contact the school for assistance.");
+            return;
+        }
+
+        const student = studentDoc.data();
+        
+        // Store parent-student relationship
+        const parentData = {
+            chatId: chatId.toString(),
+            telegramUserId: userId.toString(),
+            studentId: studentId,
+            studentName: student.fullName || 'Unknown Student',
+            studentClass: student.class || '',
+            studentShift: student.shift || '',
+            registeredAt: admin.firestore.Timestamp.now(),
+            isActive: true
+        };
+
+        await db.collection('parentNotifications').doc(`${studentId}_${chatId}`).set(parentData);
+        
+        // Send welcome message
+        const welcomeMessage = `🎉 Welcome! You have successfully registered to receive notifications for:
+
+👤 **Student:** ${student.fullName}
+🏫 **Class:** ${student.class || 'Not specified'}
+⏰ **Shift:** ${student.shift || 'Not specified'}
+
+You will now receive notifications when:
+✅ Your child arrives at school
+📝 Your child requests permission to leave early
+🚪 Your child's permission requests are approved/denied
+
+Type /help to see available commands.`;
+
+        await bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
+        
+        logger.info(`Parent successfully registered for student ${studentId}`);
+        
+    } catch (error) {
+        logger.error('Error in parent registration:', error);
+        await bot.sendMessage(chatId, "❌ Registration failed. Please try again or contact school support.");
+    }
+};
+
+/**
  * Handle /start command
  */
 const handleStartCommand = async (bot, chatId, userId) => {

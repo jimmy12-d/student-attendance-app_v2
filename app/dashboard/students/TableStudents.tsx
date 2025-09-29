@@ -135,13 +135,17 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       })();
 
       // Search by name - fallback for general queries
-      const nameMatch = student.fullName && (() => {
+      const nameMatch = (student.fullName || student.nameKhmer) && (() => {
         if (isNameQuery) {
-          // For name queries, allow substring matching
-          return student.fullName.toLowerCase().includes(query);
+          // For name queries, allow substring matching in both English and Khmer names
+          const englishMatch = student.fullName && student.fullName.toLowerCase().includes(query);
+          const khmerMatch = student.nameKhmer && student.nameKhmer.toLowerCase().includes(query);
+          return englishMatch || khmerMatch;
         }
         // For non-name queries, be more restrictive
-        return student.fullName.toLowerCase() === query;
+        const englishExact = student.fullName && student.fullName.toLowerCase() === query;
+        const khmerExact = student.nameKhmer && student.nameKhmer.toLowerCase() === query;
+        return englishExact || khmerExact;
       })();
 
       // Prioritize matches based on query type

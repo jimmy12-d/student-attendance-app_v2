@@ -11,7 +11,6 @@ import {
   mdiAccountOff,
   mdiChevronDown,
   mdiChevronUp,
-  mdiMagnify,
 } from "@mdi/js";
 import Button from "../../_components/Button";
 import CardBox from "../../_components/CardBox";
@@ -162,6 +161,18 @@ export default function StudentsPage() {
     // Cleanup listener on component unmount
     return () => unsubscribe();
   }, []);
+
+  // Update selectedStudent when students array changes (for real-time updates)
+  useEffect(() => {
+    if (selectedStudent && isModalOpen) {
+      const updatedStudent = students.find(s => s.id === selectedStudent.id) || 
+                           waitlistStudents.find(s => s.id === selectedStudent.id) || 
+                           droppedStudents.find(s => s.id === selectedStudent.id);
+      if (updatedStudent) {
+        setSelectedStudent(updatedStudent);
+      }
+    }
+  }, [students, waitlistStudents, droppedStudents, selectedStudent?.id, isModalOpen]);
 
   const handleShowCreateForm = () => {
     setStudentToEdit(null); // Ensure no student is being edited

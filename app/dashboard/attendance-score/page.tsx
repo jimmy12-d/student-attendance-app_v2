@@ -87,7 +87,7 @@ const calculateAttendanceScore = (
   );
 
   const approvedPermissionsForStudent = permissions.filter(p => 
-    p.studentId === student.id && p.status === 'approved'
+    p.studentId === student.id && p.status?.toLowerCase() === 'approved'
   );
 
   let earlyArrivals = 0;
@@ -167,13 +167,13 @@ const calculateAttendanceScore = (
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
-  const totalScore = (earlyArrivals * 2) + (onTimeArrivals * 1) + (lateArrivals * 0) + (permissionDays * -1) + (lateOver30minDays * -1) + (absentDays * -3);
+  const totalScore = (earlyArrivals * 3) + (onTimeArrivals * 2) + (lateArrivals * 1) + (permissionDays * -1) + (lateOver30minDays * 0) + (absentDays * -5);
   const totalDays = earlyArrivals + onTimeArrivals + lateArrivals + permissionDays + lateOver30minDays + absentDays;
   const averageScore = totalDays > 0 ? totalScore / totalDays : 0;
   
-  // Calculate percentage where +2 = 100% and -3 = -100% (scaled down for negatives)
-  const rawPercentage = (averageScore / 2) * 100;
-  const averagePercentage = totalDays > 0 ? (rawPercentage < 0 ? rawPercentage / 1.5 : rawPercentage) : 0;
+  // Calculate percentage where +3 = 100% and -5 = -100% (scaled down for negatives)
+  const rawPercentage = (averageScore / 3) * 100;
+  const averagePercentage = totalDays > 0 ? (rawPercentage < 0 ? rawPercentage * (3 / 5) : rawPercentage) : 0;
 
   // Calculate average arrival time for the interval
   const calculateAverageArrivalTime = (): string => {
@@ -267,6 +267,10 @@ export default function AttendanceScorePage() {
   const [selectedShift, setSelectedShift] = useState<string>('All');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table'); // New view mode state
   
+  // Column sorting states
+  const [sortColumn, setSortColumn] = useState<string>('totalScore');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
   // Pagination states
   const [currentPage, setCurrentPage] = useState<{ [shift: string]: number }>({});
   const [itemsPerPage] = useState(15);
@@ -327,7 +331,7 @@ export default function AttendanceScorePage() {
     unsubscribes.push(unsubscribeAttendance);
 
     // Load permissions
-    const permissionsQuery = query(collection(db, 'permissions'), orderBy('createdAt', 'desc'));
+    const permissionsQuery = query(collection(db, 'permissions'));
     const unsubscribePermissions = onSnapshot(permissionsQuery, (snapshot) => {
       const permissionsData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -392,6 +396,15 @@ export default function AttendanceScorePage() {
 
   const getFirstDayOfMonth = (month: number, year: number) => {
     return new Date(year, month, 1).getDay();
+  };
+
+  const handleColumnSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc'); // Default to descending for most columns
+    }
   };
 
   const handleStartDateSelect = (day: number) => {
@@ -462,7 +475,7 @@ export default function AttendanceScorePage() {
   const renderStartCalendar = () => {
     const daysInMonth = getDaysInMonth(currentStartMonth, currentStartYear);
     const firstDay = getFirstDayOfMonth(currentStartMonth, currentStartYear);
-    const days = [];
+    const days: React.ReactElement[] = [];
     const todayDate = new Date();
     const selectedDateObj = startDate ? new Date(startDate + 'T00:00:00') : null;
 
@@ -500,7 +513,7 @@ export default function AttendanceScorePage() {
   const renderEndCalendar = () => {
     const daysInMonth = getDaysInMonth(currentEndMonth, currentEndYear);
     const firstDay = getFirstDayOfMonth(currentEndMonth, currentEndYear);
-    const days = [];
+    const days: React.ReactElement[] = [];
     const todayDate = new Date();
     const selectedDateObj = endDate ? new Date(endDate + 'T00:00:00') : null;
 
@@ -565,10 +578,75 @@ export default function AttendanceScorePage() {
         return classMatch;
       });
 
-      // Sort by total score (based on sortWorstFirst setting) and assign ranks
-      const sortedScores = filteredScores.sort((a, b) => 
-        sortWorstFirst ? a.totalScore - b.totalScore : b.totalScore - a.totalScore
-      );
+      // Sort by selected column and assign ranks
+      const sortedScores = filteredScores.sort((a, b) => {
+        let aValue: any, bValue: any;
+        
+        switch (sortColumn) {
+          case 'rank':
+            aValue = a.rank;
+            bValue = b.rank;
+            break;
+          case 'studentName':
+            aValue = a.studentName.toLowerCase();
+            bValue = b.studentName.toLowerCase();
+            break;
+          case 'class':
+            aValue = a.class.toLowerCase();
+            bValue = b.class.toLowerCase();
+            break;
+          case 'totalScore':
+            aValue = a.totalScore;
+            bValue = b.totalScore;
+            break;
+          case 'averagePercentage':
+            aValue = a.averagePercentage;
+            bValue = b.averagePercentage;
+            break;
+          case 'averageArrivalTime':
+            aValue = a.averageArrivalTime.toLowerCase();
+            bValue = b.averageArrivalTime.toLowerCase();
+            break;
+          case 'earlyArrivals':
+            aValue = a.breakDown.earlyArrivals;
+            bValue = b.breakDown.earlyArrivals;
+            break;
+          case 'onTimeArrivals':
+            aValue = a.breakDown.onTimeArrivals;
+            bValue = b.breakDown.onTimeArrivals;
+            break;
+          case 'lateArrivals':
+            aValue = a.breakDown.lateArrivals;
+            bValue = b.breakDown.lateArrivals;
+            break;
+          case 'lateOver30min':
+            aValue = a.breakDown.lateOver30min;
+            bValue = b.breakDown.lateOver30min;
+            break;
+          case 'permissions':
+            aValue = a.breakDown.permissions;
+            bValue = b.breakDown.permissions;
+            break;
+          case 'absentDays':
+            aValue = a.breakDown.absentDays;
+            bValue = b.breakDown.absentDays;
+            break;
+          default:
+            aValue = a.totalScore;
+            bValue = b.totalScore;
+        }
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return sortDirection === 'asc' 
+            ? aValue.localeCompare(bValue) 
+            : bValue.localeCompare(aValue);
+        } else {
+          return sortDirection === 'asc' 
+            ? (aValue as number) - (bValue as number) 
+            : (bValue as number) - (aValue as number);
+        }
+      });
+      
       sortedScores.forEach((score, index) => {
         score.rank = index + 1;
       });
@@ -579,7 +657,7 @@ export default function AttendanceScorePage() {
     });
 
     return scoresByShift;
-  }, [students, attendanceRecords, permissions, allClassConfigs, startDate, endDate, selectedClass, selectedShift, sortWorstFirst]);
+  }, [students, attendanceRecords, permissions, allClassConfigs, startDate, endDate, selectedClass, selectedShift, sortColumn, sortDirection]);
 
   // Get unique classes and shifts for filters
   const uniqueClasses = useMemo(() => {
@@ -851,18 +929,102 @@ export default function AttendanceScorePage() {
               <table className="min-w-full table-auto">
                 <thead>
                   <tr className="bg-gradient-to-r from-slate-700/80 to-slate-600/80 border-b border-slate-500/30">
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Rank</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Student</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Class</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Total Score</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Percentage</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Avg Arrival</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Early</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">On Time</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Late (15-30min)</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Permission</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Late &gt;30min</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Absent</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('rank')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Rank</span>
+                        {sortColumn === 'rank' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('studentName')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Student</span>
+                        {sortColumn === 'studentName' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('class')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Class</span>
+                        {sortColumn === 'class' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('totalScore')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Total Score</span>
+                        {sortColumn === 'totalScore' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('averagePercentage')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Percentage</span>
+                        {sortColumn === 'averagePercentage' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('averageArrivalTime')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Avg Arrival</span>
+                        {sortColumn === 'averageArrivalTime' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('earlyArrivals')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Early</span>
+                        {sortColumn === 'earlyArrivals' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('onTimeArrivals')}>
+                      <div className="flex items-center space-x-1">
+                        <span>On Time</span>
+                        {sortColumn === 'onTimeArrivals' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('lateArrivals')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Late (15-30min)</span>
+                        {sortColumn === 'lateArrivals' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('lateOver30min')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Late &gt;30min</span>
+                        {sortColumn === 'lateOver30min' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('permissions')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Permission</span>
+                        {sortColumn === 'permissions' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer hover:text-white transition-colors" onClick={() => handleColumnSort('absentDays')}>
+                      <div className="flex items-center space-x-1">
+                        <span>Absent</span>
+                        {sortColumn === 'absentDays' && (
+                          <Icon path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} size={14} className="text-blue-400" />
+                        )}
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-slate-800/50 divide-y divide-slate-600/30">
@@ -925,10 +1087,10 @@ export default function AttendanceScorePage() {
                         <div className="text-sm text-center text-yellow-400">{score.breakDown.lateArrivals}</div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-center text-purple-400">{score.breakDown.permissions}</div>
+                        <div className="text-sm text-center text-orange-400">{score.breakDown.lateOver30min}</div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-center text-orange-400">{score.breakDown.lateOver30min}</div>
+                        <div className="text-sm text-center text-purple-400">{score.breakDown.permissions}</div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-sm text-center text-red-400">{score.breakDown.absentDays}</div>
@@ -1015,9 +1177,8 @@ export default function AttendanceScorePage() {
         title="Attendance Scoring System"
         main
       >
-        {/* View Mode and Sorting Toggles */}
+        {/* View Mode Toggle */}
         <div className="flex items-center space-x-4">
-          {/* View Mode Toggle */}
           <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
             <button
               onClick={() => setViewMode('cards')}
@@ -1038,21 +1199,6 @@ export default function AttendanceScorePage() {
               }`}
             >
               <Icon path={mdiViewList} size={18} />
-            </button>
-          </div>
-          
-          {/* Sorting Toggle */}
-          <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <button
-              onClick={() => setSortWorstFirst(!sortWorstFirst)}
-              className={`p-2 rounded-md transition-all ${
-                sortWorstFirst 
-                  ? 'bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 shadow-sm' 
-                  : 'bg-white dark:bg-gray-800 text-green-600 dark:text-green-400 shadow-sm'
-              }`}
-              title={sortWorstFirst ? 'Sorting: Worst first' : 'Sorting: Best first'}
-            >
-              <Icon path={sortWorstFirst ? mdiSortAscending : mdiSortDescending} size={18} />
             </button>
           </div>
         </div>
@@ -1291,21 +1437,21 @@ export default function AttendanceScorePage() {
               <div className="flex items-center space-x-3 bg-green-500/10 border border-green-500/20 p-3 rounded-xl hover:bg-green-500/15 transition-all duration-300">
                 <Icon path={mdiAccountCheck} className="text-green-400" size={18} />
                 <div>
-                  <div className="text-green-300 font-semibold">+2 Points</div>
+                  <div className="text-green-300 font-semibold">+3 Points</div>
                   <div className="text-green-400/80 text-xs">Early arrival</div>
                 </div>
               </div>
               <div className="flex items-center space-x-3 bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl hover:bg-blue-500/15 transition-all duration-300">
                 <Icon path={mdiStar} className="text-blue-400" size={18} />
                 <div>
-                  <div className="text-blue-300 font-semibold">+1 Point</div>
+                  <div className="text-blue-300 font-semibold">+2 Points</div>
                   <div className="text-blue-400/80 text-xs">On time (≤15min)</div>
                 </div>
               </div>
               <div className="flex items-center space-x-3 bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-xl hover:bg-yellow-500/15 transition-all duration-300">
                 <Icon path={mdiClockAlert} className="text-yellow-400" size={18} />
                 <div>
-                  <div className="text-yellow-300 font-semibold">0 Points</div>
+                  <div className="text-yellow-300 font-semibold">+1 Point</div>
                   <div className="text-yellow-400/80 text-xs">Late (15-30min)</div>
                 </div>
               </div>
@@ -1319,7 +1465,7 @@ export default function AttendanceScorePage() {
               <div className="flex items-center space-x-3 bg-red-500/10 border border-red-500/20 p-3 rounded-xl hover:bg-red-500/15 transition-all duration-300">
                 <Icon path={mdiAccountRemove} className="text-red-400" size={18} />
                 <div>
-                  <div className="text-red-300 font-semibold">-3 Points</div>
+                  <div className="text-red-300 font-semibold">-5 Points</div>
                   <div className="text-red-400/80 text-xs">Absent</div>
                 </div>
               </div>
@@ -1332,20 +1478,20 @@ export default function AttendanceScorePage() {
                 <Icon path={mdiCalculator} size={16} className="text-slate-400" />
               </div>
               <p className="text-sm text-slate-300 mb-3">
-                The percentage is calculated as (Average Score ÷ 2) × 100. For negative scores, the percentage is scaled down by dividing by 1.5 to make it less extreme.
+                The percentage is calculated as (Average Score ÷ 3) × 100. For negative scores, the percentage is scaled down by multiplying by (3/5) to make it less extreme.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
                 <div className="bg-green-500/10 border border-green-500/20 p-2 rounded-lg text-center">
                   <div className="text-green-300 font-semibold">+100%</div>
-                  <div className="text-green-400/80">Early (+2)</div>
+                  <div className="text-green-400/80">Early (+3)</div>
                 </div>
                 <div className="bg-blue-500/10 border border-blue-500/20 p-2 rounded-lg text-center">
-                  <div className="text-blue-300 font-semibold">+50%</div>
-                  <div className="text-blue-400/80">On time (+1)</div>
+                  <div className="text-blue-300 font-semibold">+66.7%</div>
+                  <div className="text-blue-400/80">On time (+2)</div>
                 </div>
                 <div className="bg-yellow-500/10 border border-yellow-500/20 p-2 rounded-lg text-center">
-                  <div className="text-yellow-300 font-semibold">0%</div>
-                  <div className="text-yellow-400/80">Late (0)</div>
+                  <div className="text-yellow-300 font-semibold">+33.3%</div>
+                  <div className="text-yellow-400/80">Late (+1)</div>
                 </div>
                 <div className="bg-purple-500/10 border border-purple-500/20 p-2 rounded-lg text-center">
                   <div className="text-purple-300 font-semibold">-33.3%</div>
@@ -1353,7 +1499,7 @@ export default function AttendanceScorePage() {
                 </div>
                 <div className="bg-red-500/10 border border-red-500/20 p-2 rounded-lg text-center">
                   <div className="text-red-300 font-semibold">-100%</div>
-                  <div className="text-red-400/80">Absent (-3)</div>
+                  <div className="text-red-400/80">Absent (-5)</div>
                 </div>
               </div>
             </div>

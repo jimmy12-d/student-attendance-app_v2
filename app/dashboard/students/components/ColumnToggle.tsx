@@ -229,7 +229,7 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
             </div>
             <input 
               type="text"
-              placeholder="Search students by name, class, or phone..."
+              placeholder="Search students by name (English/Khmer), class, or phone..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white dark:placeholder-gray-400 text-base"

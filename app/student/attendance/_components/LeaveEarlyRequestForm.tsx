@@ -12,6 +12,7 @@ import * as Yup from 'yup';
 import { toast } from 'sonner';
 import CustomCombobox from '@/app/_components/CustomCombobox';
 import { mdiAccountGroup, mdiClockOutline, mdiEmoticonSickOutline, mdiSend, mdiTextBoxOutline, mdiHelpCircleOutline, mdiCheckCircle, mdiClock, mdiAlertCircle } from '@mdi/js';
+import { split } from 'split-khmer';
 
 
 interface StudentData {
@@ -163,7 +164,15 @@ export const LeaveEarlyRequestForm = ({ onSuccess, studentData, allClassConfigs 
       .test(
         'min-words',
         t('validation.detailsMinWords'),
-        (value) => (value || '').split(/\s+/).filter(Boolean).length >= 5
+        (value) => {
+          const text = value || '';
+          const hasKhmer = /[\u1780-\u17FF]/.test(text);
+          if (hasKhmer) {
+            return split(text).length >= 5;
+          } else {
+            return text.split(/\s+/).filter(Boolean).length >= 5;
+          }
+        }
       ),
   });
 
@@ -275,6 +284,8 @@ export const LeaveEarlyRequestForm = ({ onSuccess, studentData, allClassConfigs 
           }}
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
+          validateOnBlur={true}
+          validateOnChange={true}
         >
           {({ values, isSubmitting, setFieldValue }) => (
 
@@ -289,6 +300,7 @@ export const LeaveEarlyRequestForm = ({ onSuccess, studentData, allClassConfigs 
                     </div>
                   </label>
                   <Field id="leaveTime" name="leaveTime" type="time" {...fieldData} />
+                  <ErrorMessage name="leaveTime" component="div" className="text-red-500 text-sm mt-1" />
                   {/* Preset time buttons */}
                   {getPresetLeaveTimes().length > 0 && (
                     <div className="mt-4">
@@ -337,6 +349,7 @@ export const LeaveEarlyRequestForm = ({ onSuccess, studentData, allClassConfigs 
                       fieldData={fieldData}
                       id="reason"
                     />
+                    <ErrorMessage name="reason" component="div" className="text-red-500 text-sm mt-1" />
                   </div>
                 )}
               </FormField>

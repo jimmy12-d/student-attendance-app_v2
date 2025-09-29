@@ -59,6 +59,7 @@
     "react-webcam": "^7.2.0",
     "sharp": "^0.33.5",
     "sonner": "^2.0.5",
+    "split-khmer": "^1.0.1",
     "workbox-cacheable-response": "^7.3.0",
     "workbox-expiration": "^7.3.0",
     "workbox-precaching": "^7.3.0",

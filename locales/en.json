@@ -48,7 +48,7 @@
   },
   "student": {
     "dashboard": {
-      "title": "Student Dashboard",
+      "title": "Dashboard",
       "welcomeMessage": "Welcome back!",
       "todaySchedule": "Today's Schedule",
       "upcomingExams": "Upcoming Exams",
@@ -115,6 +115,7 @@
       "studentInfoError": "Student information not loaded yet. Please try again in a moment.",
       "requestError": "Failed to send request. Please try again.",
       "requestSuccess": "Request sent successfully!",
+      "leaveRequestSuccess": "Leave request sent successfully!",
       "noRecentActivity": "No recent activity.",
       "shiftInfo": {
         "morningShift": "Morning",
@@ -150,7 +151,9 @@
       "pendingReview": "Pending Review",
       "leaveEarlyApproved": "Leave Early Approved",
       "leaveEarlyPending": "Leave Early Request Pending",
+      "approvedMessage": "Your leave early request has been approved.",
       "pendingMessage": "You already have a leave early request pending for today.",
+      "todayOnly": "Today Only",
       "fillAllFields": "Please fill all required fields",
       "leaveDetailsPlaceholder": "Please provide details about why you need to leave early...",
       "quickSelect": "Quick select",

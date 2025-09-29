@@ -124,8 +124,11 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
       try {
         const enrollmentResult = await canEnrollInClass(studentClass, shift, onWaitlist, studentData?.id);
         setEnrollmentCheck(enrollmentResult);
-        
-        if (!enrollmentResult.canEnroll && !onWaitlist) {
+
+        // For editing existing students, only show capacity warnings if they're moving to a different class/shift
+        const isMovingToDifferentClass = studentData?.class !== studentClass || studentData?.shift !== shift;
+
+        if (!enrollmentResult.canEnroll && !onWaitlist && isMovingToDifferentClass) {
           setCapacityWarning(enrollmentResult.message);
         } else {
           setCapacityWarning(null);
@@ -949,7 +952,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
         )}
         <button
           type="submit"
-          disabled={loading || (enrollmentCheck && !enrollmentCheck.canEnroll && !onWaitlist)}
+          disabled={loading || (enrollmentCheck && !enrollmentCheck.canEnroll && !onWaitlist && (studentData?.class !== studentClass || studentData?.shift !== shift))}
           className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Updating...' : 'Update Student'}

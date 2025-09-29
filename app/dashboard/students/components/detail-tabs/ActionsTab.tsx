@@ -144,10 +144,29 @@ export const ActionsTab: React.FC<ActionsTabProps> = ({
               )}
             </button>
 
-            {/* Placeholder for future action */}
-            <div className="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Future Action</p>
-            </div>
+            {/* Parent Telegram Registration Button */}
+            <button
+              onClick={() => {
+                const botUsername = 'YourSchoolBot'; // Replace with your actual bot username
+                const token = btoa(`parent_${student.id}_${Date.now()}`); // Generate unique token
+                const telegramUrl = `https://t.me/${botUsername}?start=parent_${token}`;
+                
+                // Copy to clipboard and show instructions
+                navigator.clipboard.writeText(telegramUrl).then(() => {
+                  toast.success('Parent Telegram link copied! Share this with the parent to receive notifications about their child.');
+                }).catch(() => {
+                  // Fallback: show the URL in a modal or alert
+                  alert(`Parent Telegram URL: ${telegramUrl}\n\nShare this link with the parent to receive notifications.`);
+                });
+              }}
+              className="group relative inline-flex items-center justify-center w-full px-5 py-4 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-teal-500/25 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-700"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.374 0 0 5.373 0 12s5.374 12 12 12 12-5.373 12-12S18.626 0 12 0zm5.568 8.16c-.169 1.858-.896 6.728-.896 6.728-.302 1.507-1.13 1.777-2.285 1.105l-5.59-3.723-2.697 2.607c-.301.301-.56.56-1.148.56l.415-5.97L17.526 4.44c.497-.442-.108-.688-.773-.246L7.284 10.554l-5.79-1.805c-1.257-.395-1.284-1.257.263-1.865L18.943 1.23c1.048-.382 1.966.232 1.625 1.93z"/>
+              </svg>
+              <span className="ml-3">Parent Telegram</span>
+              <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </button>
           </div>
         </div>
       </div>

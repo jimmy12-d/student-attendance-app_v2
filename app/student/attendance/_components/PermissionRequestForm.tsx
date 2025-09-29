@@ -15,6 +15,7 @@ import { mdiHospital, mdiAccountGroup, mdiSchool } from '@mdi/js';
 import { mdiEmoticonSickOutline } from '@mdi/js';
 import { mdiCalendar, mdiClockOutline, mdiHelpCircleOutline, mdiTextBoxOutline, mdiSend } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
+import { split } from 'split-khmer';
 
 type Props = {
   onSuccess?: () => void;
@@ -43,7 +44,15 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
       .test(
         'min-words',
         t('validation.detailsMinWords'),
-        (value) => (value || '').split(/\s+/).filter(Boolean).length >= 10
+        (value) => {
+          const text = value || '';
+          const hasKhmer = /[\u1780-\u17FF]/.test(text);
+          if (hasKhmer) {
+            return split(text).length >= 10;
+          } else {
+            return text.split(/\s+/).filter(Boolean).length >= 10;
+          }
+        }
       ),
   });
 
@@ -112,11 +121,13 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
         }}
         validationSchema={validationSchema}
         onSubmit={handleSubmit}
+        validateOnBlur={true}
+        validateOnChange={true}
       >
         {({ values, isSubmitting, setFieldValue }) => (
           
           <Form className="space-y-2">
-            <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField labelFor="permissionStartDate">
                 {(fieldData) => (
                   <div>
@@ -127,6 +138,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
                       </div>
                     </label>
                     <Field id="permissionStartDate" name="permissionStartDate" type="date" {...fieldData} />
+                    <ErrorMessage name="permissionStartDate" component="div" className="text-red-500 text-sm mt-1" />
                   </div>
                 )}
               </FormField>
@@ -143,6 +155,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
                       value={values.duration}
                       onChange={(value) => setFieldValue('duration', value)}
                     />
+                    <ErrorMessage name="duration" component="div" className="text-red-500 text-sm mt-1" />
                   </div>
                 )}
               </FormField>
@@ -164,6 +177,7 @@ export const PermissionRequestForm = ({ onSuccess }: Props) => {
                       fieldData={fieldData}
                       id="reason"
                     />
+                    <ErrorMessage name="reason" component="div" className="text-red-500 text-sm mt-1" />
                   </div>
                 )}
               </FormField>

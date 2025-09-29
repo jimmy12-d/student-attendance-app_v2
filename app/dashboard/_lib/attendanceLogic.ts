@@ -78,6 +78,11 @@ export const getStudentDailyStatus = (
     if (studentCreatedAt && checkDate <= studentCreatedAt && (!attendanceRecord || !attendanceRecord.status || attendanceRecord.status !== "present")) return { status: "Not Yet Enrolled" };
     if (!isSchoolDay(checkDate, classStudyDays)) return { status: "No School" };
 
+    // Check for permissions first - permissions take precedence over attendance records
+    if (approvedPermissionsForStudent && approvedPermissionsForStudent.some(p => checkDateStr >= p.permissionStartDate && checkDateStr <= p.permissionEndDate)) {
+        return { status: "Permission" };
+    }
+
     if (attendanceRecord) {
         // Check if the attendance record has a valid status property
         if (!attendanceRecord.status) {
@@ -94,10 +99,6 @@ export const getStudentDailyStatus = (
         }
         return { status, time };
     } else { // No attendance record
-        if (approvedPermissionsForStudent && approvedPermissionsForStudent.some(p => checkDateStr >= p.permissionStartDate && checkDateStr <= p.permissionEndDate)) {
-            return { status: "Permission" };
-        }
-
         if (checkDate.getTime() === today.getTime()) {
             const studentShiftKey = student.shift;
             const shiftConfig = (studentClassKey && classConfig?.shifts) ? classConfig.shifts[studentShiftKey] : undefined;

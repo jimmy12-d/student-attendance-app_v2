@@ -606,14 +606,14 @@ const AttendancePage = () => {
            </div>
        </SlideInPanel>
 
-       <div className="space-y-3 px-2 pb-6 mt-4">
+       <div className="space-y-3 px-2 pb-6 mt-2">
           {/* Today's Status Card - Mobile Enhanced */}
           {loading ? (
             <div className="animate-pulse bg-gray-200 dark:bg-slate-700 h-36 rounded-2xl mx-1"></div>
           ) : (
             <div className="relative overflow-hidden mx-1">
               {todayRecord && (
-                <div className={`${getStatusStyles(todayRecord.status).cardBg} rounded-2xl px-6 py-4 shadow-xl relative`}>
+                <div className={`${getStatusStyles(todayRecord.status).cardBg} rounded-2xl px-4 py-4 shadow-xl relative`}>
                   {/* Date at bottom right */}
                   <div className="absolute bottom-3 right-4">
                     <p className={khmerFont('text-white-900 text-sm font-medium')}>
@@ -640,13 +640,13 @@ const AttendancePage = () => {
                     </div>
                   )}
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between pr-25">
                     <div className="flex items-center space-x-4 flex-1 min-w-0">
                       <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
                         <Icon path={getStatusStyles(todayRecord.status).icon} size={28} className="text-white" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className={khmerFont('text-white text-xl font-semibold leading-tight')}>{t('status')}</h3>
+                        <h3 className={khmerFont('text-white text-lg sm:text-xl font-semibold leading-tight')}>{t('status')}</h3>
                         <p className={khmerFont('text-white/80 text-base leading-tight')}>
                           { t(todayRecord.status)}
                           {todayRecord.timestamp && (
