@@ -21,13 +21,22 @@ const TELEGRAM_GATEWAY_API_URL = "https://gatewayapi.telegram.org";
 // --- END: Configuration for Telegram Gateway ---
 
 // --- START: Telegram Bot Configuration ---
-// The bot will be initialized when needed using the secret token
-let telegramBot = null;
-const initializeTelegramBot = () => {
-    if (!telegramBot && process.env.TELEGRAM_BOT_TOKEN) {
-        telegramBot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
+// The bots will be initialized when needed using the secret tokens
+let parentBot = null;
+let studentBot = null;
+
+const initializeParentBot = () => {
+    if (!parentBot && process.env.TELEGRAM_PARENT_BOT_TOKEN) {
+        parentBot = new TelegramBot(process.env.TELEGRAM_PARENT_BOT_TOKEN, { polling: false });
     }
-    return telegramBot;
+    return parentBot;
+};
+
+const initializeStudentBot = () => {
+    if (!studentBot && process.env.TELEGRAM_STUDENT_BOT_TOKEN) {
+        studentBot = new TelegramBot(process.env.TELEGRAM_STUDENT_BOT_TOKEN, { polling: false });
+    }
+    return studentBot;
 };
 // --- END: Telegram Bot Configuration ---
 
@@ -61,6 +70,93 @@ const normalizePhone = (phoneNumber) => {
         return '0' + phoneNumber;
     }
     return phoneNumber;
+};
+
+// --- Helper functions for Khmer formatting ---
+const formatTimeInKhmer = (date) => {
+    const khmerNumbers = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+    const khmerMonths = [
+        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+    ];
+    
+    const convertToKhmerNumber = (num) => {
+        return num.toString().split('').map(digit => khmerNumbers[parseInt(digit)]).join('');
+    };
+    
+    const day = convertToKhmerNumber(date.getDate());
+    const month = khmerMonths[date.getMonth()];
+    const year = convertToKhmerNumber(date.getFullYear());
+    const hours = convertToKhmerNumber(date.getHours().toString().padStart(2, '0'));
+    const minutes = convertToKhmerNumber(date.getMinutes().toString().padStart(2, '0'));
+    
+    return `ម៉ោង${hours}:${minutes} ថ្ងៃទី${day} ខែ${month} ឆ្នាំ${year}`;
+};
+
+const formatClassInKhmer = (classLevel) => {
+    if (!classLevel) return 'មិនបានកំណត់';
+    
+    // Extract class number from various formats like "Grade 7", "Class 7", "7", etc.
+    const classMatch = classLevel.toString().match(/\d+/);
+    if (classMatch) {
+        const khmerNumbers = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+        const convertToKhmerNumber = (num) => {
+            return num.toString().split('').map(digit => khmerNumbers[parseInt(digit)]).join('');
+        };
+        return `ថ្នាក់ទី${convertToKhmerNumber(classMatch[0])}`;
+    }
+    
+    return classLevel; // Return as-is if no number found
+};
+
+const calculateAttendanceStatus = (attendanceTime, classStartTime) => {
+    if (!classStartTime) return null;
+    
+    const khmerNumbers = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+    const convertToKhmerNumber = (num) => {
+        return num.toString().split('').map(digit => khmerNumbers[parseInt(digit)]).join('');
+    };
+    
+    // Parse class start time (assuming format like "07:30" or "7:30")
+    const startTimeParts = classStartTime.split(':');
+    if (startTimeParts.length !== 2) return null;
+    
+    const startHour = parseInt(startTimeParts[0]);
+    const startMinute = parseInt(startTimeParts[1]);
+    
+    // Create start time date object
+    const startTimeDate = new Date(attendanceTime);
+    startTimeDate.setHours(startHour, startMinute, 0, 0);
+    
+    // Calculate difference in minutes
+    const diffMs = attendanceTime.getTime() - startTimeDate.getTime();
+    const diffMinutes = Math.round(diffMs / (1000 * 60));
+    
+    const formatStartTime = `${convertToKhmerNumber(startHour.toString().padStart(2, '0'))}:${convertToKhmerNumber(startMinute.toString().padStart(2, '0'))}`;
+    
+    if (diffMinutes < 0) {
+        // Early arrival
+        const earlyMinutes = Math.abs(diffMinutes);
+        return {
+            startTime: formatStartTime,
+            status: `មកមុនម៉ោង ${convertToKhmerNumber(earlyMinutes.toString())} នាទី`,
+            statusIcon: '🟢'
+        };
+    } else if (diffMinutes <= 15) {
+        // On time (within 15 minutes)
+        return {
+            startTime: formatStartTime,
+            status: 'មកត្រឹមម៉ោង',
+            statusIcon: '✅'
+        };
+    } else {
+        // Late arrival
+        return {
+            startTime: formatStartTime,
+            status: `យឺតម៉ោង ${convertToKhmerNumber(diffMinutes.toString())} នាទី`,
+            statusIcon: '🟡'
+        };
+    }
 };
 
 // --- Helper functions for password management ---
@@ -107,7 +203,7 @@ const storeTempRegistrationToken = async (studentId, token) => {
 
 const generateQRCodeURL = (token) => {
     // Use a QR code generator service or create a URL that contains the token
-    const botUsername = 'rodwell_portal_password_bot'; // Your actual bot username
+    const botUsername = 'rodwell_portal_password_bot'; // Student portal bot username
     const message = encodeURIComponent(token);
     return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://t.me/${botUsername}?start=${token}`;
 };
@@ -128,15 +224,15 @@ const verifyPassword = async (password, hash) => {
  */
 exports.telegramWebhook = onRequest({
     region: "asia-southeast1",
-    secrets: ["TELEGRAM_BOT_TOKEN"]
+    secrets: ["TELEGRAM_STUDENT_BOT_TOKEN"]
 }, async (req, res) => {
     if (req.method !== 'POST') {
         return res.status(405).send('Method Not Allowed');
     }
 
-    const bot = initializeTelegramBot();
+    const bot = initializeStudentBot();
     if (!bot) {
-        console.error("Telegram bot not initialized - missing token");
+        console.error("Student bot not initialized - missing token");
         return res.status(500).send('Bot configuration error');
     }
 
@@ -169,11 +265,12 @@ exports.telegramWebhook = onRequest({
             // Handle /start command with optional token parameter
             const parts = text.split(' ');
             if (parts.length > 1) {
-                // /start TOKEN - from QR code
+                // /start TOKEN - student registration from QR code
                 const token = parts.slice(1).join(' ').trim();
                 await handleStartWithToken(bot, chatId, userId, token);
+                return res.status(200).send('OK');
             } else {
-                // Regular /start command
+                // Regular /start command - student registration flow
                 await handleStartCommand(bot, chatId, userId);
             }
         } else if (text === '/changepassword') {
@@ -193,6 +290,279 @@ exports.telegramWebhook = onRequest({
 });
 
 /**
+ * [Callable Function]
+ * Set up Telegram webhook for the parent bot
+ */
+exports.setupTelegramWebhook = onCall({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_STUDENT_BOT_TOKEN"]
+}, async (request) => {
+    try {
+        const bot = initializeStudentBot();
+        if (!bot) {
+            throw new HttpsError('Student bot not initialized');
+        }
+
+        // Get the webhook URL for your Firebase function
+        const webhookUrl = `https://asia-southeast1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/telegramWebhook`;
+        
+        // Set the webhook
+        const response = await bot.setWebHook(webhookUrl);
+        
+        console.log('Webhook setup result:', response);
+        
+        // Get webhook info to verify
+        const webhookInfo = await bot.getWebHookInfo();
+        
+        return {
+            success: true,
+            webhookUrl: webhookUrl,
+            webhookInfo: webhookInfo
+        };
+        
+    } catch (error) {
+        console.error('Error setting up webhook:', error);
+        throw new HttpsError('internal', `Failed to setup webhook: ${error.message}`);
+    }
+});
+
+/**
+ * [Callable Function]
+ * Test Telegram bot connection and send a test message
+ */
+exports.testTelegramBot = onCall({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_STUDENT_BOT_TOKEN"]
+}, async (request) => {
+    try {
+        const { chatId } = request.data;
+        
+        if (!chatId) {
+            throw new HttpsError('invalid-argument', 'Chat ID is required');
+        }
+        
+        const bot = initializeStudentBot();
+        if (!bot) {
+            throw new HttpsError('internal', 'Student bot not initialized');
+        }
+
+        // Send a test message
+        await bot.sendMessage(chatId, '🤖 Test message from Parent Notification Bot!\n\nBot is working correctly! ✅');
+        
+        return { success: true, message: 'Test message sent successfully' };
+        
+    } catch (error) {
+        console.error('Error testing bot:', error);
+        throw new HttpsError('internal', `Bot test failed: ${error.message}`);
+    }
+});
+
+/**
+ * [HTTP Function]
+ * Webhook handler for Parent Telegram bot
+ * Handles parent registration and notification commands
+ */
+exports.parentBotWebhook = onRequest({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
+}, async (req, res) => {
+    if (req.method !== 'POST') {
+        return res.status(405).send('Method Not Allowed');
+    }
+
+    const bot = initializeParentBot();
+    if (!bot) {
+        console.error("Parent bot not initialized - missing token");
+        return res.status(500).send('Bot configuration error');
+    }
+
+    try {
+        const { message, callback_query } = req.body;
+        
+        if (!message) {
+            return res.status(200).send('OK');
+        }
+
+        const chatId = message.chat.id;
+        const text = message.text;
+        const userId = message.from.id;
+
+        console.log(`Parent bot received message from chatId ${chatId}: ${text}`);
+
+        // Handle non-text messages
+        if (!text || typeof text !== 'string') {
+            console.log(`Non-text message received from parent bot chatId ${chatId}, ignoring`);
+            return res.status(200).send('OK');
+        }
+
+        if (text.startsWith('/start')) {
+            // Handle /start command with optional token parameter
+            const parts = text.split(' ');
+            if (parts.length > 1) {
+                // /start TOKEN - parent registration
+                const token = parts.slice(1).join(' ').trim();
+                if (token.startsWith('parent_')) {
+                    await handleParentStartCommand(bot, chatId, userId, token);
+                    return res.status(200).send('OK');
+                }
+            }
+            
+            // Regular /start command - check if this is a parent trying to register
+            const parentQuery = await db.collection('parentNotifications')
+                .where('telegramUserId', '==', userId.toString())
+                .where('isActive', '==', true)
+                .get();
+            
+            if (!parentQuery.empty) {
+                // User is already registered as a parent
+                const parentRegistrations = parentQuery.docs.map(doc => doc.data());
+                const studentNamesList = parentRegistrations.map(p => {
+                    // Use Khmer name if available, otherwise use English name
+                    const displayName = p.studentKhmerName || p.studentName;
+                    return `• ${displayName}`;
+                }).join('\n');
+                
+                await bot.sendMessage(chatId, 
+                    `👋 សួស្តីបង! បងបានចុះឈ្មោះទទួលការជូនដំណឹងរួចរាល់ហើយសម្រាប់៖\n\n` +
+                    `👤 **សិស្ស:**\n${studentNamesList}\n\n` +
+                    `បងនឹងបន្តទទួលបានការជូនដំណឹងអំពីវត្តមាន និងការស្នើសុំការអនុញ្ញាតរបស់កូនរបស់បង។\n\n` +
+                    `ប្រសិនបើបងត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែម សូមស្នើសុំតំណចុះឈ្មោះថ្មីពីសាលា។`,
+                    { parse_mode: 'Markdown' }
+                );
+                return res.status(200).send('OK');
+            }
+            
+            // Not registered yet - send welcome message
+            await bot.sendMessage(chatId, 
+                `👋 សួស្តីបង! ចូលមកកាន់ប្រព័ន្ធជូនដំណឹងវត្តមានសាលា Rodwell។\n\n` +
+                `🔍 បងមិនទាន់បានចុះឈ្មោះទទួលការជូនដំណឹងអំពីកូនរបស់បងនៅឡើយទេ។\n\n` +
+                `ដើម្បីចុះឈ្មោះទទួលការជូនដំណឹងអំពីវត្តមាន និងការស្នើសុំការអនុញ្ញាតរបស់កូន៖\n` +
+                `1. ទាក់ទងសាលារបស់កូនរបស់បង\n` +
+                `2. ស្នើសុំតំណចុះឈ្មោះសម្រាប់ម្តាយឪពុក\n` +
+                `3. ចុចតំណដើម្បីចុះឈ្មោះ\n\n` +
+                `📚 បន្ទាប់ពីចុះឈ្មោះ បងនឹងទទួលបានការជូនដំណឹងនៅពេល៖\n` +
+                `• កូនរបស់បងមកដល់សាលា\n` +
+                `• កូនរបស់បងស្នើសុំការអនុញ្ញាតចាកចេញមុន\n` +
+                `• ការស្នើសុំអនុញ្ញាតត្រូវបានយល់ព្រម ឬបដិសេធ`,
+                { parse_mode: 'Markdown' }
+            );
+        } else if (text === '/parent' || text === '/parentinfo') {
+            await handleParentInfoCommand(bot, chatId, userId);
+        } else if (text === '/help') {
+            await bot.sendMessage(chatId, 
+                `📖 **ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន**\n\n` +
+                `🔸 **/start** - ចាប់ផ្តើម ឬពិនិត្យស្ថានភាពចុះឈ្មោះ\n` +
+                `🔸 **/parent** - មើលពត៌មានការចុះឈ្មោះរបស់បង\n` +
+                `🔸 **/help** - បង្ហាញមេនុយជំនួយនេះ\n\n` +
+                `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
+                { parse_mode: 'Markdown' }
+            );
+        } else {
+            // Send helpful message for unrecognized commands
+            await bot.sendMessage(chatId, 
+                `ខ្ញុំមិនយល់ពាក្យបញ្ជានេះទេ។ សូមវាយ /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។`
+            );
+        }
+
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error('Error processing parent webhook:', error);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+/**
+ * [Callable Function]
+ * Set up Telegram webhook for the parent bot
+ */
+exports.setupParentBotWebhook = onCall({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
+}, async (request) => {
+    try {
+        const bot = initializeParentBot();
+        if (!bot) {
+            throw new HttpsError('internal', 'Parent bot not initialized');
+        }
+
+        // Get the webhook URL for the parent bot
+        const webhookUrl = `https://asia-southeast1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/parentBotWebhook`;
+        
+        // Set the webhook
+        const response = await bot.setWebHook(webhookUrl);
+        
+        console.log('Parent bot webhook setup result:', response);
+        
+        // Get webhook info to verify
+        const webhookInfo = await bot.getWebHookInfo();
+        
+        return {
+            success: true,
+            webhookUrl: webhookUrl,
+            webhookInfo: webhookInfo
+        };
+        
+    } catch (error) {
+        console.error('Error setting up parent webhook:', error);
+        throw new HttpsError('internal', `Failed to setup parent webhook: ${error.message}`);
+    }
+});
+
+/**
+ * Handle /parent or /parentinfo command - show parent registration status
+ */
+const handleParentInfoCommand = async (bot, chatId, userId) => {
+    try {
+        // Check if this user is registered as a parent
+        const parentQuery = await db.collection('parentNotifications')
+            .where('telegramUserId', '==', userId.toString())
+            .where('isActive', '==', true)
+            .get();
+        
+        if (parentQuery.empty) {
+            await bot.sendMessage(chatId, 
+                `👋 Hello!\n\n` +
+                `🔍 You are not currently registered to receive parent notifications.\n\n` +
+                `To register for notifications about your child's attendance and permissions:\n` +
+                `1. Contact your child's school\n` +
+                `2. Ask for a parent registration link\n` +
+                `3. Click the link to register\n\n` +
+                `📚 This bot sends notifications when:\n` +
+                `• Your child arrives at school\n` +
+                `• Your child requests permission to leave early\n` +
+                `• Permission requests are approved or denied`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+        
+        // User is registered as a parent - show their registrations
+        const parentRegistrations = parentQuery.docs.map(doc => {
+            const data = doc.data();
+            return `👤 **${data.studentName}**\n` +
+                   `   🏫 Class: ${data.studentClass || 'Not specified'}\n` +
+                   `   ⏰ Shift: ${data.studentShift || 'Not specified'}\n` +
+                   `   📅 Registered: ${data.registeredAt.toDate().toLocaleDateString()}`;
+        });
+        
+        const message = `👋 Parent Notification Status\n\n` +
+                       `✅ You are registered to receive notifications for:\n\n` +
+                       `${parentRegistrations.join('\n\n')}\n\n` +
+                       `📱 **You will receive notifications when:**\n` +
+                       `• Your child arrives at school\n` +
+                       `• Your child requests permission to leave early\n` +
+                       `• Permission requests are approved or denied\n\n` +
+                       `Need to register for additional students? Contact the school for a new registration link.`;
+        
+        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        
+    } catch (error) {
+        console.error('Error in handleParentInfoCommand:', error);
+        await bot.sendMessage(chatId, "❌ An error occurred while checking your parent registration status.");
+    }
+};
+
+/**
  * Handle /start command for parent registration
  */
 const handleParentStartCommand = async (bot, chatId, userId, token) => {
@@ -204,14 +574,14 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
         const studentId = decodedToken.split('_')[1];
         
         if (!studentId) {
-            await bot.sendMessage(chatId, "❌ Invalid registration token. Please request a new link from your child's school.");
+            await bot.sendMessage(chatId, "❌ ថូខនិងចុះឈ្មោះមិនត្រឹមត្រូវ។ សូមស្នើសុំតំណថ្មីពីសាលារបស់កូនរបស់បង។");
             return;
         }
 
         // Get student information
         const studentDoc = await db.collection('students').doc(studentId).get();
         if (!studentDoc.exists) {
-            await bot.sendMessage(chatId, "❌ Student not found. Please contact the school for assistance.");
+            await bot.sendMessage(chatId, "❌ រកមិនឃើញសិស្ស។ សូមទាក់ទងសាលាសម្រាប់ជំនួយ។");
             return;
         }
 
@@ -223,8 +593,10 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
             telegramUserId: userId.toString(),
             studentId: studentId,
             studentName: student.fullName || 'Unknown Student',
+            studentKhmerName: student.khmerName || student.fullNameKhmer || student.nameKhmer || null, // Try different possible field names
             studentClass: student.class || '',
             studentShift: student.shift || '',
+            classStartTime: student.startTime || null, // Add class start time from student data
             registeredAt: admin.firestore.Timestamp.now(),
             isActive: true
         };
@@ -232,18 +604,18 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
         await db.collection('parentNotifications').doc(`${studentId}_${chatId}`).set(parentData);
         
         // Send welcome message
-        const welcomeMessage = `🎉 Welcome! You have successfully registered to receive notifications for:
+        const welcomeMessage = `🎉 សូមស្វាគមន៍! បងបានចុះឈ្មោះដោយជោគជ័យដើម្បីទទួលបានការជូនដំណឹងសម្រាប់៖
 
-👤 **Student:** ${student.fullName}
-🏫 **Class:** ${student.class || 'Not specified'}
-⏰ **Shift:** ${student.shift || 'Not specified'}
+👤 **សិស្ស:** ${student.fullName}
+🏫 **ថ្នាក់:** ${student.class || 'មិនបានបញ្ជាក់'}
+⏰ **វេន:** ${student.shift || 'មិនបានបញ្ជាក់'}
 
-You will now receive notifications when:
-✅ Your child arrives at school
-📝 Your child requests permission to leave early
-🚪 Your child's permission requests are approved/denied
+បងនឹងទទួលបានការជូនដំណឹងនៅពេល៖
+✅ កូនរបស់បងមកដល់សាលា
+📝 កូនរបស់បងស្នើសុំការអនុញ្ញាតចាកចេញមុន
+🚪 ការស្នើសុំអនុញ្ញាតរបស់កូនរបស់បងត្រូវបានយល់ព្រម/បដិសេធ
 
-Type /help to see available commands.`;
+វាយ /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។`;
 
         await bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
         
@@ -251,7 +623,7 @@ Type /help to see available commands.`;
         
     } catch (error) {
         logger.error('Error in parent registration:', error);
-        await bot.sendMessage(chatId, "❌ Registration failed. Please try again or contact school support.");
+        await bot.sendMessage(chatId, "❌ ការចុះឈ្មោះបានបរាជ័យ។ សូមព្យាយាមម្តងទៀត ឬទាក់ទងការគាំទ្រ​សាលា។");
     }
 };
 
@@ -2296,6 +2668,209 @@ exports.linkStudentProfileWithVerifiedNumber = onCall({
       }
     };
   });
+
+/**
+ * [Callable Function]
+ * Send Telegram notification to parent when student attendance is marked
+ */
+exports.notifyParentAttendance = onCall({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
+}, async (request) => {
+    try {
+        logger.info('📱 notifyParentAttendance called with data:', request.data);
+        const { studentId, studentName, timestamp, method = 'face-scan' } = request.data;
+        
+        if (!studentId || !studentName) {
+            logger.error('Missing required fields:', { studentId, studentName });
+            throw new HttpsError('invalid-argument', 'Student ID and name are required');
+        }
+
+        // Get parent notification settings for this student
+        const parentQuery = await db.collection('parentNotifications')
+            .where('studentId', '==', studentId)
+            .where('isActive', '==', true)
+            .get();
+
+        if (parentQuery.empty) {
+            logger.info(`No active parent notifications found for student ${studentId}`);
+            return { success: true, notificationsSent: 0 };
+        }
+
+        // Initialize Telegram parent bot
+        const bot = initializeParentBot();
+        if (!bot) {
+            logger.error('Parent bot not initialized - missing TELEGRAM_PARENT_BOT_TOKEN');
+            throw new HttpsError('internal', 'Parent bot configuration error');
+        }
+
+        let notificationsSent = 0;
+        const attendanceDate = timestamp ? new Date(timestamp) : new Date();
+        // Adjust for Cambodia timezone
+        const cambodiaTime = new Date(attendanceDate.getTime() + (7 * 60 * 60 * 1000));
+        const attendanceTime = formatTimeInKhmer(cambodiaTime);
+
+        for (const doc of parentQuery.docs) {
+            const parentData = doc.data();
+            const chatId = parentData.chatId;
+
+            try {
+                // Use Khmer name if available, otherwise use regular name
+                const khmerName = parentData.studentKhmerName || studentName;
+                const formattedClass = formatClassInKhmer(parentData.studentClass);
+                
+                // Calculate attendance status if start time is available
+                const attendanceStatus = parentData.classStartTime ? 
+                    calculateAttendanceStatus(cambodiaTime, parentData.classStartTime) : null;
+                
+                let message = `🎒 **ការជូនដំណឹងវត្តមាន**
+
+👤 **សិស្ស:** ${khmerName}
+🏫 **ថ្នាក់:** ${formattedClass}
+⏰ **ពេលវេលា:** ${attendanceTime}`;
+                
+                // Add class start time and status if available
+                if (attendanceStatus) {
+                    message += `
+� **ម៉ោងចាប់ផ្តើម:** ${attendanceStatus.startTime}
+${attendanceStatus.statusIcon} **ស្ថានភាព:** ${attendanceStatus.status}`;
+                }
+                
+                message += `
+
+✅ កូនរបស់បងបានមកដល់សាលាដោយសុវត្ថិភាព!`;
+
+                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                notificationsSent++;
+                
+                logger.info(`Attendance notification sent to parent chat ${chatId} for student ${studentId}`);
+                
+            } catch (error) {
+                logger.error(`Failed to send attendance notification to chat ${chatId}:`, error);
+                
+                // If it's a blocked bot error, deactivate notifications for this parent
+                if (error.response && error.response.body && 
+                    (error.response.body.error_code === 403 || error.response.body.description?.includes('blocked'))) {
+                    await doc.ref.update({ isActive: false, deactivatedAt: admin.firestore.Timestamp.now() });
+                    logger.info(`Deactivated notifications for blocked chat ${chatId}`);
+                }
+            }
+        }
+
+        return { success: true, notificationsSent };
+        
+    } catch (error) {
+        logger.error('Error in notifyParentAttendance:', error);
+        throw new HttpsError('internal', 'Failed to send parent notification');
+    }
+});
+
+/**
+ * [Callable Function]
+ * Send Telegram notification to parent when student requests permission
+ */
+exports.notifyParentPermissionRequest = onCall({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
+}, async (request) => {
+    try {
+        const { 
+            studentId, 
+            studentName, 
+            permissionType = 'leave early', 
+            reason, 
+            requestTime,
+            status = 'pending'
+        } = request.data;
+        
+        if (!studentId || !studentName) {
+            throw new HttpsError('invalid-argument', 'Student ID and name are required');
+        }
+
+        // Get parent notification settings for this student
+        const parentQuery = await db.collection('parentNotifications')
+            .where('studentId', '==', studentId)
+            .where('isActive', '==', true)
+            .get();
+
+        if (parentQuery.empty) {
+            logger.info(`No active parent notifications found for student ${studentId}`);
+            return { success: true, notificationsSent: 0 };
+        }
+
+        // Initialize Telegram bot
+        if (!telegramBot) {
+            initializeTelegramBot();
+        }
+
+        let notificationsSent = 0;
+        const requestDate = requestTime ? new Date(requestTime) : new Date();
+        // Adjust for Cambodia timezone
+        const cambodiaTime = new Date(requestDate.getTime() + (7 * 60 * 60 * 1000));
+        const formattedTime = formatTimeInKhmer(cambodiaTime);
+
+        for (const doc of parentQuery.docs) {
+            const parentData = doc.data();
+            const chatId = parentData.chatId;
+
+            try {
+                let icon = '';
+                let statusText = '';
+                
+                switch (status.toLowerCase()) {
+                    case 'approved':
+                        icon = '✅';
+                        statusText = 'បានយល់ព្រម';
+                        break;
+                    case 'denied':
+                        icon = '❌';
+                        statusText = 'បានបដិសេធ';
+                        break;
+                    default:
+                        icon = '📝';
+                        statusText = 'រង់ចាំការយល់ព្រម';
+                }
+
+                // Use Khmer name if available, otherwise use regular name
+                const khmerName = parentData.studentKhmerName || studentName;
+                const formattedClass = formatClassInKhmer(parentData.studentClass);
+
+                const message = `${icon} **ការស្នើសុំអនុញ្ញាត ${statusText}**
+
+👤 **សិស្ស:** ${khmerName}
+🏫 **ថ្នាក់:** ${formattedClass}
+📋 **ប្រភេទ:** ${permissionType}
+⏰ **ពេលវេលាស្នើសុំ:** ${formattedTime}
+${reason ? `📝 **ហេតុផល:** ${reason}` : ''}
+
+${status === 'pending' ? 'ℹ️ កំពុងរង់ចាំការយល់ព្រមពីគ្រូ...' : 
+  status === 'approved' ? '✅ ការអនុញ្ញាតត្រូវបានយល់ព្រមដោយគ្រូ។' : 
+  '❌ ការស្នើសុំអនុញ្ញាតត្រូវបានបដិសេធ។'}`;
+
+                await telegramBot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                notificationsSent++;
+                
+                logger.info(`Permission notification sent to parent chat ${chatId} for student ${studentId}`);
+                
+            } catch (error) {
+                logger.error(`Failed to send permission notification to chat ${chatId}:`, error);
+                
+                // If it's a blocked bot error, deactivate notifications for this parent
+                if (error.response && error.response.body && 
+                    (error.response.body.error_code === 403 || error.response.body.description?.includes('blocked'))) {
+                    await doc.ref.update({ isActive: false, deactivatedAt: admin.firestore.Timestamp.now() });
+                    logger.info(`Deactivated notifications for blocked chat ${chatId}`);
+                }
+            }
+        }
+
+        return { success: true, notificationsSent };
+        
+    } catch (error) {
+        logger.error('Error in notifyParentPermissionRequest:', error);
+        throw new HttpsError('internal', 'Failed to send parent permission notification');
+    }
+});
 
 // The 'recognizeAndMarkAttendance' function is now obsolete. Its logic has been
 // moved to the dedicated Python Cloud Run service for better performance and scalability.

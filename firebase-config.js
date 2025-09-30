@@ -5,6 +5,7 @@ import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth"
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAnalytics, isSupported } from "firebase/analytics";
+import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -28,6 +29,7 @@ if (typeof window !== 'undefined') {
 
 const db = getFirestore(app);
 const storage = getStorage(app);
+const functions = getFunctions(app, 'asia-southeast1'); // Set to match deployed region
 
 // Initialize Analytics only on the client side
 if (typeof window !== 'undefined') {
@@ -38,4 +40,4 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export { app, auth, db, storage };
+export { app, auth, db, storage, functions };

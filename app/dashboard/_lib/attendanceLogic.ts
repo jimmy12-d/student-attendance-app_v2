@@ -6,7 +6,8 @@ import {
     LATE_WINDOW_DURATION_MINUTES,
     cambodianHolidaysSet
 } from "./configForAttendanceLogic";
-import { db } from '../../../firebase-config';
+import { db, functions } from '../../../firebase-config';
+import { httpsCallable } from 'firebase/functions';
 import { toast } from 'sonner';
 
 // Interface for raw attendance data structure from Firestore
@@ -689,6 +690,21 @@ export const markAttendance = async (
       const verifySnapshot = await getDocs(verifyQuery);
       if (verifySnapshot.empty) {
         throw new Error('Attendance record verification failed - record not found after save');
+      }
+
+      // Send parent notification after successful attendance marking
+      try {
+        const notifyParentAttendance = httpsCallable(functions, 'notifyParentAttendance');
+        await notifyParentAttendance({
+          studentId: student.id,
+          studentName: student.fullName,
+          timestamp: now.toISOString(),
+          method: 'attendance-system'
+        });
+        console.log(`📱 Parent notification sent for ${student.fullName}`);
+      } catch (notificationError) {
+        console.warn('Failed to send parent notification:', notificationError);
+        // Don't throw error as this is not critical for core attendance functionality
       }
 
       // Show success message with shift information

@@ -679,7 +679,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                 // Mark attendance for the recognized student (async) with enhanced error handling
                 // Don't pass playSuccessSound since we already played it
                 markAttendance(bestMatch.student, selectedShift || '', classConfigs || {}, () => {}, 3) // 3 retry attempts
-                  .then(attendanceStatus => {
+                  .then((attendanceStatus) => {
                     console.log(`✅ Attendance marking completed for ${bestMatch.student.fullName}: ${attendanceStatus}`);
                     
                     // Notify other components that new attendance was marked
