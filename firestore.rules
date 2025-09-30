@@ -246,6 +246,11 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
+    match /backupHistory/{backupId} {
+      // READ/WRITE: Only admins can access backup history
+      allow read, write: if isAuthorizedUser();
+    }
+    
     
   }
 }

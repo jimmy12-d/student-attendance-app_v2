@@ -178,6 +178,169 @@ const validatePasswordStrength = (password) => {
     return { valid: true, message: "Password is strong." };
 };
 
+// --- Helper functions for payment status ---
+
+/**
+ * Calculate dynamic payment status based on lastPaymentMonth and current date
+ * @param lastPaymentMonth - The last payment month in format "YYYY-MM" or null/undefined
+ * @param currentDate - Optional current date (defaults to new Date())
+ * @returns PaymentStatusResult with status and reason
+ */
+const calculatePaymentStatus = (lastPaymentMonth, currentDate = new Date()) => {
+    // If no payment record exists
+    if (!lastPaymentMonth) {
+        return {
+            status: 'no-record',
+            reason: 'No payment record found'
+        };
+    }
+
+    // Get current year-month in format "YYYY-MM"
+    const currentYearMonth = currentDate.toISOString().slice(0, 7);
+    
+    // Parse the last payment month
+    const lastPaymentYearMonth = lastPaymentMonth.slice(0, 7);
+    
+    // If payment is from a previous month
+    if (lastPaymentYearMonth < currentYearMonth) {
+        return {
+            status: 'unpaid',
+            reason: 'Payment is from a previous month'
+        };
+    }
+    
+    // If payment is from the current month
+    if (lastPaymentYearMonth === currentYearMonth) {
+        // Check if we're in the last 3 days of the month
+        const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+        const currentDay = currentDate.getDate();
+        const daysUntilEndOfMonth = lastDayOfMonth - currentDay;
+        
+        if (daysUntilEndOfMonth <= 2) { // Last 3 days (0, 1, 2 days remaining)
+            return {
+                status: 'unpaid',
+                reason: 'Payment required for next month (last 3 days of current month)'
+            };
+        }
+        
+        return {
+            status: 'paid',
+            reason: 'Payment is current for this month'
+        };
+    }
+    
+    // If payment is from a future month (shouldn't happen in normal cases)
+    return {
+        status: 'paid',
+        reason: 'Payment is from a future month'
+    };
+};
+
+/**
+ * Simple version that returns only the status (for backward compatibility)
+ * @param lastPaymentMonth - The last payment month in format "YYYY-MM" or null/undefined
+ * @param currentDate - Optional current date (defaults to new Date())
+ * @returns PaymentStatus
+ */
+const getPaymentStatus = (lastPaymentMonth, currentDate = new Date()) => {
+    return calculatePaymentStatus(lastPaymentMonth, currentDate).status;
+};
+
+/**
+ * Get user-friendly payment status display text in Khmer
+ * @param status - The payment status
+ * @returns Display text for the status in Khmer
+ */
+const getPaymentStatusDisplayText = (status) => {
+    switch (status) {
+        case 'paid':
+            return 'បានបង់រួច';
+        case 'unpaid':
+            return 'មិនទាន់បានបង់';
+        case 'no-record':
+            return 'គ្មានកំណត់ត្រា';
+        default:
+            return 'មិនស្គាល់';
+    }
+};
+
+/**
+ * Format payment month in Khmer
+ * @param paymentMonth - Payment month in format "YYYY-MM"
+ * @returns Formatted month in Khmer
+ */
+const formatPaymentMonthInKhmer = (paymentMonth) => {
+    if (!paymentMonth) return 'មិនបានកំណត់';
+    
+    const khmerNumbers = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+    const khmerMonths = [
+        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+    ];
+    
+    const convertToKhmerNumber = (num) => {
+        return num.toString().split('').map(digit => khmerNumbers[parseInt(digit)]).join('');
+    };
+    
+    const [year, month] = paymentMonth.split('-');
+    const khmerYear = convertToKhmerNumber(year);
+    const khmerMonth = khmerMonths[parseInt(month) - 1] || month;
+    
+    return `ខែ${khmerMonth} ឆ្នាំ${khmerYear}`;
+};
+
+/**
+ * Get pricing information for a student class
+ * @param studentClass - The student's class name (e.g., "Class 11E")
+ * @returns Price information or null if not found
+ */
+const getClassPricing = async (studentClass) => {
+    try {
+        // First, query the classes collection to find the class and get its type
+        const classQuery = await db.collection('classes')
+            .where('name', '==', studentClass)
+            .limit(1)
+            .get();
+        
+        if (classQuery.empty) {
+            console.log(`No class found with name: ${studentClass}`);
+            return null;
+        }
+        
+        const classData = classQuery.docs[0].data();
+        const classType = classData.type;
+        
+        if (!classType) {
+            console.log(`No type found for class: ${studentClass}`);
+            return null;
+        }
+        
+        console.log(`Found class type: ${classType} for class: ${studentClass}`);
+        
+        // Query the classTypes collection to get the price
+        const classTypeDoc = await db.collection('classTypes').doc(classType).get();
+        
+        if (!classTypeDoc.exists) {
+            console.log(`No classType found with ID: ${classType}`);
+            return null;
+        }
+        
+        const classTypeData = classTypeDoc.data();
+        const price = classTypeData.price;
+        
+        console.log(`Found price: ${price} for classType: ${classType}`);
+        
+        return {
+            classType: classType,
+            price: price
+        };
+        
+    } catch (error) {
+        console.error('Error getting class pricing:', error);
+        return null;
+    }
+};
+
 // --- Helper functions for QR code registration ---
 const generateOneTimeToken = () => {
     // Generate a secure 16-character token
@@ -379,6 +542,12 @@ exports.parentBotWebhook = onRequest({
     try {
         const { message, callback_query } = req.body;
         
+        // Handle callback queries (inline button presses) for exam selection
+        if (callback_query) {
+            await handleParentCallbackQuery(bot, callback_query);
+            return res.status(200).send('OK');
+        }
+        
         if (!message) {
             return res.status(200).send('OK');
         }
@@ -399,10 +568,13 @@ exports.parentBotWebhook = onRequest({
             // Handle /start command with optional token parameter
             const parts = text.split(' ');
             if (parts.length > 1) {
-                // /start TOKEN - parent registration
+                // /start TOKEN - could be parent registration or deep link
                 const token = parts.slice(1).join(' ').trim();
                 if (token.startsWith('parent_')) {
                     await handleParentStartCommand(bot, chatId, userId, token);
+                    return res.status(200).send('OK');
+                } else if (token === 'check_mock_exam_result') {
+                    await handleMockExamResultDeepLink(bot, chatId, userId, token);
                     return res.status(200).send('OK');
                 }
             }
@@ -425,8 +597,13 @@ exports.parentBotWebhook = onRequest({
                 await bot.sendMessage(chatId, 
                     `👋 សួស្តីបង! បងបានចុះឈ្មោះទទួលការជូនដំណឹងរួចរាល់ហើយសម្រាប់៖\n\n` +
                     `👤 **សិស្ស:**\n${studentNamesList}\n\n` +
-                    `បងនឹងបន្តទទួលបានការជូនដំណឹងអំពីវត្តមាន និងការស្នើសុំការអនុញ្ញាតរបស់កូនរបស់បង។\n\n` +
-                    `ប្រសិនបើបងត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែម សូមស្នើសុំតំណចុះឈ្មោះថ្មីពីសាលា។`,
+                    `📚 **សេវាកម្មដែលមាន:**\n` +
+                    `• ការជូនដំណឹងវត្តមាន\n` +
+                    `• ការជូនដំណឹងពេលសិស្សសុំច្បាប់\n` +
+                    `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា\n` +
+                    `• មើលលទ្ធផលប្រលង\n\n` +
+                    `ប្រសិនបើបងត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែម សូមស្នើសុំតំណចុះឈ្មោះថ្មីពីសាលា។\n\n` +
+                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទង \\@RodwellLC076`,
                     { parse_mode: 'Markdown' }
                 );
                 return res.status(200).send('OK');
@@ -443,17 +620,26 @@ exports.parentBotWebhook = onRequest({
                 `📚 បន្ទាប់ពីចុះឈ្មោះ បងនឹងទទួលបានការជូនដំណឹងនៅពេល៖\n` +
                 `• កូនរបស់បងមកដល់សាលា\n` +
                 `• កូនរបស់បងស្នើសុំការអនុញ្ញាតចាកចេញមុន\n` +
-                `• ការស្នើសុំអនុញ្ញាតត្រូវបានយល់ព្រម ឬបដិសេធ`,
+                `• ការស្នើសុំអនុញ្ញាតត្រូវបានយល់ព្រម ឬបដិសេធ\n` +
+                `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សារបស់កូន\n` +
+                `• មើលលទ្ធផលប្រលងរបស់កូន\n\n` +
+                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទង \\@RodwellLC076`,
                 { parse_mode: 'Markdown' }
             );
         } else if (text === '/parent' || text === '/parentinfo') {
             await handleParentInfoCommand(bot, chatId, userId);
+        } else if (text === '/check_mock_exam_result') {
+            await handleMockExamResultDeepLink(bot, chatId, userId, 'check_mock_exam_result');
+        } else if (text === '/payment') {
+            await handlePaymentStatusCommand(bot, chatId, userId);
         } else if (text === '/help') {
             await bot.sendMessage(chatId, 
-                `📖 **ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន**\n\n` +
-                `🔸 **/start** - ចាប់ផ្តើម ឬពិនិត្យស្ថានភាពចុះឈ្មោះ\n` +
-                `🔸 **/parent** - មើលពត៌មានការចុះឈ្មោះរបស់បង\n` +
-                `🔸 **/help** - បង្ហាញមេនុយជំនួយនេះ\n\n` +
+                `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
+                `🔸 */start* - ចាប់ផ្តើម ឬពិនិត្យស្ថានភាពចុះឈ្មោះ\n` +
+                `🔸 */parent* - មើលពត៌មានការចុះឈ្មោះរបស់បង\n` +
+                `🔸 */payment* - ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សារបស់កូន\n` +
+                `🔸 */check\_mock\_exam\_result* - មើលលទ្ធផលប្រលងរបស់កូន\n` +
+                `🔸 */help* - បង្ហាញមេនុយជំនួយនេះ\n\n` +
                 `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
                 { parse_mode: 'Markdown' }
             );
@@ -539,26 +725,206 @@ const handleParentInfoCommand = async (bot, chatId, userId) => {
         // User is registered as a parent - show their registrations
         const parentRegistrations = parentQuery.docs.map(doc => {
             const data = doc.data();
-            return `👤 **${data.studentName}**\n` +
-                   `   🏫 Class: ${data.studentClass || 'Not specified'}\n` +
-                   `   ⏰ Shift: ${data.studentShift || 'Not specified'}\n` +
-                   `   📅 Registered: ${data.registeredAt.toDate().toLocaleDateString()}`;
+            return `👤 **${data.studentKhmerName || data.studentName}**\n` +
+                   `   🏫 ថ្នាក់: ${formatClassInKhmer(data.studentClass)}\n` +
+                   `   ⏰ វេន: ${data.studentShift || 'មិនបានបញ្ជាក់'}\n` +
+                   `   📅 ចុះឈ្មោះ: ${data.registeredAt.toDate().toLocaleDateString()}`;
         });
         
-        const message = `👋 Parent Notification Status\n\n` +
-                       `✅ You are registered to receive notifications for:\n\n` +
+        const message = `👋 ស្ថានភាពជូនដំណឹងម្តាយឪពុក\n\n` +
+                       `✅ បងបានចុះឈ្មោះទទួលការជូនដំណឹងសម្រាប់៖\n\n` +
                        `${parentRegistrations.join('\n\n')}\n\n` +
-                       `📱 **You will receive notifications when:**\n` +
-                       `• Your child arrives at school\n` +
-                       `• Your child requests permission to leave early\n` +
-                       `• Permission requests are approved or denied\n\n` +
-                       `Need to register for additional students? Contact the school for a new registration link.`;
+                       `📱 **បងនឹងទទួលបានការជូនដំណឹងនៅពេល៖**\n` +
+                       `• កូនរបស់បងមកដល់សាលា\n` +
+                       `• កូនរបស់បងស្នើសុំការអនុញ្ញាតចាកចេញមុន\n` +
+                       `• ការស្នើសុំអនុញ្ញាតត្រូវបានយល់ព្រម ឬបដិសេធ\n\n` +
+                       `ត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែមទៀត? ទាក់ទងសាលាសម្រាប់តំណចុះឈ្មោះថ្មី។`;
         
         await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
         
     } catch (error) {
         console.error('Error in handleParentInfoCommand:', error);
         await bot.sendMessage(chatId, "❌ An error occurred while checking your parent registration status.");
+    }
+};
+
+/**
+ * Handle /payment command - show payment status for all registered children
+ */
+const handlePaymentStatusCommand = async (bot, chatId, userId) => {
+    try {
+        // Check if this user is registered as a parent
+        const parentQuery = await db.collection('parentNotifications')
+            .where('telegramUserId', '==', userId.toString())
+            .where('isActive', '==', true)
+            .get();
+        
+        if (parentQuery.empty) {
+            await bot.sendMessage(chatId, 
+                `🔍 បងមិនទាន់បានចុះឈ្មោះទទួលការជូនដំណឹងអំពីកូនរបស់បងនៅឡើយទេ។\n\n` +
+                `ដើម្បីពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា សូមចុះឈ្មោះជាមុនសិន។\n\n` +
+                `វាយ /start ដើម្បីចាប់ផ្តើម។`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+        
+        let paymentInfo = `💰 **ស្ថានភាពបង់ថ្លៃសិក្សា**\n\n`;
+        
+        for (const doc of parentQuery.docs) {
+            const parentData = doc.data();
+            const studentId = parentData.studentId;
+            const studentName = parentData.studentKhmerName || parentData.studentName;
+            const studentClass = parentData.studentClass;
+            
+            try {
+                // Query for the latest transaction record for this student
+                console.log(`Querying transactions for studentId: ${studentId}`);
+                const paymentQuery = await db.collection('transactions')
+                    .where('studentId', '==', studentId)
+                    .orderBy('date', 'desc')
+                    .limit(1)
+                    .get();
+                
+                console.log(`Payment query result for ${studentId}: ${paymentQuery.empty ? 'EMPTY' : 'FOUND ' + paymentQuery.docs.length + ' records'}`);
+                
+                let paymentStatus, paymentResult, lastPaymentMonth = null, latestPaymentData = null;
+                
+                if (!paymentQuery.empty) {
+                    latestPaymentData = paymentQuery.docs[0].data();
+                    console.log(`Latest payment data for ${studentId}:`, latestPaymentData);
+                    
+                    // Handle paymentMonth format (e.g., "August 2025")
+                    if (latestPaymentData.paymentMonth) {
+                        // Convert "August 2025" to "2025-08" format
+                        const monthNames = {
+                            'January': '01', 'February': '02', 'March': '03', 'April': '04',
+                            'May': '05', 'June': '06', 'July': '07', 'August': '08',
+                            'September': '09', 'October': '10', 'November': '11', 'December': '12'
+                        };
+                        
+                        const parts = latestPaymentData.paymentMonth.split(' ');
+                        if (parts.length === 2) {
+                            const monthName = parts[0];
+                            const year = parts[1];
+                            const monthNumber = monthNames[monthName];
+                            if (monthNumber) {
+                                lastPaymentMonth = `${year}-${monthNumber}`;
+                                console.log(`Converted paymentMonth "${latestPaymentData.paymentMonth}" to "${lastPaymentMonth}"`);
+                            }
+                        }
+                    }
+                }
+                
+                // Calculate payment status using our logic
+                paymentResult = calculatePaymentStatus(lastPaymentMonth);
+                paymentStatus = paymentResult.status;
+                
+                // Format payment status with appropriate emoji
+                let statusEmoji = '';
+                let statusText = getPaymentStatusDisplayText(paymentStatus);
+                
+                switch (paymentStatus) {
+                    case 'paid':
+                        statusEmoji = '✅';
+                        break;
+                    case 'unpaid':
+                        statusEmoji = '❌';
+                        break;
+                    case 'no-record':
+                        statusEmoji = '⚠️';
+                        break;
+                    default:
+                        statusEmoji = '❓';
+                }
+                
+                // Get pricing information for unpaid/no-record statuses
+                let pricingInfo = null;
+                if (paymentStatus === 'unpaid' || paymentStatus === 'no-record') {
+                    pricingInfo = await getClassPricing(studentClass);
+                    console.log(`Pricing info for ${studentName}:`, pricingInfo);
+                }
+                
+                paymentInfo += `👤 **${studentName}**\n`;
+                paymentInfo += `🏫 ${formatClassInKhmer(studentClass)}\n`;
+                
+                // Show status with amount for paid status
+                if (paymentStatus === 'paid' && latestPaymentData && latestPaymentData.amount) {
+                    const formattedAmount = new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(latestPaymentData.amount);
+                    paymentInfo += `${statusEmoji} **ស្ថានភាព:** ${statusText} (${formattedAmount})\n`;
+                } else {
+                    paymentInfo += `${statusEmoji} **ស្ថានភាព:** ${statusText}\n`;
+                    
+                    // Show required payment amount for unpaid/no-record statuses
+                    if ((paymentStatus === 'unpaid' || paymentStatus === 'no-record') && pricingInfo && pricingInfo.price) {
+                        const formattedPrice = new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(pricingInfo.price);
+                        paymentInfo += `💵 **ចំនួនទឹកប្រាក់ត្រូវបង់:** ${formattedPrice}\n`;
+                    }
+                }
+                
+                if (lastPaymentMonth) {
+                    paymentInfo += `📅 **ការបង់ចុងក្រោយ:** ${formatPaymentMonthInKhmer(lastPaymentMonth)}\n`;
+                } else {
+                    paymentInfo += `📅 **ការបង់ចុងក្រោយ:** មិនមានកំណត់ត្រា\n`;
+                }
+                
+                // Add explanation based on status
+                if (paymentStatus === 'unpaid' && lastPaymentMonth) {
+                    paymentInfo += `💡 **ចំណាំ:** ការបង់ថ្លៃមិនទាន់បានដោះស្រាយ`;
+                    if (pricingInfo && pricingInfo.price) {
+                        const formattedPrice = new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(pricingInfo.price);
+                        paymentInfo += ` - សូមបង់ ${formattedPrice}`;
+                    }
+                    paymentInfo += `\n`;
+                } else if (paymentStatus === 'unpaid' && !lastPaymentMonth) {
+                    paymentInfo += `💡 **ចំណាំ:** ការបង់ថ្លៃមិនទាន់បានដោះស្រាយ`;
+                    if (pricingInfo && pricingInfo.price) {
+                        const formattedPrice = new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(pricingInfo.price);
+                        paymentInfo += ` - សូមបង់ ${formattedPrice}`;
+                    }
+                    paymentInfo += `\n`;
+                } else if (paymentStatus === 'no-record') {
+                    paymentInfo += `💡 **ចំណាំ:** មិនមានកំណត់ត្រាការបង់ថ្លៃ`;
+                    if (pricingInfo && pricingInfo.price) {
+                        const formattedPrice = new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(pricingInfo.price);
+                        paymentInfo += ` - សូមបង់ ${formattedPrice}`;
+                    }
+                    paymentInfo += `\n`;
+                } else if (paymentStatus === 'paid') {
+                    paymentInfo += `💡 **ចំណាំ:** ការបង់ថ្លៃគ្រប់គ្រាន់សម្រាប់ខែនេះ\n`;
+                }
+                
+                paymentInfo += `\n`;
+                
+            } catch (paymentError) {
+                console.error(`Error fetching payment for student ${studentId}:`, paymentError);
+                paymentInfo += `👤 **${studentName}**\n`;
+                paymentInfo += `🏫 ${formatClassInKhmer(studentClass)}\n`;
+                paymentInfo += `❓ **ស្ថានភាព:** មិនអាចពិនិត្យបាន\n`;
+                paymentInfo += `💡 **ចំណាំ:** បញ្ហាក្នុងការទាញយកទិន្នន័យ\n\n`;
+            }
+        }
+        
+        await bot.sendMessage(chatId, paymentInfo, { parse_mode: 'Markdown' });
+        
+    } catch (error) {
+        console.error('Error in handlePaymentStatusCommand:', error);
+        await bot.sendMessage(chatId, "❌ មានកំហុសក្នុងការពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា។ សូមព្យាយាមម្តងទៀតក្រោយមួយរំពេច។");
     }
 };
 
@@ -624,6 +990,163 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
     } catch (error) {
         logger.error('Error in parent registration:', error);
         await bot.sendMessage(chatId, "❌ ការចុះឈ្មោះបានបរាជ័យ។ សូមព្យាយាមម្តងទៀត ឬទាក់ទងការគាំទ្រ​សាលា។");
+    }
+};
+
+/**
+ * Handle mock exam result deep link
+ */
+const handleMockExamResultDeepLink = async (bot, chatId, userId, deepLinkParam) => {
+    try {
+        logger.info(`Mock exam deep link accessed: ${deepLinkParam} by user ${userId} in chat ${chatId}`);
+        
+        // Check if this user is registered as a parent
+        const parentQuery = await db.collection('parentNotifications')
+            .where('telegramUserId', '==', userId.toString())
+            .where('isActive', '==', true)
+            .get();
+        
+        if (parentQuery.empty) {
+            await bot.sendMessage(chatId, 
+                `❌ សូមទោស!\n\n` +
+                `បងមិនទាន់បានចុះឈ្មោះជាម្តាយឪពុកនៅឡើយទេ។ សូមចុះឈ្មោះជាមុនសិនដើម្បីមើលលទ្ធផលប្រលងរបស់កូន។\n\n` +
+                `ទាក់ទងសាលាសម្រាប់ការចុះឈ្មោះ។`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+
+        // Get all students this parent is registered for
+        const parentRegistrations = parentQuery.docs.map(doc => doc.data());
+        const studentIds = parentRegistrations.map(p => p.studentId);
+        
+        // Query examControls collection for ready exams
+        const examQuery = await db.collection('examControls')
+            .where('isReadyForStudent', '==', true)
+            .get();
+
+        if (examQuery.empty) {
+            await bot.sendMessage(chatId, 
+                `📚 **លទ្ធផលប្រលង**\n\n` +
+                `🔍 ប្រលងណាមួយមិនទាន់មានលទ្ធផលនៅឡើយទេ...\n\n` +
+                `សូមរង់ចាំការជូនដំណឹងពីសាលានៅពេលលទ្ធផលត្រៀមរួចរាល់។`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+
+        // Create inline keyboard with available exams
+        const examButtons = [];
+        examQuery.docs.forEach(doc => {
+            const examData = doc.data();
+            const examNameKhmer = examData.nameKhmer || examData.name || 'ប្រលងមិនដឹងឈ្មោះ';
+            examButtons.push([{
+                text: examNameKhmer,
+                callback_data: `exam_result_${doc.id}`
+            }]);
+        });
+
+        const options = {
+            reply_markup: {
+                inline_keyboard: examButtons
+            }
+        };
+
+        await bot.sendMessage(chatId, 
+            `📚 **លទ្ធផលប្រលងដែលមាន**\n\n` +
+            `សូមជ្រើសរើសប្រលងដែលបងចង់មើលលទ្ធផល៖`,
+            options
+        );
+
+    } catch (error) {
+        logger.error('Error in handleMockExamResultDeepLink:', error);
+        await bot.sendMessage(chatId, "❌ មានបញ្ហាក្នុងការទាញយកលទ្ធផលប្រលង។ សូមព្យាយាមម្តងទៀត។");
+    }
+};
+
+/**
+ * Handle callback queries for parent bot (exam selection)
+ */
+const handleParentCallbackQuery = async (bot, callbackQuery) => {
+    try {
+        const chatId = callbackQuery.message.chat.id;
+        const userId = callbackQuery.from.id;
+        const data = callbackQuery.data;
+        const messageId = callbackQuery.message.message_id;
+
+        console.log(`Parent callback query from chatId ${chatId}: ${data}`);
+
+        // Answer the callback query to remove loading state
+        await bot.answerCallbackQuery(callbackQuery.id);
+
+        if (data.startsWith('exam_result_')) {
+            await handleExamResultSelection(bot, chatId, userId, messageId, data);
+        }
+
+    } catch (error) {
+        console.error('Error handling parent callback query:', error);
+        await bot.answerCallbackQuery(callbackQuery.id, { 
+            text: "❌ មានបញ្ហាក្នុងការដំណើរការ។ សូមព្យាយាមម្តងទៀត។", 
+            show_alert: true 
+        });
+    }
+};
+
+/**
+ * Handle exam result selection
+ */
+const handleExamResultSelection = async (bot, chatId, userId, messageId, callbackData) => {
+    try {
+        // Extract exam ID from callback data
+        const examId = callbackData.replace('exam_result_', '');
+        
+        // Get exam details
+        const examDoc = await db.collection('examControls').doc(examId).get();
+        
+        if (!examDoc.exists) {
+            await bot.editMessageText(
+                `❌ **បញ្ហា**\n\nរកមិនឃើញប្រលងនេះ។ សូមព្យាយាមម្តងទៀត។`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown'
+                }
+            );
+            return;
+        }
+
+        const examData = examDoc.data();
+        const examNameKhmer = examData.nameKhmer || examData.name || 'ប្រលងមិនដឹងឈ្មោះ';
+
+        // For now, return dummy text as requested
+        await bot.editMessageText(
+            `📊 **លទ្ធផលប្រលង: ${examNameKhmer}**\n\n` +
+            `🎯 នេះគឺជាទិន្នន័យសាកល្បង (Dummy Data)\n\n` +
+            `📈 **ព័ត៌មានលទ្ធផល:**\n` +
+            `• ពិន្ទុសរុប: ៨៥/១០០\n` +
+            `• ចំណាត់ថ្នាក់: A\n` +
+            `• ចំណាត់ថ្នាក់ក្នុងថ្នាក់: ៣/៤០\n` +
+            `• មតិយោបល់: សម្តែងបានល្អ\n\n` +
+            `📝 *ទិន្នន័យពិតប្រាកដនឹងត្រូវបានបន្ថែមនៅពេលក្រោយ*`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown'
+            }
+        );
+
+        logger.info(`Exam result ${examId} accessed by parent ${userId} for exam: ${examNameKhmer}`);
+
+    } catch (error) {
+        logger.error('Error handling exam result selection:', error);
+        await bot.editMessageText(
+            `❌ **មានបញ្ហា**\n\nមិនអាចទាញយកលទ្ធផលប្រលងបានទេ។ សូមព្យាយាមម្តងទៀត។`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown'
+            }
+        );
     }
 };
 
@@ -2798,9 +3321,11 @@ exports.notifyParentPermissionRequest = onCall({
             return { success: true, notificationsSent: 0 };
         }
 
-        // Initialize Telegram bot
-        if (!telegramBot) {
-            initializeTelegramBot();
+        // Initialize Telegram parent bot
+        const bot = initializeParentBot();
+        if (!bot) {
+            logger.error('Parent bot not initialized - missing TELEGRAM_PARENT_BOT_TOKEN');
+            throw new HttpsError('internal', 'Parent bot configuration error');
         }
 
         let notificationsSent = 0;
@@ -2841,13 +3366,9 @@ exports.notifyParentPermissionRequest = onCall({
 🏫 **ថ្នាក់:** ${formattedClass}
 📋 **ប្រភេទ:** ${permissionType}
 ⏰ **ពេលវេលាស្នើសុំ:** ${formattedTime}
-${reason ? `📝 **ហេតុផល:** ${reason}` : ''}
+${reason ? `📝 **ហេតុផល:** ${reason}` : ''}`;
 
-${status === 'pending' ? 'ℹ️ កំពុងរង់ចាំការយល់ព្រមពីគ្រូ...' : 
-  status === 'approved' ? '✅ ការអនុញ្ញាតត្រូវបានយល់ព្រមដោយគ្រូ។' : 
-  '❌ ការស្នើសុំអនុញ្ញាតត្រូវបានបដិសេធ។'}`;
-
-                await telegramBot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
                 notificationsSent++;
                 
                 logger.info(`Permission notification sent to parent chat ${chatId} for student ${studentId}`);
@@ -3857,5 +4378,508 @@ exports.sendNotificationToStudents = onDocumentCreated({
             sendError: error.message,
             sentAt: FieldValue.serverTimestamp()
         });
+    }
+});
+
+// =============================================================================
+// AUTOMATED BACKUP SYSTEM
+// =============================================================================
+
+/**
+ * Scheduled Firestore Backup Function
+ * Runs automatically at midnight daily to backup the entire database
+ * Stores backups in Google Cloud Storage for reliability and accessibility
+ */
+exports.scheduledBackup = onSchedule({
+    schedule: "0 0 * * *", // Daily at midnight
+    timeZone: "UTC", // You can change this to your timezone
+    region: "us-central1", // Change to your preferred region
+    memory: "1GiB",
+    timeoutSeconds: 540, // 9 minutes timeout
+}, async (event) => {
+    const startTime = Date.now();
+    
+    try {
+        logger.info("Starting scheduled Firestore backup...");
+        
+        // Generate backup ID with timestamp
+        const now = new Date();
+        const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const backupId = `backup-${timestamp}`;
+        
+        // Get all collections in the database
+        const collections = await db.listCollections();
+        const collectionNames = collections.map(collection => collection.id);
+        
+        logger.info(`Found ${collectionNames.length} collections: ${collectionNames.join(', ')}`);
+        
+        // Initialize backup manifest
+        const manifest = {
+            backupId,
+            timestamp: now.toISOString(),
+            projectId: process.env.GCLOUD_PROJECT,
+            totalCollections: collectionNames.length,
+            totalDocuments: 0,
+            totalSize: 0,
+            collections: [],
+            compressed: false,
+            version: "2.0.0",
+            backupType: "scheduled_cloud_function"
+        };
+        
+        const storage = getStorage();
+        const bucket = storage.bucket();
+        
+        // Backup each collection
+        for (const collectionName of collectionNames) {
+            try {
+                logger.info(`Backing up collection: ${collectionName}`);
+                
+                const collectionRef = db.collection(collectionName);
+                const snapshot = await collectionRef.get();
+                
+                if (snapshot.empty) {
+                    logger.info(`Collection ${collectionName} is empty, skipping...`);
+                    continue;
+                }
+                
+                // Process documents in the collection
+                const documents = [];
+                let documentCount = 0;
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const processedData = processFirestoreData(data);
+                    documents.push({
+                        id: doc.id,
+                        data: processedData
+                    });
+                    documentCount++;
+                });
+                
+                // Convert to JSON and calculate size
+                const collectionData = JSON.stringify(documents, null, 2);
+                const dataSize = Buffer.byteLength(collectionData, 'utf8');
+                
+                // Upload to Cloud Storage
+                const fileName = `firestore-backups/${backupId}/${collectionName}.json`;
+                const file = bucket.file(fileName);
+                
+                await file.save(collectionData, {
+                    metadata: {
+                        contentType: 'application/json',
+                        metadata: {
+                            backupId,
+                            collection: collectionName,
+                            documentCount: documentCount.toString(),
+                            timestamp: now.toISOString()
+                        }
+                    }
+                });
+                
+                // Update manifest
+                manifest.collections.push({
+                    collection: collectionName,
+                    documentCount,
+                    filePath: fileName,
+                    size: dataSize
+                });
+                
+                manifest.totalDocuments += documentCount;
+                manifest.totalSize += dataSize;
+                
+                logger.info(`Collection ${collectionName} backed up: ${documentCount} documents, ${(dataSize / 1024).toFixed(2)} KB`);
+                
+            } catch (collectionError) {
+                logger.error(`Error backing up collection ${collectionName}:`, collectionError);
+                // Continue with other collections even if one fails
+            }
+        }
+        
+        // Save manifest file
+        const manifestData = JSON.stringify(manifest, null, 2);
+        const manifestFile = bucket.file(`firestore-backups/${backupId}/backup-manifest.json`);
+        
+        await manifestFile.save(manifestData, {
+            metadata: {
+                contentType: 'application/json',
+                metadata: {
+                    backupId,
+                    totalCollections: manifest.totalCollections.toString(),
+                    totalDocuments: manifest.totalDocuments.toString(),
+                    timestamp: now.toISOString()
+                }
+            }
+        });
+        
+        // Store backup record in Firestore for tracking
+        await db.collection('backupHistory').doc(backupId).set({
+            backupId,
+            timestamp: FieldValue.serverTimestamp(),
+            status: 'completed',
+            totalCollections: manifest.totalCollections,
+            totalDocuments: manifest.totalDocuments,
+            totalSize: manifest.totalSize,
+            duration: Date.now() - startTime,
+            storagePath: `firestore-backups/${backupId}/`,
+            backupType: 'scheduled_cloud_function',
+            manifest
+        });
+        
+        const duration = (Date.now() - startTime) / 1000;
+        logger.info(`Backup completed successfully in ${duration.toFixed(2)} seconds`);
+        logger.info(`Backup ID: ${backupId}`);
+        logger.info(`Total Collections: ${manifest.totalCollections}`);
+        logger.info(`Total Documents: ${manifest.totalDocuments}`);
+        logger.info(`Total Size: ${(manifest.totalSize / 1024 / 1024).toFixed(2)} MB`);
+        
+        // Clean up old backups (keep last 30 days)
+        await cleanupOldBackups(bucket);
+        
+        return { success: true, backupId, manifest };
+        
+    } catch (error) {
+        logger.error("Backup failed:", error);
+        
+        // Store failed backup record
+        const failedBackupId = `failed-backup-${Date.now()}`;
+        await db.collection('backupHistory').doc(failedBackupId).set({
+            backupId: failedBackupId,
+            timestamp: FieldValue.serverTimestamp(),
+            status: 'failed',
+            error: error.message,
+            duration: Date.now() - startTime,
+            backupType: 'scheduled_cloud_function'
+        });
+        
+        throw error;
+    }
+});
+
+/**
+ * Manual Backup Function - can be triggered via HTTP request
+ */
+exports.manualBackup = onCall({
+    region: "us-central1",
+    memory: "1GiB",
+    timeoutSeconds: 540,
+}, async (request) => {
+    // Verify the user has admin permissions
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Authentication required');
+    }
+    
+    try {
+        // Check if user is admin by checking authorizedUsers collection
+        if (!request.auth.token.email) {
+            throw new HttpsError('permission-denied', 'Email required for admin verification');
+        }
+        
+        const authorizedUserDoc = await db.collection('authorizedUsers').doc(request.auth.token.email).get();
+        if (!authorizedUserDoc.exists) {
+            throw new HttpsError('permission-denied', 'Admin access required');
+        }
+        
+        logger.info(`Manual backup triggered by admin: ${request.auth.token.email}`);
+        
+        // Use the same backup logic as scheduled backup
+        const backupResult = await exports.scheduledBackup.run({});
+        
+        return backupResult;
+        
+    } catch (error) {
+        logger.error("Manual backup failed:", error);
+        throw new HttpsError('internal', `Backup failed: ${error.message}`);
+    }
+});
+
+/**
+ * Process Firestore data to handle special types
+ */
+function processFirestoreData(data) {
+    if (data === null || data === undefined) {
+        return data;
+    }
+    
+    if (data instanceof admin.firestore.Timestamp) {
+        return {
+            _type: 'timestamp',
+            _value: data.toDate().toISOString()
+        };
+    }
+    
+    if (data instanceof admin.firestore.DocumentReference) {
+        return {
+            _type: 'reference',
+            _value: data.path
+        };
+    }
+    
+    if (Array.isArray(data)) {
+        return data.map(item => processFirestoreData(item));
+    }
+    
+    if (typeof data === 'object') {
+        const processed = {};
+        for (const [key, value] of Object.entries(data)) {
+            processed[key] = processFirestoreData(value);
+        }
+        return processed;
+    }
+    
+    return data;
+}
+
+/**
+ * Clean up old backups to save storage space
+ */
+async function cleanupOldBackups(bucket) {
+    try {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 30); // Keep 30 days
+        
+        const [files] = await bucket.getFiles({
+            prefix: 'firestore-backups/',
+            delimiter: '/'
+        });
+        
+        // Group files by backup folder
+        const backupFolders = new Set();
+        files.forEach(file => {
+            const pathParts = file.name.split('/');
+            if (pathParts.length >= 3) {
+                backupFolders.add(pathParts[1]); // backup-YYYY-MM-DDTHH-MM-SS format
+            }
+        });
+        
+        // Parse dates and find old backups
+        const oldBackups = [];
+        backupFolders.forEach(backupFolder => {
+            try {
+                // Extract date from backup folder name: backup-2024-01-15T10-30-00
+                const dateStr = backupFolder.replace('backup-', '').replace(/-/g, ':');
+                const backupDate = new Date(dateStr.replace(/:/g, '-').slice(0, 10) + 'T' + dateStr.slice(11) + ':00.000Z');
+                
+                if (backupDate < cutoffDate) {
+                    oldBackups.push(backupFolder);
+                }
+            } catch (e) {
+                logger.warn(`Could not parse backup date from folder: ${backupFolder}`);
+            }
+        });
+        
+        // Delete old backup folders
+        for (const oldBackup of oldBackups) {
+            try {
+                await bucket.deleteFiles({
+                    prefix: `firestore-backups/${oldBackup}/`
+                });
+                logger.info(`Deleted old backup: ${oldBackup}`);
+            } catch (error) {
+                logger.warn(`Could not delete old backup ${oldBackup}:`, error);
+            }
+        }
+        
+        if (oldBackups.length > 0) {
+            logger.info(`Cleanup completed: removed ${oldBackups.length} old backups`);
+        }
+        
+    } catch (error) {
+        logger.warn("Error during backup cleanup:", error);
+        // Don't throw - cleanup failure shouldn't fail the backup
+    }
+}
+
+/**
+ * [Firestore-triggered Function]
+ * Automatically notify parents when a permission request is created
+ */
+exports.notifyParentOnPermissionRequest = onDocumentCreated({
+    region: "asia-southeast1",
+    document: "permissions/{permissionId}",
+    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
+}, async (event) => {
+    try {
+        const permissionData = event.data.data();
+        logger.info('Permission request created, notifying parents:', permissionData);
+
+        // Extract the relevant data
+        const {
+            studentId,
+            studentName,
+            reason,
+            details,
+            permissionStartDate,
+            permissionEndDate,
+            duration,
+            requestedAt
+        } = permissionData;
+
+        if (!studentId || !studentName) {
+            logger.error('Missing required fields in permission request');
+            return;
+        }
+
+        // Get parent notification settings for this student
+        const parentQuery = await db.collection('parentNotifications')
+            .where('studentId', '==', studentId)
+            .where('isActive', '==', true)
+            .get();
+
+        if (parentQuery.empty) {
+            logger.info(`No active parent notifications found for student ${studentId}`);
+            return;
+        }
+
+        // Initialize Telegram parent bot
+        const bot = initializeParentBot();
+        if (!bot) {
+            logger.error('Parent bot not initialized - missing TELEGRAM_PARENT_BOT_TOKEN');
+            return;
+        }
+
+        let notificationsSent = 0;
+        const requestDate = requestedAt ? requestedAt.toDate() : new Date();
+        // Adjust for Cambodia timezone
+        const cambodiaTime = new Date(requestDate.getTime() + (7 * 60 * 60 * 1000));
+        const formattedTime = formatTimeInKhmer(cambodiaTime);
+
+        for (const doc of parentQuery.docs) {
+            const parentData = doc.data();
+            const chatId = parentData.chatId;
+
+            try {
+                // Use Khmer name if available, otherwise use regular name
+                const khmerName = parentData.studentKhmerName || studentName;
+                const formattedClass = formatClassInKhmer(parentData.studentClass);
+
+                const message = `📝 **ការស្នើសុំច្បាប់ឈប់សម្រាក**
+
+👤 **សិស្ស:** ${khmerName}
+🏫 **ថ្នាក់:** ${formattedClass}
+   **  ថ្ងៃចាប់ផ្តើម:** ${permissionStartDate}
+   **  ថ្ងៃបញ្ចប់:** ${permissionEndDate}
+⏳ **រយៈពេល:** ${duration} ថ្ងៃ
+⏰ **ពេលវេលាស្នើសុំ:** ${formattedTime}
+📋 **ហេតុផល:** ${reason}
+📝 **លម្អិត:** ${details}`;
+
+                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                notificationsSent++;
+                
+                logger.info(`Permission request notification sent to parent chat ${chatId} for student ${studentId}`);
+                
+            } catch (error) {
+                logger.error(`Failed to send permission notification to chat ${chatId}:`, error);
+                
+                // If it's a blocked bot error, deactivate notifications for this parent
+                if (error.response && error.response.body && 
+                    (error.response.body.error_code === 403 || error.response.body.description?.includes('blocked'))) {
+                    await doc.ref.update({ isActive: false, deactivatedAt: admin.firestore.Timestamp.now() });
+                    logger.info(`Deactivated notifications for blocked chat ${chatId}`);
+                }
+            }
+        }
+
+        logger.info(`Permission request notifications sent: ${notificationsSent}`);
+        
+    } catch (error) {
+        logger.error('Error in notifyParentOnPermissionRequest:', error);
+    }
+});
+
+/**
+ * [Firestore-triggered Function]
+ * Automatically notify parents when a leave early request is created
+ */
+exports.notifyParentOnLeaveEarlyRequest = onDocumentCreated({
+    region: "asia-southeast1",
+    document: "leaveEarlyRequests/{requestId}",
+    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
+}, async (event) => {
+    try {
+        const requestData = event.data.data();
+        logger.info('Leave early request created, notifying parents:', requestData);
+
+        // Extract the relevant data
+        const {
+            authUid,
+            studentId,
+            studentName,
+            class: studentClass,
+            date,
+            leaveTime,
+            reason,
+            shift,
+            requestedAt
+        } = requestData;
+
+        if (!studentId || !studentName) {
+            logger.error('Missing required fields in leave early request');
+            return;
+        }
+
+        // Get parent notification settings for this student
+        const parentQuery = await db.collection('parentNotifications')
+            .where('studentId', '==', studentId)
+            .where('isActive', '==', true)
+            .get();
+
+        if (parentQuery.empty) {
+            logger.info(`No active parent notifications found for student ${studentId}`);
+            return;
+        }
+
+        // Initialize Telegram parent bot
+        const bot = initializeParentBot();
+        if (!bot) {
+            logger.error('Parent bot not initialized - missing TELEGRAM_PARENT_BOT_TOKEN');
+            return;
+        }
+
+        let notificationsSent = 0;
+        const requestDate = requestedAt ? requestedAt.toDate() : new Date();
+        // Adjust for Cambodia timezone
+        const cambodiaTime = new Date(requestDate.getTime() + (7 * 60 * 60 * 1000));
+        const formattedTime = formatTimeInKhmer(cambodiaTime);
+
+        for (const doc of parentQuery.docs) {
+            const parentData = doc.data();
+            const chatId = parentData.chatId;
+
+            try {
+                // Use Khmer name if available, otherwise use regular name
+                const khmerName = parentData.studentKhmerName || studentName;
+                const formattedClass = formatClassInKhmer(parentData.studentClass || studentClass);
+
+                const message = `**ការស្នើសុំចេញមុនម៉ោង**
+
+👤 **សិស្ស:** ${khmerName}
+🏫 **ថ្នាក់:** ${formattedClass}
+⏰ **ម៉ោងស្នើសុំចេញ:** ${leaveTime}
+⏰ **ពេលវេលាស្នើសុំ:** ${formattedTime}
+📝 **ហេតុផល:** ${reason}`;
+
+                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                notificationsSent++;
+                
+                logger.info(`Leave early request notification sent to parent chat ${chatId} for student ${studentId}`);
+                
+            } catch (error) {
+                logger.error(`Failed to send leave early notification to chat ${chatId}:`, error);
+                
+                // If it's a blocked bot error, deactivate notifications for this parent
+                if (error.response && error.response.body && 
+                    (error.response.body.error_code === 403 || error.response.body.description?.includes('blocked'))) {
+                    await doc.ref.update({ isActive: false, deactivatedAt: admin.firestore.Timestamp.now() });
+                    logger.info(`Deactivated notifications for blocked chat ${chatId}`);
+                }
+            }
+        }
+
+        logger.info(`Leave early request notifications sent: ${notificationsSent}`);
+        
+    } catch (error) {
+        logger.error('Error in notifyParentOnLeaveEarlyRequest:', error);
     }
 });
