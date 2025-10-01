@@ -1224,6 +1224,19 @@ INSTRUCTIONS:
                                         placeholder="Search by name or phone..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'ArrowDown' && filteredStudents.length > 0) {
+                                                e.preventDefault();
+                                                // Select and focus the first student item
+                                                const firstStudent = filteredStudents[0];
+                                                handleSelectStudent(firstStudent);
+                                                // Focus the first student item
+                                                const firstStudentElement = document.querySelector('[data-student-id]');
+                                                if (firstStudentElement) {
+                                                    (firstStudentElement as HTMLElement).focus();
+                                                }
+                                            }
+                                        }}
                                         className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800"
                                     />
                                     <Icon path={mdiMagnify} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1237,12 +1250,50 @@ INSTRUCTIONS:
                                 <div className="space-y-2 h-[calc(100vh-220px)] overflow-y-auto px-2 py-2 mb-4">
                                     {filteredStudents.map(student => (
                                         <div key={student.id}
+                                             data-student-id={student.id}
+                                             tabIndex={0}
                                              className={`p-3 border-2 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between min-w-0
                                              ${selectedStudent?.id === student.id
                                                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shadow-lg transform scale-105'
                                                 : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20'
                                              }`}
-                                             onClick={() => handleSelectStudent(student)}>
+                                             onClick={() => handleSelectStudent(student)}
+                                             onKeyDown={(e) => {
+                                                 if (e.key === 'Enter' || e.key === ' ') {
+                                                     e.preventDefault();
+                                                     handleSelectStudent(student);
+                                                 } else if (e.key === 'ArrowDown') {
+                                                     e.preventDefault();
+                                                     const currentElement = e.currentTarget as HTMLElement;
+                                                     const nextElement = currentElement.nextElementSibling as HTMLElement;
+                                                     if (nextElement && nextElement.hasAttribute('data-student-id')) {
+                                                         const nextStudentId = nextElement.getAttribute('data-student-id');
+                                                         const nextStudent = filteredStudents.find(s => s.id === nextStudentId);
+                                                         if (nextStudent) {
+                                                             handleSelectStudent(nextStudent);
+                                                             nextElement.focus();
+                                                         }
+                                                     }
+                                                 } else if (e.key === 'ArrowUp') {
+                                                     e.preventDefault();
+                                                     const currentElement = e.currentTarget as HTMLElement;
+                                                     const prevElement = currentElement.previousElementSibling as HTMLElement;
+                                                     if (prevElement && prevElement.hasAttribute('data-student-id')) {
+                                                         const prevStudentId = prevElement.getAttribute('data-student-id');
+                                                         const prevStudent = filteredStudents.find(s => s.id === prevStudentId);
+                                                         if (prevStudent) {
+                                                             handleSelectStudent(prevStudent);
+                                                             prevElement.focus();
+                                                         }
+                                                     } else {
+                                                         // Go back to search input
+                                                         const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
+                                                         if (searchInput) {
+                                                             searchInput.focus();
+                                                         }
+                                                     }
+                                                 }
+                                             }}>
                                             <div className="flex-grow min-w-0 mr-2">
                                                 <div className="flex items-center justify-between">
                                                     <p className="font-semibold truncate flex-1">{student.fullName}</p>

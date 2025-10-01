@@ -25,6 +25,7 @@ import CardBoxModal from "../../_components/CardBox/Modal";
 import DroppedStudentsSection from "./components/DroppedStudentsSection";
 import WaitlistStudentsSection from "./components/WaitlistStudentsSection";
 import PendingRequestsSection from "./components/PendingRequestsSection";
+import PendingRegistrationsSection from "./_components/PendingRegistrationsSection";
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
 import { ExportStudentsModal } from "./components/ExportStudentsModal";
 import { AbsentFollowUpDashboard } from "./components/AbsentFollowUpDashboard";
@@ -44,9 +45,11 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [droppedStudents, setDroppedStudents] = useState<Student[]>([]);
   const [waitlistStudents, setWaitlistStudents] = useState<Student[]>([]);
+  const [pendingStudents, setPendingStudents] = useState<Student[]>([]); // New state for pending registrations
   const [showDroppedStudents, setShowDroppedStudents] = useState(false);
   const [showWaitlistStudents, setShowWaitlistStudents] = useState(false);
   const [showPendingRequests, setShowPendingRequests] = useState(false);
+  const [showPendingRegistrations, setShowPendingRegistrations] = useState(false); // New state
   const [showAbsentFollowUp, setShowAbsentFollowUp] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,14 +132,77 @@ export default function StudentsPage() {
               return tokenData ? { ...student, ...tokenData } : student;
             });
           
-            // Separate active, waitlist, dropped, and break students
-            const activeStudents = studentsWithTokens.filter(student => !student.dropped && !student.onBreak && !student.onWaitlist);
-            const waitlistStudentsData = studentsWithTokens.filter(student => student.onWaitlist && !student.dropped && !student.onBreak);
-            const droppedStudentsData = studentsWithTokens.filter(student => student.dropped || student.onBreak);
+            // Separate active, waitlist, dropped, pending, and break students
+            const activeStudents = studentsWithTokens.filter(student => 
+              !student.dropped && 
+              !student.onBreak && 
+              !student.onWaitlist && 
+              student.registrationStatus !== 'pending'
+            );
+            const waitlistStudentsData = studentsWithTokens
+              .filter(student => 
+                student.onWaitlist && 
+                !student.dropped && 
+                !student.onBreak &&
+                student.registrationStatus !== 'pending'
+              )
+              .sort((a, b) => {
+                // Sort by waitlist date (or created date if no waitlist date), oldest first
+                const dateA = a.waitlistDate || a.createdAt;
+                const dateB = b.waitlistDate || b.createdAt;
+                
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+                
+                // Convert timestamps to comparable values
+                const timeA = dateA instanceof Timestamp ? dateA.toMillis() : 
+                             dateA instanceof Date ? dateA.getTime() : 
+                             new Date(dateA).getTime();
+                const timeB = dateB instanceof Timestamp ? dateB.toMillis() : 
+                             dateB instanceof Date ? dateB.getTime() : 
+                             new Date(dateB).getTime();
+                
+                return timeA - timeB; // Oldest first (ascending order)
+              });
+            const droppedStudentsData = studentsWithTokens
+              .filter(student => 
+                student.dropped || student.onBreak
+              )
+              .sort((a, b) => {
+                // Sort by droppedAt or breakStartDate, most recent first
+                const getDate = (student: Student) => {
+                  if (student.dropped && student.droppedAt) return student.droppedAt;
+                  if (student.onBreak && student.breakStartDate) return student.breakStartDate;
+                  return student.createdAt; // Fallback
+                };
+                
+                const dateA = getDate(a);
+                const dateB = getDate(b);
+                
+                if (!dateA && !dateB) return 0;
+                if (!dateA) return 1;
+                if (!dateB) return -1;
+                
+                // Convert timestamps to comparable values
+                const timeA = dateA instanceof Timestamp ? dateA.toMillis() : 
+                             dateA instanceof Date ? dateA.getTime() : 
+                             new Date(dateA).getTime();
+                const timeB = dateB instanceof Timestamp ? dateB.toMillis() : 
+                             dateB instanceof Date ? dateB.getTime() : 
+                             new Date(dateB).getTime();
+                
+                return timeB - timeA; // Most recent first (descending order)
+              });
+            const pendingStudentsData = studentsWithTokens.filter(student => 
+              student.registrationStatus === 'pending' && 
+              !student.dropped
+            );
             
             setStudents(activeStudents);
             setWaitlistStudents(waitlistStudentsData);
             setDroppedStudents(droppedStudentsData);
+            setPendingStudents(pendingStudentsData);
             setLoading(false);
             setError(null);
           } catch (err) {
@@ -145,6 +211,7 @@ export default function StudentsPage() {
             setStudents([]);
             setWaitlistStudents([]);
             setDroppedStudents([]);
+            setPendingStudents([]);
             setLoading(false);
           }
         };
@@ -477,10 +544,61 @@ export default function StudentsPage() {
     }
   };
 
+  // Function to activate pending student (approve registration)
+  const handleActivatePendingStudent = async (student: Student) => {
+    try {
+      const updateData: any = {
+        registrationStatus: 'approved',
+        isActive: true,
+        approvedAt: serverTimestamp()
+      };
+
+      await updateDoc(doc(db, "students", student.id), updateData);
+      
+      // Real-time listener will automatically update the state
+      toast.success(`${student.fullName}'s registration has been approved and account activated`);
+      console.log("Student registration approved:", student.id);
+    } catch (err) {
+      console.error("Error activating pending student:", err);
+      toast.error("Failed to activate student. Please try again.");
+    }
+  };
+
+  // Function to reject pending student registration
+  const handleRejectPendingStudent = async (student: Student) => {
+    try {
+      const updateData: any = {
+        registrationStatus: 'rejected',
+        isActive: false,
+        rejectedAt: serverTimestamp()
+      };
+
+      await updateDoc(doc(db, "students", student.id), updateData);
+      
+      // Real-time listener will automatically update the state
+      toast.success(`${student.fullName}'s registration has been rejected`);
+      console.log("Student registration rejected:", student.id);
+    } catch (err) {
+      console.error("Error rejecting pending student:", err);
+      toast.error("Failed to reject student registration. Please try again.");
+    }
+  };
+
   // Modal functions for student details
   const handleViewDetails = (student: Student, defaultTab: 'basic' | 'actions' | 'requests' = 'basic') => {
-    // For dropped students, we'll use them as the list
-    const studentList = droppedStudents;
+    // Determine which student list this student belongs to
+    let studentList: Student[] = [];
+    if (students.find(s => s.id === student.id)) {
+      studentList = students;
+    } else if (waitlistStudents.find(s => s.id === student.id)) {
+      studentList = waitlistStudents;
+    } else if (droppedStudents.find(s => s.id === student.id)) {
+      studentList = droppedStudents;
+    } else {
+      // Fallback to students if not found in any list
+      studentList = students;
+    }
+
     const index = studentList.findIndex(s => s.id === student.id);
     setSelectedStudent(student);
     setSelectedIndex(index);
@@ -725,6 +843,23 @@ export default function StudentsPage() {
           showWaitlistStudents={showWaitlistStudents}
           onToggleShow={() => setShowWaitlistStudents(!showWaitlistStudents)}
           onActivateStudent={handleActivateWaitlistStudent}
+          onViewDetails={handleViewDetails}
+        />
+      )}
+
+      {/* Pending Registrations Section - Show above active students when not in specific modes */}
+      {!isFormActive && 
+       !isDeleteModalActive && 
+       !isTakeAttendanceMode && 
+       !isBatchEditMode && 
+       !studentToEdit &&
+       !showAbsentFollowUp && (
+        <PendingRegistrationsSection
+          pendingStudents={pendingStudents}
+          showPendingRegistrations={showPendingRegistrations}
+          onToggleShow={() => setShowPendingRegistrations(!showPendingRegistrations)}
+          onActivateStudent={handleActivatePendingStudent}
+          onRejectStudent={handleRejectPendingStudent}
           onViewDetails={handleViewDetails}
         />
       )}

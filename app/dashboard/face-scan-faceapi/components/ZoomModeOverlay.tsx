@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { mdiCamera, mdiCameraOff, mdiClose, mdiEye, mdiFaceRecognition, mdiClock } from '@mdi/js';
 import Icon from '../../../_components/Icon';
@@ -39,10 +39,35 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
   onUserMedia,
   onUserMediaError
 }) => {
+  const [isOnline, setIsOnline] = useState(true);
+
+  // Monitor network status
+  useEffect(() => {
+    const updateOnlineStatus = () => {
+      setIsOnline(navigator.onLine);
+    };
+
+    // Set initial status
+    updateOnlineStatus();
+
+    // Add event listeners
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+
+    // Check status every 3 seconds for more accurate detection
+    const intervalId = setInterval(updateOnlineStatus, 3000);
+
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+      clearInterval(intervalId);
+    };
+  }, []);
+
   if (!isZoomMode) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black">
+    <div className="fixed inset-0 z-[9999] bg-white/10 backdrop-blur-2xl">
       {/* Exit Button */}
       <button
         onClick={onExitZoomMode}
@@ -72,6 +97,20 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
               <Icon path={mdiClock} className="w-4 h-4 text-yellow-400" />
               <span>Hold position for 2 seconds</span>
             </p>
+            {/* Network Status Indicator */}
+            <div className="flex items-center space-x-2 pt-2">
+              <div className="relative">
+                <div className={`w-3 h-3 rounded-full ${
+                  isOnline ? 'bg-green-500' : 'bg-red-500'
+                } shadow-lg ${isOnline ? 'shadow-green-500/50' : 'shadow-red-500/50'}`}></div>
+                {isOnline && (
+                  <div className="absolute inset-0 w-3 h-3 rounded-full bg-green-500 animate-ping opacity-75"></div>
+                )}
+              </div>
+              <span className={`text-sm ${isOnline ? 'text-green-400' : 'text-red-400'}`}>
+                {isOnline ? 'Connected to Internet' : 'No Connection to Internet'}
+              </span>
+            </div>
           </div>
         </div>
       </div>

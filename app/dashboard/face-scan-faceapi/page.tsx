@@ -23,7 +23,7 @@ import ShiftSelector from './components/ShiftSelector';
 import CameraShutdownHandler from './components/CameraShutdownHandler';
 import ShutdownTransition from './components/ShutdownTransition';
 import FailedAttendanceManager from './components/FailedAttendanceManager';
-import { failedAttendanceRetryManager, FailedAttendanceRecord } from './utils/failedAttendanceRetryManager';
+import { offlineAttendanceManager, OfflineAttendanceRecord } from './utils/offlineAttendanceManager';
 
 const FaceApiAttendanceScanner = () => {
   const webcamRef = useRef<Webcam>(null);
@@ -232,8 +232,8 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Setup retry manager callback when students or classConfigs change
   useEffect(() => {
     if (students.length > 0 && classConfigs) {
-      // Setup failed attendance retry manager with current data
-      failedAttendanceRetryManager.setRetryCallback(async (record: FailedAttendanceRecord) => {
+      // Setup offline attendance retry manager with current data
+      offlineAttendanceManager.setRetryCallback(async (record: OfflineAttendanceRecord) => {
         try {
           // Find the student from the record
           const student = students.find(s => s.id === record.studentId);
@@ -243,7 +243,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
           }
 
           // Use the enhanced markAttendance with retry logic
-          const result = await markAttendance(student, record.shift, classConfigs || {}, () => {}, 2); // 2 retry attempts for auto-retry
+          const result = await markAttendance(student, record.shift, classConfigs || {}, () => {}, 2, record.date); // 2 retry attempts for auto-retry, use original date
           return result !== 'present'; // Return true if not default fallback
         } catch (error) {
           console.error('Retry callback failed:', error);
@@ -251,14 +251,14 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         }
       });
       
-      console.log('🔄 Updated retry manager callback with current data');
+      console.log('🔄 Updated offline attendance retry manager callback with current data');
     }
   }, [students, classConfigs]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      failedAttendanceRetryManager.stopRetryManager();
+      offlineAttendanceManager.stopRetryManager();
     };
   }, []);
 
@@ -1557,13 +1557,13 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                       <div className="flex justify-between items-center mt-2">
                         <span className="text-sm text-gray-600 dark:text-gray-400">Auto-Retry System</span>
                         <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                          {failedAttendanceRetryManager.getFailedRecordsCount() > 0 ? 'Active' : 'Monitoring'}
+                          {offlineAttendanceManager.getFailedRecordsCount() > 0 ? 'Active' : 'Monitoring'}
                         </span>
                       </div>
                       <div className="flex justify-between items-center mt-2">
                         <span className="text-sm text-gray-600 dark:text-gray-400">Failed Records</span>
                         <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                          {failedAttendanceRetryManager.getFailedRecordsCount()}
+                          {offlineAttendanceManager.getFailedRecordsCount()}
                         </span>
                       </div>
                     </div>

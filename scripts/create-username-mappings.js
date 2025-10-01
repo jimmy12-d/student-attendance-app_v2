@@ -1,5 +1,5 @@
 /**
- * Script to add username field to all students based on fullName
+ * Script to create username mappings for authentication
  */
 
 const admin = require('firebase-admin');
@@ -29,78 +29,66 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-async function addUsernameToStudents() {
+async function createUsernameMappings() {
   try {
-    console.log('🚀 Adding username field to all students based on fullName...\n');
+    console.log('🚀 Creating username mappings for authentication...\n');
 
-    // Query for all students
-    const studentsQuery = db.collection('students');
-
-    const studentsSnapshot = await studentsQuery.get();
+    // Get all students
+    const studentsSnapshot = await db.collection('students').get();
 
     if (studentsSnapshot.empty) {
       console.log('⚠️  No students found.');
       return;
     }
 
-    console.log(`📊 Found ${studentsSnapshot.size} total students...\n`);
+    console.log(`📊 Found ${studentsSnapshot.size} students...\n`);
 
-    let updatedCount = 0;
+    let createdCount = 0;
     let skippedCount = 0;
-    const usedUsernames = new Set();
 
     // Process each student
     for (const doc of studentsSnapshot.docs) {
       const data = doc.data();
-      const fullName = data.fullName;
+      const username = data.username;
+      const phone = data.phone;
 
-      if (!fullName || typeof fullName !== 'string') {
-        console.log(`⚠️  Skipping student ${doc.id}: no valid fullName`);
+      if (!username || !phone) {
+        console.log(`⚠️  Skipping student ${doc.id}: missing username or phone`);
         skippedCount++;
         continue;
       }
 
-      // Generate base username: lowercase, replace spaces with underscores
-      let baseUsername = fullName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''); // remove non-alphanumeric except underscore
-
-      let username = baseUsername;
-      let suffix = 1;
-
-      // Check for duplicates and append suffix if needed
-      while (usedUsernames.has(username)) {
-        suffix++;
-        username = `${baseUsername}_${suffix}`;
-      }
-
-      usedUsernames.add(username);
-
-      // Update the document with username
       try {
-        await doc.ref.update({ username });
-        console.log(`✅ Updated ${fullName} -> ${username}`);
-        updatedCount++;
+        // Create mapping document with username as ID
+        await db.collection('usernameMappings').doc(username).set({
+          phone: phone,
+          studentId: doc.id,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`✅ Created mapping: ${username} -> ${phone}`);
+        createdCount++;
       } catch (error) {
-        console.error(`❌ Failed to update ${doc.id}:`, error);
+        console.error(`❌ Failed to create mapping for ${username}:`, error);
         skippedCount++;
       }
     }
 
-    console.log('\n� Username Addition Summary:');
+    console.log('\n📈 Username Mappings Creation Summary:');
     console.log(`   📊 Total students processed: ${studentsSnapshot.size}`);
-    console.log(`   ✅ Students updated: ${updatedCount}`);
+    console.log(`   ✅ Mappings created: ${createdCount}`);
     console.log(`   ⚠️  Students skipped: ${skippedCount}`);
 
-    console.log('\n� Username addition complete!');
+    console.log('\n🎉 Username mappings creation complete!');
 
   } catch (error) {
-    console.error('❌ Error during analysis:', error);
+    console.error('❌ Error during mapping creation:', error);
     throw error;
   }
 }
 
 // Main execution
 if (require.main === module) {
-  addUsernameToStudents()
+  createUsernameMappings()
     .then(() => {
       console.log('\n✨ Script completed successfully!');
       process.exit(0);
@@ -111,4 +99,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { addUsernameToStudents };
+module.exports = { createUsernameMappings };

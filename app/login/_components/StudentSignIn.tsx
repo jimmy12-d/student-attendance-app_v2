@@ -14,6 +14,8 @@ import {
   query, 
   where, 
   getDocs, 
+  doc,
+  getDoc,
   limit
 } from "firebase/firestore";
 import { useAppDispatch } from "../../_stores/hooks";
@@ -98,6 +100,47 @@ const StudentSignIn = () => {
       });
   }, [checkUserAndRedirect]);
 
+  const isPhoneNumber = (input: string): boolean => {
+    // More robust phone number detection
+    const cleanInput = input.trim();
+
+    // If it starts with +, it's definitely a phone number
+    if (cleanInput.startsWith('+')) {
+      return true;
+    }
+
+    // If it contains phone-specific characters (parentheses, dashes in phone format), it's a phone
+    if (/[\(\)\-]/.test(cleanInput)) {
+      return true;
+    }
+
+    // Count digits
+    const digitCount = (cleanInput.match(/\d/g) || []).length;
+
+    // If it has 7+ digits and no underscores (usernames have underscores), it's likely a phone
+    if (digitCount >= 7 && !cleanInput.includes('_')) {
+      return true;
+    }
+
+    // If it has 10+ digits regardless, it's definitely a phone
+    if (digitCount >= 10) {
+      return true;
+    }
+
+    // If it contains letters and underscores but few/no digits, it's a username
+    if (/[a-z]/.test(cleanInput) && cleanInput.includes('_')) {
+      return false;
+    }
+
+    // Default: if it has moderate digits (3-6) and no letters, could be phone
+    if (digitCount >= 3 && digitCount <= 6 && !/[a-z]/.test(cleanInput)) {
+      return true;
+    }
+
+    // Otherwise, assume username
+    return false;
+  };
+
   const handlePhoneSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -155,8 +198,22 @@ const StudentSignIn = () => {
             
         } catch (teacherAuthError: any) {            
             // If teacher auth fails, proceed with student authentication
-            const authenticateStudent = httpsCallable(functions, 'authenticateStudentWithPhone');
-                        const result = await authenticateStudent({ phone, password: userPassword });
+            const isUsingPhone = isPhoneNumber(phone);
+            
+            let authenticateStudent;
+            let authData;
+            
+            if (isUsingPhone) {
+              // Use phone authentication
+              authenticateStudent = httpsCallable(functions, 'authenticateStudentWithPhone');
+              authData = { phone, password: userPassword };
+            } else {
+              // Use username authentication
+              authenticateStudent = httpsCallable(functions, 'authenticateStudentWithUsername');
+              authData = { username: phone, password: userPassword };
+            }
+            
+            const result = await authenticateStudent(authData);
             const resultData = result.data as { customToken?: string; student?: any; error?: string };
 
             if (resultData.customToken && resultData.student) {
@@ -179,7 +236,7 @@ const StudentSignIn = () => {
                 // Redirect to student dashboard
                 navigateWithinPWA(navItems[0].href, { replace: true });
             } else {
-                throw new Error("Authentication failed. Please check your phone and password.");
+                throw new Error("Authentication failed. Please check your credentials and try again.");
             }
         }
 
@@ -194,11 +251,13 @@ const StudentSignIn = () => {
         } else if (error.code === 'auth/wrong-password') {
             setError("Invalid password. For teachers, use 'RodwellTeacher'. For students, use your registered password.");
         } else if (error.code === 'auth/user-not-found') {
-            setError("No account found with this phone number. Students should register via Telegram bot first.");
+            const isUsingPhone = isPhoneNumber(phone);
+            setError(`No account found with this ${isUsingPhone ? 'phone number' : 'username'}. Students should register via Telegram bot first.`);
         } else if (error.code === 'functions/not-found') {
             setError("Invalid Account");
         } else if (error.code === 'functions/unauthenticated') {
-            setError("Invalid phone or password. Please check your credentials.");
+            const isUsingPhone = isPhoneNumber(phone);
+            setError(`Invalid ${isUsingPhone ? 'phone number' : 'username'} or password. Please check your credentials.`);
         } else {
             setError(error.message || "Invalid credentials. Please try again.");
         }
@@ -256,8 +315,8 @@ const StudentSignIn = () => {
       )}
 
       <form onSubmit={handlePhoneSignIn} className="space-y-4">
-          <FormField label="Phone Number" labelFor="phone">
-              {(fd) => <input type="tel" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter your phone (e.g., 0967639355)" required className={fd.className}/>}
+          <FormField label="Phone Number or Username" labelFor="phone">
+              {(fd) => <input type="text" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Enter your phone or username" required className={fd.className}/>}
           </FormField>
           <FormField label="Password" labelFor="userPassword">
               {(fd) => (
@@ -293,6 +352,30 @@ const StudentSignIn = () => {
             {isSubmitting ? "Logging In..." : "Log In"}
           </Button>
       </form>
+
+      {/* <div className="mt-6 text-center">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400">
+              New student?
+            </span>
+          </div>
+        </div>
+        
+        <button
+          onClick={() => window.location.href = '/register'}
+          className="mt-4 w-full flex justify-center py-2 px-4 border border-blue-300 rounded-lg shadow-sm bg-white dark:bg-slate-700 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+        >
+          Sign Up for New Account
+        </button>
+        
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          Register and wait for admin approval
+        </p>
+      </div> */}
 
       <InstallPWA as_button={true} showPrompt={true} />
 

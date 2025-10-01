@@ -2536,9 +2536,8 @@ exports.authenticateStudentWithUsername = onCall({
         const customToken = await admin.auth().createCustomToken(authUid);
 
         return {
-            success: true,
-            token: customToken,
-            studentData: {
+            customToken: customToken,
+            student: {
                 id: studentDoc.id,
                 fullName: studentData.fullName,
                 username: studentData.username,

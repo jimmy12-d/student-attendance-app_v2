@@ -88,6 +88,7 @@ export interface Student {
   fullName: string;
   nameKhmer?: string; // Optional Khmer name
   phone?: string; // Optional, as it wasn't in the display list
+  grade?: string; // Grade level (from classTypes collection)
   class: string;
   shift: string;
   ay?: string; // Academic Year
@@ -127,6 +128,10 @@ export interface Student {
   authUid?: string; // Firebase Auth UID for legitimate authentication
   telegramAuthEnabled?: boolean; // Flag indicating Telegram auth is set up
   registeredAt?: Timestamp | Date; // When student registered via Telegram
+  username?: string; // Username for login (for self-registered students)
+  registrationStatus?: 'pending' | 'approved' | 'rejected'; // Registration status for self-registrations
+  registrationSource?: 'telegram' | 'self-registration' | 'admin'; // Source of registration
+  isActive?: boolean; // Whether account is active (approved by admin)
   lastLoginAt?: Timestamp | Date; // Last login timestamp
   passwordUpdatedAt?: Timestamp | Date; // When password was last changed
   migratedToPhoneAuth?: Timestamp | Date; // When migrated from username to phone auth

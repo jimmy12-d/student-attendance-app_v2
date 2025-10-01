@@ -736,10 +736,21 @@ export const markAttendance = async (
         await new Promise(resolve => setTimeout(resolve, retryDelay));
         return attemptMarkAttendance(attempt + 1);
       } else {
-        // Final attempt failed
+        // Final attempt failed - save to offline queue
         console.error(`💥 Final attempt failed for ${student.fullName}:`, error);
         
-        // Try to save as offline record for manual processing
+        // Determine network status from error
+        let networkStatus: 'offline' | 'timeout' | 'error' = 'error';
+        if (!navigator.onLine) {
+          networkStatus = 'offline';
+        } else if (error.code === 'unavailable' || error.message.includes('timeout')) {
+          networkStatus = 'timeout';
+        }
+        
+        // Determine the status using the advanced logic
+        const { status: attendanceStatus } = determineAttendanceStatus(student as any, selectedShift, classConfigs);
+        
+        // Try to save as offline record for automatic retry
         try {
           const offlineRecord = {
             studentId: student.id,
@@ -747,29 +758,52 @@ export const markAttendance = async (
             authUid: (student as any).authUid || null,
             date: attendanceDate,
             timeIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-            status: 'present', // Default to present for failed attempts
+            status: attendanceStatus, // Use calculated status
             shift: selectedShift,
-            method: 'face-api-failed',
-            timestamp: new Date(),
-            startTime: '',
+            method: 'face-api',
+            timestamp: new Date().toISOString(),
+            startTime: classConfigs?.[student.class?.replace(/^Class\s+/i, '')]?.shifts?.[selectedShift]?.startTime || '',
             class: (student as any).class || null,
             gracePeriodMinutes: (student as any).gracePeriodMinutes || 15,
-            errorReason: error.message,
-            requiresManualReview: true,
-            failedAttempts: maxRetries
+            errorReason: error.message || 'Network error',
+            requiresManualReview: networkStatus !== 'offline', // Auto-retry for offline, manual review for other errors
+            failedAttempts: maxRetries,
+            networkStatus: networkStatus
           };
           
-          // Store in localStorage as fallback
-          const offlineKey = `failed_attendance_${student.id}_${attendanceDate}_${selectedShift}`;
-          localStorage.setItem(offlineKey, JSON.stringify(offlineRecord));
-          console.log(`💾 Stored failed attendance in localStorage: ${offlineKey}`);
+          // Store in localStorage for automatic retry when connection is restored
+          const offlineKey = `failed_attendance_${student.id}_${attendanceDate}_${selectedShift}_${Date.now()}`;
+          localStorage.setItem(offlineKey, JSON.stringify({
+            ...offlineRecord,
+            savedAt: new Date().toISOString(),
+            synced: false
+          }));
+          console.log(`💾 Stored failed attendance in offline queue: ${offlineKey}`);
           
-          toast.error(`Failed to mark attendance for ${student.fullName}. Saved for manual review.`, {
-            duration: 10000
-          });
+          // Show appropriate message based on network status
+          if (networkStatus === 'offline') {
+            toast.warning(`📴 Offline: ${student.fullName}'s attendance saved. Will sync when online.`, {
+              duration: 8000
+            });
+          } else {
+            toast.error(`⚠️ Failed to mark attendance for ${student.fullName}. Saved for retry.`, {
+              duration: 10000
+            });
+          }
+          
+          // Dispatch event for UI updates
+          window.dispatchEvent(new CustomEvent('offlineAttendanceSaved', {
+            detail: { 
+              studentName: student.fullName,
+              networkStatus: networkStatus
+            }
+          }));
           
         } catch (offlineError) {
           console.error('Failed to save offline record:', offlineError);
+          toast.error(`Critical error: Unable to save attendance for ${student.fullName}`, {
+            duration: 10000
+          });
         }
         
         throw error; // Re-throw the original error

@@ -13,8 +13,12 @@ service cloud.firestore {
     // --- COLLECTION RULES ---
 
     match /students/{studentId} {
-      // READ: An admin or the student owner can read.
-      allow read: if isAuthorizedUser() || (request.auth != null && request.auth.uid == resource.data.authUid);
+      // READ: An admin, the student owner, or anyone querying by username for authentication can read.
+      allow read: if isAuthorizedUser() || 
+                   (request.auth != null && request.auth.uid == resource.data.authUid) ||
+                   (request.query.where.size() == 1 && 
+                    request.query.where[0].field == 'username' && 
+                    request.query.where[0].op == '==');
 
       // CREATE/DELETE: Only admins can create or delete student records.
       allow create, delete: if isAuthorizedUser();
@@ -43,7 +47,7 @@ service cloud.firestore {
     match /classes/{classId} {
       // Only admins can manage class data.
       allow write: if isAuthorizedUser();
-      allow read: if request.auth != null;
+      allow read: if true; // Allow public read for registration
     }
     
     match /classConfigs/{classConfigId} {
@@ -246,8 +250,15 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == resource.data.userId;
     }
     
+    match /usernameMappings/{mappingId} {
+      // Allow anyone to read username mappings for authentication
+      allow read: if true;
+      // Only admins can write mappings
+      allow write: if isAuthorizedUser();
+    }
+    
     match /backupHistory/{backupId} {
-      // READ/WRITE: Only admins can access backup history
+      // READ/WRITE: Only admins can access backup history records
       allow read, write: if isAuthorizedUser();
     }
     

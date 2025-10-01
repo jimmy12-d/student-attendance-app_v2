@@ -303,6 +303,53 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
         const updateEvent = new CustomEvent('refreshClassCounts');
         window.dispatchEvent(updateEvent);
       }, 100);
+
+      // Create username mapping for the new student
+      try {
+        // Generate username from fullName
+        const baseUsername = studentData.fullName
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '') // Remove non-alphanumeric except spaces
+          .replace(/\s+/g, '_') // Replace spaces with underscores
+          .replace(/_+/g, '_') // Replace multiple underscores with single
+          .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+
+        if (baseUsername) {
+          // Get unique username (handles duplicates)
+          let username = baseUsername;
+          let counter = 1;
+          let isUnique = false;
+
+          while (!isUnique) {
+            const existingMapping = await db.collection('usernameMappings').doc(username).get();
+            if (!existingMapping.exists) {
+              isUnique = true;
+            } else {
+              counter++;
+              username = `${baseUsername}_${counter}`;
+            }
+          }
+
+          // Create the mapping
+          await db.collection('usernameMappings').doc(username).set({
+            studentId: docRef.id,
+            phone: studentData.phone || '',
+            fullName: studentData.fullName,
+            createdAt: serverTimestamp()
+          });
+
+          // Update the student document with username
+          await db.collection('students').doc(docRef.id).update({
+            username: username,
+            usernameUpdatedAt: serverTimestamp()
+          });
+
+          console.log(`✅ Created username mapping: ${username} for student ${studentData.fullName}`);
+        }
+      } catch (mappingError) {
+        console.error('Error creating username mapping:', mappingError);
+        // Don't fail the entire operation if mapping creation fails
+      }
       
       toast.success(`Student '${studentData.fullName}' has been added successfully!`);
       if (onStudentAdded) {
