@@ -337,5 +337,52 @@
     "qrCodeError": "QR code scanning error",
     "invalidQRCode": "Invalid QR code",
     "sessionExpired": "Session expired. Please login again."
+  },
+  "dateOfBirth": {
+    "title": {
+      "year": "Select Your Birth Year",
+      "month": "Choose Your Birth Month", 
+      "day": "Pick Your Birth Day",
+      "yearMobile": "Birth Year",
+      "monthMobile": "Birth Month",
+      "dayMobile": "Birth Day"
+    },
+    "validation": {
+      "incompleteFields": "Please complete all date fields",
+      "invalidDate": "Please enter a valid date",
+      "futureDate": "Date of birth cannot be in the future",
+      "invalidAge": "Please enter a valid date of birth"
+    },
+    "success": {
+      "saved": "Date of birth saved successfully! 🎉"
+    },
+    "error": {
+      "saveFailed": "Failed to save date of birth. Please try again."
+    },
+    "ui": {
+      "stepOf": "Step {current} of {total}",
+      "swipeHint": "Swipe left/right to navigate",
+      "yourSelection": "Your Selection",
+      "back": "Back",
+      "next": "Next",
+      "nextArrow": "Next →",
+      "saving": "Saving...",
+      "done": "Done",
+      "complete": "Complete"
+    },
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    }
   }
 }

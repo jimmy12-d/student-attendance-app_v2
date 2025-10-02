@@ -24,11 +24,14 @@ service cloud.firestore {
       allow create, delete: if isAuthorizedUser();
       
       // UPDATE: An admin can update anything. A user can update a record
-      // ONLY to link their authUid for the first time.
+      // ONLY to link their authUid for the first time, or update their own dateOfBirth.
       allow update: if isAuthorizedUser() ||
                      (request.auth != null &&
                       resource.data.authUid == '' &&
-                      request.resource.data.authUid == request.auth.uid);
+                      request.resource.data.authUid == request.auth.uid) ||
+                     (request.auth != null &&
+                      request.auth.uid == resource.data.authUid &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dateOfBirth']));
     }
 
     match /attendance/{attendanceId} {

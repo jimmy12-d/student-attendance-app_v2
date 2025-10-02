@@ -99,6 +99,7 @@ export interface Student {
   motherPhone?: string; // Mother's Phone
   fatherName?: string; // Father's Name
   fatherPhone?: string; // Father's Phone
+  dateOfBirth?: string; // Date of Birth in "YYYY-MM-DD" format
   photoUrl?: string; // Photo URL
   faceDescriptor?: number[]; // Stored as array of numbers (Float32Array serialized)
   lastPaymentMonth?: string; // e.g., "YYYY-MM"

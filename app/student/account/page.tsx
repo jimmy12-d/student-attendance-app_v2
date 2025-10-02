@@ -13,10 +13,13 @@ import { useRouter } from 'next/navigation';
 import { usePWANavigation } from '@/app/_hooks/usePWANavigation';
 import { usePWAInstall } from '@/app/_hooks/usePWAInstall';
 import { useTranslations, useLocale } from 'next-intl';
+import { db } from '@/firebase-config';
+import { doc, getDoc } from 'firebase/firestore';
 
 // --- Import components for settings ---
 import NotificationSettings from './_components/NotificationSettings';
-import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle, mdiWeb, mdiHistory, mdiShieldAccount } from '@mdi/js';
+import BirthdayViewer from './_components/BirthdayViewer';
+import { mdiChevronRight, mdiBell, mdiPalette, mdiLogout, mdiDownload, mdiCheckCircle, mdiWeb, mdiHistory, mdiShieldAccount, mdiCakeVariant } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
 
 // --- Reusable UI Components for the new design ---
@@ -123,6 +126,7 @@ const AccountPage = () => {
   const tPayment = useTranslations('payment');
   const locale = useLocale();
   const userName = useAppSelector((state) => state.main.userName);
+  const studentDocId = useAppSelector((state) => state.main.studentDocId);
 
   // Utility function for Khmer font styling
   const khmerFont = (additionalClasses = '') => {
@@ -132,6 +136,7 @@ const AccountPage = () => {
 
   const [isLogoutModalActive, setIsLogoutModalActive] = useState(false);
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [showBirthdayViewer, setShowBirthdayViewer] = useState(false);
 
   const handlePaymentModalOpen = () => {
     router.push('/student/payment-history');
@@ -143,6 +148,10 @@ const AccountPage = () => {
     } else {
       triggerInstall();
     }
+  };
+
+  const handleViewBirthday = () => {
+    setShowBirthdayViewer(true);
   };
 
   const handleLogout = async () => {
@@ -207,6 +216,11 @@ const AccountPage = () => {
           </ol>
         </div>
       </CardBoxModal>
+
+      <BirthdayViewer
+        isActive={showBirthdayViewer}
+        onClose={() => setShowBirthdayViewer(false)}
+      />
 
       <div 
         key={locale}
@@ -361,6 +375,16 @@ const AccountPage = () => {
                   <ListDivider />
                 </>
               )}
+              <SettingsListItem
+                iconPath={mdiCakeVariant}
+                iconBgColor="bg-gradient-to-br from-pink-500 to-rose-600"
+                title="View Birthday"
+                subtitle="Check your registered date of birth"
+                onClick={handleViewBirthday}
+                titleClassName={khmerFont()}
+                subtitleClassName={khmerFont()}
+              />
+              <ListDivider />
               <SettingsListItem
                 iconPath={mdiLogout}
                 iconBgColor="bg-gradient-to-br from-red-500 to-rose-600"

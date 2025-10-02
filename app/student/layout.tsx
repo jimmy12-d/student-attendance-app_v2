@@ -17,6 +17,7 @@ import LocaleProvider from "../_components/LocaleProvider";
 import StudentLayoutContent from "./_components/StudentLayoutContent";
 import { usePathname } from "next/navigation";
 import { PWACache } from "../_utils/pwaCache";
+import DateOfBirthPrompt from "./_components/DateOfBirthPrompt";
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const { navigateWithinPWA } = usePWANavigation();
@@ -133,6 +134,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
           </div>
           <StudentBottomNav />
           <NotificationPermissionPrompt />
+          <DateOfBirthPrompt />
         </RouteGuard>
       </StudentLayoutContent>
     </LocaleProvider>
