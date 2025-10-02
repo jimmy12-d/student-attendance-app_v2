@@ -24,6 +24,7 @@ import FormField from '../../_components/FormField';
 import CustomMultiSelectDropdown, { MultiSelectOption } from '../_components/CustomMultiSelectDropdown';
 import { mdiBellRing, mdiTrashCan, mdiEyeOutline, mdiEyeOffOutline, mdiEarth, mdiGoogleClassroom, mdiAccount } from '@mdi/js';
 import Icon from '../../_components/Icon';
+import { toast } from 'sonner';
 
 
 type Notification = {
@@ -160,6 +161,7 @@ const NotificationManager = () => {
                 createdAt: serverTimestamp(),
                 readCount: 0
             });
+            toast.success('Notification sent successfully!');
             resetForm();
         } catch (err) {
             console.error("Error creating notification: ", err);

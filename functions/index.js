@@ -4,7 +4,7 @@ const { getFirestore, Timestamp, FieldValue } = require("firebase-admin/firestor
 const { getStorage } = require("firebase-admin/storage");
 const {onRequest} = require("firebase-functions/v2/https");
 const {onObjectFinalized} = require("firebase-functions/v2/storage");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -107,6 +107,61 @@ const formatClassInKhmer = (classLevel) => {
     }
     
     return classLevel; // Return as-is if no number found
+};
+
+// --- Helper function to check if text contains English characters ---
+const containsEnglish = (text) => {
+    if (!text) return false;
+    return /[a-zA-Z]/.test(text);
+};
+
+// --- Helper function to format shift in Khmer ---
+const formatShiftInKhmer = (shift) => {
+    if (!shift) return 'មិនបានបញ្ជាក់';
+    
+    // If already in Khmer (no English characters), return as-is
+    if (!containsEnglish(shift)) return shift;
+    
+    // Convert common English shifts to Khmer
+    const shiftLower = shift.toLowerCase().trim();
+    if (shiftLower.includes('morning') || shiftLower === 'am' || shiftLower === 'morning') {
+        return 'ព្រឹក';
+    } else if (shiftLower.includes('afternoon') || shiftLower === 'pm' || shiftLower === 'afternoon') {
+        return 'រសៀល';
+    } else if (shiftLower.includes('evening') || shiftLower === 'evening') {
+        return 'ល្ងាច';
+    }
+    
+    return shift; // Return as-is if no match
+};
+
+// --- Helper function to format date as dd/mm/yyyy ---
+const formatDateDDMMYYYY = (dateString) => {
+    try {
+        const date = new Date(dateString);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    } catch (error) {
+        return dateString; // Return original if parsing fails
+    }
+};
+
+// --- Helper function to get user's language preference ---
+const getUserLanguage = async (authUid) => {
+    try {
+        // Check if user has language preference stored
+        const userDoc = await db.collection('users').doc(authUid).get();
+        if (userDoc.exists && userDoc.data().language) {
+            return userDoc.data().language;
+        }
+        // Default to Khmer for Cambodian school
+        return 'kh';
+    } catch (error) {
+        console.log('Error getting user language, defaulting to kh:', error);
+        return 'kh';
+    }
 };
 
 const calculateAttendanceStatus = (attendanceTime, classStartTime) => {
@@ -970,11 +1025,15 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
         await db.collection('parentNotifications').doc(`${studentId}_${chatId}`).set(parentData);
         
         // Send welcome message
+        const studentDisplayName = (student.khmerName || student.fullNameKhmer || student.nameKhmer) || student.fullName;
+        const classDisplay = containsEnglish(student.class) ? formatClassInKhmer(student.class) : (student.class || 'មិនបានបញ្ជាក់');
+        const shiftDisplay = formatShiftInKhmer(student.shift) || 'មិនបានបញ្ជាក់';
+        
         const welcomeMessage = `🎉 សូមស្វាគមន៍! បងបានចុះឈ្មោះដោយជោគជ័យដើម្បីទទួលបានការជូនដំណឹងសម្រាប់៖
 
-👤 **សិស្ស:** ${student.fullName}
-🏫 **ថ្នាក់:** ${student.class || 'មិនបានបញ្ជាក់'}
-⏰ **វេន:** ${student.shift || 'មិនបានបញ្ជាក់'}
+👤 **សិស្ស:** ${studentDisplayName}
+🏫 **ថ្នាក់:** ${classDisplay}
+⏰ **វេន:** ${shiftDisplay}
 
 បងនឹងទទួលបានការជូនដំណឹងនៅពេល៖
 ✅ កូនរបស់បងមកដល់សាលា
@@ -3239,7 +3298,8 @@ exports.notifyParentAttendance = onCall({
             try {
                 // Use Khmer name if available, otherwise use regular name
                 const khmerName = parentData.studentKhmerName || studentName;
-                const formattedClass = formatClassInKhmer(parentData.studentClass);
+                const classDisplay = containsEnglish(parentData.studentClass) ? formatClassInKhmer(parentData.studentClass) : (parentData.studentClass || 'មិនបានបញ្ជាក់');
+                const shiftDisplay = formatShiftInKhmer(parentData.studentShift) || 'មិនបានបញ្ជាក់';
                 
                 // Calculate attendance status if start time is available
                 const attendanceStatus = parentData.classStartTime ? 
@@ -3248,13 +3308,14 @@ exports.notifyParentAttendance = onCall({
                 let message = `🎒 **ការជូនដំណឹងវត្តមាន**
 
 👤 **សិស្ស:** ${khmerName}
-🏫 **ថ្នាក់:** ${formattedClass}
-⏰ **ពេលវេលា:** ${attendanceTime}`;
+🏫 **ថ្នាក់:** ${classDisplay}
+⏰ **វេន:** ${shiftDisplay}
+🕐 **ពេលវេលា:** ${attendanceTime}`;
                 
                 // Add class start time and status if available
                 if (attendanceStatus) {
                     message += `
-� **ម៉ោងចាប់ផ្តើម:** ${attendanceStatus.startTime}
+🔔 **ម៉ោងចាប់ផ្តើម:** ${attendanceStatus.startTime}
 ${attendanceStatus.statusIcon} **ស្ថានភាព:** ${attendanceStatus.status}`;
                 }
                 
@@ -3357,14 +3418,16 @@ exports.notifyParentPermissionRequest = onCall({
 
                 // Use Khmer name if available, otherwise use regular name
                 const khmerName = parentData.studentKhmerName || studentName;
-                const formattedClass = formatClassInKhmer(parentData.studentClass);
+                const classDisplay = containsEnglish(parentData.studentClass) ? formatClassInKhmer(parentData.studentClass) : (parentData.studentClass || 'មិនបានបញ្ជាក់');
+                const shiftDisplay = formatShiftInKhmer(parentData.studentShift) || 'មិនបានបញ្ជាក់';
 
                 const message = `${icon} **ការស្នើសុំអនុញ្ញាត ${statusText}**
 
 👤 **សិស្ស:** ${khmerName}
-🏫 **ថ្នាក់:** ${formattedClass}
+🏫 **ថ្នាក់:** ${classDisplay}
+⏰ **វេន:** ${shiftDisplay}
 📋 **ប្រភេទ:** ${permissionType}
-⏰ **ពេលវេលាស្នើសុំ:** ${formattedTime}
+🕐 **ពេលវេលាស្នើសុំ:** ${formattedTime}
 ${reason ? `📝 **ហេតុផល:** ${reason}` : ''}`;
 
                 await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
@@ -4224,8 +4287,15 @@ exports.sendNotificationToStudents = onDocumentCreated({
 
     const notificationData = snapshot.data();
     const { title, body, link, targetType, targetValue } = notificationData;
+    const docId = event.params.docId;
 
-    console.log(`Processing notification: ${title} (${targetType})`);
+    console.log(`Processing notification ${docId}: ${title} (${targetType})`);
+    
+    // Check if this notification has already been processed (deduplication)
+    if (notificationData.sentAt) {
+        console.log(`Notification ${docId} already processed (sentAt exists) - skipping duplicate`);
+        return;
+    }
 
     try {
         // Get all FCM tokens for targeted students
@@ -4312,23 +4382,49 @@ exports.sendNotificationToStudents = onDocumentCreated({
 
         console.log(`Sending notification to ${fcmTokens.length} devices`);
 
-        // Prepare FCM message
+        // Also create in-app notifications for each target student
+        const inAppNotificationPromises = targetStudentUids.map(async (authUid) => {
+            try {
+                await db.collection(`users/${authUid}/notifications`).add({
+                    title: title,
+                    body: body,
+                    type: 'admin_broadcast',
+                    link: link || '/student/notifications',
+                    isRead: false,
+                    createdAt: FieldValue.serverTimestamp(),
+                    broadcastId: docId // Link back to the broadcast notification
+                });
+            } catch (error) {
+                console.error(`Failed to create in-app notification for user ${authUid}:`, error);
+            }
+        });
+        
+        await Promise.all(inAppNotificationPromises);
+        console.log(`Created ${targetStudentUids.length} in-app notifications`);
+
+        // Prepare FCM message (data-only to prevent duplicate notifications)
+        // FCM auto-displays notifications when 'notification' object is included
+        // Service worker will handle display via onBackgroundMessage
         const message = {
-            notification: {
-                title: title,
-                body: body,
-                icon: '/favicon.png',
-            },
             data: {
+                title: title, // Pass as data instead
+                body: body,   // Pass as data instead
                 click_action: 'FLUTTER_NOTIFICATION_CLICK',
                 url: link || '/student/notifications',
-                notificationId: event.params.docId
+                notificationId: event.params.docId,
+                icon: '/icon-192x192-3d.png',
+                badge: '/icon-192x192-3d.png'
             },
-            tokens: fcmTokens
+            tokens: fcmTokens,
+            webpush: {
+                fcmOptions: {
+                    link: link || '/student/notifications'
+                }
+            }
         };
 
         // Send multicast notification
-        const response = await admin.messaging().sendMulticast(message);
+        const response = await admin.messaging().sendEachForMulticast(message);
 
         console.log(`Notification sent successfully: ${response.successCount} succeeded, ${response.failureCount} failed`);
 
@@ -4377,6 +4473,372 @@ exports.sendNotificationToStudents = onDocumentCreated({
             sendError: error.message,
             sentAt: FieldValue.serverTimestamp()
         });
+    }
+});
+
+// Track when students mark notifications as read
+exports.trackNotificationReadStatus = onDocumentWritten({
+    document: "users/{userId}/notifications/{notificationId}",
+    region: "asia-southeast1"
+}, async (event) => {
+    const beforeData = event.data?.before?.data();
+    const afterData = event.data?.after?.data();
+    
+    // Only process when isRead changes from false to true
+    const wasRead = beforeData?.isRead === true;
+    const isNowRead = afterData?.isRead === true;
+    
+    if (!wasRead && isNowRead) {
+        const notificationId = event.params.notificationId;
+        
+        try {
+            // Increment readCount on the main notification document
+            const notificationRef = db.collection('notifications').doc(notificationId);
+            await notificationRef.update({
+                readCount: FieldValue.increment(1)
+            });
+            
+            console.log(`Incremented readCount for notification ${notificationId}`);
+        } catch (error) {
+            console.error(`Error updating readCount for notification ${notificationId}:`, error);
+        }
+    }
+});
+
+/**
+ * [Firestore-triggered Function]
+ * Notify students when their permission request is approved or rejected
+ */
+exports.notifyStudentPermissionStatus = onDocumentWritten({
+    document: "permissions/{permissionId}",
+    region: "asia-southeast1"
+}, async (event) => {
+    const beforeData = event.data?.before?.data();
+    const afterData = event.data?.after?.data();
+    
+    // Only process when status changes from 'pending' to 'approved' or 'rejected'
+    const wasPending = beforeData?.status === 'pending';
+    const newStatus = afterData?.status;
+    
+    if (wasPending && (newStatus === 'approved' || newStatus === 'rejected')) {
+        const permissionId = event.params.permissionId;
+        const { studentId, studentName, authUid, reason, permissionStartDate, permissionEndDate } = afterData;
+        
+        console.log(`Permission ${permissionId} ${newStatus} for student ${studentName}`);
+        
+        // Send in-app notification to student
+        if (authUid) {
+            try {
+                // Check if notification already exists for this permission to prevent duplicates
+                // Also check recent notifications (within last 10 seconds) to catch race conditions
+                const tenSecondsAgo = new Date(Date.now() - 10000);
+                const existingNotifications = await db.collection(`users/${authUid}/notifications`)
+                    .where('type', '==', 'permission')
+                    .where('permissionId', '==', permissionId)
+                    .where('createdAt', '>=', tenSecondsAgo)
+                    .limit(1)
+                    .get();
+                
+                if (!existingNotifications.empty) {
+                    console.log(`Notification already exists for permission ${permissionId} (within last 10 seconds) - skipping duplicate`);
+                    return;
+                }
+                
+                // Get user's language preference
+                const userLang = await getUserLanguage(authUid);
+                
+                // Format dates as dd/mm/yyyy
+                const formattedStartDate = formatDateDDMMYYYY(permissionStartDate);
+                const formattedEndDate = formatDateDDMMYYYY(permissionEndDate);
+                const dateRange = formattedStartDate === formattedEndDate ? formattedStartDate : `${formattedStartDate} - ${formattedEndDate}`;
+                
+                const statusEmoji = newStatus === 'approved' ? '✅' : '❌';
+                
+                // Create notification in appropriate language
+                let notificationTitle, notificationBody;
+                if (userLang === 'kh') {
+                    const statusTextKh = newStatus === 'approved' ? 'បានអនុញ្ញាត' : 'មិនអនុញ្ញាត';
+                    notificationTitle = `${statusEmoji} ពាក្យសុំច្បាប់${statusTextKh}`;
+                    notificationBody = `មូលហេតុ: ${reason}\nកាលបរិច្ឆេទ: ${dateRange}`;
+                } else {
+                    const statusTextEn = newStatus === 'approved' ? 'Approved' : 'Rejected';
+                    notificationTitle = `${statusEmoji} Permission ${statusTextEn}`;
+                    notificationBody = `Reason: ${reason}\nDate: ${dateRange}`;
+                }
+                
+                // Create notification in student's notifications subcollection
+                await db.collection(`users/${authUid}/notifications`).add({
+                    title: notificationTitle,
+                    body: notificationBody,
+                    type: 'permission',
+                    status: newStatus,
+                    permissionId: permissionId,
+                    startDate: permissionStartDate,
+                    endDate: permissionEndDate,
+                    reason: reason,
+                    isRead: false,
+                    createdAt: FieldValue.serverTimestamp(),
+                    link: '/student/attendance'
+                });
+                
+                console.log(`In-app notification sent to student ${studentName} (${authUid})`);
+                
+                // Also send FCM notification if student has tokens
+                const fcmTokensSnapshot = await db.collection('fcmTokens')
+                    .where('userId', '==', authUid)
+                    .get();
+                
+                if (!fcmTokensSnapshot.empty) {
+                    const fcmTokens = fcmTokensSnapshot.docs.map(doc => doc.data().token);
+                    
+                    const message = {
+                        data: {
+                            title: notificationTitle, // Pass as data
+                            body: notificationBody,   // Pass as data
+                            type: 'permission',
+                            status: newStatus,
+                            permissionId: permissionId,
+                            link: '/student/attendance',
+                            icon: '/icon-192x192-3d.png',
+                            badge: '/icon-192x192-3d.png'
+                        },
+                        tokens: fcmTokens,
+                        webpush: {
+                            fcmOptions: {
+                                link: '/student/attendance'
+                            }
+                        }
+                    };
+                    
+                    const response = await admin.messaging().sendEachForMulticast(message);
+                    console.log(`FCM notification sent: ${response.successCount} succeeded, ${response.failureCount} failed`);
+                }
+            } catch (error) {
+                console.error(`Error sending permission notification to student ${studentId}:`, error);
+            }
+        }
+    }
+});
+
+/**
+ * [Firestore-triggered Function]
+ * Notify students when their leave early request is approved or rejected
+ */
+exports.notifyStudentLeaveEarlyStatus = onDocumentWritten({
+    document: "leaveEarlyRequests/{requestId}",
+    region: "asia-southeast1"
+}, async (event) => {
+    const beforeData = event.data?.before?.data();
+    const afterData = event.data?.after?.data();
+    
+    // Only process when status changes from 'pending' to 'approved' or 'rejected'
+    const wasPending = beforeData?.status === 'pending';
+    const newStatus = afterData?.status;
+    
+    if (wasPending && (newStatus === 'approved' || newStatus === 'rejected')) {
+        const requestId = event.params.requestId;
+        const { studentId, studentName, authUid, leaveTime, reason } = afterData;
+        
+        console.log(`Leave early request ${requestId} ${newStatus} for student ${studentName}`);
+        
+        // Send in-app notification to student
+        if (authUid) {
+            try {
+                // Check if notification already exists for this leave early request to prevent duplicates
+                // Also check recent notifications (within last 10 seconds) to catch race conditions
+                const tenSecondsAgo = new Date(Date.now() - 10000);
+                const existingNotifications = await db.collection(`users/${authUid}/notifications`)
+                    .where('type', '==', 'leaveEarly')
+                    .where('requestId', '==', requestId)
+                    .where('createdAt', '>=', tenSecondsAgo)
+                    .limit(1)
+                    .get();
+                
+                if (!existingNotifications.empty) {
+                    console.log(`Notification already exists for leave early request ${requestId} (within last 10 seconds) - skipping duplicate`);
+                    return;
+                }
+                
+                // Get user's language preference
+                const userLang = await getUserLanguage(authUid);
+                
+                const statusEmoji = newStatus === 'approved' ? '✅' : '❌';
+                
+                // Create notification in appropriate language
+                let notificationTitle, notificationBody;
+                if (userLang === 'kh') {
+                    const statusTextKh = newStatus === 'approved' ? 'បានអនុញ្ញាត' : 'មិនអនុញ្ញាត';
+                    notificationTitle = `${statusEmoji} ពាក្យសុំចេញមុន${statusTextKh}`;
+                    notificationBody = `មូលហេតុ: ${reason}\nពេលវេលា: ${leaveTime}`;
+                } else {
+                    const statusTextEn = newStatus === 'approved' ? 'Approved' : 'Rejected';
+                    notificationTitle = `${statusEmoji} Leave Early ${statusTextEn}`;
+                    notificationBody = `Reason: ${reason}\nTime: ${leaveTime}`;
+                }
+                
+                // Create notification in student's notifications subcollection
+                await db.collection(`users/${authUid}/notifications`).add({
+                    title: notificationTitle,
+                    body: notificationBody,
+                    type: 'leaveEarly',
+                    status: newStatus,
+                    requestId: requestId,
+                    leaveTime: leaveTime,
+                    reason: reason,
+                    isRead: false,
+                    createdAt: FieldValue.serverTimestamp(),
+                    link: '/student/attendance'
+                });
+                
+                console.log(`In-app notification sent to student ${studentName} (${authUid})`);
+                
+                // Also send FCM notification if student has tokens
+                const fcmTokensSnapshot = await db.collection('fcmTokens')
+                    .where('userId', '==', authUid)
+                    .get();
+                
+                if (!fcmTokensSnapshot.empty) {
+                    const fcmTokens = fcmTokensSnapshot.docs.map(doc => doc.data().token);
+                    
+                    const message = {
+                        data: {
+                            title: notificationTitle, // Pass as data
+                            body: notificationBody,   // Pass as data
+                            type: 'leaveEarly',
+                            status: newStatus,
+                            requestId: requestId,
+                            link: '/student/attendance',
+                            icon: '/icon-192x192-3d.png',
+                            badge: '/icon-192x192-3d.png'
+                        },
+                        tokens: fcmTokens,
+                        webpush: {
+                            fcmOptions: {
+                                link: '/student/attendance'
+                            }
+                        }
+                    };
+                    
+                    const response = await admin.messaging().sendEachForMulticast(message);
+                    console.log(`FCM notification sent: ${response.successCount} succeeded, ${response.failureCount} failed`);
+                }
+            } catch (error) {
+                console.error(`Error sending leave early notification to student ${studentId}:`, error);
+            }
+        }
+    }
+});
+
+/**
+ * [Firestore-triggered Function]
+ * Notify students when their attendance is marked
+ */
+exports.notifyStudentAttendance = onDocumentCreated({
+    document: "attendance/{attendanceId}",
+    region: "asia-southeast1"
+}, async (event) => {
+    const attendanceData = event.data?.data();
+    const attendanceId = event.params.attendanceId;
+    
+    if (!attendanceData) {
+        console.log("No data in attendance document");
+        return;
+    }
+    
+    const { authUid, studentName, status, timeIn, shift, date, method } = attendanceData;
+    
+    // Only send notifications for face-api or manual attendance marking (not for requested status)
+    if (status === 'requested' || !authUid) {
+        console.log(`Skipping notification - status: ${status}, authUid: ${authUid}`);
+        return;
+    }
+    
+    console.log(`Attendance marked for ${studentName} - status: ${status}, method: ${method || 'unknown'}`);
+    
+    try {
+        // Check if notification already exists for this attendance record to prevent duplicates
+        const existingNotifications = await db.collection(`users/${authUid}/notifications`)
+            .where('type', '==', 'attendance')
+            .where('date', '==', date)
+            .where('arrivalTime', '==', timeIn)
+            .limit(1)
+            .get();
+        
+        if (!existingNotifications.empty) {
+            console.log(`Notification already exists for ${studentName} on ${date} at ${timeIn} - skipping duplicate`);
+            return;
+        }
+        // Get user's language preference
+        const userLang = await getUserLanguage(authUid);
+        
+        // Format date as dd/mm/yyyy
+        const formattedDate = formatDateDDMMYYYY(date);
+        
+        // Format notification based on status and language
+        const statusEmoji = status === 'late' ? '⚠️' : '✅';
+        
+        let notificationTitle, notificationBody;
+        if (userLang === 'kh') {
+            const statusTextKh = status === 'late' ? 'មកយឺត' : 'មកទាន់ម៉ោង';
+            notificationTitle = `${statusEmoji} វត្តមាន${statusTextKh}`;
+            notificationBody = `ពេលមកដល់: ${timeIn}\nកាលបរិច្ឆេទ: ${formattedDate}`;
+        } else {
+            const statusTextEn = status === 'late' ? 'Late' : 'Present';
+            notificationTitle = `${statusEmoji} Attendance Marked`;
+            notificationBody = `Status: ${statusTextEn}\nArrival: ${timeIn}\nDate: ${formattedDate}`;
+        }
+        
+        // Create in-app notification
+        await db.collection(`users/${authUid}/notifications`).add({
+            title: notificationTitle,
+            body: notificationBody,
+            type: 'attendance',
+            status: status,
+            arrivalTime: timeIn,
+            shift: shift,
+            date: date,
+            attendanceId: attendanceId, // Link to the attendance record
+            isRead: false,
+            createdAt: FieldValue.serverTimestamp(),
+            link: '/student/attendance'
+        });
+        
+        console.log(`In-app notification created for student ${studentName} (${authUid})`);
+        
+        // Also send FCM notification if student has tokens
+        const fcmTokensSnapshot = await db.collection('fcmTokens')
+            .where('userId', '==', authUid)
+            .get();
+        
+        if (!fcmTokensSnapshot.empty) {
+            const fcmTokens = fcmTokensSnapshot.docs.map(doc => doc.data().token);
+            
+            const message = {
+                data: {
+                    title: notificationTitle, // Pass as data
+                    body: notificationBody,   // Pass as data
+                    type: 'attendance',
+                    status: status,
+                    arrivalTime: timeIn,
+                    shift: shift,
+                    date: date,
+                    link: '/student/attendance',
+                    icon: '/icon-192x192-3d.png',
+                    badge: '/icon-192x192-3d.png'
+                },
+                tokens: fcmTokens,
+                webpush: {
+                    fcmOptions: {
+                        link: '/student/attendance'
+                    }
+                }
+            };
+            
+            const response = await admin.messaging().sendEachForMulticast(message);
+            console.log(`FCM notification sent: ${response.successCount} succeeded, ${response.failureCount} failed`);
+        }
+    } catch (error) {
+        console.error(`Error sending attendance notification to student ${authUid}:`, error);
     }
 });
 

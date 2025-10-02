@@ -114,9 +114,9 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
             }
         };
 
-        if (isVisible && userUid) {
-            // Set up real-time listener for notifications
-            const notificationQueries = [];
+        // Set up real-time listener - ALWAYS active, not just when panel is open
+        if (userUid) {
+            const notificationQueries: any[] = [];
             
             // Real-time listener for user-specific notifications
             notificationQueries.push(
@@ -148,7 +148,8 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
             }
 
             const unsubscribes = notificationQueries.map(q => 
-                onSnapshot(q, () => {
+                onSnapshot(q, (snapshot) => {
+                    console.log('[NotificationsPanel] Notification change detected, refreshing...');
                     // Refresh notifications when any changes occur
                     fetchNotifications();
                 }, (error) => {
@@ -163,7 +164,7 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
                 unsubscribes.forEach(unsubscribe => unsubscribe());
             };
         }
-    }, [userUid, studentClassType, dispatch, isVisible]);
+    }, [userUid, studentClassType, dispatch]); // Removed isVisible from dependencies
     
     const markSingleNotificationAsRead = async (notification: AppNotification) => {
         if (!userUid || notification.isRead) return;

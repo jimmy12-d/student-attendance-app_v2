@@ -19,67 +19,94 @@ export const useFirebaseMessaging = (userId: string | null) => {
     }, []);
 
     const requestPermission = async () => {
+        console.log('[useFirebaseMessaging] Starting permission request...');
+        console.log('[useFirebaseMessaging] User ID:', userId);
+        
         if (!userId) {
-            console.error("User ID is not available. Cannot request permission.");
+            console.error("[useFirebaseMessaging] User ID is not available. Cannot request permission.");
             return;
         }
 
         // Check if the browser supports notifications and service workers
         if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
-            console.error("This browser doesn't support notifications or service workers");
+            console.error("[useFirebaseMessaging] This browser doesn't support notifications or service workers");
+            console.log('[useFirebaseMessaging] Browser checks:', {
+                isWindow: typeof window !== 'undefined',
+                hasNotification: 'Notification' in window,
+                hasServiceWorker: 'serviceWorker' in navigator
+            });
             setPermission('denied');
             return;
         }
 
+        console.log('[useFirebaseMessaging] Browser support confirmed');
+
         try {
             // Request notification permission first
+            console.log('[useFirebaseMessaging] Requesting notification permission...');
             const permissionResult = await Notification.requestPermission();
+            console.log('[useFirebaseMessaging] Permission result:', permissionResult);
             setPermission(permissionResult);
 
             if (permissionResult === 'granted') {
-                // Wait for service worker to be ready
-                const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}&authDomain=${process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}&projectId=${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}&storageBucket=${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}&messagingSenderId=${process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}&appId=${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}`);
-                console.log('Service worker registered:', registration);
+                console.log('[useFirebaseMessaging] Permission granted! Registering service worker...');
+                // Wait for service worker to be ready (simplified registration for iOS compatibility)
+                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+                    scope: '/'
+                });
+                await navigator.serviceWorker.ready;
+                console.log('[useFirebaseMessaging] Service worker registered:', registration.scope);
 
                 // Initialize Firebase messaging
+                console.log('[useFirebaseMessaging] Initializing Firebase Messaging...');
                 const messaging = getMessaging(app);
                 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
                 
                 if (!VAPID_KEY || VAPID_KEY === 'your_vapid_key_here') {
-                    console.error("VAPID key is not set or is placeholder. Please set NEXT_PUBLIC_FIREBASE_VAPID_KEY in your environment variables.");
+                    console.error("[useFirebaseMessaging] VAPID key is not set or is placeholder.");
                     return;
                 }
                 
+                console.log('[useFirebaseMessaging] Getting FCM token...');
                 const currentToken = await getToken(messaging, { 
                     vapidKey: VAPID_KEY,
                     serviceWorkerRegistration: registration
                 });
 
                 if (currentToken) {
+                    console.log('[useFirebaseMessaging] FCM Token obtained:', currentToken.substring(0, 20) + '...');
                     setFcmToken(currentToken);
+                    
                     // Save the token to Firestore
+                    console.log('[useFirebaseMessaging] Saving token to Firestore...');
                     await setDoc(doc(db, 'fcmTokens', userId), {
                         token: currentToken,
                         userId: userId,
                         createdAt: serverTimestamp(),
+                        platform: navigator.userAgent.includes('iPhone') ? 'iOS' : 'other',
+                        isPWA: window.matchMedia('(display-mode: standalone)').matches
                     }, { merge: true });
-                    console.log('FCM Token registered:', currentToken);
+                    console.log('[useFirebaseMessaging] Token saved successfully!');
                 } else {
-                    console.log('No registration token available. Request permission to generate one.');
+                    console.warn('[useFirebaseMessaging] No registration token available.');
                 }
             } else {
-                console.log('Permission not granted for Notification.');
+                console.log('[useFirebaseMessaging] Permission not granted:', permissionResult);
             }
         } catch (error) {
-            console.error('An error occurred while retrieving token:', error);
+            console.error('[useFirebaseMessaging] Error in requestPermission:', error);
             // Provide more specific error handling
             if (error instanceof Error) {
+                console.error('[useFirebaseMessaging] Error details:', {
+                    message: error.message,
+                    stack: error.stack
+                });
                 if (error.message.includes('messaging/unsupported-browser')) {
-                    console.error('This browser is not supported for Firebase messaging');
+                    console.error('[useFirebaseMessaging] Browser not supported for Firebase messaging');
                 } else if (error.message.includes('messaging/permission-blocked')) {
-                    console.error('Notification permission was blocked');
+                    console.error('[useFirebaseMessaging] Notification permission was blocked');
                 } else if (error.message.includes('messaging/vapid-key-required')) {
-                    console.error('VAPID key is required for this operation');
+                    console.error('[useFirebaseMessaging] VAPID key is required');
                 }
             }
         }
@@ -91,50 +118,19 @@ export const useFirebaseMessaging = (userId: string | null) => {
             try {
                 const messaging = getMessaging(app);
                 const unsubscribe = onMessage(messaging, (payload) => {
-                    console.log('Message received in foreground:', payload);
+                    console.log('[useFirebaseMessaging] Message received in foreground:', payload);
                     
-                    // Show browser notification for foreground messages
-                    if (payload.notification) {
-                        const notificationTitle = payload.notification.title || 'New Notification';
-                        const notificationOptions = {
-                            body: payload.notification.body || '',
-                            icon: payload.notification.icon || '/favicon.png',
-                            badge: '/favicon.png',
-                            tag: payload.data?.notificationId || 'default',
-                            renotify: true,
-                            requireInteraction: false,
-                            data: payload.data || {}
-                        };
-
-                        // Check if service worker is available and ready
-                        if ('serviceWorker' in navigator) {
-                            navigator.serviceWorker.ready.then((registration) => {
-                                if (registration && registration.showNotification) {
-                                    registration.showNotification(notificationTitle, notificationOptions);
-                                } else {
-                                    // Fallback to browser notification
-                                    if ('Notification' in window && Notification.permission === 'granted') {
-                                        new Notification(notificationTitle, notificationOptions);
-                                    }
-                                }
-                            }).catch((error) => {
-                                console.error('Error showing notification via service worker:', error);
-                                // Fallback to browser notification
-                                if ('Notification' in window && Notification.permission === 'granted') {
-                                    new Notification(notificationTitle, notificationOptions);
-                                }
-                            });
-                        } else {
-                            // Direct browser notification if service worker not available
-                            if ('Notification' in window && Notification.permission === 'granted') {
-                                new Notification(notificationTitle, notificationOptions);
-                            }
-                        }
-                    }
+                    // Note: We don't manually show notification here because:
+                    // 1. The service worker's onBackgroundMessage handles it (even in foreground for PWA)
+                    // 2. Showing it here would cause duplicate notifications
+                    // 3. The real-time listener in NotificationsPanel already updates the badge
+                    
+                    // Just log for debugging - the service worker handles display
+                    console.log('[useFirebaseMessaging] Notification will be shown by service worker');
                 });
                 return () => unsubscribe();
             } catch (error) {
-                console.error('Error setting up foreground message listener:', error);
+                console.error('[useFirebaseMessaging] Error setting up foreground message listener:', error);
             }
         }
     }, [permission]);

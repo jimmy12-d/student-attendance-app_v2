@@ -707,6 +707,11 @@ export const markAttendance = async (
         // Don't throw error as this is not critical for core attendance functionality
       }
 
+      // Note: Student in-app notification is now handled by Cloud Function
+      // triggered automatically when attendance document is created
+      console.log(`📝 Attendance saved - student notification will be sent by Cloud Function (authUid: ${(student as any).authUid || 'N/A'})`);
+
+
       // Show success message with shift information
       const message = `${student.fullName} marked ${status} for ${selectedShift} shift at ${timeString}`;
       

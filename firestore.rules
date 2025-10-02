@@ -244,10 +244,15 @@ service cloud.firestore {
     match /fcmTokens/{tokenId} {
       // READ: Authenticated users can read their own tokens, admins can read all
       allow read: if request.auth != null && 
-                     (isAuthorizedUser() || request.auth.uid == resource.data.userId);
+                     (isAuthorizedUser() || request.auth.uid == tokenId);
       
-      // WRITE: Authenticated users can manage their own tokens
-      allow write: if request.auth != null && request.auth.uid == resource.data.userId;
+      // CREATE/UPDATE: Users can only write to their own token document (tokenId must match their uid)
+      allow create, update: if request.auth != null && 
+                               request.auth.uid == tokenId &&
+                               request.resource.data.userId == request.auth.uid;
+      
+      // DELETE: Users can delete their own token
+      allow delete: if request.auth != null && request.auth.uid == tokenId;
     }
     
     match /usernameMappings/{mappingId} {
