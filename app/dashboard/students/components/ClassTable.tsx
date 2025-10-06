@@ -200,13 +200,13 @@ export const ClassTable: React.FC<ClassTableProps> = ({
     // Attendance statistics (if attendance column is enabled)
     const attendanceColumnEnabled = enabledColumns.some(col => col.id === 'todayAttendance');
     if (attendanceColumnEnabled && getTodayAttendanceStatus) {
-      const presentCount = studentList.filter(student => {
+      const attendedCount = studentList.filter(student => {
         const status = getTodayAttendanceStatus(student);
-        return status.status === 'Present';
+        return status.status === 'Present' || status.status === 'Late';
       }).length;
       stats.push({
-        label: 'Present',
-        count: presentCount,
+        label: 'Attended',
+        count: attendedCount,
         color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
       });
     }

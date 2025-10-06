@@ -184,7 +184,7 @@ export default function CloudBackupPage() {
       <CardBox className="mb-6">
         <div className="p-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Automated daily backups run at midnight UTC. No laptop required!
+            Automated daily backups run at midnight Phnom Penh time (ICT). No laptop required!
           </h2>
           
           {backupHistory.length === 0 ? (
@@ -286,7 +286,7 @@ export default function CloudBackupPage() {
               Automatic Backups
             </h3>
             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
-              <li>• Run daily at midnight UTC</li>
+              <li>• Run daily at midnight Phnom Penh time (ICT)</li>
               <li>• Backup all Firestore collections</li>
               <li>• Store in Google Cloud Storage</li>
               <li>• Automatic cleanup (keep 30 days)</li>

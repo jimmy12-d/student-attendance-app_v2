@@ -1079,7 +1079,7 @@ INSTRUCTIONS:
         return `${year}-${String(month - 1).padStart(2, '0')}`;
     };
 
-    // Helper function to check if payment is late (after 5th of the month)
+    // Helper function to check if payment is late (after 3rd of the month)
     const isLatePayment = (paymentMonth: string): boolean => {
         if (!paymentMonth) return false;
         
@@ -1091,10 +1091,10 @@ INSTRUCTIONS:
         const [paymentYear, paymentMonthNum] = paymentMonth.split('-').map(Number);
         
         // Create date objects for comparison
-        const paymentDueDate = new Date(paymentYear, paymentMonthNum - 1, 5); // 5th of the payment month
+        const paymentDueDate = new Date(paymentYear, paymentMonthNum - 1, 3); // 3rd of the payment month
         const today = new Date(currentYear, currentMonth - 1, currentDay);
                 
-        // If today is after the 5th of the payment month, it's late
+        // If today is after the 3rd of the payment month, it's late
         return today > paymentDueDate;
     };
 
@@ -1129,6 +1129,10 @@ INSTRUCTIONS:
     const handleRemoveTransaction = async (transaction: Transaction) => {
         try {
             // Remove the transaction
+            if (!transaction.transactionId) {
+                toast.error("Invalid transaction ID");
+                return;
+            }
             await deleteDoc(doc(db, "transactions", transaction.transactionId));
 
             // Update student's lastPaymentMonth
@@ -1312,7 +1316,7 @@ INSTRUCTIONS:
                                                             {formatPaymentMonth(student.lastPaymentMonth)}
                                                         </span>
                                                     )}
-                                                    {student.discount > 0 && (
+                                                    {(student.discount ?? 0) > 0 && (
                                                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium 
                                                                        bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 
                                                                        border border-emerald-200 dark:border-emerald-700">
@@ -1512,14 +1516,14 @@ INSTRUCTIONS:
                                         </div>
                                     )}
                                     {/* Show discount if applicable */}
-                                    {lastTransaction.discountAmount > 0 && !lastTransaction.manualDiscountAmount && (
+                                    {(lastTransaction.discountAmount ?? 0) > 0 && !(lastTransaction.manualDiscountAmount ?? 0) && (
                                         <div>
                                             <span className="text-gray-500 dark:text-gray-400">Scholarship Discount</span>
-                                            <p className="font-medium text-emerald-600 dark:text-emerald-400">-${lastTransaction.discountAmount.toFixed(2)}</p>
+                                            <p className="font-medium text-emerald-600 dark:text-emerald-400">-${(lastTransaction.discountAmount ?? 0).toFixed(2)}</p>
                                         </div>
                                     )}
                                     {/* Show manual discount if applicable */}
-                                    {lastTransaction.manualDiscountAmount > 0 && (
+                                    {(lastTransaction.manualDiscountAmount ?? 0) > 0 && (
                                         <div>
                                             <span className="text-gray-500 dark:text-gray-400">
                                                 Manual Discount
@@ -1527,11 +1531,11 @@ INSTRUCTIONS:
                                                     <span className="text-xs block">{lastTransaction.manualDiscountReason}</span>
                                                 )}
                                             </span>
-                                            <p className="font-medium text-emerald-600 dark:text-emerald-400">-${lastTransaction.manualDiscountAmount.toFixed(2)}</p>
+                                            <p className="font-medium text-emerald-600 dark:text-emerald-400">-${(lastTransaction.manualDiscountAmount ?? 0).toFixed(2)}</p>
                                         </div>
                                     )}
                                     {/* Show late fee if applicable */}
-                                    {lastTransaction.lateFeeAmount > 0 && (
+                                    {(lastTransaction.lateFeeAmount ?? 0) > 0 && (
                                         <div>
                                             <span className="text-gray-500 dark:text-gray-400">
                                                 Late Payment Fee
@@ -1540,7 +1544,7 @@ INSTRUCTIONS:
                                                 )}
                                             </span>
                                             <p className={`font-medium ${lastTransaction.lateFeeWaived ? 'line-through text-gray-500' : 'text-orange-600 dark:text-orange-400'}`}>
-                                                +${lastTransaction.lateFeeAmount.toFixed(2)}
+                                                +${(lastTransaction.lateFeeAmount ?? 0).toFixed(2)}
                                             </p>
                                         </div>
                                     )}

@@ -1,5 +1,5 @@
 /**
- * Script to add username field to all students based on fullName
+ * Script to add classType field to all students based on their class
  */
 
 const admin = require('firebase-admin');
@@ -29,14 +29,24 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-async function addUsernameToStudents() {
+async function addClassTypeToStudents() {
   try {
-    console.log('🚀 Adding username field to all students based on fullName...\n');
+    console.log('🚀 Adding classType field to all students based on their class...\n');
 
-    // Query for all students
-    const studentsQuery = db.collection('students');
+    // First, build a map of class names to types
+    const classesSnapshot = await db.collection('classes').get();
+    const classMap = {};
+    classesSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.name && data.type) {
+        classMap[data.name] = data.type;
+      }
+    });
 
-    const studentsSnapshot = await studentsQuery.get();
+    console.log(`📊 Loaded ${Object.keys(classMap).length} class mappings\n`);
+
+    // Now query students
+    const studentsSnapshot = await db.collection('students').get();
 
     if (studentsSnapshot.empty) {
       console.log('⚠️  No students found.');
@@ -47,37 +57,37 @@ async function addUsernameToStudents() {
 
     let updatedCount = 0;
     let skippedCount = 0;
-    const usedUsernames = new Set();
 
     // Process each student
     for (const doc of studentsSnapshot.docs) {
       const data = doc.data();
-      const fullName = data.fullName;
+      const studentClass = data.class;
 
-      if (!fullName || typeof fullName !== 'string') {
-        console.log(`⚠️  Skipping student ${doc.id}: no valid fullName`);
+      if (!studentClass || typeof studentClass !== 'string') {
+        console.log(`⚠️  Skipping student ${doc.id}: no valid class field`);
         skippedCount++;
         continue;
       }
 
-      // Generate base username: lowercase, replace spaces with underscores
-      let baseUsername = fullName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''); // remove non-alphanumeric except underscore
+      const classType = classMap[studentClass];
 
-      let username = baseUsername;
-      let suffix = 1;
-
-      // Check for duplicates and append suffix if needed
-      while (usedUsernames.has(username)) {
-        suffix++;
-        username = `${baseUsername}_${suffix}`;
+      if (!classType) {
+        console.log(`⚠️  Skipping student ${doc.id}: no matching classType for class "${studentClass}"`);
+        skippedCount++;
+        continue;
       }
 
-      usedUsernames.add(username);
+      // Check if classType already exists
+      if (data.classType === classType) {
+        console.log(`⚠️  Skipping student ${doc.id}: classType already set to "${classType}"`);
+        skippedCount++;
+        continue;
+      }
 
-      // Update the document with username
+      // Update the document with classType
       try {
-        await doc.ref.update({ username });
-        console.log(`✅ Updated ${fullName} -> ${username}`);
+        await doc.ref.update({ classType });
+        console.log(`✅ Updated ${doc.id} (${studentClass}) -> ${classType}`);
         updatedCount++;
       } catch (error) {
         console.error(`❌ Failed to update ${doc.id}:`, error);
@@ -85,22 +95,22 @@ async function addUsernameToStudents() {
       }
     }
 
-    console.log('\n� Username Addition Summary:');
+    console.log('\n📊 ClassType Addition Summary:');
     console.log(`   📊 Total students processed: ${studentsSnapshot.size}`);
     console.log(`   ✅ Students updated: ${updatedCount}`);
     console.log(`   ⚠️  Students skipped: ${skippedCount}`);
 
-    console.log('\n� Username addition complete!');
+    console.log('\n✨ ClassType addition complete!');
 
   } catch (error) {
-    console.error('❌ Error during analysis:', error);
+    console.error('❌ Error during addition:', error);
     throw error;
   }
 }
 
 // Main execution
 if (require.main === module) {
-  addUsernameToStudents()
+  addClassTypeToStudents()
     .then(() => {
       console.log('\n✨ Script completed successfully!');
       process.exit(0);
@@ -111,4 +121,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { addUsernameToStudents };
+module.exports = { addClassTypeToStudents };

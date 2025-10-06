@@ -50,7 +50,7 @@ async function testManualBackup() {
         }
         
         console.log('\n✅ Backup system test completed successfully!');
-        console.log('\nYour scheduled backup function will run automatically at midnight UTC every day.');
+        console.log('\nYour scheduled backup function will run automatically at midnight Phnom Penh time (ICT) every day.');
         console.log('You can also trigger manual backups from your admin interface.');
         
     } catch (error) {

@@ -164,7 +164,7 @@ const RecognitionControls: React.FC<RecognitionControlsProps> = ({
                   </div>
                   <input
                     type="range"
-                    min="80"
+                    min="60"
                     max="160"
                     step="10"
                     value={minFaceSize}
@@ -172,7 +172,7 @@ const RecognitionControls: React.FC<RecognitionControlsProps> = ({
                     className="w-full h-2 bg-gradient-to-r from-blue-200 to-blue-500 dark:from-blue-800 dark:to-blue-500 rounded-lg appearance-none cursor-pointer"
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>80px (Very Far)</span>
+                    <span>60px (Very Far)</span>
                     <span>160px (Close)</span>
                   </div>
                 </div>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { db } from '../../../firebase-config';
-import { collection, addDoc, serverTimestamp} from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, serverTimestamp} from 'firebase/firestore';
 import { toast } from 'sonner';
 import { mdiAccount, mdiSchool, mdiAccountMultiple, mdiLockOutline, mdiEye, mdiEyeOff, mdiCheck, mdiContentCopy } from '@mdi/js';
 import Icon from '../../_components/Icon';
@@ -139,6 +139,24 @@ const StudentRegistrationForm = () => {
         isActive: false, // Will be activated by admin
         registrationSource: 'self-registration'
       };
+
+      // Fetch classType from classes collection
+      let classType = null;
+      if (studentData.class && studentData.class !== 'Unassigned') {
+        const classCode = studentData.class.replace(/^Class\s+/, ''); // Remove "Class " prefix
+        try {
+          const classDocRef = doc(db, 'classes', classCode);
+          const classDocSnap = await getDoc(classDocRef);
+          if (classDocSnap.exists()) {
+            const classData = classDocSnap.data();
+            classType = classData.type || null;
+          }
+        } catch (error) {
+          console.error('Error fetching class type:', error);
+          // Continue without classType if there's an error
+        }
+      }
+      studentData.classType = classType;
 
       // Add to Firestore
       const docRef = await addDoc(collection(db, 'students'), studentData);

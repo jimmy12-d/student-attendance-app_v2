@@ -13,8 +13,8 @@ interface ZoomModeOverlayProps {
   isCameraShutdown?: boolean;
   cameraShutdownCountdown?: number | null;
   selectedCamera: string;
-  webcamRef: React.RefObject<Webcam>;
-  canvasRef: React.RefObject<HTMLCanvasElement>;
+  webcamRef: React.RefObject<Webcam | null>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
   trackedFaces: TrackedFace[];
   recognitionThreshold: number;
   onExitZoomMode: () => void;
@@ -122,12 +122,12 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
             {/* Minimal Sophisticated Student Recognition Cards */}
             {trackedFaces.map(face => (
               <div key={face.id} className={`group relative overflow-hidden rounded-2xl backdrop-blur-xl border transition-all duration-700 ease-out transform hover:scale-[1.01] ${
-                face.isScanning
-                  ? face.attendanceStatus === 'late'
-                    ? 'bg-gradient-to-r from-amber-900/80 via-yellow-900/60 to-amber-900/80 border-amber-400/30 shadow-2xl shadow-amber-500/10'
-                    : 'bg-gradient-to-r from-slate-900/80 via-blue-900/60 to-slate-900/80 border-blue-400/30 shadow-2xl shadow-blue-500/10'
-                  : face.attendanceStatus === 'late'
+                face.status === 'recognizing'
+                  ? 'bg-gradient-to-r from-slate-900/80 via-gray-900/60 to-slate-900/80 border-gray-400/30 shadow-2xl shadow-gray-500/10'
+                  : face.status === 'recognized' && face.attendanceStatus === 'late'
                   ? 'bg-gradient-to-r from-yellow-900/90 via-amber-900/70 to-yellow-900/90 border-yellow-400/40 shadow-2xl shadow-yellow-500/15'
+                  : face.status === 'recognized' && face.name
+                  ? 'bg-gradient-to-r from-green-900/90 via-emerald-900/70 to-green-900/90 border-green-400/40 shadow-2xl shadow-green-500/15'
                   : face.name
                   ? 'bg-gradient-to-r from-green-900/90 via-emerald-900/70 to-green-900/90 border-green-400/40 shadow-2xl shadow-green-500/15'
                   : 'bg-gradient-to-r from-slate-900/80 via-gray-900/60 to-slate-900/80 border-gray-400/30 shadow-2xl shadow-gray-500/10'
@@ -135,12 +135,11 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
                 {/* Subtle animated background */}
                 <div className="absolute inset-0 opacity-5">
                   <div className={`absolute inset-0 ${
-                    face.isScanning 
-                      ? face.attendanceStatus === 'late'
-                        ? 'bg-gradient-to-r from-amber-500/20 to-transparent animate-pulse'
-                        : 'bg-gradient-to-r from-blue-500/20 to-transparent animate-pulse'
-                      : face.attendanceStatus === 'late' ? 'bg-gradient-to-r from-amber-500/20 to-transparent' :
-                    face.name ? 'bg-gradient-to-r from-emerald-500/20 to-transparent' : 'bg-gradient-to-r from-gray-500/20 to-transparent'
+                    face.status === 'recognizing'
+                      ? 'bg-gradient-to-r from-gray-500/20 to-transparent animate-pulse'
+                      : face.status === 'recognized' && face.attendanceStatus === 'late' 
+                      ? 'bg-gradient-to-r from-amber-500/20 to-transparent' 
+                      : face.name ? 'bg-gradient-to-r from-emerald-500/20 to-transparent' : 'bg-gradient-to-r from-gray-500/20 to-transparent'
                   }`}></div>
                 </div>
 
@@ -153,37 +152,45 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
                           {/* Elegant Name Display */}
                           <div className="flex items-center space-x-4">
                             <div className={`text-7xl font-light tracking-tight ${
-                              face.attendanceStatus === 'late' ? 'text-amber-200' : 'text-emerald-200'
+                              face.status === 'recognizing' ? 'text-gray-200' :
+                              face.status === 'recognized' && face.attendanceStatus === 'late' ? 'text-amber-200' : 'text-emerald-200'
                             }`}>
                               {face.name}
                             </div>
-                            {/* Minimal Status Indicator */}
-                            <div className={`px-3 py-1 rounded-full text-xs font-medium tracking-wider ${
-                              face.isScanning
-                                ? 'bg-blue-500/20 text-blue-200 border border-blue-400/30'
-                                : face.attendanceStatus === 'late'
+                            {/* Loading Spinner for recognizing state */}
+                            {face.status === 'recognizing' && (
+                              <div className="relative w-12 h-12">
+                                <div className="absolute inset-0 border-4 border-gray-200/30 rounded-full"></div>
+                                <div className="absolute inset-0 border-4 border-t-gray-400 rounded-full animate-spin"></div>
+                              </div>
+                            )}
+                            {/* Minimal Status Indicator for other states */}
+                            {face.status !== 'recognizing' && (
+                              <div className={`px-3 py-1 rounded-full text-xs font-medium tracking-wider ${
+                                face.status === 'recognized' && face.attendanceStatus === 'late'
                                 ? 'bg-amber-500/20 text-amber-200 border border-amber-400/30'
                                 : 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30'
-                            }`}>
-                              {face.isScanning ? '•' : face.attendanceStatus === 'late' ? 'LATE' : '✓'}
-                            </div>
+                              }`}>
+                                {face.status === 'recognized' && face.attendanceStatus === 'late' ? 'LATE' : '✓'}
+                              </div>
+                            )}
                           </div>
 
                           {/* Clean Status Line */}
                           <div className="flex items-center space-x-3">
                             <div className={`w-2 h-2 rounded-full ${
-                              face.isScanning 
-                                ? face.attendanceStatus === 'late' 
-                                  ? 'bg-amber-400 animate-pulse' 
-                                  : 'bg-blue-400 animate-pulse'
-                                : face.attendanceStatus === 'late' ? 'bg-amber-400' : 'bg-emerald-400'
+                              face.status === 'recognizing' 
+                                ? 'bg-gray-400 animate-pulse'
+                                : face.status === 'recognized' && face.attendanceStatus === 'late' 
+                                ? 'bg-amber-400' 
+                                : 'bg-emerald-400'
                             }`}></div>
                             <span className="text-2xl font-light text-gray-200 tracking-wide">
-                              {face.isScanning 
-                                ? face.attendanceStatus === 'late' 
-                                  ? 'LATE' 
-                                  : 'PROCESSING'
-                                : face.attendanceStatus === 'late' ? 'LATE ARRIVAL' : 'PRESENT'}
+                              {face.status === 'recognizing' 
+                                ? 'MARKING ATTENDANCE...'
+                                : face.status === 'recognized' && face.attendanceStatus === 'late' 
+                                ? 'LATE ARRIVAL' 
+                                : 'PRESENT'}
                             </span>
                           </div>
 
@@ -230,14 +237,14 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
                     {/* Sophisticated Status Orb */}
                     <div className="flex flex-col items-center space-y-3 ml-8">
                       <div className={`relative w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
-                        face.status === 'scanning'
+                        face.status === 'recognizing'
+                          ? 'bg-gray-500/20 border-gray-400/60 shadow-lg shadow-gray-500/20'
+                          : face.status === 'scanning'
                           ? 'bg-blue-500/20 border-blue-400/60 shadow-lg shadow-blue-500/20'
                           : face.status === 'recognized'
                           ? face.attendanceStatus === 'late'
                             ? 'bg-amber-500/20 border-amber-400/60 shadow-lg shadow-amber-500/20'
                             : 'bg-emerald-500/20 border-emerald-400/60 shadow-lg shadow-emerald-500/20'
-                          : face.status === 'recognizing'
-                          ? 'bg-blue-500/20 border-blue-400/60 shadow-lg shadow-blue-500/20 animate-pulse'
                           : face.status === 'unknown'
                           ? 'bg-red-500/20 border-red-400/60 shadow-lg shadow-red-500/20'
                           : 'bg-gray-500/20 border-gray-400/60 shadow-lg shadow-gray-500/20'
@@ -245,8 +252,8 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
                         <div className="w-6 h-6 bg-white/90 rounded-full"></div>
                         {/* Subtle pulsing ring */}
                         <div className={`absolute inset-0 rounded-full border border-white/20 ${
-                          face.status === 'scanning' ? 'animate-ping' :
                           face.status === 'recognizing' ? 'animate-ping' :
+                          face.status === 'scanning' ? 'animate-ping' :
                           'opacity-0'
                         }`}></div>
                       </div>
@@ -254,31 +261,37 @@ const ZoomModeOverlay: React.FC<ZoomModeOverlayProps> = ({
                       {/* Minimal status text */}
                       <div className="text-center">
                         <div className={`font-medium uppercase tracking-widest ${
+                          face.status === 'recognizing' ? 'text-base text-gray-300' :
                           face.status === 'scanning' ? 'text-base text-blue-300' :
                           face.status === 'recognized' 
                             ? face.attendanceStatus === 'late' 
                               ? 'text-2xl text-amber-300' 
                               : 'text-2xl text-emerald-300'
-                            : face.status === 'recognizing' ? 'text-base text-blue-300' :
-                          face.status === 'unknown' ? 'text-base text-red-300' : 'text-base text-gray-300'
+                            : face.status === 'unknown' ? 'text-base text-red-300' : 'text-base text-gray-300'
                         }`}>
-                          {face.status === 'scanning' ? 'Active' :
+                          {face.status === 'recognizing' ? 'Marking' :
+                           face.status === 'scanning' ? 'Active' :
                            face.status === 'recognized' 
                              ? face.attendanceStatus === 'late' 
                                ? 'Late Arrival' 
                                : 'Present'
-                             : face.status === 'recognizing' ? 'Scan' :
-                           face.status === 'unknown' ? 'Error' : 'Wait'}
+                             : face.status === 'unknown' ? 'Error' : 'Wait'}
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Minimal Progress Bar */}
-                  {face.isScanning && (
+                  {(face.isScanning || face.status === 'recognizing') && (
                     <div className="mt-6">
                       <div className="w-full bg-gray-700/30 rounded-full h-1 overflow-hidden">
-                        <div className="bg-gradient-to-r from-blue-400 to-blue-500 h-full rounded-full animate-pulse"
+                        <div className={`h-full rounded-full animate-pulse ${
+                          face.status === 'recognizing' 
+                            ? 'bg-gradient-to-r from-gray-400 to-gray-500' 
+                            : face.attendanceStatus === 'late'
+                            ? 'bg-gradient-to-r from-amber-400 to-amber-500'
+                            : 'bg-gradient-to-r from-emerald-400 to-emerald-500'
+                        }`}
                              style={{width: '100%'}}></div>
                       </div>
                     </div>

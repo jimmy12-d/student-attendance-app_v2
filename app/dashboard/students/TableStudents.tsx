@@ -15,7 +15,7 @@ import { db } from "../../../firebase-config";
 import { doc, writeBatch, collection, getDocs, setDoc } from "firebase/firestore";
 
 // Attendance logic imports
-import { getStudentDailyStatus, markAttendance, calculateShiftRankings } from '../_lib/attendanceLogic';
+import { getStudentDailyStatus, markAttendance, calculateShiftRankings, calculateAverageArrivalTime } from '../_lib/attendanceLogic';
 import { AllClassConfigs } from '../_lib/configForAttendanceLogic';
 import { PermissionRecord } from '../../_interfaces';
 
@@ -40,6 +40,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
     { id: 'name', label: 'Name', enabled: true },
     { id: 'phone', label: 'Phone', enabled: true },
     { id: 'portal', label: 'Portal', enabled: false },
+    { id: 'notificationVersion', label: 'Notif Version', enabled: false },
     { id: 'paymentStatus', label: 'Payment', enabled: false },
     { id: 'scheduleType', label: 'Type', enabled: false },
     { id: 'warning', label: 'Warning', enabled: false },
@@ -397,7 +398,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   };
 
   // Calculate average arrival time for a student in the current month with ranking
-  const calculateAverageArrivalTime = (student: Student): string => {
+  const getAverageArrivalTime = (student: Student): string => {
     if (!allClassConfigs || loadingAttendanceData || !monthlyAttendance.length) {
       return "Loading...";
     }
@@ -408,73 +409,12 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       const studentAttendance = monthlyAttendance.filter((record: any) => 
         record.studentId === student.id && 
         record.date && 
-        record.date.startsWith(currentMonth) &&
-        record.timeIn && 
-        (record.status === 'present' || record.status === 'late')
+        record.date.startsWith(currentMonth)
       );
 
-      if (studentAttendance.length === 0) {
-        return "No data";
-      }
-
-      // Get student's class config for start time
-      const classId = student.class?.replace(/^Class\s+/i, '') || '';
-      const classConfig = allClassConfigs[classId];
-      
-      if (!classConfig?.shifts || !student.shift) {
-        return "No config";
-      }
-
-      const shiftConfig = classConfig.shifts[student.shift];
-      if (!shiftConfig?.startTime) {
-        return "No schedule";
-      }
-
-      // Calculate differences for each day
-      const differences: number[] = [];
-      
-      studentAttendance.forEach((record: any) => {
-        const timeIn = record.timeIn;
-        const startTime = shiftConfig.startTime;
-        
-        if (timeIn && startTime) {
-          const [timeInHour, timeInMinute] = timeIn.split(':').map(Number);
-          const [startHour, startMinute] = startTime.split(':').map(Number);
-          
-          const timeInMinutes = timeInHour * 60 + timeInMinute;
-          const startMinutes = startHour * 60 + startMinute;
-          
-          differences.push(timeInMinutes - startMinutes);
-        }
-      });
-
-      if (differences.length === 0) {
-        return "No data";
-      }
-
-      // Calculate average difference
-      const avgDifferenceMinutes = differences.reduce((sum, diff) => sum + diff, 0) / differences.length;
-      
-      // Format the result
-      if (Math.abs(avgDifferenceMinutes) < 1) {
-        return "on time";
-      } else if (avgDifferenceMinutes > 0) {
-        const hours = Math.floor(avgDifferenceMinutes / 60);
-        const minutes = Math.round(avgDifferenceMinutes % 60);
-        if (hours > 0) {
-          return `-${hours}h ${minutes}m late`;
-        } else {
-          return `-${minutes}m late`;
-        }
-      } else {
-        const hours = Math.floor(Math.abs(avgDifferenceMinutes) / 60);
-        const minutes = Math.round(Math.abs(avgDifferenceMinutes) % 60);
-        if (hours > 0) {
-          return `+${hours}h ${minutes}m early`;
-        } else {
-          return `+${minutes}m early`;
-        }
-      }
+      // Use the shared calculateAverageArrivalTime function
+      const result = calculateAverageArrivalTime(student, studentAttendance, currentMonth);
+      return result.averageTime;
     } catch (error) {
       console.error('Error calculating average arrival time for', student.fullName, ':', error);
       return "Error";
@@ -771,7 +711,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       record.studentId === student.id && record.date === selectedAttendanceDate
     );
     
-    return existingRecord?.status === 'present';
+    return existingRecord?.status === 'present' || existingRecord?.status === 'late';
   };
 
   const saveAttendance = async () => {
@@ -803,7 +743,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
               allClassConfigs || {},
               () => {}, // Empty sound function
               3, // maxRetries
-              selectedAttendanceDate // Pass the selected date
+              selectedAttendanceDate, // Pass the selected date
+              'manual' // Specify manual method for dashboard attendance
             );
             successfulMarks.push(`${student.fullName}: ${status}`);
           } else {
@@ -974,7 +915,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentMonth, currentYear);
     const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
-    const days = [];
+    const days: React.ReactElement[] = [];
     const todayDate = new Date();
     const selectedDateObj = selectedAttendanceDate ? new Date(selectedAttendanceDate + 'T00:00:00') : null;
 
@@ -1128,7 +1069,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 <CustomDropdown
                   label="New Class"
                   value={batchClass}
-                  onChange={setBatchClass}
+                  onChange={(value) => setBatchClass(String(value))}
                   options={getClassOptions()}
                   placeholder="Select class"
                   searchable={true}
@@ -1140,7 +1081,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 <CustomDropdown
                   label="New Shift"
                   value={batchShift}
-                  onChange={setBatchShift}
+                  onChange={(value) => setBatchShift(String(value))}
                   options={shiftOptions}
                   placeholder="Select shift"
                   id="batch-shift"
@@ -1554,7 +1495,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   getTodayAttendanceStatus={getTodayAttendanceStatus}
                   isStudentCurrentlyPresent={isStudentCurrentlyPresent}
                   onAttendanceChange={handleAttendanceChange}
-                  calculateAverageArrivalTime={calculateAverageArrivalTime}
+                  calculateAverageArrivalTime={getAverageArrivalTime}
                   shiftRankings={shiftRankings}
                   forceCollapsed={isClassCollapsed(className)}
                   onClassToggle={handleClassToggle}
@@ -1583,7 +1524,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   getTodayAttendanceStatus={getTodayAttendanceStatus}
                   isStudentCurrentlyPresent={isStudentCurrentlyPresent}
                   onAttendanceChange={handleAttendanceChange}
-                  calculateAverageArrivalTime={calculateAverageArrivalTime}
+                  calculateAverageArrivalTime={getAverageArrivalTime}
                   shiftRankings={shiftRankings}
                   forceCollapsed={isClassCollapsed(className)}
                   onClassToggle={handleClassToggle}
@@ -1646,7 +1587,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 getTodayAttendanceStatus={getTodayAttendanceStatus}
                 isStudentCurrentlyPresent={isStudentCurrentlyPresent}
                 onAttendanceChange={handleAttendanceChange}
-                calculateAverageArrivalTime={calculateAverageArrivalTime}
+                calculateAverageArrivalTime={getAverageArrivalTime}
                 shiftRankings={shiftRankings}
                 forceCollapsed={isClassCollapsed(className)}
                 onClassToggle={handleClassToggle}

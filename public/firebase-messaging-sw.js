@@ -1,6 +1,6 @@
 
 // Service Worker Version - Update this to force cache refresh
-const SW_VERSION = 'v2.1.0-clean';
+const SW_VERSION = 'v2.2.0-android-fix';
 console.log('[firebase-messaging-sw.js] Version:', SW_VERSION);
 
 // Import the Firebase app and messaging services
@@ -27,6 +27,18 @@ if (!firebase.apps.length) {
 
 const messaging = firebase.messaging();
 
+// Service Worker Install Event - Important for Android
+self.addEventListener('install', (event) => {
+  console.log('[firebase-messaging-sw.js] Service Worker installing...');
+  self.skipWaiting(); // Force activation
+});
+
+// Service Worker Activate Event - Important for Android
+self.addEventListener('activate', (event) => {
+  console.log('[firebase-messaging-sw.js] Service Worker activating...');
+  event.waitUntil(self.clients.claim()); // Take control immediately
+});
+
 // Handle background messages
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message', payload);
@@ -40,6 +52,8 @@ messaging.onBackgroundMessage((payload) => {
     tag: payload.data?.notificationId || payload.data?.permissionId || payload.data?.requestId || 'default',
     requireInteraction: false,
     silent: false,
+    vibrate: [200, 100, 200], // Android: vibration pattern
+    timestamp: Date.now(), // Android: timestamp
     data: {
       url: payload.data?.url || '/student/notifications',
       notificationId: payload.data?.notificationId,
@@ -49,6 +63,7 @@ messaging.onBackgroundMessage((payload) => {
     }
   };
 
+  console.log('[firebase-messaging-sw.js] Showing notification:', notificationTitle);
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 

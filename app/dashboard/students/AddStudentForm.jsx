@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../../firebase-config';
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { mdiClockOutline, mdiAlertCircle, mdiCash } from '@mdi/js';
 import Icon from '../../_components/Icon';
@@ -26,9 +26,10 @@ import { getClassCapacityInfo, formatClassLabelWithCapacityAndSchedule, canEnrol
  * @property {string} [nameKhmer]
  * @property {string} [phone]
  * @property {string} class
+ * @property {string} [classType]
  * @property {string} shift
  * @property {string} [school]
- * @property {string} [scheduleType]
+ * @property {string} scheduleType
  * @property {string} [motherName]
  * @property {string} [motherPhone]
  * @property {string} [fatherName]
@@ -239,8 +240,8 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
     setLoading(true);
     setError(null);
 
-    if (!fullName || !studentClass || !shift) {
-      toast.error("Full Name, Class, and Shift are required.");
+    if (!fullName || !studentClass || !shift || !scheduleType) {
+      toast.error("Full Name, Class, Shift, and Schedule Type are required.");
       setLoading(false);
       return;
     }
@@ -293,7 +294,29 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
 
       const studentData = getFormData();
 
-      const docRef = await addDoc(collection(db, "students"), { ...studentData, authUid: '', createdAt: serverTimestamp() });
+      // Fetch classType from classes collection
+      let classType = null;
+      if (studentData.class) {
+        const classCode = studentData.class.replace(/^Class\s+/, ''); // Remove "Class " prefix
+        try {
+          const classDocRef = doc(db, 'classes', classCode);
+          const classDocSnap = await getDoc(classDocRef);
+          if (classDocSnap.exists()) {
+            const classData = classDocSnap.data();
+            classType = classData.type || null;
+          }
+        } catch (error) {
+          console.error('Error fetching class type:', error);
+          // Continue without classType if there's an error
+        }
+      }
+
+      const docRef = await addDoc(collection(db, "students"), { 
+        ...studentData, 
+        classType,
+        authUid: '', 
+        createdAt: serverTimestamp() 
+      });
       
       // Clear cache for the class/shift combination
       clearCacheForClass(studentData.class, studentData.shift);
@@ -379,6 +402,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
           isEditMode={false}
           className="mt-2"
         >
+        <div>
         {/* Row 1: Full Name and Khmer Name */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-sm p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0">
@@ -411,8 +435,8 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
             </div>
           </div>
           
-          {/* Row 2: Phone and Schedule Type */}
-          <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0 mt-6">
+          {/* Row 2: Phone */}
+          <div className="grid grid-cols-1 md:grid-cols-1 md:gap-x-8 gap-y-8 md:gap-y-0 mt-6">
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Phone
@@ -426,10 +450,13 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Schedule Type
-              </label>
+          </div>
+
+          {/* Row 3: Schedule Type */}
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Schedule Type
+            </label>
               <div className="relative">
                 <div className={`flex bg-gradient-to-r rounded-full p-1 w-fit relative overflow-hidden shadow-inner ${
                   !scheduleType

@@ -49,9 +49,21 @@ export const calculateProratedAmount = (
     // Ensure remaining days don't exceed total days
     remainingWorkingDays = Math.min(remainingWorkingDays, totalWorkingDays);
     
+    // Handle edge case: if totalWorkingDays is 0 (e.g., empty classStudyDays array), return full amount
+    if (totalWorkingDays === 0 || isNaN(totalWorkingDays)) {
+        console.warn('⚠️ Total working days is 0 or NaN. Returning full amount.');
+        return fullAmount;
+    }
+    
     // Calculate prorated amount with more precision
     const ratio = remainingWorkingDays / totalWorkingDays;
     const exactAmount = fullAmount * ratio;
+    
+    // Safety check: return full amount if calculation results in NaN
+    if (isNaN(exactAmount)) {
+        console.warn('⚠️ Prorated amount calculation resulted in NaN. Returning full amount.');
+        return fullAmount;
+    }
     
     return exactAmount; // Return exact amount without rounding
 };

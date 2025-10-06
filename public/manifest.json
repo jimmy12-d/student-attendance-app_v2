@@ -11,24 +11,19 @@
   "categories": ["education", "productivity"],
   "lang": "en",
   "dir": "ltr",
+  "gcm_sender_id": "103953800507",
   "icons": [
     {
       "src": "/icon-192x192-3d.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512x512-3d.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-512x512-3d.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
   "shortcuts": [

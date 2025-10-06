@@ -983,7 +983,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   capturePhotoForEnrollment={capturePhotoForEnrollment}
                   confirmPhotoEnrollment={confirmPhotoEnrollment}
                   cancelPhotoCapture={cancelPhotoCapture}
-                  webcamRef={webcamRef}
+                  webcamRef={webcamRef as React.RefObject<Webcam>}
                   availableCameras={availableCameras}
                   selectedCameraId={selectedCameraId}
                   setSelectedCameraId={setSelectedCameraId}
@@ -1238,7 +1238,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                         label: camera.label
                       }))}
                       value={selectedCameraId || ''}
-                      onChange={(value) => setSelectedCameraId(value)}
+                      onChange={(value) => setSelectedCameraId(String(value))}
                       placeholder="Choose a camera"
                       className="w-full"
                     />

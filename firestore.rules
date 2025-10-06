@@ -270,6 +270,18 @@ service cloud.firestore {
       allow read, write: if isAuthorizedUser();
     }
     
+    match /attendance_failed_backup/{backupId} {
+      // CREATE: Authenticated users (teachers) can create backup records
+      // This is critical - must allow creation even when main attendance save fails
+      allow create: if request.auth != null;
+      
+      // READ: Only admins can read backup records (for manual review)
+      allow read: if isAuthorizedUser();
+      
+      // UPDATE/DELETE: Only admins can update or delete backup records
+      allow update, delete: if isAuthorizedUser();
+    }
+    
     
   }
 }

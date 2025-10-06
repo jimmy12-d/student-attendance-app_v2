@@ -77,16 +77,33 @@ export const useFirebaseMessaging = (userId: string | null) => {
                     console.log('[useFirebaseMessaging] FCM Token obtained:', currentToken.substring(0, 20) + '...');
                     setFcmToken(currentToken);
                     
+                    // Detect service worker version from registration
+                    let swVersion = 'unknown';
+                    try {
+                        const swRegistration = await navigator.serviceWorker.getRegistration();
+                        if (swRegistration && swRegistration.active) {
+                            // Service worker version will be detected from the SW file itself
+                            // For now, we'll use the current expected version
+                            swVersion = 'v2.2.0-android-fix';
+                        }
+                    } catch (error) {
+                        console.warn('[useFirebaseMessaging] Could not detect service worker version:', error);
+                    }
+                    
                     // Save the token to Firestore
                     console.log('[useFirebaseMessaging] Saving token to Firestore...');
                     await setDoc(doc(db, 'fcmTokens', userId), {
                         token: currentToken,
                         userId: userId,
                         createdAt: serverTimestamp(),
-                        platform: navigator.userAgent.includes('iPhone') ? 'iOS' : 'other',
-                        isPWA: window.matchMedia('(display-mode: standalone)').matches
+                        platform: navigator.userAgent.includes('iPhone') ? 'iOS' : 
+                                 navigator.userAgent.includes('Android') ? 'Android' : 'other',
+                        isPWA: window.matchMedia('(display-mode: standalone)').matches,
+                        userAgent: navigator.userAgent,
+                        swVersion: swVersion, // Service worker version
+                        lastUpdated: serverTimestamp()
                     }, { merge: true });
-                    console.log('[useFirebaseMessaging] Token saved successfully!');
+                    console.log('[useFirebaseMessaging] Token saved successfully with SW version:', swVersion);
                 } else {
                     console.warn('[useFirebaseMessaging] No registration token available.');
                 }

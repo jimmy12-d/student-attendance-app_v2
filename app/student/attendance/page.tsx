@@ -367,8 +367,7 @@ const AttendancePage = () => {
         const avgResult = calculateAverageArrivalTime(
           studentData,
           monthlyAttendance,
-          currentMonth,
-          allClassConfigs
+          currentMonth
         );
 
         setAverageArrivalTime(avgResult);

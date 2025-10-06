@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, getDoc} from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { db } from "../../../firebase-config";
 import { toast } from "sonner";
 import { getPaymentStatus } from "../_lib/paymentLogic";
@@ -11,6 +11,7 @@ import MetricsCards from "./components/MetricsCards";
 import ClassTypeAnalysis from "./components/ClassTypeAnalysis";
 import PaymentTrends from "./components/PaymentTrends";
 import UnpaidStudentsTab from "./components/UnpaidStudentsTab";
+import * as XLSX from 'xlsx';
 
 interface DateInterval {
   type: 'interval' | 'monthly';
@@ -23,6 +24,13 @@ interface SummaryData {
   averagePayment: number;
   dailyAverage: number;
   unpaidStudentsCount: number;
+  expectedRevenue: {
+    trialPeriodAmount: number;
+    existingUnpaidAmount: number;
+    totalExpected: number;
+    trialPeriodCount: number;
+    existingUnpaidCount: number;
+  };
   classTypeBreakdown: { classType: string; count: number; revenue: number; }[];
   comparisonData?: { classType: string; previousCount: number; previousRevenue: number; }[];
   dailyBreakdown: { date: string; revenue: number; count: number; }[];
@@ -39,6 +47,7 @@ const PaymentSummaryPage = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [activeTab, setActiveTab] = useState<'summary' | 'unpaid'>('summary');
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [transactionsData, setTransactionsData] = useState<any[]>([]);
   const [studentsData, setStudentsData] = useState<any[]>([]);
   const [classesData, setClassesData] = useState<{ [classId: string]: { type: string } }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -88,6 +97,13 @@ const PaymentSummaryPage = () => {
     }
   }, [isAuthenticated]);
 
+  // Fetch data when dates or interval changes
+  useEffect(() => {
+    if (isAuthenticated && (startDate || endDate)) {
+      fetchSummaryData();
+    }
+  }, [startDate, endDate, dateInterval, isAuthenticated]);
+
   const handleAuthentication = async () => {
     if (!password.trim()) {
       toast.error("Please enter the password");
@@ -126,9 +142,10 @@ const PaymentSummaryPage = () => {
       // Get all transactions first, then filter appropriately
       const querySnapshot = await getDocs(transactionsRef);
       
-      // Fetch all students to calculate unpaid count
+      // Fetch all students to calculate unpaid count (filter by current academic year)
       const studentsRef = collection(db, "students");
-      const studentsSnapshot = await getDocs(studentsRef);
+      const studentsQuery = query(studentsRef, where("ay", "==", "2026"));
+      const studentsSnapshot = await getDocs(studentsQuery);
       const transactions: any[] = [];
 
       if (dateInterval.type === 'monthly') {
@@ -178,19 +195,141 @@ const PaymentSummaryPage = () => {
       const totalTransactions = transactions.length;
       const averagePayment = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
       
-      // Calculate unpaid students count (excluding onBreak, waitlist, and dropped students)
+      // Store transactions for detailed export
+      setTransactionsData(transactions);
+      
+      // Calculate unpaid students count based on the selected date range
       let unpaidStudentsCount = 0;
+      
+      // Determine which month to check for unpaid students
+      let targetDate: Date;
+      let targetPaymentMonth: string;
+      let isCurrentMonth: boolean;
+      const now = new Date(); // Declare now at the top level so it's available throughout
+      
+      if (dateInterval.type === 'monthly') {
+        // Use the selected month for unpaid check
+        targetDate = new Date(startDate + 'T12:00:00');
+        targetPaymentMonth = targetDate.toLocaleDateString('en-US', { 
+          month: 'long', 
+          year: 'numeric' 
+        });
+        
+        // Check if the selected month is the current month
+        const currentMonthString = now.toLocaleDateString('en-US', { 
+          month: 'long', 
+          year: 'numeric' 
+        });
+        isCurrentMonth = targetPaymentMonth === currentMonthString;
+      } else {
+        // For interval view, use the end date's month
+        targetDate = new Date(endDate + 'T12:00:00');
+        targetPaymentMonth = targetDate.toLocaleDateString('en-US', { 
+          month: 'long', 
+          year: 'numeric' 
+        });
+        
+        // For interval view, check if end date is in current month
+        isCurrentMonth = targetDate.getMonth() === now.getMonth() && 
+                        targetDate.getFullYear() === now.getFullYear();
+      }
+      
+      console.log("Checking unpaid students for month:", targetPaymentMonth, "with date context:", targetDate, "isCurrentMonth:", isCurrentMonth);
+      
+      // Expected revenue calculation
+      let trialPeriodCount = 0;
+      let existingUnpaidCount = 0;
+      let trialPeriodAmount = 0;
+      let existingUnpaidAmount = 0;
+      
+      // Fetch classes to get type mapping
+      const classesRef = collection(db, "classes");
+      const classesSnapshot = await getDocs(classesRef);
+      const classToTypeMap = new Map<string, string>();
+      classesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        classToTypeMap.set(doc.id, data.type || ''); // Map class ID to type (e.g., "MWF")
+      });
+      
+      // Fetch class types to get pricing
+      const classTypesRef = collection(db, "classTypes");
+      const classTypesSnapshot = await getDocs(classTypesRef);
+      const classTypePrices = new Map<string, number>();
+      classTypesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        classTypePrices.set(doc.id, data.price || 25); // Default to $25 if not set
+      });
+      
       studentsSnapshot.forEach((doc) => {
-        const studentData = doc.data();
+        const studentData = doc.data() as any;
 
-        // Skip students who are on break, waitlist, or dropped
-        if (studentData.onBreak || studentData.onWaitlist || studentData.dropped) {
+        // Skip students who are on break, waitlist, dropped, or not active
+        if (studentData.onBreak || studentData.onWaitlist || studentData.dropped || studentData.isActive === false) {
           return; // Skip this student
         }
 
-        const paymentStatus = getPaymentStatus(studentData.lastPaymentMonth);
-        if (paymentStatus === 'unpaid' || paymentStatus === 'no-record') {
+        // Use getPaymentStatus with the target date context
+        // This will properly evaluate if the student is unpaid for the selected month
+        const paymentStatus = getPaymentStatus(studentData.lastPaymentMonth, targetDate);
+        
+        // Debug log for first few students
+        if (unpaidStudentsCount < 3) {
+          console.log(`Student: ${studentData.fullName}, lastPaymentMonth: ${studentData.lastPaymentMonth}, status: ${paymentStatus}, targetDate: ${targetDate.toISOString().slice(0, 7)}, isCurrentMonth: ${isCurrentMonth}`);
+        }
+        
+        // Count as unpaid based on status:
+        // - Always count 'unpaid' status
+        // - Only count 'no-record' status if viewing the current month
+        if (paymentStatus === 'unpaid') {
           unpaidStudentsCount++;
+        } else if (paymentStatus === 'no-record' && isCurrentMonth) {
+          unpaidStudentsCount++;
+        }
+        
+        // Calculate expected revenue for current month only
+        if (isCurrentMonth && (paymentStatus === 'unpaid' || paymentStatus === 'no-record')) {
+          // Get the student's class type price via: class → type → price
+          const studentClass = studentData.class; // e.g., "Class A"
+          // Extract just the letter (e.g., "A" from "Class A")
+          const classId = studentClass?.replace('Class ', '').trim() || '';
+          const classType = classToTypeMap.get(classId) || ''; // e.g., "MWF"
+          let studentPrice = classTypePrices.get(classType) || 25; // Get price from classTypes
+          
+          // Apply discount if student has a discount field
+          if (studentData.discount && typeof studentData.discount === 'number') {
+            // Discount is stored as actual amount to subtract (e.g., 5 for $5 off)
+            studentPrice = studentPrice - studentData.discount;
+          }
+          
+          // Check if student is in trial period (created within last 3 days)
+          let isTrialPeriod = false;
+          if (studentData.createdAt) {
+            try {
+              let createdDate;
+              if (typeof studentData.createdAt === 'object' && studentData.createdAt.toDate) {
+                createdDate = studentData.createdAt.toDate();
+              } else if (typeof studentData.createdAt === 'string') {
+                createdDate = new Date(studentData.createdAt);
+              } else {
+                createdDate = new Date(studentData.createdAt);
+              }
+              
+              if (!isNaN(createdDate.getTime())) {
+                const daysSinceCreation = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+                isTrialPeriod = daysSinceCreation <= 3;
+              }
+            } catch (error) {
+              console.error('Error parsing createdAt for student:', studentData.fullName);
+            }
+          }
+          
+          if (isTrialPeriod) {
+            trialPeriodCount++;
+            trialPeriodAmount += studentPrice;
+          } else {
+            existingUnpaidCount++;
+            existingUnpaidAmount += studentPrice;
+          }
         }
       });
       
@@ -510,6 +649,13 @@ const PaymentSummaryPage = () => {
         averagePayment,
         dailyAverage,
         unpaidStudentsCount,
+        expectedRevenue: {
+          trialPeriodAmount,
+          existingUnpaidAmount,
+          totalExpected: trialPeriodAmount + existingUnpaidAmount,
+          trialPeriodCount,
+          existingUnpaidCount
+        },
         classTypeBreakdown,
         comparisonData,
         dailyBreakdown,
@@ -565,48 +711,128 @@ const PaymentSummaryPage = () => {
     return `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
   };
 
-  const handleExportData = () => {
+  const handleExportData = async (exportType: 'summary' | 'detail') => {
     if (!summaryData) return;
 
-    const csvData = [
-      ['Payment Summary Report'],
-      [`Period: ${formatDateRange(startDate, endDate)}`],
-      [''],
-      ['Metrics'],
-      ['Total Revenue', `$${summaryData.totalRevenue.toLocaleString()}`],
-      ['Total Transactions', summaryData.totalTransactions.toString()],
-      ['Average Payment', `$${summaryData.averagePayment.toFixed(2)}`],
-      ['Daily Average', `$${summaryData.dailyAverage.toFixed(2)}`],
-      [''],
-      ['Class Type Breakdown'],
-      ['Class Type', 'Transactions', 'Revenue'],
-      ...summaryData.classTypeBreakdown.map(item => [
-        item.classType,
-        item.count.toString(),
-        `$${item.revenue.toLocaleString()}`
-      ]),
-      [''],
-      ['Daily Breakdown'],
-      ['Date', 'Revenue', 'Transactions'],
-      ...summaryData.dailyBreakdown.map(item => [
-        item.date,
-        `$${item.revenue.toLocaleString()}`,
-        item.count.toString()
-      ])
-    ];
+    if (exportType === 'summary') {
+      // Export summary as XLSX
+      const wb = XLSX.utils.book_new();
+      
+      // Metrics sheet
+      const metricsData = [
+        ['Payment Summary Report'],
+        [`Period: ${formatDateRange(startDate, endDate)}`],
+        [],
+        ['Metric', 'Value'],
+        ['Total Revenue', summaryData.totalRevenue],
+        ['Total Transactions', summaryData.totalTransactions],
+        ['Average Payment', parseFloat(summaryData.averagePayment.toFixed(2))],
+        ['Daily Average', parseFloat(summaryData.dailyAverage.toFixed(2))],
+        ['Unpaid Students Count', summaryData.unpaidStudentsCount]
+      ];
+      const metricsSheet = XLSX.utils.aoa_to_sheet(metricsData);
+      XLSX.utils.book_append_sheet(wb, metricsSheet, 'Metrics');
 
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `payment-summary-${startDate}-to-${endDate}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast.success("Payment summary exported successfully!");
+      // Class Type Breakdown sheet
+      const classTypeData = [
+        ['Class Type Breakdown'],
+        [],
+        ['Class Type', 'Transactions', 'Revenue'],
+        ...summaryData.classTypeBreakdown.map(item => [
+          item.classType,
+          item.count,
+          item.revenue
+        ])
+      ];
+      const classTypeSheet = XLSX.utils.aoa_to_sheet(classTypeData);
+      XLSX.utils.book_append_sheet(wb, classTypeSheet, 'Class Breakdown');
+
+      // Daily Breakdown sheet
+      const dailyData = [
+        ['Daily Breakdown'],
+        [],
+        ['Date', 'Revenue', 'Transactions'],
+        ...summaryData.dailyBreakdown.map(item => [
+          item.date,
+          item.revenue,
+          item.count
+        ])
+      ];
+      const dailySheet = XLSX.utils.aoa_to_sheet(dailyData);
+      XLSX.utils.book_append_sheet(wb, dailySheet, 'Daily Breakdown');
+
+      // Write file
+      XLSX.writeFile(wb, `payment-summary-${startDate}-to-${endDate}.xlsx`);
+      toast.success("Payment summary exported successfully!");
+      
+    } else {
+      // Export detailed transactions as XLSX
+      try {
+        // Fetch student details for each transaction
+        const studentsRef = collection(db, "students");
+        const studentsSnapshot = await getDocs(studentsRef);
+        const studentsMap = new Map();
+        studentsSnapshot.forEach((doc) => {
+          const data = doc.data();
+          studentsMap.set(doc.id, {
+            fullName: data.fullName || 'Unknown',
+            nameKhmer: data.nameKhmer || '',
+            class: data.class || 'Unknown',
+            shift: data.shift || 'Unknown',
+            phone: data.phone || 'N/A'
+          });
+        });
+
+        const wb = XLSX.utils.book_new();
+        
+        // Summary info sheet
+        const summaryInfo = [
+          ['Payment Transaction Details'],
+          [`Period: ${formatDateRange(startDate, endDate)}`],
+          [`Total Transactions: ${transactionsData.length}`],
+          [`Total Revenue: $${summaryData.totalRevenue.toLocaleString()}`],
+        ];
+        const summarySheet = XLSX.utils.aoa_to_sheet(summaryInfo);
+        XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+        // Transaction details sheet
+        const detailsData = [
+          ['Date', 'Student Name', 'Khmer Name', 'Class', 'Shift', 'Phone', 'Class Type', 'Amount', 'Payment Method', 'Payment Month', 'Received By', 'Transaction ID'],
+          ...transactionsData.map(t => {
+            const student = studentsMap.get(t.studentId) || {
+              fullName: 'Unknown Student',
+              nameKhmer: '',
+              class: 'Unknown',
+              shift: 'Unknown',
+              phone: 'N/A'
+            };
+            return [
+              new Date(t.date).toLocaleDateString('en-GB'),
+              student.fullName,
+              student.nameKhmer,
+              student.class,
+              student.shift,
+              student.phone,
+              t.classType || 'N/A',
+              t.amount,
+              t.paymentMethod || 'N/A',
+              t.paymentMonth || 'N/A',
+              t.receivedBy || 'N/A',
+              t.id || 'N/A'
+            ];
+          })
+        ];
+        const detailsSheet = XLSX.utils.aoa_to_sheet(detailsData);
+        XLSX.utils.book_append_sheet(wb, detailsSheet, 'Transactions');
+
+        // Write file
+        XLSX.writeFile(wb, `payment-details-${startDate}-to-${endDate}.xlsx`);
+        toast.success(`Exported ${transactionsData.length} transaction details successfully!`);
+      } catch (error) {
+        console.error("Error exporting transaction details:", error);
+        toast.error("Failed to export transaction details");
+      }
+    }
   };
 
   if (!isAuthenticated) {
@@ -689,9 +915,17 @@ const PaymentSummaryPage = () => {
                 totalTransactions: 0,
                 averagePayment: 0,
                 dailyAverage: 0,
-                unpaidStudentsCount: 0
+                unpaidStudentsCount: 0,
+                expectedRevenue: {
+                  trialPeriodAmount: 0,
+                  existingUnpaidAmount: 0,
+                  totalExpected: 0,
+                  trialPeriodCount: 0,
+                  existingUnpaidCount: 0
+                }
               }}
               isLoading={isLoading}
+              startDate={startDate}
             />
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -701,6 +935,7 @@ const PaymentSummaryPage = () => {
                   comparisonData: []
                 }}
                 studentsData={studentsData}
+                transactionsData={transactionsData}
                 classesData={classesData}
                 dateInterval={dateInterval}
                 isLoading={isLoading}

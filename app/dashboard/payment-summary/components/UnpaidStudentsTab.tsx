@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { getPaymentStatus } from "../../_lib/paymentLogic";
 import Icon from "../../../_components/Icon";
 import { mdiClockOutline } from "@mdi/js";
+import * as XLSX from 'xlsx';
 
 // Phone formatting utility (matching StudentRow)
 const formatPhoneNumber = (phone: string | undefined | null): string => {
@@ -62,6 +63,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
   const [shiftFilter, setShiftFilter] = useState("all");
   const [overdueFilter, setOverdueFilter] = useState("all");
   const [lateFeeFilter, setLateFeeFilter] = useState("all");
+  const [trialPeriodFilter, setTrialPeriodFilter] = useState("all");
 
   useEffect(() => {
     fetchUnpaidStudents();
@@ -69,7 +71,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
 
   useEffect(() => {
     filterStudents();
-  }, [unpaidStudents, searchTerm, classFilter, shiftFilter, overdueFilter, lateFeeFilter]);
+  }, [unpaidStudents, searchTerm, classFilter, shiftFilter, overdueFilter, lateFeeFilter, trialPeriodFilter]);
 
   const fetchUnpaidStudents = async () => {
     setIsLoading(true);
@@ -226,8 +228,8 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
               
               const daysSinceCreation = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
 
-              // Condition 3: Check if in trial period (created < 3 days ago)
-              isTrialPeriod = daysSinceCreation < 3;
+              // Condition 3: Check if in trial period (created within last 3 days including today)
+              isTrialPeriod = daysSinceCreation <= 3;
 
               // Condition 1 & 2: Show appropriate date
               if (payments.length > 0) {
@@ -332,6 +334,15 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
       }
     }
 
+    // Trial period filter
+    if (trialPeriodFilter !== "all") {
+      if (trialPeriodFilter === "trial-period") {
+        filtered = filtered.filter(student => student.isNewStudent);
+      } else if (trialPeriodFilter === "not-trial-period") {
+        filtered = filtered.filter(student => !student.isNewStudent);
+      }
+    }
+
     setFilteredStudents(filtered);
   };
 
@@ -346,11 +357,15 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
   };
 
   const handleExportUnpaidStudents = () => {
-    const csvData = [
+    const wb = XLSX.utils.book_new();
+    
+    // Create the data array
+    const data = [
       ['Unpaid Students Report'],
       [`Generated on: ${new Date().toLocaleDateString()}`],
-      [''],
-      ['Student Name', 'Khmer Name', 'Class', 'Shift', 'Schedule', 'Phone', 'Father Name', 'Father Phone', 'Mother Name', 'Mother Phone', 'Payment Date', 'Payment Amount', 'Days Overdue', 'Late Fee Permission', 'Telegram Username'],
+      [`Total Unpaid Students: ${filteredStudents.length}`],
+      [],
+      ['Student Name', 'Khmer Name', 'Class', 'Shift', 'Phone', 'Last Payment Date', 'Last Payment Amount', 'Days Overdue', 'Late Fee Permission', 'Telegram Username'],
       ...filteredStudents.map(student => [
         student.fullName,
         student.nameKhmer,
@@ -358,23 +373,21 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
         student.shift,
         student.phone,
         student.lastPaymentDate,
-        `$${student.lastPaymentAmount.toFixed(2)}`,
-        student.daysOverdue === 999 ? 'Never Paid' : `${student.daysOverdue} days`,
+        student.lastPaymentAmount,
+        student.daysOverdue === 999 ? 'Never Paid' : student.daysOverdue,
         student.lateFeePermission ? 'Yes' : 'No',
         student.telegramUsername || 'N/A'
       ])
     ];
 
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `unpaid-students-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Unpaid Students');
+    
+    // Write file
+    XLSX.writeFile(wb, `unpaid-students-${new Date().toISOString().split('T')[0]}.xlsx`);
     
     toast.success("Unpaid students list exported successfully!");
   };
@@ -394,7 +407,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
             <div className="text-right">
               <div className="text-3xl font-bold text-red-600 dark:text-red-400">{filteredStudents.length}</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                {searchTerm || classFilter !== "all" || shiftFilter !== "all" || overdueFilter !== "all" || lateFeeFilter !== "all" ? "Filtered" : "Total"} Unpaid
+                {searchTerm || classFilter !== "all" || shiftFilter !== "all" || overdueFilter !== "all" || lateFeeFilter !== "all" || trialPeriodFilter !== "all" ? "Filtered" : "Total"} Unpaid
               </div>
             </div>
             <div className="text-right">
@@ -413,7 +426,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
             <input
@@ -466,6 +479,19 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Trial Period</label>
+            <select
+              value={trialPeriodFilter}
+              onChange={(e) => setTrialPeriodFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+            >
+              <option value="all">All Students</option>
+              <option value="trial-period">In Trial Period</option>
+              <option value="not-trial-period">Not In Trial Period</option>
+            </select>
+          </div>
+
           <div className="flex items-end">
             <button
               onClick={() => {
@@ -474,6 +500,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
                 setShiftFilter("all");
                 setOverdueFilter("all");
                 setLateFeeFilter("all");
+                setTrialPeriodFilter("all");
               }}
               className="w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors duration-200"
             >

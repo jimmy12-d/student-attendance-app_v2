@@ -4,7 +4,7 @@ import { ColumnConfig } from './ColumnToggle';
 import { toast } from 'sonner';
 import { AbsentStatusTracker } from './AbsentStatusTracker';
 import { getStatusStyles } from '../../_lib/statusStyles';
-import { getPaymentStatus, getPaymentStatusDisplayText } from '../../_lib/paymentLogic';
+import { getPaymentStatus } from '../../_lib/paymentLogic';
 import { mdiTrophy, mdiMedal } from '@mdi/js';
 import Icon from "../../../_components/Icon";
 // Phone formatting utility
@@ -57,15 +57,11 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   student, 
   index, 
   enabledColumns, 
-  onEdit, 
-  onDelete, 
   onViewDetails, 
   isBatchEditMode = false, 
   isTakeAttendanceMode = false, 
-  onBatchUpdate, 
   isSelected = false, 
   onSelect, 
-  getAttendanceStatus, 
   getTodayAttendanceStatus, 
   isStudentCurrentlyPresent, 
   onAttendanceChange, 
@@ -77,6 +73,14 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   // Check if student has warning and is absent today
   const todayStatus = getTodayAttendanceStatus ? getTodayAttendanceStatus(student) : { status: 'Unknown' };
   const isWarningAbsent = student.warning && todayStatus.status === 'Absent';
+  
+  // Check if it's the student's birthday
+  const isBirthday = (() => {
+    if (!student.dateOfBirth) return false;
+    const today = new Date();
+    const birthDate = new Date(student.dateOfBirth);
+    return today.getMonth() === birthDate.getMonth() && today.getDate() === birthDate.getDate();
+  })();
   
   // Helper function to render status badge with optional SVG
   const renderStatusBadge = (status: string, displayText?: string, showTime?: string) => {
@@ -110,11 +114,25 @@ export const StudentRow: React.FC<StudentRowProps> = ({
 
   
   return (
-    <tr 
+    <>
+      {/* Birthday confetti effect */}
+      {isBirthday && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-lg">
+          <div className="absolute top-2 left-1/4 w-1 h-1 bg-yellow-400 rounded-full animate-bounce opacity-60"></div>
+          <div className="absolute top-4 right-1/3 w-1.5 h-1.5 bg-pink-400 rounded-full animate-ping opacity-50"></div>
+          <div className="absolute bottom-3 left-1/2 w-1 h-1 bg-rose-400 rounded-full animate-pulse opacity-70"></div>
+          <div className="absolute top-6 right-1/4 w-0.5 h-0.5 bg-purple-400 rounded-full animate-bounce opacity-80"></div>
+          <div className="absolute bottom-2 right-1/5 w-1 h-1 bg-orange-400 rounded-full animate-ping opacity-60"></div>
+        </div>
+      )}
+      
+      <tr 
       data-student-id={student.id}
-      className={`group transition-all duration-200 ease-in-out hover:shadow-sm ${
+      className={`group transition-all duration-300 ease-in-out hover:shadow-lg ${
         isWarningAbsent 
           ? 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 shadow-md animate-pulse' 
+          : isBirthday
+          ? 'bg-gradient-to-r from-pink-50 via-rose-50 to-pink-100 dark:from-pink-900/30 dark:via-rose-900/30 dark:to-pink-900/40 border-l-4 border-pink-400 shadow-lg ring-2 ring-pink-200 dark:ring-pink-800/50 animate-pulse shadow-pink-200/50 dark:shadow-pink-900/50'
           : isBatchEditMode && isSelected 
           ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500' 
           : student.isFlipPreview && student.scheduleType?.toLowerCase() === 'flip-flop'
@@ -154,6 +172,22 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                             <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                             </svg>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Birthday indicator */}
+                      {isBirthday && (
+                        <div className="absolute -top-2 -right-2 z-20">
+                          <div className="relative">
+                            {/* Main birthday badge */}
+                            <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full shadow-lg animate-bounce border-2 border-white dark:border-gray-800">
+                              <span className="text-lg animate-pulse">🎂</span>
+                            </div>
+                            {/* Sparkle effects */}
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping opacity-75"></div>
+                            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-pink-300 rounded-full animate-pulse"></div>
+                            <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-rose-400 rounded-full animate-bounce"></div>
                           </div>
                         </div>
                       )}
@@ -219,6 +253,17 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                           >
                           {student.nameKhmer}
                         </p>
+                      )}
+                      {/* Birthday celebration message */}
+                      {isBirthday && (
+                        <div className="mt-1 flex items-center space-x-1 animate-pulse">
+                          <span className="text-xs font-bold text-pink-600 dark:text-pink-400">🎉 HAPPY BIRTHDAY!</span>
+                          <div className="flex space-x-1">
+                            <span className="text-xs animate-bounce delay-100">🎂</span>
+                            <span className="text-xs animate-bounce delay-200">🎈</span>
+                            <span className="text-xs animate-bounce delay-300">🎊</span>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -463,44 +508,41 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                     <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${enhancedClasses} ${ringClasses} ${
                       (earliestRank === 1 || latestRank === 1) ? 'animate-pulse' : ''
                     }`}>
-                      {/* Rank number for top 3 performers */}
-                      {(earliestRank && earliestRank <= 3) && (
+                      {/* Rank number for top 3 performers - prioritize earliest over latest */}
+                      {((earliestRank && earliestRank <= 3) || (latestRank && latestRank <= 3)) && (
                         <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                          earliestRank === 1 
-                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200' // Silver for #1
-                            : (earliestRank === 2 || earliestRank === 3)
-                            ? 'bg-amber-200 dark:bg-amber-700 text-amber-800 dark:text-amber-200' // Bronze for #2 and #3
-                            : 'bg-green-50 dark:bg-green-600 text-green-700 dark:text-green-200'
+                          earliestRank && earliestRank <= 3
+                            ? earliestRank === 1 
+                              ? 'bg-yellow-200 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-200' // Gold for #1 earliest
+                              : earliestRank === 2
+                              ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200' // Silver for #2 earliest
+                              : 'bg-amber-200 dark:bg-amber-700 text-amber-800 dark:text-amber-200' // Bronze for #3 earliest
+                            : latestRank === 1 
+                              ? 'bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100' // Red for #1 latest
+                              : latestRank === 2
+                              ? 'bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100' // Red for #2 latest
+                              : 'bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100' // Red for #3 latest
                         }`}>
-                          #{earliestRank}
-                        </span>
-                      )}
-                      
-                      {(latestRank && latestRank <= 3) && (
-                        <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                          latestRank === 1 
-                            ? 'bg-red-200 dark:bg-red-800 text-red-900 dark:text-red-100' 
-                            : latestRank === 2
-                            ? 'bg-orange-200 dark:bg-orange-700 text-orange-800 dark:text-orange-200'
-                            : 'bg-yellow-200 dark:bg-yellow-700 text-yellow-800 dark:text-yellow-200'
-                        }`}>
-                          #{latestRank}
+                          #{earliestRank && earliestRank <= 3 ? earliestRank : latestRank}
                         </span>
                       )}
                       
                       {/* Icon based on type - Different icons for each rank */}
                       {showIcon && (earliestRank || latestRank) && (
                         <span className="flex-shrink-0">
-                          {earliestRank === 1 ? (
-                            // Gold Trophy for #1
-                            <Icon path={mdiTrophy} className="w-5 h-5 text-yellow-500" />
-                          ) : earliestRank === 2 ? (
-                            // Silver Medal for #2
-                            <Icon path={mdiMedal} className="w-5 h-5 text-gray-400" />
-                          ) : earliestRank === 3 ? (
-                            // Bronze Medal for #3
-                            <Icon path={mdiMedal} className="w-5 h-5 text-orange-400" />
+                          {earliestRank && earliestRank <= 3 ? (
+                            earliestRank === 1 ? (
+                              // Gold Trophy for #1 earliest
+                              <Icon path={mdiTrophy} className="w-5 h-5 text-yellow-500" />
+                            ) : earliestRank === 2 ? (
+                              // Silver Medal for #2 earliest
+                              <Icon path={mdiMedal} className="w-5 h-5 text-gray-400" />
+                            ) : (
+                              // Bronze Medal for #3 earliest
+                              <Icon path={mdiMedal} className="w-5 h-5 text-orange-400" />
+                            )
                           ) : latestRank && latestRank <= 3 ? (
+                            // Warning icon for latest ranks
                             <svg className="w-3 h-3 text-red-600 dark:text-red-400" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                             </svg>
@@ -645,10 +687,87 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               </td>
             );
 
+          case 'notificationVersion':
+            // Show notification version status - especially important for Android after fixes
+            const needsUpdate = student.notificationPlatform === 'Android' && 
+                               (!student.notificationVersion || student.notificationVersion === 'unknown' || 
+                                student.notificationVersion !== 'v2.2.0-android-fix');
+            const hasNotificationSetup = student.authUid && student.notificationVersion;
+            
+            return (
+              <td key="notificationVersion" className="p-3 whitespace-nowrap">
+                <div className="flex items-center justify-center">
+                  {!student.authUid ? (
+                    // No auth UID - not logged in
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                      Not Logged In
+                    </span>
+                  ) : !hasNotificationSetup ? (
+                    // Logged in but no notification token
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-700">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                      </svg>
+                      No Notif Setup
+                    </span>
+                  ) : student.notificationPlatform === 'Android' && needsUpdate ? (
+                    // Android with outdated version - needs reinstall
+                    <span 
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-700 animate-pulse cursor-help"
+                      title={`Android user with old notification system (${student.notificationVersion || 'unknown'}). Needs to reinstall PWA for Android notification fix.`}
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      {student.notificationPlatform} ({student.notificationVersion || 'old'})
+                      <span className="ml-1 text-xs bg-red-200 dark:bg-red-800 px-1.5 py-0.5 rounded-full font-semibold">REINSTALL</span>
+                    </span>
+                  ) : student.notificationPlatform === 'Android' ? (
+                    // Android with current version - good!
+                    <span 
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700"
+                      title={`Android user with latest notification system (${student.notificationVersion}).`}
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {student.notificationPlatform} ✓
+                    </span>
+                  ) : student.notificationPlatform === 'iOS' ? (
+                    // iOS - always works
+                    <span 
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700"
+                      title={`iOS user - notifications working (${student.notificationVersion || 'active'}).`}
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {student.notificationPlatform} ✓
+                    </span>
+                  ) : (
+                    // Other platform or unknown
+                    <span 
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400"
+                      title={`Platform: ${student.notificationPlatform || 'unknown'}, Version: ${student.notificationVersion || 'unknown'}`}
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {student.notificationPlatform || 'Unknown'}
+                    </span>
+                  )}
+                </div>
+              </td>
+            );
+
           default:
             return null;
         }
       })}
     </tr>
+    </>
   );
 };

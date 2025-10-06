@@ -90,6 +90,7 @@ export interface Student {
   phone?: string; // Optional, as it wasn't in the display list
   grade?: string; // Grade level (from classTypes collection)
   class: string;
+  classType?: string; // Class type from classes collection
   shift: string;
   ay?: string; // Academic Year
   scheduleType?: string; // Schedule Type
@@ -146,6 +147,11 @@ export interface Student {
   }>; // History of flip-flop changes by month (key: "YYYY_MM")
   // Flip preview flag for UI (not stored in database)
   isFlipPreview?: boolean;
+  
+  // Notification system version tracking (from fcmTokens collection)
+  notificationVersion?: string; // Service worker version (e.g., 'v2.2.0-android-fix')
+  notificationPlatform?: 'iOS' | 'Android' | 'other'; // Platform from FCM token
+  notificationLastUpdated?: Timestamp | Date; // When FCM token was last updated
 }
 
 export interface PermissionRecord {

@@ -66,16 +66,15 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
         new Date(record.timestamp.seconds * 1000).toLocaleTimeString('en-US', { 
           hour12: false, hour: '2-digit', minute: '2-digit' 
         }) : undefined),
-      startTime: record.startTime || getShiftInfo(studentData.shift || '').startTime
-    }));
+      startTime: record.startTime // Only use startTime if it exists in the record
+    })).filter(record => record.startTime); // Filter out records without startTime
     
     return calculateAverageArrivalTime(
       studentData as any, // Cast to match the Student interface from attendanceLogic
       transformedRecords,
-      currentMonth,
-      classConfigs
+      currentMonth
     );
-  }, [studentData, recentRecords, classConfigs, getShiftInfo]);
+  }, [studentData, recentRecords, classConfigs]);
 
   // Khmer font utility
   const khmerFont = (additionalClasses: string = '') => {

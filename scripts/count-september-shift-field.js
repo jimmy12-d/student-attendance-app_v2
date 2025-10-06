@@ -1,5 +1,5 @@
 /**
- * Script to add username field to all students based on fullName
+ * Script to add timestamp field to attendance records and fix date from 2025-06-10 to 2025-10-06
  */
 
 const admin = require('firebase-admin');
@@ -29,55 +29,39 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-async function addUsernameToStudents() {
+async function addTimestampToAttendance() {
   try {
-    console.log('🚀 Adding username field to all students based on fullName...\n');
+    console.log('🚀 Adding timestamp field to attendance records and fixing date...\n');
 
-    // Query for all students
-    const studentsQuery = db.collection('students');
+    // Query for attendance records with date 2025-06-10
+    const attendanceQuery = db.collection('attendance')
+      .where('date', '==', '2025-06-10');
 
-    const studentsSnapshot = await studentsQuery.get();
+    const attendanceSnapshot = await attendanceQuery.get();
 
-    if (studentsSnapshot.empty) {
-      console.log('⚠️  No students found.');
+    if (attendanceSnapshot.empty) {
+      console.log('⚠️  No attendance records found with date 2025-06-10.');
       return;
     }
 
-    console.log(`📊 Found ${studentsSnapshot.size} total students...\n`);
+    console.log(`📊 Found ${attendanceSnapshot.size} attendance records with date 2025-06-10...\n`);
 
     let updatedCount = 0;
     let skippedCount = 0;
-    const usedUsernames = new Set();
 
-    // Process each student
-    for (const doc of studentsSnapshot.docs) {
+    // Process each attendance record
+    for (const doc of attendanceSnapshot.docs) {
       const data = doc.data();
-      const fullName = data.fullName;
 
-      if (!fullName || typeof fullName !== 'string') {
-        console.log(`⚠️  Skipping student ${doc.id}: no valid fullName`);
-        skippedCount++;
-        continue;
+      // Always update date, add timestamp if not present
+      const updateData = { date: '2025-10-06' };
+      if (!data.timestamp) {
+        updateData.timestamp = admin.firestore.Timestamp.fromDate(new Date('2025-10-06T12:00:00'));
       }
 
-      // Generate base username: lowercase, replace spaces with underscores
-      let baseUsername = fullName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''); // remove non-alphanumeric except underscore
-
-      let username = baseUsername;
-      let suffix = 1;
-
-      // Check for duplicates and append suffix if needed
-      while (usedUsernames.has(username)) {
-        suffix++;
-        username = `${baseUsername}_${suffix}`;
-      }
-
-      usedUsernames.add(username);
-
-      // Update the document with username
       try {
-        await doc.ref.update({ username });
-        console.log(`✅ Updated ${fullName} -> ${username}`);
+        await doc.ref.update(updateData);
+        console.log(`✅ Updated ${doc.id}: changed date to 2025-10-06${!data.timestamp ? ' and added timestamp' : ''}`);
         updatedCount++;
       } catch (error) {
         console.error(`❌ Failed to update ${doc.id}:`, error);
@@ -85,12 +69,12 @@ async function addUsernameToStudents() {
       }
     }
 
-    console.log('\n� Username Addition Summary:');
-    console.log(`   📊 Total students processed: ${studentsSnapshot.size}`);
-    console.log(`   ✅ Students updated: ${updatedCount}`);
-    console.log(`   ⚠️  Students skipped: ${skippedCount}`);
+    console.log('\n📊 Timestamp Addition Summary:');
+    console.log(`   📊 Total records processed: ${attendanceSnapshot.size}`);
+    console.log(`   ✅ Records updated: ${updatedCount}`);
+    console.log(`   ⚠️  Records skipped: ${skippedCount}`);
 
-    console.log('\n� Username addition complete!');
+    console.log('\n⏰ Timestamp addition complete!');
 
   } catch (error) {
     console.error('❌ Error during analysis:', error);
@@ -100,7 +84,7 @@ async function addUsernameToStudents() {
 
 // Main execution
 if (require.main === module) {
-  addUsernameToStudents()
+  addTimestampToAttendance()
     .then(() => {
       console.log('\n✨ Script completed successfully!');
       process.exit(0);
@@ -111,4 +95,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { addUsernameToStudents };
+module.exports = { addTimestampToAttendance };

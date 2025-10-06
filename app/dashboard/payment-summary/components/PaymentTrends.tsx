@@ -326,20 +326,6 @@ const PaymentTrends: React.FC<PaymentTrendsProps> = ({ summaryData, isLoading, d
                   // Calculate exact x position to match SVG circles
                   const xPos = maxDays === 1 ? 50 : (index / (maxDays - 1)) * 100;
                   
-                  // For comparison, find the corresponding date in the previous period
-                  // If current date is Sep 1, look for Aug 1 in previous period
-                  let comparisonPreviousDay: { date: string; revenue: number; count: number; } | undefined = previousDay;
-                  if (currentDay && summaryData.previousMonth) {
-                    const currentDate = new Date(currentDay.date);
-                    // Calculate corresponding date in previous month (same day, previous month)
-                    const comparisonDate = new Date(currentDate);
-                    comparisonDate.setMonth(comparisonDate.getMonth() - 1);
-                    const comparisonDateStr = comparisonDate.toISOString().split('T')[0];
-                    
-                    // Find the data point for this comparison date
-                    comparisonPreviousDay = summaryData.previousMonth.find(day => day.date === comparisonDateStr);
-                  }
-                  
                   return (
                     <div 
                       key={`day-${index}`} 
@@ -369,13 +355,13 @@ const PaymentTrends: React.FC<PaymentTrendsProps> = ({ summaryData, isLoading, d
                               </span>
                             </div>
                           )}
-                          {currentDay && comparisonPreviousDay && (
+                          {currentDay && previousDay && (
                             <div className="mt-2 pt-2 border-t border-gray-600 dark:border-gray-400">
                               <div className="text-center">
                                 <div className="text-xs font-medium">
-                                  vs {new Date(comparisonPreviousDay.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}: 
-                                  <span className={currentDay.revenue >= comparisonPreviousDay.revenue ? 'text-green-400' : 'text-red-400'}>
-                                    {currentDay.revenue > comparisonPreviousDay.revenue ? '+' : ''}${(currentDay.revenue - comparisonPreviousDay.revenue).toFixed(2)}
+                                  vs {new Date(previousDay.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}: 
+                                  <span className={currentDay.revenue >= previousDay.revenue ? 'text-green-400' : 'text-red-400'}>
+                                    {currentDay.revenue > previousDay.revenue ? '+' : ''}${(currentDay.revenue - previousDay.revenue).toFixed(2)}
                                   </span>
                                 </div>
                               </div>

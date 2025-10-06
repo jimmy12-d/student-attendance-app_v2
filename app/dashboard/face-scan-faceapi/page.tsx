@@ -163,7 +163,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       setLoadingMessage('Loading available cameras...');
 
       // First, request camera access to ensure permissions are granted and device labels are populated
-      let tempStream = null;
+      let tempStream: MediaStream | null = null;
       try {
         tempStream = await navigator.mediaDevices.getUserMedia({
           video: { deviceId: undefined },
@@ -648,13 +648,15 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                   };
                 }
                 
-                // Mark the student as recently processed
+                // 🔒 CRITICAL: Set temporary cooldown IMMEDIATELY to prevent duplicate calls
+                // This prevents race condition where second scan happens before first save completes
                 recentlyMarkedStudents.current.set(studentKey, now);
+                console.log(`🔒 Temporary cooldown set for ${bestMatch.student.fullName} (preventing duplicates during save)`);
                 
-                // Start per-face scan lock process
+                // Start per-face scan lock process - show recognizing state immediately
                 const updatedFace = {
                   ...face,
-                  status: 'scanning' as const,
+                  status: 'recognizing' as const,
                   name: bestMatch.student.fullName,
                   confidence: finalConfidence,
                   lastRecognized: now,
@@ -681,6 +683,16 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                 markAttendance(bestMatch.student, selectedShift || '', classConfigs || {}, () => {}, 3) // 3 retry attempts
                   .then((attendanceStatus) => {
                     console.log(`✅ Attendance marking completed for ${bestMatch.student.fullName}: ${attendanceStatus}`);
+                    
+                    // ✅ SUCCESS: Refresh the cooldown timestamp to full duration
+                    // (it was already set temporarily, now confirm it for full 10 seconds)
+                    recentlyMarkedStudents.current.set(studentKey, Date.now());
+                    console.log(`🔒 Cooldown confirmed for ${bestMatch.student.fullName} - locked for ${RECOGNITION_COOLDOWN/1000}s`);
+                    
+                    // Check if this was a duplicate detection (status returned from existing record)
+                    if (attendanceStatus === 'present' || attendanceStatus === 'late') {
+                      console.log(`✅ Record confirmed (may have been duplicate detection working correctly)`);
+                    }
                     
                     // Notify other components that new attendance was marked
                     window.dispatchEvent(new CustomEvent('attendanceMarked', {
@@ -719,6 +731,10 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                   .catch(error => {
                     console.error('❌ All attendance marking attempts failed:', error);
                     
+                    // ❌ FAILURE: Remove from cooldown to allow immediate retry
+                    recentlyMarkedStudents.current.delete(studentKey);
+                    console.log(`🔓 Cooldown removed for ${bestMatch.student.fullName} due to failure - can retry immediately`);
+                    
                     // Show detailed error information to user
                     const errorMessage = error.message || 'Unknown error occurred';
                     toast.error(`Failed to mark attendance for ${bestMatch.student.fullName}: ${errorMessage}`, {
@@ -750,7 +766,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                               isScanning: false, 
                               scanMessage: '', 
                               status: 'unknown' as const, 
-                              message: `⚠️ Attendance failed - saved for manual review`,
+                              message: `⚠️ Attendance failed - can retry now`,
                               attendanceStatus: 'failed'
                             }
                           : f
@@ -762,7 +778,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                       setTrackedFaces(prevFaces => 
                         prevFaces.filter(f => f.id !== face.id)
                       );
-                    }, 8000); // Keep failed faces visible for 8 seconds
+                    }, 5000); // Keep failed faces visible for 5 seconds, then allow retry
                   });
                 
                 return updatedFace;
@@ -1351,8 +1367,8 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                         id="camera-selection"
                         label="Select Camera"
                         value={selectedCamera}
-                        onChange={setSelectedCamera}
-                        options={availableCameras}
+                        onChange={(value) => setSelectedCamera(String(value))}
+                        options={availableCameras as any}
                         placeholder="Choose camera..."
                         searchable={false}
                         className="w-full"

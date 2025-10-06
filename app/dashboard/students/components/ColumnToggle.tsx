@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Icon from '../../../_components/Icon';
 import { mdiEye, mdiEyeOff } from '@mdi/js';
 
@@ -49,7 +49,114 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
   defaultModalTab = 'basic',
   onDefaultModalTabChange
 }) => {
+  const [focusedStudentIndex, setFocusedStudentIndex] = useState(-1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const enabledColumns = columns.filter(col => col.enabled);
+
+  // Reset focused index when search query changes
+  useEffect(() => {
+    setFocusedStudentIndex(-1);
+  }, [searchQuery]);
+
+  // Keyboard navigation handler
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const hasMatchingStudents = filteredStudentsCount > 0 && filteredStudentsCount < 10 && filteredStudents.length > 0;
+    
+    if (!hasMatchingStudents) return;
+
+    const totalStudents = filteredStudents.length;
+    const columns = 2; // 2-column grid
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        if (focusedStudentIndex === -1) {
+          // Move from input to first student
+          setFocusedStudentIndex(0);
+        } else {
+          // Move down to next row
+          const nextIndex = focusedStudentIndex + columns;
+          if (nextIndex < totalStudents) {
+            setFocusedStudentIndex(nextIndex);
+          }
+        }
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        if (focusedStudentIndex > 0) {
+          // Move up to previous row
+          const prevIndex = focusedStudentIndex - columns;
+          if (prevIndex >= 0) {
+            setFocusedStudentIndex(prevIndex);
+          } else if (focusedStudentIndex < columns) {
+            // Move back to input if in first row
+            setFocusedStudentIndex(-1);
+            searchInputRef.current?.focus();
+          }
+        } else if (focusedStudentIndex === 0) {
+          // Move back to input
+          setFocusedStudentIndex(-1);
+          searchInputRef.current?.focus();
+        }
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        if (focusedStudentIndex === -1) {
+          // Move from input to first student
+          setFocusedStudentIndex(0);
+        } else {
+          // Move right within row, or to next row if at end of current row
+          const currentRow = Math.floor(focusedStudentIndex / columns);
+          const nextInRow = focusedStudentIndex + 1;
+          if (nextInRow < totalStudents && Math.floor(nextInRow / columns) === currentRow) {
+            // Still in same row
+            setFocusedStudentIndex(nextInRow);
+          } else {
+            // At end of row, move to start of next row
+            const nextRowStart = (currentRow + 1) * columns;
+            if (nextRowStart < totalStudents) {
+              setFocusedStudentIndex(nextRowStart);
+            }
+          }
+        }
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        if (focusedStudentIndex > 0) {
+          // Move left within row, or to previous row if at start of current row
+          const currentRow = Math.floor(focusedStudentIndex / columns);
+          const prevInRow = focusedStudentIndex - 1;
+          if (prevInRow >= 0 && Math.floor(prevInRow / columns) === currentRow) {
+            // Still in same row
+            setFocusedStudentIndex(prevInRow);
+          } else {
+            // At start of row, move to end of previous row
+            const prevRowEnd = (currentRow * columns) - 1;
+            if (prevRowEnd >= 0) {
+              setFocusedStudentIndex(prevRowEnd);
+            }
+          }
+        } else if (focusedStudentIndex === 0) {
+          // Move back to input
+          setFocusedStudentIndex(-1);
+          searchInputRef.current?.focus();
+        }
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (focusedStudentIndex >= 0 && focusedStudentIndex < filteredStudents.length) {
+          onStudentSelect?.(filteredStudents[focusedStudentIndex].id);
+          setFocusedStudentIndex(-1);
+          searchInputRef.current?.focus();
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setFocusedStudentIndex(-1);
+        searchInputRef.current?.focus();
+        break;
+    }
+  };
 
   return (
     <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 dark:border-slate-700/50 rounded-2xl p-6 shadow-xl relative z-25">
@@ -228,10 +335,12 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
               </svg>
             </div>
             <input 
+              ref={searchInputRef}
               type="text"
               placeholder="Search students by name (English/Khmer), class, or phone..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white dark:placeholder-gray-400 text-base"
             />
             {searchQuery && (
@@ -264,11 +373,18 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
                         Matching Students:
                       </div>
                       <div className="p-2 grid grid-cols-2 gap-3">
-                        {filteredStudents.map((student) => (
+                        {filteredStudents.map((student, index) => (
                           <div 
                             key={student.id}
-                            onClick={() => onStudentSelect?.(student.id)}
-                            className={`flex flex-col p-3 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 cursor-pointer transition-all duration-200 hover:!bg-blue-50 dark:hover:!bg-blue-900/20 hover:!border-blue-300 dark:hover:!border-blue-600 hover:!shadow-md hover:!scale-[1.02] isolate`}
+                            onClick={() => {
+                              onStudentSelect?.(student.id);
+                              setFocusedStudentIndex(-1);
+                            }}
+                            className={`flex flex-col p-3 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 cursor-pointer transition-all duration-200 hover:!bg-blue-50 dark:hover:!bg-blue-900/20 hover:!border-blue-300 dark:hover:!border-blue-600 hover:!shadow-md hover:!scale-[1.02] isolate ${
+                              focusedStudentIndex === index 
+                                ? '!bg-blue-100 dark:!bg-blue-900/40 !border-blue-400 dark:!border-blue-500 !ring-2 !ring-blue-300 dark:!ring-blue-600' 
+                                : ''
+                            }`}
                             title={onStudentSelect ? `Click to scroll to ${student.fullName}` : undefined}
                           >
                             <div className="flex-1 min-w-0">

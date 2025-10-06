@@ -2,6 +2,7 @@ export interface Student {
     id: string;
     fullName: string;
     class: string;
+    classType?: string;
     lastPaymentMonth?: string;
     discount?: number;
     createdAt: Date;

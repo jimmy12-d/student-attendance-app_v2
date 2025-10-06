@@ -68,6 +68,7 @@ interface AttendanceScore {
   averageScore: number;
   averagePercentage: number; // Percentage based on full score = 100%
   averageArrivalTime: string;
+  averageArrivalTimeMinutes: number; // Numeric value for sorting (negative = early, positive = late)
   rank: number;
 }
 
@@ -176,7 +177,7 @@ const calculateAttendanceScore = (
   const averagePercentage = totalDays > 0 ? (rawPercentage < 0 ? rawPercentage * (3 / 5) : rawPercentage) : 0;
 
   // Calculate average arrival time for the interval
-  const calculateAverageArrivalTime = (): string => {
+  const calculateAverageArrivalTime = (): { timeString: string; timeInMinutes: number } => {
     const validArrivalTimes: number[] = [];
     
     studentAttendance.forEach(record => {
@@ -192,24 +193,29 @@ const calculateAttendanceScore = (
     });
 
     if (validArrivalTimes.length === 0) {
-      return 'N/A';
+      return { timeString: 'N/A', timeInMinutes: 999999 }; // Large number so N/A sorts last
     }
 
     const averageDifference = validArrivalTimes.reduce((sum, diff) => sum + diff, 0) / validArrivalTimes.length;
     
+    let timeString: string;
     if (averageDifference < 0) {
       const absMinutes = Math.abs(averageDifference);
       const hours = Math.floor(absMinutes / 60);
       const minutes = Math.round(absMinutes % 60);
-      return hours > 0 ? `${hours}h ${minutes}m early` : `${minutes}m early`;
+      timeString = hours > 0 ? `${hours}h ${minutes}m early` : `${minutes}m early`;
     } else if (averageDifference > 0) {
       const hours = Math.floor(averageDifference / 60);
       const minutes = Math.round(averageDifference % 60);
-      return hours > 0 ? `${hours}h ${minutes}m late` : `${minutes}m late`;
+      timeString = hours > 0 ? `${hours}h ${minutes}m late` : `${minutes}m late`;
     } else {
-      return 'On time';
+      timeString = 'On time';
     }
+    
+    return { timeString, timeInMinutes: averageDifference };
   };
+
+  const averageArrivalTimeData = calculateAverageArrivalTime();
 
   return {
     studentId: student.id!,
@@ -227,7 +233,8 @@ const calculateAttendanceScore = (
     },
     averageScore,
     averagePercentage,
-    averageArrivalTime: calculateAverageArrivalTime(),
+    averageArrivalTime: averageArrivalTimeData.timeString,
+    averageArrivalTimeMinutes: averageArrivalTimeData.timeInMinutes,
     rank: 0 // Will be set after sorting
   };
 };
@@ -636,15 +643,24 @@ export default function AttendanceScorePage() {
             bValue = b.totalScore;
         }
         
+        let result: number;
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortDirection === 'asc' 
+          result = sortDirection === 'asc' 
             ? aValue.localeCompare(bValue) 
             : bValue.localeCompare(aValue);
         } else {
-          return sortDirection === 'asc' 
+          result = sortDirection === 'asc' 
             ? (aValue as number) - (bValue as number) 
             : (bValue as number) - (aValue as number);
         }
+        
+        // If primary sort values are equal, use average arrival time as tie-breaker
+        // Earlier arrival times should rank higher (lower minutes = better)
+        if (result === 0) {
+          return a.averageArrivalTimeMinutes - b.averageArrivalTimeMinutes;
+        }
+        
+        return result;
       });
       
       sortedScores.forEach((score, index) => {
@@ -673,7 +689,11 @@ export default function AttendanceScorePage() {
   // Chart data for top performers (combined from all shifts)
   const chartData = useMemo(() => {
     const allScores = Object.values(attendanceScoresByShift).flat();
-    const topScores = allScores.sort((a, b) => b.totalScore - a.totalScore).slice(0, 5);
+    const topScores = allScores.sort((a, b) => {
+      const scoreDiff = b.totalScore - a.totalScore;
+      // Use average arrival time as tie-breaker if scores are equal
+      return scoreDiff !== 0 ? scoreDiff : a.averageArrivalTimeMinutes - b.averageArrivalTimeMinutes;
+    }).slice(0, 5);
     
     return {
       labels: topScores.map(score => score.studentName),
@@ -702,7 +722,11 @@ export default function AttendanceScorePage() {
   // Top 5 worst performers data
   const worstPerformersData = useMemo(() => {
     const allScores = Object.values(attendanceScoresByShift).flat();
-    const worstScores = allScores.sort((a, b) => a.totalScore - b.totalScore).slice(0, 5);
+    const worstScores = allScores.sort((a, b) => {
+      const scoreDiff = a.totalScore - b.totalScore;
+      // Use average arrival time as tie-breaker if scores are equal
+      return scoreDiff !== 0 ? scoreDiff : a.averageArrivalTimeMinutes - b.averageArrivalTimeMinutes;
+    }).slice(0, 5);
     
     return {
       labels: worstScores.map(score => score.studentName),

@@ -208,7 +208,7 @@ const calculateAttendanceStatus = (attendanceTime, classStartTime) => {
         // Late arrival
         return {
             startTime: formatStartTime,
-            status: `យឺតម៉ោង ${convertToKhmerNumber(diffMinutes.toString())} នាទី`,
+            status: `មកយឺត ${convertToKhmerNumber(diffMinutes.toString())} នាទី`,
             statusIcon: '🟡'
         };
     }
@@ -1008,6 +1008,22 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
 
         const student = studentDoc.data();
         
+        // Get class start time from class configuration
+        let classStartTime = null;
+        if (student.class && student.shift) {
+            try {
+                const classDoc = await db.collection('classes').doc(student.class.replace(/^Class\s+/, '')).get();
+                if (classDoc.exists) {
+                    const classData = classDoc.data();
+                    if (classData.shifts && classData.shifts[student.shift] && classData.shifts[student.shift].startTime) {
+                        classStartTime = classData.shifts[student.shift].startTime;
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching class start time:', error);
+            }
+        }
+        
         // Store parent-student relationship
         const parentData = {
             chatId: chatId.toString(),
@@ -1017,7 +1033,7 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
             studentKhmerName: student.khmerName || student.fullNameKhmer || student.nameKhmer || null, // Try different possible field names
             studentClass: student.class || '',
             studentShift: student.shift || '',
-            classStartTime: student.startTime || null, // Add class start time from student data
+            classStartTime: classStartTime, // Add class start time from class configuration
             registeredAt: admin.firestore.Timestamp.now(),
             isActive: true
         };
@@ -3309,13 +3325,19 @@ exports.notifyParentAttendance = onCall({
 
 👤 **សិស្ស:** ${khmerName}
 🏫 **ថ្នាក់:** ${classDisplay}
-⏰ **វេន:** ${shiftDisplay}
-🕐 **ពេលវេលា:** ${attendanceTime}`;
+⏰ **វេន:** ${shiftDisplay}`;
                 
                 // Add class start time and status if available
                 if (attendanceStatus) {
+                    message += ` 🔔 **ម៉ោងចាប់ផ្តើម:** ${attendanceStatus.startTime}`;
+                }
+                
+                message += `
+🕐 **ពេលវេលា:** ${attendanceTime}`;
+                
+                // Add attendance status if available
+                if (attendanceStatus) {
                     message += `
-🔔 **ម៉ោងចាប់ផ្តើម:** ${attendanceStatus.startTime}
 ${attendanceStatus.statusIcon} **ស្ថានភាព:** ${attendanceStatus.status}`;
                 }
                 
@@ -3454,220 +3476,6 @@ ${reason ? `📝 **ហេតុផល:** ${reason}` : ''}`;
         throw new HttpsError('internal', 'Failed to send parent permission notification');
     }
 });
-
-// The 'recognizeAndMarkAttendance' function is now obsolete. Its logic has been
-// moved to the dedicated Python Cloud Run service for better performance and scalability.
-// We are removing it to avoid conflicts and outdated code.
-/*
-exports.recognizeAndMarkAttendance = functions
-  .region('asia-southeast1')
-  .https.onRequest((req, res) => {
-    cors(req, res, async () => {
-      if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
-
-      // 1. Verify admin credentials and input data
-      if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
-          return res.status(401).json({ error: 'Authentication required.' });
-      }
-      const idToken = req.headers.authorization.split('Bearer ')[1];
-      let decodedToken;
-      try {
-        decodedToken = await admin.auth().verifyIdToken(idToken);
-      } catch (error) {
-        console.error('Token verification failed:', error);
-        return res.status(401).json({ error: 'Invalid authentication token.' });
-      }
-      
-      const adminEmail = decodedToken.email;
-
-      if (!req.body.image) {
-          return res.status(400).json({ error: 'An \'image\' (base64 encoded) must be provided.' });
-      }
-      const imageBuffer = Buffer.from(req.body.image, 'base64');
-
-      console.log(`Request from admin: ${adminEmail}`);
-
-      try {
-          // 2. Use Vision AI to detect faces in the provided image
-          const [result] = await visionClient.faceDetection({ image: { content: imageBuffer } });
-          const faces = result.faceAnnotations;
-
-          if (!faces || faces.length === 0) {
-              return res.status(200).json({ status: 'no_face_detected', message: "No face was detected in the image." });
-          }
-          if (faces.length > 1) {
-              console.log(`Multiple faces (${faces.length}) detected, using the most prominent one.`);
-          }
-
-          // --- FIX: Use the new standardized embedding function for the live face ---
-          const liveEmbedding = createNormalizedEmbedding(faces[0]);
-          
-          if (!liveEmbedding) {
-              return res.status(200).json({ status: 'no_face_data', message: "Detected a face, but could not extract its geometric features for comparison." });
-          }
-
-          // --- OPTIMIZATION: Use a 5-minute in-memory cache for student embeddings ---
-          let allStudentsWithEmbeddings = [];
-          const now = Date.now();
-
-          if (now - studentEmbeddingsCache.timestamp < CACHE_DURATION_MS && studentEmbeddingsCache.data.length > 0) {
-              console.log(`Using cached student embeddings. Cache size: ${studentEmbeddingsCache.data.length}`);
-              allStudentsWithEmbeddings = studentEmbeddingsCache.data;
-          } else {
-              console.log("Cache is stale or empty. Fetching fresh student embeddings from Firestore.");
-              // --- FIX: The query was incorrect, it should be '!=' not '==' ---
-              const studentsSnapshot = await db.collection("students").where("facialEmbeddings", "!=", []).get();
-
-              if (studentsSnapshot.empty) {
-                  return res.status(404).json({ error: 'No students have enrolled for facial recognition.' });
-              }
-              
-              const freshEmbeddings = [];
-              for (const doc of studentsSnapshot.docs) {
-                  freshEmbeddings.push({
-                      studentId: doc.id,
-                      studentData: doc.data(),
-                      storedEmbeddings: doc.data().facialEmbeddings || [],
-                  });
-              }
-              
-              studentEmbeddingsCache = { data: freshEmbeddings, timestamp: now };
-              allStudentsWithEmbeddings = freshEmbeddings;
-              console.log(`Successfully fetched and cached embeddings for ${allStudentsWithEmbeddings.length} students.`);
-          }
-          
-          // 4. Find the best match by comparing the live face with the cached embeddings
-          let bestMatch = { studentId: null, studentData: null, similarity: 0 };
-          for (const student of allStudentsWithEmbeddings) {
-              const { studentId, studentData, storedEmbeddings } = student;
-              
-              for (const storedEmbedding of storedEmbeddings) {
-                  if (!storedEmbedding) continue;
-
-                  const similarity = cosineSimilarity(liveEmbedding, storedEmbedding);
-                  if (similarity > bestMatch.similarity) {
-                      bestMatch = { studentId, studentData, similarity };
-                  }
-              }
-          }
-          
-          // 5. If match is weak, return "unknown"
-          // --- FIX: Increased threshold for more accurate, normalized matching ---
-          const SIMILARITY_THRESHOLD = 0.92; // Stricter confidence threshold
-          if (bestMatch.similarity < SIMILARITY_THRESHOLD) {
-              return res.status(200).json({ 
-                  status: 'unknown_student', 
-                  message: `No confident match found. Best similarity: ${(bestMatch.similarity * 100).toFixed(2)}%`,
-                  similarity: bestMatch.similarity 
-              });
-          }
-
-          const studentData = bestMatch.studentData;
-          const studentUid = studentData.authUid;
-
-          // --- FIX: Get classId by transforming the 'class' field (e.g., "Class 12C" -> "12C") ---
-          if (!studentData.class) {
-              console.error(`Student ${studentData.fullName} (${bestMatch.studentId}) is missing a class assignment.`);
-              return res.status(400).json({
-                  status: 'error_missing_class',
-                  studentName: studentData.fullName,
-                  message: `Recognized ${studentData.fullName}, but they are not assigned to a class.`,
-              });
-          }
-          const classId = studentData.class.replace(/^Class\s+/, ''); // "Class 12C" -> "12C"
-
-          // 6. Check if student has already been marked for attendance today
-          const today = new Date().toISOString().split('T')[0];
-          const attendanceQuery = await db.collection("attendance")
-              .where("authUid", "==", studentUid)
-              .where("date", "==", today)
-              .get();
-
-          if (!attendanceQuery.empty) {
-              const docData = attendanceQuery.docs[0].data();
-              return res.status(200).json({ 
-                  status: 'already_marked',
-                  studentName: studentData.fullName,
-                  checkInTime: docData.checkInTime,
-                  attendanceStatus: docData.status,
-                  message: `${studentData.fullName} has already been marked ${docData.status}.`
-              });
-          }
-          
-          // 7. Mark Attendance (Logic aligned with verifyFaceForAttendance)
-          const classesSnap = await db.collection("classes").doc(classId).get();
-          if (!classesSnap.exists) {
-              return res.status(404).json({ error: `Class configuration for '${classId}' not found.` });
-          }
-          const classConfig = classesSnap.data();
-          
-          let attendanceStatus = "present"; // Default status, aligned with other functions
-          
-          const shiftConfig = (studentData.shift && classConfig.shifts) ? classConfig.shifts[studentData.shift] : null;
-
-          if (shiftConfig && shiftConfig.startTime) {
-              const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
-              
-              const now = new Date();
-              // Use timezone-aware date for accurate 'late' calculation (UTC+7 for Phnom Penh)
-              const phnomPenhTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
-              const shiftStartTimeDate = new Date(phnomPenhTime.getFullYear(), phnomPenhTime.getMonth(), phnomPenhTime.getDate(), startHour, startMinute, 0, 0);
-
-              // Use student-specific grace period, with fallback to typo and then default.
-              let graceMinutes = 15;
-              const studentGracePeriod = studentData.gracePeriodMinutes ?? studentData.gradePeriodMinutes;
-              
-              if (typeof studentGracePeriod === 'number' && !isNaN(studentGracePeriod)) {
-                  graceMinutes = studentGracePeriod;
-              } else if (typeof studentGracePeriod === 'string' && studentGracePeriod.trim() !== '' && !isNaN(Number(studentGracePeriod))) {
-                  graceMinutes = Number(studentGracePeriod);
-              }
-
-              const onTimeDeadline = new Date(shiftStartTimeDate);
-              onTimeDeadline.setMinutes(shiftStartTimeDate.getMinutes() + graceMinutes);
-
-              if (phnomPenhTime > onTimeDeadline) {
-                  attendanceStatus = "late";
-              }
-          } else {
-              console.warn(`Could not determine late status for ${studentData.fullName}. No valid shift config found for shift: '${studentData.shift}'`);
-          }
-          
-          const attendanceRecord = {
-              studentId: bestMatch.studentId,
-              authUid: studentUid,
-              studentName: studentData.fullName,
-              class: studentData.class || null,
-              shift: studentData.shift || null,
-              status: attendanceStatus,
-              date: today,
-              timestamp: FieldValue.serverTimestamp(),
-              scannedBy: `Face Recognition via ${adminEmail}`,
-          };
-
-          await db.collection("attendance").add(attendanceRecord);
-          
-          console.log(`Successfully marked attendance for ${studentData.fullName} with status: ${attendanceStatus}`);
-
-          // 8. Return success response
-          return res.status(200).json({ 
-              status: 'success', 
-              studentName: studentData.fullName,
-              similarity: bestMatch.similarity,
-              attendanceStatus: attendanceStatus,
-              message: `Successfully marked ${studentData.fullName} as ${attendanceStatus}.`
-          });
-
-      } catch (error) {
-          console.error("Error in recognizeAndMarkAttendance:", error);
-          if (error instanceof functions.https.HttpsError) {
-              throw error;
-          }
-          return res.status(500).json({ error: "An unexpected error occurred during face recognition." });
-      }
-    });
-  });
-*/
 
 exports.verifyFaceForAttendance = onCall({
   region: "asia-southeast1"
@@ -4852,8 +4660,8 @@ exports.notifyStudentAttendance = onDocumentCreated({
  * Stores backups in Google Cloud Storage for reliability and accessibility
  */
 exports.scheduledBackup = onSchedule({
-    schedule: "0 0 * * *", // Daily at midnight
-    timeZone: "UTC", // You can change this to your timezone
+    schedule: "0 17 * * *", // Daily at 5pm UTC (midnight Phnom Penh time)
+    timeZone: "Asia/Phnom_Penh", // Phnom Penh timezone (ICT)
     region: "us-central1", // Change to your preferred region
     memory: "1GiB",
     timeoutSeconds: 540, // 9 minutes timeout
@@ -5342,5 +5150,199 @@ exports.notifyParentOnLeaveEarlyRequest = onDocumentCreated({
         
     } catch (error) {
         logger.error('Error in notifyParentOnLeaveEarlyRequest:', error);
+    }
+});
+
+// ============================================================================
+// AUTO-RECOVERY: Process Failed Attendance Backup Records
+// ============================================================================
+
+/**
+ * Scheduled Cloud Function to automatically process failed attendance records
+ * from the backup collection and move them to the main attendance collection.
+ * 
+ * Runs every hour to ensure timely recovery of failed attendance marks.
+ * 
+ * Features:
+ * - Checks for duplicate records before creating
+ * - Marks processed records as synced
+ * - Tracks retry attempts and errors
+ * - Only processes records that don't require manual review
+ */
+exports.processFailedAttendanceBackup = onSchedule({
+    schedule: "every 1 hours",
+    timeZone: "Asia/Phnom_Penh",
+    region: "asia-southeast1"
+}, async (event) => {
+    try {
+        logger.info("🔄 Starting automatic failed attendance backup processing...");
+        
+        const backupRef = db.collection('attendance_failed_backup');
+        
+        // Get unsynced records that don't require manual review
+        const snapshot = await backupRef
+            .where('synced', '==', false)
+            .where('requiresManualReview', '==', false)
+            .limit(100) // Process 100 at a time
+            .get();
+        
+        if (snapshot.empty) {
+            logger.info("✅ No failed attendance records to process");
+            return null;
+        }
+        
+        logger.info(`📋 Found ${snapshot.size} failed attendance records to process`);
+        
+        let processedCount = 0;
+        let failedCount = 0;
+        let alreadyExistsCount = 0;
+        
+        for (const doc of snapshot.docs) {
+            const record = doc.data();
+            
+            try {
+                // Check if record already exists in main attendance collection
+                const attendanceRef = db.collection('attendance');
+                const existingQuery = await attendanceRef
+                    .where('studentId', '==', record.studentId)
+                    .where('date', '==', record.date)
+                    .where('shift', '==', record.shift)
+                    .get();
+                
+                if (existingQuery.empty) {
+                    // Record doesn't exist - create it in main collection
+                    const attendanceData = {
+                        studentId: record.studentId,
+                        studentName: record.studentName,
+                        authUid: record.authUid || null,
+                        date: record.date,
+                        timeIn: record.timeIn,
+                        status: record.status,
+                        shift: record.shift,
+                        method: 'auto-recovery',
+                        timestamp: admin.firestore.Timestamp.now(),
+                        startTime: record.startTime || '',
+                        class: record.class || null,
+                        gracePeriodMinutes: record.gracePeriodMinutes || 15,
+                        // Recovery metadata
+                        recoveredFrom: 'backup',
+                        recoveredAt: admin.firestore.Timestamp.now(),
+                        originalFailureReason: record.errorReason || 'Unknown',
+                        originalFailureCode: record.errorCode || 'unknown',
+                        originalNetworkStatus: record.networkStatus || 'unknown'
+                    };
+                    
+                    await attendanceRef.add(attendanceData);
+                    
+                    // Mark backup record as synced
+                    await doc.ref.update({
+                        synced: true,
+                        syncedAt: admin.firestore.Timestamp.now(),
+                        syncMethod: 'auto-cloud-function'
+                    });
+                    
+                    processedCount++;
+                    logger.info(`✅ Successfully recovered attendance for ${record.studentName} (${record.date}, ${record.shift})`);
+                    
+                } else {
+                    // Record already exists - just mark backup as synced
+                    await doc.ref.update({
+                        synced: true,
+                        syncedAt: admin.firestore.Timestamp.now(),
+                        syncMethod: 'already-exists',
+                        existingRecordId: existingQuery.docs[0].id
+                    });
+                    
+                    alreadyExistsCount++;
+                    logger.info(`ℹ️ Attendance already exists for ${record.studentName} (${record.date}, ${record.shift})`);
+                }
+                
+            } catch (error) {
+                failedCount++;
+                logger.error(`❌ Failed to process backup for ${record.studentName}:`, error);
+                
+                // Update backup record with error info
+                try {
+                    await doc.ref.update({
+                        retryCount: admin.firestore.FieldValue.increment(1),
+                        lastRetryError: error.message || 'Unknown error',
+                        lastRetryAt: admin.firestore.Timestamp.now(),
+                        // If failed 5 times, mark for manual review
+                        requiresManualReview: (record.retryCount || 0) >= 4
+                    });
+                } catch (updateError) {
+                    logger.error(`Failed to update retry info for ${record.studentName}:`, updateError);
+                }
+            }
+        }
+        
+        // Log summary
+        logger.info(`📊 Auto-recovery completed:`);
+        logger.info(`   ✅ Processed: ${processedCount}`);
+        logger.info(`   ℹ️  Already existed: ${alreadyExistsCount}`);
+        logger.info(`   ❌ Failed: ${failedCount}`);
+        
+        // Alert if too many failures
+        if (failedCount > 10) {
+            logger.warn(`⚠️ HIGH FAILURE RATE: ${failedCount} records failed to process`);
+        }
+        
+        return null;
+        
+    } catch (error) {
+        logger.error('❌ Critical error in processFailedAttendanceBackup:', error);
+        throw error;
+    }
+});
+
+// ============================================================================
+// CLEANUP: Remove Old Synced Backup Records
+// ============================================================================
+
+/**
+ * Scheduled Cloud Function to clean up old synced backup records
+ * Runs daily at 2 AM to remove records older than 30 days
+ */
+exports.cleanupOldAttendanceBackups = onSchedule({
+    schedule: "every day 02:00",
+    timeZone: "Asia/Phnom_Penh",
+    region: "asia-southeast1"
+}, async (event) => {
+    try {
+        logger.info("🧹 Starting cleanup of old attendance backup records...");
+        
+        // Calculate date 30 days ago
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgoTimestamp = admin.firestore.Timestamp.fromDate(thirtyDaysAgo);
+        
+        const backupRef = db.collection('attendance_failed_backup');
+        
+        // Get old synced records
+        const snapshot = await backupRef
+            .where('synced', '==', true)
+            .where('syncedAt', '<', thirtyDaysAgoTimestamp)
+            .limit(500) // Delete 500 at a time
+            .get();
+        
+        if (snapshot.empty) {
+            logger.info("✅ No old backup records to clean up");
+            return null;
+        }
+        
+        logger.info(`🗑️ Found ${snapshot.size} old backup records to delete`);
+        
+        // Use batch delete
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        
+        logger.info(`✅ Successfully cleaned up ${snapshot.size} old backup records`);
+        
+        return null;
+        
+    } catch (error) {
+        logger.error('❌ Error in cleanupOldAttendanceBackups:', error);
+        throw error;
     }
 });

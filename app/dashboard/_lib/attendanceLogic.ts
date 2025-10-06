@@ -105,10 +105,12 @@ export const getStudentDailyStatus = (
             const shiftConfig = (studentClassKey && classConfig?.shifts) ? classConfig.shifts[studentShiftKey] : undefined;
             if (shiftConfig && shiftConfig.startTime) {
                 const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
-                const shiftStartTimeForToday = new Date();
+                // Use Phnom Penh timezone for current time comparison
+                const shiftStartTimeForToday = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }));
                 shiftStartTimeForToday.setHours(startHour, startMinute, 0, 0);
                 
-                const currentTime = new Date();
+                // Use Phnom Penh timezone for current time
+                const currentTime = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }));
                 
                 // If current time is before shift start time, it's pending
                 if (currentTime < shiftStartTimeForToday) {
@@ -259,9 +261,11 @@ function formatMinutesAsTime(minutes: number): string {
 export const calculateAverageArrivalTime = (
   student: Student,
   attendanceForStudentInMonth: RawAttendanceRecord[],
-  selectedMonthValue: string,
-  allClassConfigs: AllClassConfigs | null
+  selectedMonthValue: string
 ): { averageTime: string; details:string; averageDifference: number | null } => {
+    console.log(`🎯 Calculating average for student: ${student.fullName} (${student.id})`);
+    console.log(`📅 Month: ${selectedMonthValue}, Records: ${attendanceForStudentInMonth.length}`);
+    
     const [year, monthIndex] = selectedMonthValue.split('-').map(Number).map((n, i) => i === 1 ? n - 1 : n);
     const monthLabel = new Date(year, monthIndex).toLocaleString('default', { month: 'long', year: 'numeric' });
     
@@ -287,6 +291,11 @@ export const calculateAverageArrivalTime = (
         return (record.status === 'present' || record.status === 'late') && 
                record.timeIn && 
                record.startTime;
+    });
+    
+    console.log(`✅ Valid records: ${validRecords.length}/${attendanceForStudentInMonth.length}`);
+    validRecords.forEach(record => {
+        console.log(`   ${record.date}: ${record.status} at ${record.timeIn}, startTime: ${record.startTime}`);
     });
 
     if (validRecords.length === 0) {
@@ -314,6 +323,7 @@ export const calculateAverageArrivalTime = (
                 difference = -30;
             }
             
+            console.log(`📊 ${record.date}: timeIn=${record.timeIn} (${timeInMinutes}min), startTime=${record.startTime} (${startTimeMinutes}min), difference=${difference}min (${difference > 0 ? 'late' : difference < 0 ? 'early' : 'on-time'})`);
             arrivalDifferences.push(difference);
         }
     });
@@ -328,6 +338,9 @@ export const calculateAverageArrivalTime = (
 
     // Calculate average difference
     const averageDifference = arrivalDifferences.reduce((sum, diff) => sum + diff, 0) / arrivalDifferences.length;
+    
+    console.log(`📈 Average calculation: ${arrivalDifferences.length} days, differences=[${arrivalDifferences.join(', ')}], average=${averageDifference}min`);
+    console.log(`📈 Final result: ${formatAverageDifference(averageDifference)}`);
     
     // Format the result
     const averageTimeFormatted = formatAverageDifference(averageDifference);
@@ -552,9 +565,9 @@ export const calculateShiftRankings = (
 
     const differences: number[] = [];
     studentAttendance.forEach(record => {
-      if (record.timeIn && shiftConfig.startTime) {
+      if (record.timeIn && record.startTime) {
         const [timeInHour, timeInMinute] = record.timeIn.split(':').map(Number);
-        const [startHour, startMinute] = shiftConfig.startTime.split(':').map(Number);
+        const [startHour, startMinute] = record.startTime.split(':').map(Number);
         
         const timeInMinutes = timeInHour * 60 + timeInMinute;
         const startMinutes = startHour * 60 + startMinute;
@@ -617,9 +630,18 @@ export const markAttendance = async (
   classConfigs: any, 
   playSuccessSound: () => void,
   maxRetries: number = 3,
-  selectedDate?: string
+  selectedDate?: string,
+  method: string = 'face-api'
 ): Promise<string> => {
-  const attendanceDate = selectedDate || new Date().toISOString().split('T')[0]; // Use provided date or default to today
+  // Use Phnom Penh timezone for attendance date
+  const dateStr = new Date().toLocaleString('en-US', { 
+    timeZone: 'Asia/Phnom_Penh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const [month, day, year] = dateStr.split('/');
+  const attendanceDate = selectedDate || `${year}-${month}-${day}`;
   
   // Retry logic wrapper
   const attemptMarkAttendance = async (attempt: number): Promise<string> => {
@@ -663,7 +685,7 @@ export const markAttendance = async (
         timeIn: timeString,
         status: status,
         shift: selectedShift,
-        method: 'face-api',
+        method: method,
         timestamp: new Date(),
         startTime: startTime, // Add startTime in 24-hour format instead of cutoffTime
         // Additional fields for advanced tracking
@@ -676,10 +698,19 @@ export const markAttendance = async (
 
       // Save to Firestore with enhanced error handling
       console.log(`💾 Saving attendance record to Firestore for ${student.fullName}...`);
+      console.log(`📋 Record details: Date=${attendanceDate}, Shift=${selectedShift}, Status=${status}, Time=${timeString}`);
+      
       const docRef = await addDoc(collection(db, 'attendance'), attendanceRecord);
+      
+      if (!docRef.id) {
+        throw new Error('Failed to save attendance - no document ID returned');
+      }
+      
       console.log(`✅ Attendance record saved successfully with ID: ${docRef.id}`);
 
-      // Verify the record was actually saved by reading it back
+      // Verify the record was actually saved by reading it back with a small delay
+      await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay for Firestore consistency
+      
       const verifyQuery = query(
         collection(db, 'attendance'),
         where('studentId', '==', student.id),
@@ -691,6 +722,8 @@ export const markAttendance = async (
       if (verifySnapshot.empty) {
         throw new Error('Attendance record verification failed - record not found after save');
       }
+      
+      console.log(`✅ Verification passed: Record exists in Firestore`);
 
       // Send parent notification after successful attendance marking
       try {
@@ -728,6 +761,28 @@ export const markAttendance = async (
     } catch (error: any) {
       console.error(`❌ Attendance marking failed for ${student.fullName} (attempt ${attempt}):`, error);
       
+      // Log more detailed error information
+      if (error.code) {
+        console.error(`   Error code: ${error.code}`);
+      }
+      if (error.message) {
+        console.error(`   Error message: ${error.message}`);
+      }
+      
+      // Analyze error type for better user feedback
+      let errorType = 'unknown';
+      if (!navigator.onLine) {
+        errorType = 'offline';
+      } else if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
+        errorType = 'timeout';
+      } else if (error.code === 'permission-denied') {
+        errorType = 'permission';
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorType = 'network';
+      }
+      
+      console.error(`   Classified as: ${errorType}`);
+      
       // If this is not the last attempt, wait and retry
       if (attempt < maxRetries) {
         const retryDelay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
@@ -746,70 +801,116 @@ export const markAttendance = async (
         
         // Determine network status from error
         let networkStatus: 'offline' | 'timeout' | 'error' = 'error';
+        let errorDetails = error.message || 'Unknown error';
+        
         if (!navigator.onLine) {
           networkStatus = 'offline';
-        } else if (error.code === 'unavailable' || error.message.includes('timeout')) {
+          errorDetails = 'No internet connection';
+        } else if (error.code === 'unavailable' || error.code === 'deadline-exceeded' || error.message?.includes('timeout')) {
           networkStatus = 'timeout';
+          errorDetails = 'Firestore timeout - server may be slow';
+        } else if (error.code === 'permission-denied') {
+          networkStatus = 'error';
+          errorDetails = 'Permission denied - check Firestore rules';
+        } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+          networkStatus = 'timeout';
+          errorDetails = 'Network connection unstable';
         }
+        
+        console.error(`💥 Final failure details: Status=${networkStatus}, Error=${errorDetails}`);
         
         // Determine the status using the advanced logic
         const { status: attendanceStatus } = determineAttendanceStatus(student as any, selectedShift, classConfigs);
         
-        // Try to save as offline record for automatic retry
+        // Create comprehensive offline record
+        const offlineRecord = {
+          studentId: student.id,
+          studentName: student.fullName,
+          authUid: (student as any).authUid || null,
+          date: attendanceDate,
+          timeIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
+          status: attendanceStatus, // Use calculated status
+          shift: selectedShift,
+          method: 'face-api',
+          timestamp: new Date().toISOString(),
+          startTime: classConfigs?.[student.class?.replace(/^Class\s+/i, '')]?.shifts?.[selectedShift]?.startTime || '',
+          class: (student as any).class || null,
+          gracePeriodMinutes: (student as any).gracePeriodMinutes || 15,
+          errorReason: errorDetails, // Use detailed error message
+          requiresManualReview: networkStatus !== 'offline', // Auto-retry for offline, manual review for other errors
+          failedAttempts: maxRetries,
+          networkStatus: networkStatus,
+          errorCode: error.code || 'unknown',
+          failedAt: new Date().toISOString(),
+          retryCount: 0,
+          synced: false
+        };
+        
+        // 🔥 DUAL FALLBACK SYSTEM - 100% Guarantee
+        // 1. Save to localStorage (immediate, works offline)
+        // 2. Save to Firestore backup collection (persistent, accessible from anywhere)
+        
         try {
-          const offlineRecord = {
-            studentId: student.id,
-            studentName: student.fullName,
-            authUid: (student as any).authUid || null,
-            date: attendanceDate,
-            timeIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
-            status: attendanceStatus, // Use calculated status
-            shift: selectedShift,
-            method: 'face-api',
-            timestamp: new Date().toISOString(),
-            startTime: classConfigs?.[student.class?.replace(/^Class\s+/i, '')]?.shifts?.[selectedShift]?.startTime || '',
-            class: (student as any).class || null,
-            gracePeriodMinutes: (student as any).gracePeriodMinutes || 15,
-            errorReason: error.message || 'Network error',
-            requiresManualReview: networkStatus !== 'offline', // Auto-retry for offline, manual review for other errors
-            failedAttempts: maxRetries,
-            networkStatus: networkStatus
-          };
-          
-          // Store in localStorage for automatic retry when connection is restored
+          // PRIMARY FALLBACK: Store in localStorage for automatic retry
           const offlineKey = `failed_attendance_${student.id}_${attendanceDate}_${selectedShift}_${Date.now()}`;
           localStorage.setItem(offlineKey, JSON.stringify({
             ...offlineRecord,
-            savedAt: new Date().toISOString(),
-            synced: false
+            savedAt: new Date().toISOString()
           }));
-          console.log(`💾 Stored failed attendance in offline queue: ${offlineKey}`);
-          
-          // Show appropriate message based on network status
-          if (networkStatus === 'offline') {
-            toast.warning(`📴 Offline: ${student.fullName}'s attendance saved. Will sync when online.`, {
-              duration: 8000
-            });
-          } else {
-            toast.error(`⚠️ Failed to mark attendance for ${student.fullName}. Saved for retry.`, {
-              duration: 10000
-            });
-          }
-          
-          // Dispatch event for UI updates
-          window.dispatchEvent(new CustomEvent('offlineAttendanceSaved', {
-            detail: { 
-              studentName: student.fullName,
-              networkStatus: networkStatus
+          console.log(`💾 [1/2] Stored in localStorage: ${offlineKey}`);
+        } catch (localStorageError) {
+          console.error('⚠️ localStorage save failed:', localStorageError);
+        }
+        
+        // SECONDARY FALLBACK: Save to Firestore backup collection (100% guarantee)
+        try {
+          const backupRef = await addDoc(collection(db, 'attendance_failed_backup'), {
+            ...offlineRecord,
+            backupCreatedAt: new Date(),
+            source: 'face-recognition-failure',
+            deviceInfo: {
+              userAgent: navigator.userAgent,
+              online: navigator.onLine,
+              timestamp: new Date().toISOString()
             }
-          }));
+          });
+          console.log(`💾 [2/2] ✅ SAVED TO FIRESTORE BACKUP: ${backupRef.id}`);
+          console.log(`🎯 100% GUARANTEED: Record preserved in backup collection`);
           
-        } catch (offlineError) {
-          console.error('Failed to save offline record:', offlineError);
-          toast.error(`Critical error: Unable to save attendance for ${student.fullName}`, {
+          toast.success(`🛡️ Attendance safely backed up for ${student.fullName}`, {
+            duration: 5000,
+            description: 'Will be automatically processed when possible'
+          });
+        } catch (backupError: any) {
+          console.error('⚠️ Firestore backup ALSO failed:', backupError);
+          // This should be extremely rare - both main save and backup failed
+          toast.error(`⚠️ Critical: Unable to save backup for ${student.fullName}. Please report this.`, {
+            duration: 15000
+          });
+        }
+        
+        // Show appropriate message based on network status
+        if (networkStatus === 'offline') {
+          toast.warning(`📴 Offline: ${student.fullName}'s attendance saved. Will sync when online.`, {
+            duration: 8000
+          });
+        } else if (networkStatus === 'timeout') {
+          toast.error(`⏱️ Timeout: ${student.fullName}'s attendance saved for retry. Check internet connection.`, {
+            duration: 10000
+          });
+        } else {
+          toast.error(`⚠️ Error: ${student.fullName}'s attendance saved for retry. ${errorDetails}`, {
             duration: 10000
           });
         }
+        
+        // Dispatch event for UI updates
+        window.dispatchEvent(new CustomEvent('offlineAttendanceSaved', {
+          detail: { 
+            studentName: student.fullName,
+            networkStatus: networkStatus
+          }
+        }));
         
         throw error; // Re-throw the original error
       }

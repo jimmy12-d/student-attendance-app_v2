@@ -38,6 +38,7 @@ export const useStudentForm = (initialData) => {
       setStudentClass(initialData.class || '');
       setShift(initialData.shift || '');
       setScheduleType(initialData.scheduleType || '');
+      
       setMotherName(initialData.motherName || '');
       setMotherPhone(initialData.motherPhone || '');
       setFatherName(initialData.fatherName || '');

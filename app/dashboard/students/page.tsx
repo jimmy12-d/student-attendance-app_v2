@@ -125,11 +125,33 @@ export default function StudentsPage() {
                 tokenCreatedAt: tokenData.createdAt
               });
             });
+            
+            // Fetch FCM notification versions from fcmTokens collection
+            const fcmTokensRef = collection(db, "fcmTokens");
+            const fcmTokensSnapshot = await getDocs(fcmTokensRef);
+            
+            // Create a map of authUid -> notification version data
+            const notificationVersionsMap = new Map();
+            fcmTokensSnapshot.docs.forEach(doc => {
+              const fcmData = doc.data();
+              if (fcmData.userId) { // userId is the authUid
+                notificationVersionsMap.set(fcmData.userId, {
+                  notificationVersion: fcmData.swVersion || 'unknown',
+                  notificationPlatform: fcmData.platform || 'other',
+                  notificationLastUpdated: fcmData.lastUpdated || fcmData.createdAt
+                });
+              }
+            });
 
-            // Merge token data with student data
+            // Merge token data and notification version data with student data
             const studentsWithTokens = studentsData.map(student => {
               const tokenData = tokensMap.get(student.id);
-              return tokenData ? { ...student, ...tokenData } : student;
+              const notificationData = student.authUid ? notificationVersionsMap.get(student.authUid) : null;
+              return { 
+                ...student, 
+                ...(tokenData || {}),
+                ...(notificationData || {})
+              };
             });
           
             // Separate active, waitlist, dropped, pending, and break students

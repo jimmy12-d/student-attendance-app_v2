@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android Notification Test - Rodwell Portal</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px 10px 0;
+            width: 100%;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            border: 1px solid #dee2e6;
+        }
+        .check-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .check-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Android Notification Test</h1>
+        <p>This page helps diagnose notification issues on Android devices.</p>
+        
+        <div id="status"></div>
+        
+        <div id="checks"></div>
+
+        <button onclick="runFullTest()">🔍 Run Full Diagnostic</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const checksDiv = document.getElementById('checks');
+        const resultsDiv = document.getElementById('results');
+
+        function showStatus(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            statusDiv.appendChild(div);
+        }
+
+        function addCheck(label, passed, details = '') {
+            const div = document.createElement('div');
+            div.className = 'check-item';
+            div.innerHTML = `
+                <span class="check-icon">${passed ? '✅' : '❌'}</span>
+                <div>
+                    <strong>${label}</strong>
+                    ${details ? `<br><small>${details}</small>` : ''}
+                </div>
+            `;
+            checksDiv.appendChild(div);
+            return passed;
+        }
+
+        async function runFullTest() {
+            statusDiv.innerHTML = '';
+            checksDiv.innerHTML = '';
+            resultsDiv.innerHTML = '';
+
+            showStatus('🔍 Running Android notification diagnostics...', 'info');
+
+            const results = {
+                platform: navigator.userAgent,
+                checks: {}
+            };
+
+            // Check 1: Android Device
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            results.checks.isAndroid = isAndroid;
+            addCheck('Running on Android', isAndroid, 
+                isAndroid ? 'Detected Android device' : 'Not an Android device');
+
+            // Check 2: Chrome Browser
+            const isChrome = /Chrome/i.test(navigator.userAgent) && !/Edge/i.test(navigator.userAgent);
+            results.checks.isChrome = isChrome;
+            addCheck('Using Chrome browser', isChrome,
+                isChrome ? 'Chrome browser detected' : 'Consider using Chrome for best compatibility');
+
+            // Check 3: PWA Mode
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+            results.checks.isPWA = isPWA;
+            addCheck('Running as PWA', isPWA,
+                isPWA ? 'App is installed as PWA' : 'Running in browser (not installed)');
+
+            // Check 4: Service Worker Support
+            const hasSW = 'serviceWorker' in navigator;
+            results.checks.hasServiceWorker = hasSW;
+            addCheck('Service Worker support', hasSW,
+                hasSW ? 'Service workers supported' : 'Service workers not supported');
+
+            // Check 5: Notification Support
+            const hasNotifications = 'Notification' in window;
+            results.checks.hasNotifications = hasNotifications;
+            addCheck('Notification API available', hasNotifications,
+                hasNotifications ? 'Notification API supported' : 'Notifications not supported');
+
+            // Check 6: Notification Permission
+            const permission = hasNotifications ? Notification.permission : 'not-supported';
+            results.checks.permission = permission;
+            addCheck('Notification permission', permission === 'granted',
+                `Current permission: ${permission}`);
+
+            // Check 7: Service Worker Registration
+            if (hasSW) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    const hasReg = registrations.length > 0;
+                    results.checks.swRegistered = hasReg;
+                    
+                    if (hasReg) {
+                        const reg = registrations[0];
+                        const isActive = !!reg.active;
+                        results.checks.swActive = isActive;
+                        addCheck('Service Worker registered', hasReg,
+                            `Found ${registrations.length} registration(s), Active: ${isActive ? 'Yes' : 'No'}`);
+                    } else {
+                        addCheck('Service Worker registered', false,
+                            'No service worker registered - notifications will not work');
+                    }
+                } catch (error) {
+                    results.checks.swError = error.message;
+                    addCheck('Service Worker check', false, `Error: ${error.message}`);
+                }
+            }
+
+            // Check 8: HTTPS
+            const isHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
+            results.checks.isHTTPS = isHTTPS;
+            addCheck('Secure context (HTTPS)', isHTTPS,
+                isHTTPS ? 'Running on HTTPS or localhost' : 'Notifications require HTTPS');
+
+            // Display Results
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(results, null, 2);
+            resultsDiv.appendChild(pre);
+
+            // Overall Status
+            const allPassed = results.checks.hasServiceWorker && 
+                            results.checks.hasNotifications &&
+                            results.checks.permission === 'granted' &&
+                            results.checks.swRegistered &&
+                            results.checks.isHTTPS;
+
+            if (allPassed) {
+                showStatus('✅ All checks passed! Notifications should work.', 'success');
+            } else {
+                showStatus('⚠️ Some checks failed. See details above.', 'warning');
+                
+                // Provide specific guidance
+                if (permission !== 'granted') {
+                    showStatus('📱 To fix: Go to your Account page and enable notifications, then grant permission.', 'info');
+                }
+                if (!results.checks.swRegistered) {
+                    showStatus('🔧 To fix: Reload the app or clear browser cache and try again.', 'info');
+                }
+                if (!isHTTPS && location.hostname !== 'localhost') {
+                    showStatus('🔒 To fix: Access the app via HTTPS instead of HTTP.', 'error');
+                }
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', runFullTest);
+    </script>
+</body>
+</html>

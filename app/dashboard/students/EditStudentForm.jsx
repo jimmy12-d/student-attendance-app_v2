@@ -63,6 +63,9 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     nameKhmer, setNameKhmer,
     phone, setPhone,
     scheduleType, setScheduleType,
+    birthDay, setBirthDay,
+    birthMonth, setBirthMonth,
+    birthYear, setBirthYear,
     motherName, setMotherName,
     motherPhone, setMotherPhone,
     fatherName, setFatherName,
@@ -297,6 +300,40 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
       const studentRef = doc(db, "students", studentData.id);
       await setDoc(studentRef, { ...updatedStudentData, updatedAt: serverTimestamp() }, { merge: true });
       
+      // Update parentNotifications collection if student name changed
+      const nameChanged = (studentData.fullName !== updatedStudentData.fullName) || 
+                         (studentData.nameKhmer !== updatedStudentData.nameKhmer);
+      
+      if (nameChanged) {
+        try {
+          // Query all parentNotifications for this student
+          const parentNotificationsRef = collection(db, "parentNotifications");
+          const parentQuery = query(parentNotificationsRef, where("studentId", "==", studentData.id));
+          const parentSnapshot = await getDocs(parentQuery);
+          
+          // Update each parent notification document
+          const updatePromises = parentSnapshot.docs.map(doc => {
+            const updateData = {};
+            if (studentData.fullName !== updatedStudentData.fullName) {
+              updateData.studentName = updatedStudentData.fullName;
+            }
+            if (studentData.nameKhmer !== updatedStudentData.nameKhmer) {
+              updateData.studentKhmerName = updatedStudentData.nameKhmer || null;
+            }
+            return setDoc(doc.ref, updateData, { merge: true });
+          });
+          
+          if (updatePromises.length > 0) {
+            await Promise.all(updatePromises);
+            console.log(`Updated ${updatePromises.length} parent notification records for student ${updatedStudentData.fullName}`);
+          }
+        } catch (error) {
+          console.error("Error updating parent notifications:", error);
+          // Don't fail the entire operation if parent notifications update fails
+          toast.warning("Student updated successfully, but there was an issue updating parent notification records.");
+        }
+      }
+      
       // Clear cache for both old and new class/shift combinations if they changed
       if (studentData.class !== updatedStudentData.class || studentData.shift !== updatedStudentData.shift) {
         clearCacheForClass(studentData.class, studentData.shift); // Old combination
@@ -373,7 +410,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
             </div>
           </div>
 
-          {/* Row 2: Phone and Schedule Type */}
+          {/* Row 2: Phone and Date of Birth */}
           <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0 mt-6">
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -388,6 +425,53 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Date of Birth
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <input
+                    type="number"
+                    placeholder="DD"
+                    value={birthDay}
+                    onChange={(e) => setBirthDay(e.target.value)}
+                    min="1"
+                    max="31"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black text-center"
+                  />
+                  <p className="text-xs text-gray-500 mt-1 text-center">Day</p>
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    placeholder="MM"
+                    value={birthMonth}
+                    onChange={(e) => setBirthMonth(e.target.value)}
+                    min="1"
+                    max="12"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black text-center"
+                  />
+                  <p className="text-xs text-gray-500 mt-1 text-center">Month</p>
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    placeholder="YYYY"
+                    value={birthYear}
+                    onChange={(e) => setBirthYear(e.target.value)}
+                    min="1900"
+                    max="2030"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black text-center"
+                  />
+                  <p className="text-xs text-gray-500 mt-1 text-center">Year</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 3: Schedule Type */}
+          <div className="grid grid-cols-1 md:grid-cols-1 md:gap-x-8 gap-y-8 md:gap-y-0 mt-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Schedule Type
@@ -457,7 +541,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
             </div>
           </div>
 
-          {/* Row 2.5: Telegram Settings */}
+          {/* Row 4: Telegram Settings */}
           <div className="mt-6 transition-all duration-500 ease-in-out">
             {hasTelegramUsername ? (
               // Full visual version when enabled
@@ -631,7 +715,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
             </div>
           </div>
 
-          {/* Row 3: Class and Shift */}
+          {/* Row 5: Class and Shift */}
           <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-8 gap-y-8 md:gap-y-0 relative z-50 mt-6">
             <div className="relative z-[60]">
               <CustomDropdown
