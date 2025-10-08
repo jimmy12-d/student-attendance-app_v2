@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache & Reset PWA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-label {
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .status-value {
+            font-weight: 600;
+        }
+        
+        .status-value.success {
+            color: #10b981;
+        }
+        
+        .status-value.warning {
+            color: #f59e0b;
+        }
+        
+        .status-value.error {
+            color: #ef4444;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4);
+        }
+        
+        .log {
+            background: #1f2937;
+            color: #10b981;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+        }
+        
+        .log-entry.error {
+            color: #ef4444;
+        }
+        
+        .log-entry.success {
+            color: #10b981;
+        }
+        
+        .log-entry.info {
+            color: #60a5fa;
+        }
+        
+        .icon {
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 PWA Reset Tool</h1>
+        <p class="subtitle">Clear cache and reset your Progressive Web App</p>
+        
+        <div class="status">
+            <div class="status-item">
+                <span class="status-label">Service Worker</span>
+                <span class="status-value" id="sw-status">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Caches</span>
+                <span class="status-value" id="cache-status">Checking...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Local Storage</span>
+                <span class="status-value" id="storage-status">Checking...</span>
+            </div>
+        </div>
+        
+        <button class="btn-primary" onclick="clearAllCache()">
+            <span class="icon">🗑️</span> Clear All Cache
+        </button>
+        
+        <button class="btn-secondary" onclick="unregisterServiceWorkers()">
+            <span class="icon">⚙️</span> Unregister Service Workers
+        </button>
+        
+        <button class="btn-danger" onclick="resetEverything()">
+            <span class="icon">🔄</span> Complete Reset & Reload
+        </button>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        async function checkStatus() {
+            // Check Service Workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                const swStatus = document.getElementById('sw-status');
+                if (registrations.length > 0) {
+                    swStatus.textContent = `${registrations.length} registered`;
+                    swStatus.className = 'status-value warning';
+                } else {
+                    swStatus.textContent = 'None';
+                    swStatus.className = 'status-value success';
+                }
+            }
+            
+            // Check Caches
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                const cacheStatus = document.getElementById('cache-status');
+                if (cacheNames.length > 0) {
+                    cacheStatus.textContent = `${cacheNames.length} caches`;
+                    cacheStatus.className = 'status-value warning';
+                } else {
+                    cacheStatus.textContent = 'Empty';
+                    cacheStatus.className = 'status-value success';
+                }
+            }
+            
+            // Check Local Storage
+            const storageStatus = document.getElementById('storage-status');
+            const itemCount = localStorage.length;
+            if (itemCount > 0) {
+                storageStatus.textContent = `${itemCount} items`;
+                storageStatus.className = 'status-value info';
+            } else {
+                storageStatus.textContent = 'Empty';
+                storageStatus.className = 'status-value success';
+            }
+        }
+        
+        async function clearAllCache() {
+            addLog('Starting cache clearing...', 'info');
+            
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                addLog(`Found ${cacheNames.length} caches`, 'info');
+                
+                for (const cacheName of cacheNames) {
+                    await caches.delete(cacheName);
+                    addLog(`Deleted cache: ${cacheName}`, 'success');
+                }
+                
+                addLog('All caches cleared!', 'success');
+            } else {
+                addLog('Cache API not supported', 'error');
+            }
+            
+            await checkStatus();
+        }
+        
+        async function unregisterServiceWorkers() {
+            addLog('Unregistering service workers...', 'info');
+            
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                addLog(`Found ${registrations.length} service workers`, 'info');
+                
+                for (const registration of registrations) {
+                    await registration.unregister();
+                    addLog(`Unregistered: ${registration.scope}`, 'success');
+                }
+                
+                addLog('All service workers unregistered!', 'success');
+            } else {
+                addLog('Service Workers not supported', 'error');
+            }
+            
+            await checkStatus();
+        }
+        
+        async function resetEverything() {
+            addLog('=== COMPLETE RESET STARTED ===', 'info');
+            
+            // Clear all caches
+            await clearAllCache();
+            
+            // Unregister service workers
+            await unregisterServiceWorkers();
+            
+            // Clear local storage
+            addLog('Clearing local storage...', 'info');
+            localStorage.clear();
+            addLog('Local storage cleared!', 'success');
+            
+            // Clear session storage
+            addLog('Clearing session storage...', 'info');
+            sessionStorage.clear();
+            addLog('Session storage cleared!', 'success');
+            
+            // Clear IndexedDB
+            if ('indexedDB' in window) {
+                addLog('Clearing IndexedDB...', 'info');
+                const dbs = await indexedDB.databases();
+                for (const db of dbs) {
+                    indexedDB.deleteDatabase(db.name);
+                    addLog(`Deleted database: ${db.name}`, 'success');
+                }
+            }
+            
+            addLog('=== RESET COMPLETE ===', 'success');
+            addLog('Reloading page in 2 seconds...', 'info');
+            
+            await checkStatus();
+            
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 2000);
+        }
+        
+        // Initial status check
+        checkStatus();
+        addLog('PWA Reset Tool loaded', 'success');
+        addLog('Ready to clear cache and reset', 'info');
+    </script>
+</body>
+</html>

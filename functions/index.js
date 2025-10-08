@@ -695,13 +695,14 @@ exports.parentBotWebhook = onRequest({
                 `🔸 */payment* - ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សារបស់កូន\n` +
                 `🔸 */check\_mock\_exam\_result* - មើលលទ្ធផលប្រលងរបស់កូន\n` +
                 `🔸 */help* - បង្ហាញមេនុយជំនួយនេះ\n\n` +
+                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទង \\@RodwellLC076\n\n` +
                 `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
                 { parse_mode: 'Markdown' }
             );
         } else {
             // Send helpful message for unrecognized commands
             await bot.sendMessage(chatId, 
-                `ខ្ញុំមិនយល់ពាក្យបញ្ជានេះទេ។ សូមវាយ /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។`
+                `ខ្ញុំមិនយល់ពាក្យបញ្ជានេះទេ។ សូមចុច /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។`
             );
         }
 
@@ -1055,6 +1056,8 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
 ✅ កូនរបស់បងមកដល់សាលា
 📝 កូនរបស់បងស្នើសុំការអនុញ្ញាតចាកចេញមុន
 🚪 ការស្នើសុំអនុញ្ញាតរបស់កូនរបស់បងត្រូវបានយល់ព្រម/បដិសេធ
+
+🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទង \\@RodwellLC076
 
 វាយ /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។`;
 
@@ -3280,7 +3283,12 @@ exports.notifyParentAttendance = onCall({
         
         if (!studentId || !studentName) {
             logger.error('Missing required fields:', { studentId, studentName });
-            throw new HttpsError('invalid-argument', 'Student ID and name are required');
+            return { 
+                success: false, 
+                status: 'failed',
+                error: 'Missing required fields: Student ID and name are required',
+                notificationsSent: 0 
+            };
         }
 
         // Get parent notification settings for this student
@@ -3291,17 +3299,29 @@ exports.notifyParentAttendance = onCall({
 
         if (parentQuery.empty) {
             logger.info(`No active parent notifications found for student ${studentId}`);
-            return { success: true, notificationsSent: 0 };
+            return { 
+                success: true, 
+                status: 'no_parent',
+                message: 'No active parent registered for this student',
+                notificationsSent: 0 
+            };
         }
 
         // Initialize Telegram parent bot
         const bot = initializeParentBot();
         if (!bot) {
             logger.error('Parent bot not initialized - missing TELEGRAM_PARENT_BOT_TOKEN');
-            throw new HttpsError('internal', 'Parent bot configuration error');
+            return { 
+                success: false, 
+                status: 'failed',
+                error: 'Parent bot configuration error - missing token',
+                notificationsSent: 0 
+            };
         }
 
         let notificationsSent = 0;
+        let failedNotifications = 0;
+        const errors = [];
         const attendanceDate = timestamp ? new Date(timestamp) : new Date();
         // Adjust for Cambodia timezone
         const cambodiaTime = new Date(attendanceDate.getTime() + (7 * 60 * 60 * 1000));
@@ -3351,6 +3371,9 @@ ${attendanceStatus.statusIcon} **ស្ថានភាព:** ${attendanceStatus.
                 logger.info(`Attendance notification sent to parent chat ${chatId} for student ${studentId}`);
                 
             } catch (error) {
+                failedNotifications++;
+                const errorMessage = error.message || 'Unknown error';
+                errors.push(`Chat ${chatId}: ${errorMessage}`);
                 logger.error(`Failed to send attendance notification to chat ${chatId}:`, error);
                 
                 // If it's a blocked bot error, deactivate notifications for this parent
@@ -3362,11 +3385,35 @@ ${attendanceStatus.statusIcon} **ស្ថានភាព:** ${attendanceStatus.
             }
         }
 
-        return { success: true, notificationsSent };
+        // Determine overall status
+        let status = 'success';
+        let message = `Sent ${notificationsSent} notification(s) successfully`;
+        
+        if (notificationsSent === 0 && failedNotifications > 0) {
+            status = 'failed';
+            message = `Failed to send all ${failedNotifications} notification(s)`;
+        } else if (failedNotifications > 0) {
+            status = 'partial';
+            message = `Sent ${notificationsSent} notification(s), ${failedNotifications} failed`;
+        }
+
+        return { 
+            success: notificationsSent > 0, 
+            status,
+            message,
+            notificationsSent,
+            failedNotifications,
+            errors: errors.length > 0 ? errors.join('; ') : null
+        };
         
     } catch (error) {
         logger.error('Error in notifyParentAttendance:', error);
-        throw new HttpsError('internal', 'Failed to send parent notification');
+        return { 
+            success: false, 
+            status: 'failed',
+            error: error.message || 'Failed to send parent notification',
+            notificationsSent: 0 
+        };
     }
 });
 

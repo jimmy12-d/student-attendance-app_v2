@@ -273,9 +273,14 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
                       >
                         {/* Student Name and Request Info */}
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
-                            {student?.fullName || request.studentName}
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
+                              {student?.fullName || request.studentName}
+                            </h3>
+                            <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-0.5 rounded">
+                              {student?.class || request.studentClass}
+                            </span>
+                          </div>
                           {student?.nameKhmer && (
                             <p className="text-xs text-gray-600 dark:text-gray-400">
                               {student.nameKhmer}
@@ -294,6 +299,9 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
                                 ? `Leave at: ${request.details.leaveTime || 'Unknown'}`
                                 : `Duration: ${request.details.duration ? `${request.details.duration} day${request.details.duration > 1 ? 's' : ''}` : 'Unknown'}`
                               }
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatRequestDate(request.requestedAt)}
                             </span>
                           </div>
                         </div>

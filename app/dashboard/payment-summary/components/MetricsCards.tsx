@@ -80,8 +80,14 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
       studentsSnapshot.forEach((doc) => {
         const studentData = doc.data() as any;
 
-        // Skip students who are on break, waitlist, dropped, or not active
-        if (studentData.onBreak || studentData.onWaitlist || studentData.dropped || studentData.isActive === false) {
+        // Skip inactive students (dropped or on break)
+        const inactiveStatus = getInactiveStudentStatus(studentData);
+        if (inactiveStatus === 'dropped' || inactiveStatus === 'onBreak') {
+          return;
+        }
+
+        // Skip students who are on waitlist or not active
+        if (studentData.onWaitlist || studentData.isActive === false) {
           return;
         }
 

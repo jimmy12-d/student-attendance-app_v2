@@ -124,12 +124,10 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
                               student.class?.includes(classType);
 
       if (matchesClassType) {
-        // Use central inactive student logic
-        const inactiveStatus = getInactiveStudentStatus(student);
-        
-        if (inactiveStatus === 'onBreak') {
+        // Check for inactive students
+        if (student.onBreak) {
           onBreak++;
-        } else if (inactiveStatus === 'dropped') {
+        } else if (student.dropped) {
           dropped++;
         } else {
           const paymentStatus = getPaymentStatus(student.lastPaymentMonth);

@@ -33,6 +33,7 @@ interface ClassTableProps {
   onZoomToggle?: (className: string, isExpanded: boolean) => void;
   searchQuery?: string;
   highlightText?: (text: string, query: string) => React.ReactNode;
+  waitlistCount?: number;
 }
 
 export const ClassTable: React.FC<ClassTableProps> = ({ 
@@ -59,10 +60,11 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   shiftRankings,
   forceCollapsed,
   onClassToggle,
-  expandedClasses,
+  expandedClasses = new Set<string>(),
   onZoomToggle,
   searchQuery = '',
-  highlightText
+  highlightText,
+  waitlistCount = 0
 }) => {
   const [isClassCollapsed, setIsClassCollapsed] = useState(forceCollapsed);
   
@@ -259,6 +261,15 @@ export const ClassTable: React.FC<ClassTableProps> = ({
           color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700'
         });
       }
+    }
+
+    // Waitlist statistics
+    if (waitlistCount > 0) {
+      stats.push({
+        label: 'Waitlist',
+        count: waitlistCount,
+        color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-300 dark:border-yellow-700'
+      });
     }
 
     return stats;

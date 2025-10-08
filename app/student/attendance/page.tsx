@@ -13,6 +13,7 @@ import { mdiChevronRight, mdiClockAlertOutline, mdiFileDocumentEditOutline, mdiW
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from './_components/PermissionRequestForm';
 import { LeaveEarlyRequestForm } from './_components/LeaveEarlyRequestForm';
+import StudentFormsList from './_components/StudentFormsList';
 import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
 import OngoingPermissions from './_components/OngoingPermissions';
@@ -271,7 +272,7 @@ const AttendancePage = () => {
                 const todayDisplayStatus = todayCalculatedStatus.status === "Permission" ? 'permission' :
                                          todayCalculatedStatus.status === "Not Yet Enrolled" ? 'not-enrolled' :
                                          todayCalculatedStatus.status === "No School" ? 'no-school' :
-                                         todayCalculatedStatus.status === "Present" ? 'present' :
+                                         todayCalculatedStatus.status === "Present" ? 'joinToday' :
                                          todayCalculatedStatus.status === "Late" ? 'late' :
                                          todayCalculatedStatus.status === "Pending" ? 'pending' : 'absent';
 
@@ -776,6 +777,18 @@ const AttendancePage = () => {
                </div>
              </div>
            </div>
+
+           {/* Active Forms Section */}
+           {studentUid && (
+             <div className="pt-4">
+               <StudentFormsList 
+                 studentUid={studentUid} 
+                 studentClassType={studentData?.classType}
+                 khmerFont={khmerFont}
+                 createRipple={createRipple}
+               />
+             </div>
+           )}
 
            <div className="space-y-5 pt-4 pb-2">
              <div className="flex items-center gap-4 mb-4">

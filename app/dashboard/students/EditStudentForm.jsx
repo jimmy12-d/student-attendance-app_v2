@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../../firebase-config';
-import { collection, setDoc, doc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, setDoc, doc, query, where, getDocs, getDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { mdiInformation, mdiClockOutline, mdiAlertCircle, mdiCash } from '@mdi/js';
 import Icon from '../../_components/Icon';
@@ -54,6 +54,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
   const [classOptionsWithCounts, setClassOptionsWithCounts] = useState([]);
   const [capacityWarning, setCapacityWarning] = useState(null);
   const [enrollmentCheck, setEnrollmentCheck] = useState(null);
+  const [classType, setClassType] = useState(null);
 
   // Custom hooks
   const { allClassData, classOptions, allShiftOptions, loadingClasses } = useClassData();
@@ -205,6 +206,33 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     };
   }, [classOptions, allClassData, shift, loadingClasses, studentData?.id]);
 
+  // Effect to fetch classType when class changes
+  useEffect(() => {
+    const fetchClassType = async () => {
+      if (!studentClass) {
+        setClassType(null);
+        return;
+      }
+
+      const classCode = studentClass.replace(/^Class\s+/, ''); // Remove "Class " prefix
+      try {
+        const classDocRef = doc(db, 'classes', classCode);
+        const classDocSnap = await getDoc(classDocRef);
+        if (classDocSnap.exists()) {
+          const classData = classDocSnap.data();
+          setClassType(classData.type || null);
+        } else {
+          setClassType(null);
+        }
+      } catch (error) {
+        console.error('Error fetching class type:', error);
+        setClassType(null);
+      }
+    };
+
+    fetchClassType();
+  }, [studentClass]);
+
   // Always show all class options for better search functionality
   const filteredClassOptions = useMemo(() => {
     return classOptionsWithCounts;
@@ -295,7 +323,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
         return;
       }
 
-      const updatedStudentData = getFormData();
+      const updatedStudentData = { ...getFormData(), classType };
 
       const studentRef = doc(db, "students", studentData.id);
       await setDoc(studentRef, { ...updatedStudentData, updatedAt: serverTimestamp() }, { merge: true });

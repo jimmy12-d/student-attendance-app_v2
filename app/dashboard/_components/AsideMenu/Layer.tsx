@@ -6,6 +6,9 @@ import AsideMenuList from "./List";
 import { MenuAsideItem } from "../../../_interfaces";
 import { useAppSelector } from "../../../_stores/hooks";
 import RodwellLogo from "../../../_components/JustboilLogo";
+import { mdiBellOutline } from "@mdi/js";
+import { mdiChartLine } from "@mdi/js";
+import { mdiFormSelect } from "@mdi/js";
 
 type Props = {
   menu: MenuAsideItem[];
@@ -27,6 +30,24 @@ export default function AsideMenuLayer({
     icon: mdiLogout,
     isLogout: true,
     color: "danger"
+  };
+
+  const notificationItem: MenuAsideItem = {
+    label: "Notification",
+    icon: mdiBellOutline,
+    href: "/dashboard/notification",
+  };
+
+  const paymentSummaryItem: MenuAsideItem = {
+    label: "Payment Summary",
+    icon: mdiChartLine,
+    href: "/dashboard/payment-summary",
+  };
+
+  const formItem: MenuAsideItem = {
+    label: "Forms",
+    icon: mdiFormSelect,
+    href: "/dashboard/forms",
   };
 
   // Filter menu items based on search term
@@ -165,7 +186,10 @@ export default function AsideMenuLayer({
           {/* Subtle glow effect at top */}
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-gray-300/20"></div>
           
-          <div className="p-2 flex items-center justify-between">
+          <div className="p-2 flex flex-col space-y-1">
+            <AsideMenuItem item={formItem} onRouteChange={props.onRouteChange} />
+            <AsideMenuItem item={paymentSummaryItem} onRouteChange={props.onRouteChange} />
+            <AsideMenuItem item={notificationItem} onRouteChange={props.onRouteChange} />
             <AsideMenuItem item={logoutItem} onRouteChange={props.onRouteChange} />
           </div>
         </div>

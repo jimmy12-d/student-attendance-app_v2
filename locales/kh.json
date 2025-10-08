@@ -66,6 +66,7 @@
       "absent": "អវត្តមាន",
       "late": "មកយឺត",
       "permission": "សុំច្បាប់",
+      "joinToday": "ចូលថ្ងៃនេះ",
       "permissionForm": "សុំច្បាប់",
       "quickActions": "សកម្មភាព",
       "requestAttendance": "ស្នើសុំវត្តមាន",
@@ -161,7 +162,9 @@
   "quickSelect": "ជ្រើសរើសលឿន",
   "leaveEarly1Hour": "មុនម៉ោង ១ ម៉ោង ({time})",
   "leaveEarly30Min": "មុន ៣០ នាទី ({time})",
-  "leaveEarly90Min": "មុន ១ ម៉ោង ៣០ នាទី ({time})"
+  "leaveEarly90Min": "មុន ១ ម៉ោង ៣០ នាទី ({time})",
+  "journeyBegins": "ដំណើររបស់អ្នកចាប់ផ្តើមនៅទីនេះ",
+  "attendToUnlock": "ចាប់ផ្តើមចូលរួមថ្នាក់ដើម្បី តាមដានវត្តមានរបស់ប្អូន។"
 },
 "mockExam": {
       "title": "តេស្តសាកល្បង",
@@ -341,6 +344,13 @@
     "qrCodeError": "កំហុសក្នុងការស្កេន QR កូដ",
     "invalidQRCode": "QR កូដមិនត្រឹមត្រូវ",
     "sessionExpired": "ការចូលប្រើបានផុតកំណត់។ សូមចូលម្តងទៀត។"
+  },
+  "pwaUpdate": {
+    "newVersionTitle": "មានកំណែថ្មី!",
+    "newVersionDescription": "កំណែថ្មីនៃកម្មវិធីត្រៀមរួចរាល់ហើយ។",
+    "updateNow": "ឥឡូវនេះ",
+    "updateLater": "ពេលក្រោយ",
+    "updating": "កំពុងធ្វើបច្ចុប្បន្នភាព..."
   },
   "dateOfBirth": {
     "title": {

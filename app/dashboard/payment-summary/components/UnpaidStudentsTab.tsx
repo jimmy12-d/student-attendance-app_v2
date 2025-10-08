@@ -37,6 +37,7 @@ interface UnpaidStudent {
   fullName: string;
   nameKhmer: string;
   class: string;
+  classType: string;
   shift: string;
   lastPaymentMonth: string;
   lastPaymentDate: string;
@@ -59,7 +60,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
   const [unpaidStudents, setUnpaidStudents] = useState<UnpaidStudent[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<UnpaidStudent[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [classFilter, setClassFilter] = useState("all");
+  const [classTypeFilter, setClassTypeFilter] = useState("all");
   const [shiftFilter, setShiftFilter] = useState("all");
   const [overdueFilter, setOverdueFilter] = useState("all");
   const [lateFeeFilter, setLateFeeFilter] = useState("all");
@@ -71,7 +72,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
 
   useEffect(() => {
     filterStudents();
-  }, [unpaidStudents, searchTerm, classFilter, shiftFilter, overdueFilter, lateFeeFilter, trialPeriodFilter]);
+  }, [unpaidStudents, searchTerm, classTypeFilter, shiftFilter, overdueFilter, lateFeeFilter, trialPeriodFilter]);
 
   const fetchUnpaidStudents = async () => {
     setIsLoading(true);
@@ -261,6 +262,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
             fullName: studentData.fullName || 'Unknown Student',
             nameKhmer: studentData.nameKhmer || '',
             class: studentData.class || 'Unknown Class',
+            classType: studentData.classType || 'Unknown Type',
             shift: studentData.shift || 'Unknown',
             lastPaymentMonth: studentData.lastPaymentMonth || 'Never',
             lastPaymentDate: displayDate,
@@ -302,9 +304,9 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
       );
     }
 
-    // Class filter
-    if (classFilter !== "all") {
-      filtered = filtered.filter(student => student.class === classFilter);
+    // Class Type filter
+    if (classTypeFilter !== "all") {
+      filtered = filtered.filter(student => student.classType === classTypeFilter);
     }
 
     // Shift filter
@@ -349,6 +351,36 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
   const getUniqueClasses = () => {
     const classes = [...new Set(unpaidStudents.map(student => student.class))];
     return classes.sort();
+  };
+
+  const getUniqueClassTypes = () => {
+    const classTypes = [...new Set(unpaidStudents.map(student => student.classType))];
+
+    // Custom sort function for grades
+    const gradeSort = (a: string, b: string) => {
+      // Extract grade number from strings like "Grade 7", "Grade 8", etc.
+      const getGradeNumber = (str: string) => {
+        const match = str.match(/(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      };
+
+      const gradeA = getGradeNumber(a);
+      const gradeB = getGradeNumber(b);
+
+      // If both have grade numbers, sort by grade number
+      if (gradeA && gradeB) {
+        return gradeA - gradeB;
+      }
+
+      // If only one has grade number, put the one with grade number first
+      if (gradeA && !gradeB) return -1;
+      if (!gradeA && gradeB) return 1;
+
+      // If neither has grade number, sort alphabetically
+      return a.localeCompare(b);
+    };
+
+    return classTypes.sort(gradeSort);
   };
 
   const getUniqueShifts = () => {
@@ -407,7 +439,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
             <div className="text-right">
               <div className="text-3xl font-bold text-red-600 dark:text-red-400">{filteredStudents.length}</div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                {searchTerm || classFilter !== "all" || shiftFilter !== "all" || overdueFilter !== "all" || lateFeeFilter !== "all" || trialPeriodFilter !== "all" ? "Filtered" : "Total"} Unpaid
+                {searchTerm || classTypeFilter !== "all" || shiftFilter !== "all" || overdueFilter !== "all" || lateFeeFilter !== "all" || trialPeriodFilter !== "all" ? "Filtered" : "Total"} Unpaid
               </div>
             </div>
             <div className="text-right">
@@ -439,15 +471,15 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class Type</label>
             <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
+              value={classTypeFilter}
+              onChange={(e) => setClassTypeFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             >
-              <option value="all">All Classes</option>
-              {getUniqueClasses().map(cls => (
-                <option key={cls} value={cls}>{cls}</option>
+              <option value="all">All Class Types</option>
+              {getUniqueClassTypes().map(type => (
+                <option key={type} value={type}>{type}</option>
               ))}
             </select>
           </div>
@@ -496,7 +528,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
             <button
               onClick={() => {
                 setSearchTerm("");
-                setClassFilter("all");
+                setClassTypeFilter("all");
                 setShiftFilter("all");
                 setOverdueFilter("all");
                 setLateFeeFilter("all");

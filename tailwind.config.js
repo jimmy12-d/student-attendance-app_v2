@@ -15,6 +15,10 @@ module.exports = {
       gray: "gray",
     },
     extend: {
+      fontFamily: {
+        'sans': ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        'nokora': ['var(--font-nokora)', 'Nokora', 'sans-serif'],
+      },
       zIndex: {
         "-1": "-1",
       },

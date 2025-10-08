@@ -65,6 +65,7 @@
       "absent": "Absent",
       "late": "Late",
       "permission": "Permission",
+      "joinToday": "Join Today",
       "permissionForm": "Permission Form",
       "quickActions": "Quick Actions",
       "requestAttendance": "Request Attendance",
@@ -159,7 +160,9 @@
       "quickSelect": "Quick select",
       "leaveEarly1Hour": "1 hour early ({time})",
       "leaveEarly30Min": "30 min early ({time})",
-      "leaveEarly90Min": "1:30 early ({time})"
+      "leaveEarly90Min": "1:30 early ({time})",
+      "journeyBegins": "Your Journey Begins Here",
+      "attendToUnlock": "Start attending classes to unlock your arrival time chart and track your punctuality patterns."
     },
     "mockExam": {
       "title": "Mock Exam",
@@ -337,6 +340,13 @@
     "qrCodeError": "QR code scanning error",
     "invalidQRCode": "Invalid QR code",
     "sessionExpired": "Session expired. Please login again."
+  },
+  "pwaUpdate": {
+    "newVersionTitle": "New version available!",
+    "newVersionDescription": "A new version of the app is ready to use.",
+    "updateNow": "Update Now",
+    "updateLater": "Later",
+    "updating": "Updating app..."
   },
   "dateOfBirth": {
     "title": {

@@ -1,4 +1,4 @@
-import { Timestamp, collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { Timestamp, collection, query, where, getDocs, addDoc, doc, updateDoc } from "firebase/firestore";
 import { Student, PermissionRecord } from "../../_interfaces";
 import { 
     AllClassConfigs, 
@@ -263,8 +263,6 @@ export const calculateAverageArrivalTime = (
   attendanceForStudentInMonth: RawAttendanceRecord[],
   selectedMonthValue: string
 ): { averageTime: string; details:string; averageDifference: number | null } => {
-    console.log(`🎯 Calculating average for student: ${student.fullName} (${student.id})`);
-    console.log(`📅 Month: ${selectedMonthValue}, Records: ${attendanceForStudentInMonth.length}`);
     
     const [year, monthIndex] = selectedMonthValue.split('-').map(Number).map((n, i) => i === 1 ? n - 1 : n);
     const monthLabel = new Date(year, monthIndex).toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -293,11 +291,6 @@ export const calculateAverageArrivalTime = (
                record.startTime;
     });
     
-    console.log(`✅ Valid records: ${validRecords.length}/${attendanceForStudentInMonth.length}`);
-    validRecords.forEach(record => {
-        console.log(`   ${record.date}: ${record.status} at ${record.timeIn}, startTime: ${record.startTime}`);
-    });
-
     if (validRecords.length === 0) {
         return { 
             averageTime: 'N/A', 
@@ -323,7 +316,6 @@ export const calculateAverageArrivalTime = (
                 difference = -30;
             }
             
-            console.log(`📊 ${record.date}: timeIn=${record.timeIn} (${timeInMinutes}min), startTime=${record.startTime} (${startTimeMinutes}min), difference=${difference}min (${difference > 0 ? 'late' : difference < 0 ? 'early' : 'on-time'})`);
             arrivalDifferences.push(difference);
         }
     });
@@ -338,9 +330,6 @@ export const calculateAverageArrivalTime = (
 
     // Calculate average difference
     const averageDifference = arrivalDifferences.reduce((sum, diff) => sum + diff, 0) / arrivalDifferences.length;
-    
-    console.log(`📈 Average calculation: ${arrivalDifferences.length} days, differences=[${arrivalDifferences.join(', ')}], average=${averageDifference}min`);
-    console.log(`📈 Final result: ${formatAverageDifference(averageDifference)}`);
     
     // Format the result
     const averageTimeFormatted = formatAverageDifference(averageDifference);
@@ -442,20 +431,7 @@ export const determineAttendanceStatus = (student: any, selectedShift: string, c
     const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
     if (studentClassKey === '12NKGS' && dayOfWeek === 6) {
       shiftConfig = { startTime: '13:00' };
-      console.log('Special case: Class 12NKGS on Saturday - overriding start time to 13:00');
     }
-
-    console.log('Late calculation debug:', {
-      studentName: student.fullName,
-      studentClass: student.class,
-      studentShift: student.shift,
-      studentClassKey,
-      dayOfWeek,
-      isSpecialCase: studentClassKey === '12NKGS' && dayOfWeek === 6,
-      hasClassConfig: !!classConfig,
-      hasShiftConfig: !!shiftConfig,
-      shiftConfig: shiftConfig
-    });
 
     if (shiftConfig && shiftConfig.startTime) {
       // Set the startTime in 24-hour format
@@ -646,7 +622,6 @@ export const markAttendance = async (
   // Retry logic wrapper
   const attemptMarkAttendance = async (attempt: number): Promise<string> => {
     try {
-      console.log(`📝 Attempting to mark attendance for ${student.fullName} (attempt ${attempt}/${maxRetries})`);
       
       // Check if already marked today for this shift
       const attendanceRef = collection(db, 'attendance');
@@ -661,7 +636,6 @@ export const markAttendance = async (
       
       if (!attendanceSnapshot.empty) {
         const existingRecord = attendanceSnapshot.docs[0].data();
-        console.log(`🚫 Duplicate attendance prevented for ${student.fullName} (${selectedShift} shift on ${attendanceDate})`);
         toast.warning(`${student.fullName} already marked ${existingRecord.status} for ${selectedShift} shift on ${attendanceDate}`);
         return existingRecord.status; // Return the existing status
       }
@@ -697,8 +671,6 @@ export const markAttendance = async (
       };
 
       // Save to Firestore with enhanced error handling
-      console.log(`💾 Saving attendance record to Firestore for ${student.fullName}...`);
-      console.log(`📋 Record details: Date=${attendanceDate}, Shift=${selectedShift}, Status=${status}, Time=${timeString}`);
       
       const docRef = await addDoc(collection(db, 'attendance'), attendanceRecord);
       
@@ -706,8 +678,6 @@ export const markAttendance = async (
         throw new Error('Failed to save attendance - no document ID returned');
       }
       
-      console.log(`✅ Attendance record saved successfully with ID: ${docRef.id}`);
-
       // Verify the record was actually saved by reading it back with a small delay
       await new Promise(resolve => setTimeout(resolve, 300)); // 300ms delay for Firestore consistency
       
@@ -723,27 +693,53 @@ export const markAttendance = async (
         throw new Error('Attendance record verification failed - record not found after save');
       }
       
-      console.log(`✅ Verification passed: Record exists in Firestore`);
-
+      // Get the document ID from verification
+      const attendanceDocId = verifySnapshot.docs[0].id;
+      
       // Send parent notification after successful attendance marking
+      let parentNotificationStatus: 'success' | 'failed' | 'no_parent' | 'partial' = 'no_parent';
+      let parentNotificationError: string | null = null;
+      let parentNotificationsSent = 0;
+      
       try {
         const notifyParentAttendance = httpsCallable(functions, 'notifyParentAttendance');
-        await notifyParentAttendance({
+        const result = await notifyParentAttendance({
           studentId: student.id,
           studentName: student.fullName,
           timestamp: now.toISOString(),
           method: 'attendance-system'
         });
-        console.log(`📱 Parent notification sent for ${student.fullName}`);
-      } catch (notificationError) {
+        
+        // Extract notification result
+        const data = result.data as any;
+        parentNotificationStatus = data.status || 'failed';
+        parentNotificationError = data.error || data.errors || null;
+        parentNotificationsSent = data.notificationsSent || 0;
+        
+        console.log('✅ Parent notification result:', data);
+      } catch (notificationError: any) {
+        parentNotificationStatus = 'failed';
+        parentNotificationError = notificationError.message || 'Unknown error occurred';
         console.warn('Failed to send parent notification:', notificationError);
-        // Don't throw error as this is not critical for core attendance functionality
+      }
+      
+      // Update the attendance record with notification status
+      try {
+        const attendanceDocRef = doc(db, 'attendance', attendanceDocId);
+        await updateDoc(attendanceDocRef, {
+          parentNotificationStatus,
+          parentNotificationError,
+          parentNotificationTimestamp: new Date(),
+          parentNotificationsSent
+        });
+        console.log('✅ Updated attendance record with notification status');
+      } catch (updateError) {
+        console.error('Failed to update attendance record with notification status:', updateError);
+        // Don't throw - this is not critical
       }
 
       // Note: Student in-app notification is now handled by Cloud Function
       // triggered automatically when attendance document is created
-      console.log(`📝 Attendance saved - student notification will be sent by Cloud Function (authUid: ${(student as any).authUid || 'N/A'})`);
-
 
       // Show success message with shift information
       const message = `${student.fullName} marked ${status} for ${selectedShift} shift at ${timeString}`;
@@ -755,7 +751,7 @@ export const markAttendance = async (
       }
       
       playSuccessSound();
-      console.log(`🎉 Attendance successfully marked for ${student.fullName} as ${status}`);
+      
       return status; // Return the attendance status
       
     } catch (error: any) {
@@ -786,7 +782,6 @@ export const markAttendance = async (
       // If this is not the last attempt, wait and retry
       if (attempt < maxRetries) {
         const retryDelay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
-        console.log(`⏳ Retrying in ${retryDelay}ms...`);
         
         // Show retry notification to user
         toast.info(`Retrying attendance for ${student.fullName}... (${attempt}/${maxRetries})`, {
@@ -857,7 +852,6 @@ export const markAttendance = async (
             ...offlineRecord,
             savedAt: new Date().toISOString()
           }));
-          console.log(`💾 [1/2] Stored in localStorage: ${offlineKey}`);
         } catch (localStorageError) {
           console.error('⚠️ localStorage save failed:', localStorageError);
         }
@@ -874,8 +868,6 @@ export const markAttendance = async (
               timestamp: new Date().toISOString()
             }
           });
-          console.log(`💾 [2/2] ✅ SAVED TO FIRESTORE BACKUP: ${backupRef.id}`);
-          console.log(`🎯 100% GUARANTEED: Record preserved in backup collection`);
           
           toast.success(`🛡️ Attendance safely backed up for ${student.fullName}`, {
             duration: 5000,

@@ -72,6 +72,11 @@ export interface AttendanceRecord {
   timestamp?: Timestamp | Date; // The exact time of marking
   timeIn?: string; // 24-hour format time (HH:MM)
   method?: string; // e.g., "QR Code", "Manual", "Face Recognition"
+  // Parent notification fields
+  parentNotificationStatus?: 'success' | 'failed' | 'no_parent' | 'partial' | null;
+  parentNotificationError?: string | null;
+  parentNotificationTimestamp?: Timestamp | Date | null;
+  parentNotificationsSent?: number;
 }
 
 // Interface for loading states
@@ -329,6 +334,9 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
           <div className="h-4 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded w-16 animate-shimmer"></div>
         </div>
       </td>
+      <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
+        <div className="h-6 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded-full w-16 mx-auto animate-shimmer"></div>
+      </td>
       <td className="px-6 py-4 whitespace-nowrap text-center">
         <div className="h-8 w-8 bg-gradient-to-r from-blue-200 via-blue-300 to-blue-200 dark:from-blue-700 dark:via-blue-600 dark:to-blue-700 rounded-full mx-auto animate-shimmer"></div>
       </td>
@@ -338,7 +346,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
   // Warning Row Component
   const TimeDifferenceWarningRow = () => (
     <tr className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 animate-pulse">
-      <td colSpan={7} className="px-6 py-4">
+      <td colSpan={8} className="px-6 py-4">
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0">
             <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -581,6 +589,9 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                 Time
               </th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                Parent Notif
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Action
               </th>
             </tr>
@@ -709,6 +720,63 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                       </button>
                     )}
                   </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
+                  {/* Parent Notification Status */}
+                  {record.parentNotificationStatus === 'success' ? (
+                    <div className="inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" title={`Sent to ${record.parentNotificationsSent || 0} parent(s)`}>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-xs font-medium">{record.parentNotificationsSent || 1}</span>
+                    </div>
+                  ) : record.parentNotificationStatus === 'no_parent' ? (
+                    <div className="inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" title="No parent registered">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-xs">No Parent</span>
+                    </div>
+                  ) : record.parentNotificationStatus === 'failed' ? (
+                    <div className="group relative inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 cursor-help" title={record.parentNotificationError || 'Failed to send notification'}>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-xs font-medium">Failed</span>
+                      {record.parentNotificationError && (
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64 text-left">
+                          <div className="font-semibold mb-1">Error Details:</div>
+                          <div className="text-gray-200 dark:text-gray-300 break-words">{record.parentNotificationError}</div>
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                            <div className="border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : record.parentNotificationStatus === 'partial' ? (
+                    <div className="group relative inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 cursor-help" title={record.parentNotificationError || 'Some notifications failed'}>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span className="text-xs font-medium">{record.parentNotificationsSent || 0}/{(record.parentNotificationsSent || 0) + 1}</span>
+                      {record.parentNotificationError && (
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 w-64 text-left">
+                          <div className="font-semibold mb-1">Partial Failure:</div>
+                          <div className="text-gray-200 dark:text-gray-300 break-words">{record.parentNotificationError}</div>
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                            <div className="border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500" title="Notification status unknown">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-xs">N/A</span>
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center">
                   {record.status === 'requested' ? (

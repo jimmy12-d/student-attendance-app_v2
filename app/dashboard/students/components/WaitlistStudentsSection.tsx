@@ -1,12 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { mdiAccountPlus, mdiClockOutline, mdiAccountClock } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import Button from "../../../_components/Button";
 import CardBox from "../../../_components/CardBox";
 import { Student } from "../../../_interfaces";
 import { Timestamp } from "firebase/firestore";
+import { db } from "../../../../firebase-config";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 interface WaitlistStudentsSectionProps {
   waitlistStudents: Student[];
@@ -82,9 +84,64 @@ const WaitlistStudentsSection: React.FC<WaitlistStudentsSectionProps> = ({
   onActivateStudent,
   onViewDetails,
 }) => {
-  if (waitlistStudents.length === 0) {
-    return null;
-  }
+  const [classCapacities, setClassCapacities] = useState<{[className: string]: {current: number, max: number}}>({});
+
+  // Fetch class capacity information for waitlist students
+  useEffect(() => {
+    const fetchClassCapacities = async () => {
+      if (waitlistStudents.length === 0) return;
+
+      try {
+        // Get unique classes from waitlist students
+        const uniqueClasses = [...new Set(waitlistStudents.map(student => student.class))];
+        
+        // Fetch class configurations
+        const classesCollection = collection(db, 'classes');
+        const classesSnapshot = await getDocs(classesCollection);
+        
+        const capacities: {[key: string]: {current: number, max: number}} = {};
+        
+        for (const classDoc of classesSnapshot.docs) {
+          const classData = classDoc.data();
+          const className = classData.name;
+          
+          if (uniqueClasses.includes(className)) {
+            // For each shift in this class, calculate capacity and current enrollment
+            for (const [shiftName, shiftConfig] of Object.entries(classData.shifts || {})) {
+              const shiftData = shiftConfig as {maxStudents?: number};
+              const maxCapacity = shiftData.maxStudents || 25;
+              
+              // Count active students in this specific class/shift combination
+              const activeStudentsQuery = query(
+                collection(db, "students"),
+                where("class", "==", className),
+                where("shift", "==", shiftName),
+                where("ay", "==", "2026")
+              );
+              const activeSnapshot = await getDocs(activeStudentsQuery);
+              const activeStudents = activeSnapshot.docs.filter(doc => {
+                const data = doc.data();
+                return !data.dropped && !data.onBreak && !data.onWaitlist;
+              });
+              
+              // Store by class-shift combination
+              const key = `${className}-${shiftName}`;
+              capacities[key] = {
+                current: activeStudents.length,
+                max: maxCapacity
+              };
+            }
+          }
+        }
+        
+        setClassCapacities(capacities);
+      } catch (error) {
+        console.error("Error fetching class capacities:", error);
+      }
+    };
+
+    fetchClassCapacities();
+  }, [waitlistStudents]);
 
   return (
     <CardBox className="mb-6 border-l-4 border-l-blue-400 ">
@@ -148,7 +205,7 @@ const WaitlistStudentsSection: React.FC<WaitlistStudentsSectionProps> = ({
                         {/* Student Info */}
                         <div className="flex-1">
                           {/* Student Details */}
-                          <div className="grid grid-cols-2 md:grid-cols-[35%_1fr_1fr_1fr] gap-3 mb-3">
+                          <div className="grid grid-cols-1 md:grid-cols-[40%_1fr_1fr] gap-3 mb-3">
                             <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3 flex items-center gap-3">
                               {/* Avatar */}
                               <div className="relative group/avatar flex-shrink-0">
@@ -190,19 +247,34 @@ const WaitlistStudentsSection: React.FC<WaitlistStudentsSectionProps> = ({
                             </div>
                             <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">
                               <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                Preferred Class
+                                Preferred Class & Shift
                               </p>
                               <p className="font-semibold text-gray-800 dark:text-gray-200">
-                                {student.class}
+                                {student.class} ({student.shift})
                               </p>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">
-                              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                Preferred Shift
-                              </p>
-                              <p className="font-semibold text-gray-800 dark:text-gray-200">
-                                {student.shift}
-                              </p>
+                              {classCapacities[`${student.class}-${student.shift}`] && (
+                                <div className="mt-2">
+                                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                    Status: {classCapacities[`${student.class}-${student.shift}`].current} / {classCapacities[`${student.class}-${student.shift}`].max} students
+                                  </p>
+                                  <div className="mt-1">
+                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                                      <div 
+                                        className={`h-1.5 rounded-full ${
+                                          classCapacities[`${student.class}-${student.shift}`].current >= classCapacities[`${student.class}-${student.shift}`].max 
+                                            ? 'bg-red-500' 
+                                            : classCapacities[`${student.class}-${student.shift}`].current >= classCapacities[`${student.class}-${student.shift}`].max * 0.9 
+                                            ? 'bg-orange-500' 
+                                            : 'bg-green-500'
+                                        }`}
+                                        style={{ 
+                                          width: `${Math.min((classCapacities[`${student.class}-${student.shift}`].current / classCapacities[`${student.class}-${student.shift}`].max) * 100, 100)}%` 
+                                        }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             {student.phone && (
                               <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">

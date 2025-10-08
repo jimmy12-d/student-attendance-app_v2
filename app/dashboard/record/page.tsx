@@ -682,7 +682,13 @@ export default function AttendanceRecordPage() {
                   status: data.status || 'Unknown',
                   date: data.date,
                   timestamp: data.timestamp,
-                  method: data.method, // Add method field
+                  timeIn: data.timeIn,
+                  method: data.method,
+                  // Parent notification fields
+                  parentNotificationStatus: data.parentNotificationStatus || null,
+                  parentNotificationError: data.parentNotificationError || null,
+                  parentNotificationTimestamp: data.parentNotificationTimestamp || null,
+                  parentNotificationsSent: data.parentNotificationsSent || 0,
                 } as AttendanceRecord;
               }
 
@@ -695,7 +701,13 @@ export default function AttendanceRecordPage() {
                 status: data.status || 'Unknown',
                 date: data.date,
                 timestamp: data.timestamp,
-                method: data.method, // Add method field
+                timeIn: data.timeIn,
+                method: data.method,
+                // Parent notification fields
+                parentNotificationStatus: data.parentNotificationStatus || null,
+                parentNotificationError: data.parentNotificationError || null,
+                parentNotificationTimestamp: data.parentNotificationTimestamp || null,
+                parentNotificationsSent: data.parentNotificationsSent || 0,
               } as AttendanceRecord;
             })
             .filter((record): record is AttendanceRecord => record !== null && record.status !== 'Unknown');
@@ -703,6 +715,17 @@ export default function AttendanceRecordPage() {
           // Separate requested records and put them at the top
           const requestedRecords = fetchedRecords.filter(r => r.status === 'requested');
           const otherRecords = fetchedRecords.filter(r => r.status !== 'requested');
+          
+          // Debug: Log parent notification status
+          const recordsWithNotification = fetchedRecords.filter(r => r.parentNotificationStatus);
+          const recordsWithoutNotification = fetchedRecords.filter(r => !r.parentNotificationStatus);
+          console.log(`📊 Attendance Records Summary:`);
+          console.log(`   Total: ${fetchedRecords.length}`);
+          console.log(`   With notification status: ${recordsWithNotification.length}`);
+          console.log(`   Without notification status: ${recordsWithoutNotification.length}`);
+          if (recordsWithNotification.length > 0) {
+            console.log(`   Sample with status:`, recordsWithNotification[0]);
+          }
           
           setRawAttendanceRecords(rawRecords);
           setAttendanceRecords([...requestedRecords, ...otherRecords]);

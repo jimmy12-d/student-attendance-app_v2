@@ -112,6 +112,10 @@
   font-family: var(--font-nokora), 'Nokora', sans-serif;
 }
 
+.english-font {
+  font-family: var(--font-inter), 'Inter', sans-serif;
+}
+
 .khmer-font {
   font-family: var(--font-nokora), 'Nokora', sans-serif !important;
   font-optical-sizing: auto;

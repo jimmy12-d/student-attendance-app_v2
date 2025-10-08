@@ -141,7 +141,7 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
 
   const componentClass = [
     "group relative flex items-center w-full rounded-xl transition-all duration-300 ease-in-out",
-    isDropdownList ? "py-2 px-4 mx-2 my-1" : item.isLogout ? "py-1.5 px-3 mx-3 my-1" : "py-3 px-4 mx-3 my-1",
+    isDropdownList ? "py-1 px-4 mx-2 my-0.5" : item.isLogout ? "py-1 px-3 mx-3 my-0.5" : "py-1.5 px-4 mx-3 my-0.5",
     item.color && item.isLogout
       ? "bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl border border-red-400/30 backdrop-blur-sm"
       : isLinkActive

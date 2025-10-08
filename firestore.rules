@@ -282,6 +282,27 @@ service cloud.firestore {
       allow update, delete: if isAuthorizedUser();
     }
     
+    match /forms/{formId} {
+      // READ: Authenticated users can read forms (application handles active/deadline filtering)
+      allow read: if request.auth != null;
+      
+      // CREATE/UPDATE/DELETE: Only admins can manage forms
+      allow create, update, delete: if isAuthorizedUser();
+    }
+    
+    match /form_responses/{responseId} {
+      // READ: Admins can read all responses, students can read their own
+      allow read: if isAuthorizedUser() || 
+                     (request.auth != null && request.auth.uid == resource.data.studentUid);
+      
+      // CREATE: Authenticated students can create their own responses
+      allow create: if request.auth != null && 
+                       request.resource.data.studentUid == request.auth.uid;
+      
+      // UPDATE/DELETE: Only admins can update or delete responses
+      allow update, delete: if isAuthorizedUser();
+    }
+    
     
   }
 }

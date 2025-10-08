@@ -97,7 +97,7 @@ export default function HomePage() {
   if (hasImmediateRedirect) {
     // Show minimal loading for immediate redirects
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-gray-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
@@ -110,7 +110,7 @@ export default function HomePage() {
 
   if (isLoading || !initialCheck) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-gray-50 to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-hidden">
         <div className="relative text-center max-w-md mx-auto px-8">
           {/* Background decorative elements */}
           <div className="absolute -top-20 -left-20 w-40 h-40 bg-blue-200 dark:bg-blue-900 rounded-full opacity-20 animate-pulse"></div>

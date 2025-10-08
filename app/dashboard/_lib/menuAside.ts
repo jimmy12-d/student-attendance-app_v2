@@ -11,7 +11,8 @@ import {
   mdiChartLine,
   mdiAccountPlus,
   mdiStar,
-  mdiBellOutline
+  mdiBellOutline,
+  mdiFormSelect
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -27,14 +28,12 @@ const menuAside: MenuAsideItem[] = [
     label: "Student",
   },
   {
-    href: "/dashboard/stars",
-    icon: mdiStar,
-    label: "Star Management",
-  },
-  {
     href: "/dashboard/pos-student",
     icon: mdiCreditCard,
     label: "POS",
+  },
+  {
+    isDivider: true,
   },
   // {
   //   label: 'ABA Approvals',
@@ -83,11 +82,6 @@ const menuAside: MenuAsideItem[] = [
     ]
   },
   {
-    href: "/dashboard/payment-summary",
-    icon: mdiChartLine,
-    label: "Payment Summary",
-  },
-  {
     label: "Academic",
     icon: mdiNotebookEditOutline,
     menu: [
@@ -106,6 +100,11 @@ const menuAside: MenuAsideItem[] = [
         label: "Result",
         icon: mdiChartLine,
       },
+      {
+        href: "/dashboard/stars",
+        label: "Star Management",
+        icon: mdiStar,
+      },
     ]
   },
   // {
@@ -113,11 +112,6 @@ const menuAside: MenuAsideItem[] = [
   //   label: "Print Approvals",
   //   icon: mdiFileDocumentCheckOutline,
   // },
-  {
-    href: "/dashboard/notification",
-    label: "Notification",
-    icon: mdiBellOutline,
-  },
 ];
 
 export default menuAside;

@@ -8,6 +8,7 @@ import DarkModeInit from "./_components/DarkModeInit";
 import { Toaster } from 'sonner';
 import ClientLayoutWrapper from './_components/ClientLayoutWrapper';
 import PWAInstaller from './_components/PWAInstaller';
+import PWAUpdatePrompt from './_components/PWAUpdatePrompt';
 import { AuthProvider } from './_contexts/AuthContext';
 
 const inter = Inter({
@@ -61,12 +62,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Rodwell Portal" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body id="student-attendance-app" className={`h-full bg-white dark:bg-slate-800 text-gray-900 dark:text-white ${inter.variable} ${nokora.variable}`}>
+      <body id="student-attendance-app" className={`h-full bg-white dark:bg-slate-800 text-gray-900 dark:text-white overflow-y-auto ${inter.variable} ${nokora.variable}`}>
         <StoreProvider>
           <AuthProvider>
             <ClientLayoutWrapper>
               <div className="flex flex-col min-h-screen">
                 <PWAInstaller />
+                <PWAUpdatePrompt />
                 <main className="flex-grow">
                   {children}
                 </main>

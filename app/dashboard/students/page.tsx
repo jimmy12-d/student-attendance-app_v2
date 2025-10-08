@@ -955,6 +955,7 @@ export default function StudentsPage() {
                 onExitTakeAttendance={() => setIsTakeAttendanceMode(false)}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
+                waitlistStudents={waitlistStudents}
               />
             </CardBox>
           ) : null}

@@ -16,14 +16,18 @@ export default function AsideMenuList({
   ...props
 }: Props) {
   return (
-    <ul className={`${className} ${isDropdownList ? 'space-y-1' : 'space-y-2'}`}>
+    <ul className={`${className} ${isDropdownList ? 'space-y-1' : 'space-y-1'}`}>
       {menu.map((item, index) => (
-        <AsideMenuItem
-          key={index}
-          item={item}
-          isDropdownList={isDropdownList}
-          onRouteChange={props.onRouteChange}
-        />
+        item.isDivider ? (
+          <div key={index} className="my-3 border-t border-gray-200 dark:border-gray-700 mx-4"></div>
+        ) : (
+          <AsideMenuItem
+            key={index}
+            item={item}
+            isDropdownList={isDropdownList}
+            onRouteChange={props.onRouteChange}
+          />
+        )
       ))}
     </ul>
   );

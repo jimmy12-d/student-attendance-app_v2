@@ -31,9 +31,10 @@ type Props = {
   onExitTakeAttendance?: () => void;
   searchQuery?: string;
   onSearchChange?: (query: string) => void;
+  waitlistStudents?: Student[];
 };
 
-const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, isFlipFlopPreviewMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance, searchQuery = '', onSearchChange }: Props) => {
+const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, isFlipFlopPreviewMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance, searchQuery = '', onSearchChange, waitlistStudents = [] }: Props) => {
   // Default column configuration
   const defaultColumns: ColumnConfig[] = [
     { id: 'number', label: '#N', enabled: true },
@@ -526,6 +527,21 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
     return grouped;
   }, [validStudents, shiftOrder]);
+
+  // Group waitlist students by class and shift
+  const groupedWaitlistStudents = React.useMemo(() => {
+    const grouped = waitlistStudents.reduce((acc, student) => {
+      const { class: studentClass, shift } = student;
+      if (!acc[studentClass]) {
+        acc[studentClass] = { Morning: [], Afternoon: [], Evening: [] };
+      }
+      if (shift && shiftOrder.includes(shift as any)) {
+        acc[studentClass][shift as 'Morning' | 'Afternoon' | 'Evening'].push(student);
+      }
+      return acc;
+    }, {} as Record<string, { Morning: Student[]; Afternoon: Student[]; Evening: Student[] }>);
+    return grouped;
+  }, [waitlistStudents, shiftOrder]);
 
   // 2. Partition classes into day (morning/afternoon) and evening lists
   const dayShiftClasses: string[] = [];
@@ -1503,6 +1519,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   onZoomToggle={handleZoomToggle}
                   searchQuery={searchQuery}
                   highlightText={highlightText}
+                  waitlistCount={(groupedWaitlistStudents[className]?.Morning?.length || 0)}
                 />
                 <ClassTable 
                   studentList={groupedStudents[className]['Afternoon']} 
@@ -1532,6 +1549,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   onZoomToggle={handleZoomToggle}
                   searchQuery={searchQuery}
                   highlightText={highlightText}
+                  waitlistCount={(groupedWaitlistStudents[className]?.Afternoon?.length || 0)}
                 />
               </div>
             ))}
@@ -1595,6 +1613,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 onZoomToggle={handleZoomToggle}
                 searchQuery={searchQuery}
                 highlightText={highlightText}
+                waitlistCount={(groupedWaitlistStudents[className]?.Evening?.length || 0)}
               />
             ))}
           </div>
