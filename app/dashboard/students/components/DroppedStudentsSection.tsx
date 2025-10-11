@@ -1,10 +1,8 @@
 "use client";
 
 import React from "react";
-import { mdiRestore, mdiAccountRemove, mdiCalendar } from "@mdi/js";
+import { mdiRestore, mdiAccountRemove, mdiCalendar, mdiEye } from "@mdi/js";
 import Icon from "../../../_components/Icon";
-import Button from "../../../_components/Button";
-import CardBox from "../../../_components/CardBox";
 import { Student } from "../../../_interfaces";
 import { Timestamp } from "firebase/firestore";
 
@@ -91,39 +89,45 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
   const actuallyDroppedStudents = droppedStudents.filter(student => student.dropped && !student.onBreak);
 
   return (
-    <CardBox className="mb-6 border-l-4 border-l-orange-400">
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-              <Icon 
-                path={mdiAccountRemove} 
-                size={20} 
-                className="text-orange-600 dark:text-orange-400" 
-              />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-orange-700 dark:text-orange-400">
-                Inactive Students
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {breakStudents.length} on break, {actuallyDroppedStudents.length} dropped
-              </p>
-            </div>
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-red-200 dark:border-red-800 mb-6">
+      <div 
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+        onClick={onToggleShow}
+      >
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+            <Icon 
+              path={mdiAccountRemove} 
+              size={20} 
+              className="text-red-600 dark:text-red-400" 
+            />
           </div>
-          <Button
-            onClick={onToggleShow}
-            label={showDroppedStudents ? "Hide" : "Show"}
-            color="info"
-            small
-            outline
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Inactive Students
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {breakStudents.length} on break, {actuallyDroppedStudents.length} dropped
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          {droppedStudents.length > 0 && (
+            <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
+              {droppedStudents.length}
+            </span>
+          )}
+          <Icon 
+            path={showDroppedStudents ? "M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" : "M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"} 
+            size={20} 
+            className="text-gray-400" 
           />
         </div>
+      </div>
         
-        {/* Collapsible Content */}
-        {showDroppedStudents && (
-          <div className="space-y-6">
+      {showDroppedStudents && (
+        <div className="border-t border-red-200 dark:border-red-800">
+          <div className="space-y-6 p-4">
             {/* Break Students Section */}
             {breakStudents.length > 0 && (
               <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
@@ -146,7 +150,7 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
                     return (
                       <div
                         key={student.id}
-                        className="bg-white dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200"
+                        className="backdrop-blur-sm bg-white/10 dark:bg-black/10 border border-white/20 dark:border-white/10 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300"
                       >
                         <div className="flex items-start justify-between">
                           {/* Student Info */}
@@ -246,15 +250,24 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
                           </div>
                           
                           {/* Action Buttons */}
-                          <div className="ml-4 flex flex-col space-y-2">
-                            <Button
+                          <div className="flex items-center justify-center ml-4">
+                            {onViewDetails && (
+                              <button
+                                onClick={() => onViewDetails(student)}
+                                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-900/20 rounded-lg transition-colors mr-2"
+                                title="View Details"
+                              >
+                                <Icon path={mdiEye} size={16} />
+                              </button>
+                            )}
+                            <button
                               onClick={() => onRestoreStudent(student)}
-                              icon={mdiRestore}
-                              label="Restore"
-                              color="warning"
-                              small
-                              className="whitespace-nowrap"
-                            />
+                              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center min-w-[100px]"
+                              title="Restore Student"
+                            >
+                              <Icon path={mdiRestore} size={16} className="mr-2" />
+                              Restore
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -288,47 +301,51 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
                     return (
                       <div
                         key={student.id}
-                        className="bg-white dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200"
+                        className="backdrop-blur-sm bg-white/10 dark:bg-black/10 border border-white/20 dark:border-white/10 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300"
                       >
                         <div className="flex items-start justify-between">
                           {/* Student Info */}
                           <div className="flex-1">                           
                             {/* Student Details */}
                             <div className="grid grid-cols-2 md:grid-cols-[35%_1fr_1fr_1fr] gap-3 mb-3">
-                              <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">
-                            <div className="flex items-center space-x-3 mb-3">
-                              <div className="relative group/avatar">
-                                <div className="w-10 h-10 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center transition-all duration-200 hover:shadow-lg">
-                                  <span className="text-white font-semibold text-sm group-hover/avatar:opacity-0 transition-opacity duration-200">
-                                    {student.fullName.charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                                
-                                {/* Hover overlay with eye icon */}
-                                {onViewDetails && (
-                                  <div 
-                                    className="absolute inset-0 bg-red-600 bg-opacity-90 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 cursor-pointer"
-                                    onClick={() => onViewDetails(student)}
-                                    title="View student details"
-                                  >
-                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
+                              <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3 flex items-center gap-3">
+                                {/* Avatar */}
+                                <div className="relative group/avatar flex-shrink-0">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center transition-all duration-200 hover:shadow-lg">
+                                    <span className="text-white font-semibold text-sm group-hover/avatar:opacity-0 transition-opacity duration-200">
+                                      {student.fullName.charAt(0).toUpperCase()}
+                                    </span>
                                   </div>
-                                )}
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-lg">
-                                  {student.fullName}
-                                </h3>
-                                {student.nameKhmer && (
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                                    {student.nameKhmer}
-                                  </p>
-                                )}
-                              </div>
-                            </div>          
+                                  {onViewDetails && (
+                                    <div
+                                      className="absolute inset-0 bg-red-600 bg-opacity-90 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 cursor-pointer"
+                                      onClick={() => onViewDetails(student)}
+                                      title="View student details"
+                                    >
+                                      <svg
+                                        className="w-5 h-5 text-white"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Names stacked vertically */}
+                                <div className="flex flex-col">
+                                  <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-lg">
+                                    {student.fullName}
+                                  </h3>
+                                  {student.nameKhmer && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                                      {student.nameKhmer}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                               <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">
                                 <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
@@ -367,15 +384,24 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
                           </div>
                           
                           {/* Action Buttons */}
-                          <div className="ml-4 flex flex-col space-y-2">
-                            <Button
+                          <div className="flex items-center justify-center ml-4">
+                            {onViewDetails && (
+                              <button
+                                onClick={() => onViewDetails(student)}
+                                className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-900/20 rounded-lg transition-colors mr-2"
+                                title="View Details"
+                              >
+                                <Icon path={mdiEye} size={16} />
+                              </button>
+                            )}
+                            <button
                               onClick={() => onRestoreStudent(student)}
-                              icon={mdiRestore}
-                              label="Restore"
-                              color="success"
-                              small
-                              className="whitespace-nowrap"
-                            />
+                              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center min-w-[100px]"
+                              title="Restore Student"
+                            >
+                              <Icon path={mdiRestore} size={16} className="mr-2" />
+                              Restore
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -385,9 +411,9 @@ const DroppedStudentsSection: React.FC<DroppedStudentsSectionProps> = ({
               </div>
             )}
           </div>
-        )}
-      </div>
-    </CardBox>
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -58,10 +58,7 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     
-    // Get the shift start time
-    const shiftStartTime = studentData.shift ? getShiftInfo(studentData.shift).startTime : '07:00';
-    
-    // Transform the data to match RawAttendanceRecord format
+    // Transform the data to match RawAttendanceRecord format if needed
     const transformedRecords = recentRecords.map(record => ({
       ...record,
       // Ensure we have the required fields for calculateAverageArrivalTime
@@ -69,27 +66,15 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
         new Date(record.timestamp.seconds * 1000).toLocaleTimeString('en-US', { 
           hour12: false, hour: '2-digit', minute: '2-digit' 
         }) : undefined),
-      // Add startTime from student's shift if not present in record
-      startTime: record.startTime || shiftStartTime
-    }));
+      startTime: record.startTime // Only use startTime if it exists in the record
+    })).filter(record => record.startTime); // Filter out records without startTime
     
-    console.log('Average calculation - transformedRecords:', transformedRecords.length, 'records');
-    console.log('Average calculation - sample record:', transformedRecords[0]);
-    
-    const result = calculateAverageArrivalTime(
+    return calculateAverageArrivalTime(
       studentData as any, // Cast to match the Student interface from attendanceLogic
       transformedRecords,
       currentMonth
     );
-    
-    console.log('Average calculation result:', {
-      averageTime: result.averageTime,
-      averageDifference: result.averageDifference,
-      details: result.details
-    });
-    
-    return result;
-  }, [studentData, recentRecords, classConfigs, getShiftInfo]);
+  }, [studentData, recentRecords, classConfigs]);
 
   // Khmer font utility
   const khmerFont = (additionalClasses: string = '') => {
@@ -380,12 +365,10 @@ const HealthArrivalChart: React.FC<HealthArrivalChartProps> = ({
       .attr('opacity', 0.8);
 
     // Draw average arrival time line if available
-    console.log('Drawing average line - averageDifference:', averageDifference, 'averageTime:', averageTime);
-    
     if (averageDifference !== null) {
-      console.log('Average line will be drawn at Y position:', yScale(averageDifference));
-      
-      const avgY = yScale(averageDifference);
+      // Cap the visual representation at 30 minutes but keep actual value for tooltip
+      const cappedDifference = Math.max(-30, Math.min(30, averageDifference));
+      const avgY = yScale(cappedDifference);
       const isLate = averageDifference > 0;
 
       const avgLine = g.append('line')

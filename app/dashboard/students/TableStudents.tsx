@@ -19,6 +19,16 @@ import { getStudentDailyStatus, markAttendance, calculateShiftRankings, calculat
 import { AllClassConfigs } from '../_lib/configForAttendanceLogic';
 import { PermissionRecord } from '../../_interfaces';
 
+// Helper function to get current date in Phnom Penh timezone (UTC+7)
+const getPhnomPenhDateString = (): string => {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Phnom_Penh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+};
+
 type Props = {
   students: Student[];
   onEdit: (student: Student) => void;
@@ -68,7 +78,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   // Take attendance state
   const [attendanceChanges, setAttendanceChanges] = useState<Map<string, boolean>>(new Map());
   const [savingAttendance, setSavingAttendance] = useState(false);
-  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(() => getPhnomPenhDateString());
   
   // Date picker state
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -82,6 +92,9 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   
   // Zoom state management
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+
+  // Shift filter state
+  const [selectedShift, setSelectedShift] = useState<'All' | 'Morning' | 'Afternoon' | 'Evening' | '12BP'>('All');
 
   // Filter students based on search query
   const filteredStudents = React.useMemo(() => {
@@ -500,8 +513,20 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   // Define the desired order of shifts
   const shiftOrder: ('Morning' | 'Afternoon' | 'Evening')[] = ['Morning', 'Afternoon', 'Evening'];
 
-  // Filter out students who are missing a class property to prevent 'undefined' groups
+  // Don't filter out BP students - they should appear in both their regular class and BP class
   const validStudents = filteredStudents.filter(student => student.class);
+  
+  // Get BP students separately, sort them, and override their shift to Evening
+  const bpStudents = React.useMemo(() => {
+    return filteredStudents
+      .filter(student => student.inBPClass)
+      .map(student => ({
+        ...student,
+        shift: 'Evening', // Override shift to Evening for BP class
+        class: '12BP' // Override class to 12BP for consistency
+      }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName));
+  }, [filteredStudents]);
 
   // 1. Group students by class, then by shift
   const groupedStudents = React.useMemo(() => {
@@ -1278,7 +1303,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                           </button>
                           <button
                             onClick={() => {
-                              const today = new Date().toISOString().split('T')[0];
+                              const today = getPhnomPenhDateString();
                               setSelectedAttendanceDate(today);
                               setShowDatePicker(false);
                             }}
@@ -1457,9 +1482,12 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           }}
           defaultModalTab={defaultModalTab}
           onDefaultModalTabChange={setDefaultModalTab}
+          selectedShift={selectedShift}
+          onShiftChange={setSelectedShift}
         />
 
       </div>      {/* Morning & Afternoon Section */}
+      {(selectedShift === 'All' || selectedShift === 'Morning' || selectedShift === 'Afternoon') && dayShiftClasses.length > 0 && (
       <div className="space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
@@ -1469,28 +1497,33 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="text-center">
-            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full shadow-lg mb-4">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              <span className="font-semibold">Morning Shift</span>
+          {(selectedShift === 'All' || selectedShift === 'Morning') && (
+            <div className="text-center">
+              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full shadow-lg mb-4">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span className="font-semibold">Morning Shift</span>
+              </div>
             </div>
-          </div>
-          <div className="text-center">
-            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-400 text-white rounded-full shadow-lg mb-4">
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              <span className="font-semibold">Afternoon Shift</span>
+          )}
+          {(selectedShift === 'All' || selectedShift === 'Afternoon') && (
+            <div className="text-center">
+              <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-400 text-white rounded-full shadow-lg mb-4">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <span className="font-semibold">Afternoon Shift</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {dayShiftClasses.length > 0 ? (
           <div className="space-y-6">
             {dayShiftClasses.map(className => (
               <div key={`${className}-day`} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {(selectedShift === 'All' || selectedShift === 'Morning') && (
                 <ClassTable 
                   studentList={groupedStudents[className]['Morning']} 
                   enabledColumns={enabledColumns}
@@ -1521,6 +1554,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   highlightText={highlightText}
                   waitlistCount={(groupedWaitlistStudents[className]?.Morning?.length || 0)}
                 />
+                )}
+                {(selectedShift === 'All' || selectedShift === 'Afternoon') && (
                 <ClassTable 
                   studentList={groupedStudents[className]['Afternoon']} 
                   enabledColumns={enabledColumns}
@@ -1551,6 +1586,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   highlightText={highlightText}
                   waitlistCount={(groupedWaitlistStudents[className]?.Afternoon?.length || 0)}
                 />
+                )}
               </div>
             ))}
           </div>
@@ -1565,9 +1601,10 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           </div>
         ) : null}
       </div>
+      )}
 
       {/* Evening Section */}
-      {eveningShiftClasses.length > 0 && (
+      {(selectedShift === 'All' || selectedShift === 'Evening') && eveningShiftClasses.length > 0 && (
         <div className="space-y-6 pt-8 border-t border-gray-200 dark:border-slate-700">
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
@@ -1620,6 +1657,58 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         </div>
       )}
 
+      {/* 12BP Class Section - Special class with custom student filtering */}
+      {(selectedShift === 'All' || selectedShift === '12BP') && bpStudents.length > 0 && (
+        <div className="space-y-6 pt-8 border-t border-gray-200 dark:border-slate-700">
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 via-rose-600 to-red-600 bg-clip-text text-transparent">
+              12BP Class
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Bridge Program - Special Class</p>
+            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-rose-700 to-pink-700 text-white rounded-full shadow-lg">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              <span className="font-semibold">Evening Shift</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ClassTable 
+              key="12BP-evening"
+              studentList={bpStudents} 
+              enabledColumns={enabledColumns}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onViewDetails={handleViewDetails}
+              className="12BP"
+              studentCount={bpStudents.length}
+              shift="Evening"
+              isBatchEditMode={isBatchEditMode}
+              isTakeAttendanceMode={isTakeAttendanceMode}
+              isFlipFlopPreviewMode={isFlipFlopPreviewMode}
+              onBatchUpdate={onBatchUpdate}
+              selectedStudents={selectedStudents}
+              onStudentSelect={handleStudentSelect}
+              onSelectAll={handleSelectAll}
+              getAttendanceStatus={getStudentAttendanceStatus}
+              getTodayAttendanceStatus={getTodayAttendanceStatus}
+              isStudentCurrentlyPresent={isStudentCurrentlyPresent}
+              onAttendanceChange={handleAttendanceChange}
+              calculateAverageArrivalTime={getAverageArrivalTime}
+              shiftRankings={shiftRankings}
+              forceCollapsed={isClassCollapsed("12BP")}
+              onClassToggle={handleClassToggle}
+              expandedClasses={expandedClasses}
+              onZoomToggle={handleZoomToggle}
+              searchQuery={searchQuery}
+              highlightText={highlightText}
+              waitlistCount={0}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Student Details Modal - rendered outside all table containers */}
       <StudentDetailsModal
         student={selectedStudent}
@@ -1631,6 +1720,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         currentIndex={selectedIndex}
         onNavigate={handleNavigate}
         defaultTab={defaultModalTab}
+        viewContext={selectedStudent?.class === '12BP' ? '12BP' : 'regular'}
       />
 
       {/* QR Code Modal for admin (lost receipt cases) */}

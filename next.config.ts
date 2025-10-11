@@ -54,7 +54,6 @@ const withPWA = require('next-pwa')({
     },
   ],
   buildExcludes: [/middleware-manifest\.json$/],
-  customWorkerDir: 'worker',
 });
 
 module.exports = withPWA({

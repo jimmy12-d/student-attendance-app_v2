@@ -148,6 +148,9 @@ export interface Student {
   // Flip preview flag for UI (not stored in database)
   isFlipPreview?: boolean;
   
+  // BP Class flag - true if student is in the special 12BP class
+  inBPClass?: boolean;
+  
   // Notification system version tracking (from fcmTokens collection)
   notificationVersion?: string; // Service worker version (e.g., 'v2.2.0-android-fix')
   notificationPlatform?: 'iOS' | 'Android' | 'other'; // Platform from FCM token

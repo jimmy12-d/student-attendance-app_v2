@@ -76,6 +76,8 @@ interface StudentDetailsModalProps {
   hideActions?: boolean; // When true, hides edit/delete/break buttons
   // Default tab to show when modal opens
   defaultTab?: 'basic' | 'actions' | 'requests'; // Default tab selection
+  // View context for BP students
+  viewContext?: 'regular' | '12BP'; // Context to determine which class config to use
 }
 
 export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
@@ -90,6 +92,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
   onBreak,
   hideActions = false,
   defaultTab = 'basic',
+  viewContext,
 }) => {
   const webcamRef = useRef<Webcam>(null);
   
@@ -1211,6 +1214,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           approvedPermissions={approvedPermissions}
           isActive={showAttendanceModal}
           onClose={() => setShowAttendanceModal(false)}
+          viewContext={viewContext}
         />
       )}
 

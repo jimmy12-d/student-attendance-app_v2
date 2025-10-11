@@ -658,7 +658,7 @@ exports.parentBotWebhook = onRequest({
                     `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា\n` +
                     `• មើលលទ្ធផលប្រលង\n\n` +
                     `ប្រសិនបើបងត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែម សូមស្នើសុំតំណចុះឈ្មោះថ្មីពីសាលា។\n\n` +
-                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទង \\@RodwellLC076`,
+                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
                     { parse_mode: 'Markdown' }
                 );
                 return res.status(200).send('OK');
@@ -678,7 +678,7 @@ exports.parentBotWebhook = onRequest({
                 `• ការស្នើសុំអនុញ្ញាតត្រូវបានយល់ព្រម ឬបដិសេធ\n` +
                 `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សារបស់កូន\n` +
                 `• មើលលទ្ធផលប្រលងរបស់កូន\n\n` +
-                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទង \\@RodwellLC076`,
+                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
                 { parse_mode: 'Markdown' }
             );
         } else if (text === '/parent' || text === '/parentinfo') {
@@ -687,22 +687,95 @@ exports.parentBotWebhook = onRequest({
             await handleMockExamResultDeepLink(bot, chatId, userId, 'check_mock_exam_result');
         } else if (text === '/payment') {
             await handlePaymentStatusCommand(bot, chatId, userId);
+        } else if (text === '/attendance') {
+            // Check attendance for registered students
+            const parentQuery = await db.collection('parentNotifications')
+                .where('telegramUserId', '==', userId.toString())
+                .where('isActive', '==', true)
+                .get();
+            
+            if (parentQuery.empty) {
+                await bot.sendMessage(chatId, 
+                    `🔍 បងមិនទាន់បានចុះឈ្មោះទទួលការជូនដំណឹងអំពីកូនរបស់បងនៅឡើយទេ។\n\n` +
+                    `ដើម្បីពិនិត្យវត្តមាន សូមចុះឈ្មោះជាមុនសិន។\n\n` +
+                    `វាយ /start ដើម្បីចាប់ផ្តើម។`
+                );
+                return res.status(200).send('OK');
+            }
+            
+            const today = new Date();
+            const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            let attendanceMessage = `📍 **ពិនិត្យវត្តមានសិស្ស**\n\n`;
+            
+            for (const doc of parentQuery.docs) {
+                const parentData = doc.data();
+                const studentId = parentData.studentId;
+                const studentName = parentData.studentKhmerName || parentData.studentName;
+                
+                try {
+                    // Query attendance for today
+                    const attendanceQuery = await db.collection('attendance')
+                        .where('studentId', '==', studentId)
+                        .where('date', '==', todayString)
+                        .limit(1)
+                        .get();
+                    
+                    if (!attendanceQuery.empty) {
+                        const attendanceData = attendanceQuery.docs[0].data();
+                        const attendanceTimeUTC = attendanceData.timestamp.toDate();
+                        // Convert to Phnom Penh time (UTC+7)
+                        const attendanceTime = new Date(attendanceTimeUTC.getTime() + (7 * 60 * 60 * 1000));
+                        const status = calculateAttendanceStatus(attendanceTime, parentData.classStartTime);
+                        
+                        attendanceMessage += `👤 **${studentName}**\n`;
+                        attendanceMessage += `✅ បានមកដល់សាលា\n`;
+                        attendanceMessage += `🕐 ម៉ោង: ${formatTimeInKhmer(attendanceTime)}\n`;
+                        if (status) {
+                            attendanceMessage += `📊 ស្ថានភាព: ${status.status} ${status.statusIcon}\n`;
+                        }
+                        attendanceMessage += `\n`;
+                    } else {
+                        attendanceMessage += `👤 **${studentName}**\n`;
+                        attendanceMessage += `❌ កូនរបស់បងមិនទាន់មកដល់សាលានៅឡើយទេ\n\n`;
+                    }
+                } catch (error) {
+                    console.error(`Error checking attendance for student ${studentId}:`, error);
+                    attendanceMessage += `👤 **${studentName}**\n`;
+                    attendanceMessage += `⚠️ មានបញ្ហាក្នុងការពិនិត្យវត្តមាន\n\n`;
+                }
+            }
+            
+            await bot.sendMessage(chatId, attendanceMessage, { parse_mode: 'Markdown' });
         } else if (text === '/help') {
+            const helpKeyboard = {
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '💰 ស្ថានភាពបង់ថ្លៃ', callback_data: 'help_payment' },
+                            { text: '📚 លទ្ធផលប្រលង', callback_data: 'help_exam' }
+                        ],
+                        [
+                            { text: '📍 ពិនិត្យវត្តមាន', callback_data: 'help_attendance' },
+                            { text: '❓ ជំនួយ', callback_data: 'help_help' }
+                        ],
+                    ]
+                }
+            };
+
             await bot.sendMessage(chatId, 
                 `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
-                `🔸 */start* - ចាប់ផ្តើម ឬពិនិត្យស្ថានភាពចុះឈ្មោះ\n` +
-                `🔸 */parent* - មើលពត៌មានការចុះឈ្មោះរបស់បង\n` +
-                `🔸 */payment* - ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សារបស់កូន\n` +
-                `🔸 */check\_mock\_exam\_result* - មើលលទ្ធផលប្រលងរបស់កូន\n` +
-                `🔸 */help* - បង្ហាញមេនុយជំនួយនេះ\n\n` +
-                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទង \\@RodwellLC076\n\n` +
+                `សូមជ្រើសរើសពាក្យបញ្ជាដែលបងចង់ប្រើ៖\n\n` +
+                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076\n\n` +
                 `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'Markdown', ...helpKeyboard }
             );
         } else {
             // Send helpful message for unrecognized commands
             await bot.sendMessage(chatId, 
-                `ខ្ញុំមិនយល់ពាក្យបញ្ជានេះទេ។ សូមចុច /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។`
+                '🤖 នេះគ្រាន់តែជា Bot។\n'
+                `ខ្ញុំមិនយល់ពាក្យបញ្ជានេះទេ។ សូមចុច /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។\n\n` +
+                `ឬ សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`
             );
         }
 
@@ -985,6 +1058,117 @@ const handlePaymentStatusCommand = async (bot, chatId, userId) => {
 };
 
 /**
+ * Generate calendar keyboard for attendance date selection
+ * @param year - Year to display
+ * @param month - Month to display (0-11)
+ * @returns Inline keyboard markup for calendar
+ */
+const generateCalendarKeyboard = (year, month) => {
+    const khmerNumbers = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+    const khmerMonths = [
+        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+    ];
+    
+    const convertToKhmerNumber = (num) => {
+        return num.toString().split('').map(digit => khmerNumbers[parseInt(digit)]).join('');
+    };
+    
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    const currentDate = today.getDate();
+    
+    // Create date object for the requested month
+    const date = new Date(year, month, 1);
+    const monthName = khmerMonths[month];
+    const yearKhmer = convertToKhmerNumber(year);
+    
+    // Get first day of month and total days
+    const firstDay = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // Create keyboard array
+    const keyboard = [];
+    
+    // Header row with month/year and navigation
+    const headerRow = [];
+    if (year > currentYear - 1 || (year === currentYear - 1 && month >= currentMonth)) {
+        headerRow.push({ text: '< ខែមុន', callback_data: `calendar_prev_${year}_${month}` });
+    } else {
+        headerRow.push({ text: ' ', callback_data: 'calendar_ignore' });
+    }
+    
+    headerRow.push({ text: `${monthName} ${yearKhmer}`, callback_data: 'calendar_ignore' });
+    
+    if (year < currentYear || (year === currentYear && month < currentMonth)) {
+        headerRow.push({ text: 'ខែបន្ទាប់ >', callback_data: `calendar_next_${year}_${month}` });
+    } else {
+        headerRow.push({ text: ' ', callback_data: 'calendar_ignore' });
+    }
+    
+    keyboard.push(headerRow);
+    
+    // Generate calendar grid (removed day headers)
+    let weekRow = [];
+    let dayCount = 1;
+    
+    // Add empty cells for days before the first day of month
+    for (let i = 0; i < firstDay; i++) {
+        weekRow.push({ text: ' ', callback_data: 'calendar_ignore' });
+    }
+    
+    // Add days of the month
+    while (dayCount <= daysInMonth) {
+        if (weekRow.length === 7) {
+            keyboard.push(weekRow);
+            weekRow = [];
+        }
+        
+        const dayText = dayCount.toString(); // Use English numerals for better readability
+        const isToday = year === currentYear && month === currentMonth && dayCount === currentDate;
+        const isPastOrToday = year < currentYear || (year === currentYear && month < currentMonth) || 
+                            (year === currentYear && month === currentMonth && dayCount <= currentDate);
+        
+        let buttonText = dayText;
+        if (isToday) {
+            buttonText = `●${dayText}`; // Mark today with a dot
+        }
+        
+        const callbackData = isPastOrToday ? 
+            `attendance_date_${year}-${String(month + 1).padStart(2, '0')}-${String(dayCount).padStart(2, '0')}` : 
+            'calendar_ignore';
+        
+        weekRow.push({ 
+            text: buttonText, 
+            callback_data: callbackData 
+        });
+        
+        dayCount++;
+    }
+    
+    // Fill remaining cells in the last week
+    while (weekRow.length < 7) {
+        weekRow.push({ text: ' ', callback_data: 'calendar_ignore' });
+    }
+    
+    if (weekRow.length > 0) {
+        keyboard.push(weekRow);
+    }
+    
+    // Add back button
+    keyboard.push([
+        { text: '⬅️ ត្រឡប់', callback_data: 'calendar_back' }
+    ]);
+    
+    return {
+        reply_markup: {
+            inline_keyboard: keyboard
+        }
+    };
+};
+
+/**
  * Handle /start command for parent registration
  */
 const handleParentStartCommand = async (bot, chatId, userId, token) => {
@@ -1057,7 +1241,7 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
 📝 កូនរបស់បងស្នើសុំការអនុញ្ញាតចាកចេញមុន
 🚪 ការស្នើសុំអនុញ្ញាតរបស់កូនរបស់បងត្រូវបានយល់ព្រម/បដិសេធ
 
-🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទង \\@RodwellLC076
+🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076
 
 វាយ /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។`;
 
@@ -1159,6 +1343,308 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
 
         if (data.startsWith('exam_result_')) {
             await handleExamResultSelection(bot, chatId, userId, messageId, data);
+        } else if (data === 'check_payment') {
+            await handlePaymentStatusCommand(bot, chatId, userId);
+        } else if (data === 'check_mock_exam') {
+            await handleMockExamResultDeepLink(bot, chatId, userId, 'check_mock_exam_result');
+        } else if (data === 'check_attendance') {
+            // Show calendar for attendance checking
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth(); // 0-based
+            
+            const calendarKeyboard = generateCalendarKeyboard(currentYear, currentMonth);
+            await bot.sendMessage(
+                chatId,
+                `📅 **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
+                `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
+                `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                {
+                    parse_mode: 'Markdown',
+                    ...calendarKeyboard
+                }
+            );
+        } else if (data.startsWith('calendar_prev_')) {
+            // Handle calendar previous month navigation
+            const [, , year, month] = data.split('_');
+            const prevYear = parseInt(year);
+            const prevMonth = parseInt(month) - 1;
+            
+            let newYear = prevYear;
+            let newMonth = prevMonth;
+            
+            if (newMonth < 0) {
+                newMonth = 11;
+                newYear = prevYear - 1;
+            }
+            
+            const calendarKeyboard = generateCalendarKeyboard(newYear, newMonth);
+            await bot.editMessageText(
+                `📅 **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
+                `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
+                `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    ...calendarKeyboard
+                }
+            );
+        } else if (data.startsWith('calendar_next_')) {
+            // Handle calendar next month navigation
+            const [, , year, month] = data.split('_');
+            const nextYear = parseInt(year);
+            const nextMonth = parseInt(month) + 1;
+            
+            let newYear = nextYear;
+            let newMonth = nextMonth;
+            
+            if (newMonth > 11) {
+                newMonth = 0;
+                newYear = nextYear + 1;
+            }
+            
+            const calendarKeyboard = generateCalendarKeyboard(newYear, newMonth);
+            await bot.editMessageText(
+                `📅 **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
+                `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
+                `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    ...calendarKeyboard
+                }
+            );
+        } else if (data === 'calendar_back') {
+            // Handle back button - return to help menu
+            const helpKeyboard = {
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '💰 ស្ថានភាពបង់ថ្លៃ', callback_data: 'help_payment' },
+                            { text: '📚 លទ្ធផលប្រលង', callback_data: 'help_exam' }
+                        ],
+                        [
+                            { text: '📍 ពិនិត្យវត្តមាន', callback_data: 'help_attendance' },
+                            { text: '❓ ជំនួយ', callback_data: 'help_help' }
+                        ],
+                    ]
+                }
+            };
+            
+            await bot.editMessageText(
+                `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
+                `សូមជ្រើសរើសពាក្យបញ្ជាដែលបងចង់ប្រើ៖\n\n` +
+                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076\n\n` +
+                `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    ...helpKeyboard
+                }
+            );
+        } else if (data.startsWith('attendance_date_')) {
+            // Handle date selection for attendance checking
+            const selectedDate = data.replace('attendance_date_', ''); // Format: YYYY-MM-DD
+            
+            // Check if parent is registered
+            const parentQuery = await db.collection('parentNotifications')
+                .where('telegramUserId', '==', userId.toString())
+                .where('isActive', '==', true)
+                .get();
+            
+            if (parentQuery.empty) {
+                await bot.editMessageText(
+                    `🔍 បងមិនទាន់បានចុះឈ្មោះទទួលការជូនដំណឹងអំពីកូនរបស់បងនៅឡើយទេ។\n\n` +
+                    `ដើម្បីពិនិត្យវត្តមាន សូមចុះឈ្មោះជាមុនសិន។\n\n` +
+                    `វាយ /start ដើម្បីចាប់ផ្តើម។`,
+                    {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        parse_mode: 'Markdown'
+                    }
+                );
+                return;
+            }
+            
+            // Format date for display
+            const dateParts = selectedDate.split('-');
+            const khmerNumbers = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+            const khmerMonths = [
+                'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+                'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+            ];
+            
+            const convertToKhmerNumber = (num) => {
+                return num.toString().split('').map(digit => khmerNumbers[parseInt(digit)]).join('');
+            };
+            
+            const displayDate = `${convertToKhmerNumber(dateParts[2])} ${khmerMonths[parseInt(dateParts[1]) - 1]} ${convertToKhmerNumber(dateParts[0])}`;
+            
+            let attendanceMessage = `📍 **ពិនិត្យវត្តមានសិស្ស**\n`;
+            attendanceMessage += `📅 **ថ្ងៃទី:** ${displayDate}\n\n`;
+            
+            for (const doc of parentQuery.docs) {
+                const parentData = doc.data();
+                const studentId = parentData.studentId;
+                const studentName = parentData.studentKhmerName || parentData.studentName;
+                
+                try {
+                    // Query attendance for selected date
+                    const attendanceQuery = await db.collection('attendance')
+                        .where('studentId', '==', studentId)
+                        .where('date', '==', selectedDate)
+                        .limit(1)
+                        .get();
+                    
+                    if (!attendanceQuery.empty) {
+                        const attendanceData = attendanceQuery.docs[0].data();
+                        const attendanceTimeUTC = attendanceData.timestamp.toDate();
+                        // Convert to Phnom Penh time (UTC+7)
+                        const attendanceTime = new Date(attendanceTimeUTC.getTime() + (7 * 60 * 60 * 1000));
+                        const status = calculateAttendanceStatus(attendanceTime, parentData.classStartTime);
+                        
+                        attendanceMessage += `👤 **${studentName}**\n`;
+                        attendanceMessage += `✅ បានមកដល់សាលា\n`;
+                        attendanceMessage += `🕐 ម៉ោង: ${formatTimeInKhmer(attendanceTime)}\n`;
+                        if (status) {
+                            attendanceMessage += `📊 ស្ថានភាព: ${status.status} ${status.statusIcon}\n`;
+                        }
+                        attendanceMessage += `\n`;
+                    } else {
+                        attendanceMessage += `👤 **${studentName}**\n`;
+                        attendanceMessage += `❌ កូនរបស់បងមិនទាន់មកដល់សាលានៅថ្ងៃនោះទេ\n\n`;
+                    }
+                } catch (error) {
+                    console.error(`Error checking attendance for student ${studentId}:`, error);
+                    attendanceMessage += `👤 **${studentName}**\n`;
+                    attendanceMessage += `⚠️ មានបញ្ហាក្នុងការពិនិត្យវត្តមាន\n\n`;
+                }
+            }
+            
+            // Add back button to return to calendar
+            const backKeyboard = {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '⬅️ ត្រឡប់ទៅប្រតិទិន', callback_data: 'calendar_back_to_calendar' }]
+                    ]
+                }
+            };
+            
+            await bot.editMessageText(attendanceMessage, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown',
+                ...backKeyboard
+            });
+        } else if (data === 'calendar_back_to_calendar') {
+            // Return to calendar view
+            const today = new Date();
+            const calendarKeyboard = generateCalendarKeyboard(today.getFullYear(), today.getMonth());
+            
+            await bot.editMessageText(
+                `📅 **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
+                `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
+                `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    ...calendarKeyboard
+                }
+            );
+        } else if (data.startsWith('help_')) {
+            const command = data.replace('help_', '');
+            if (command === 'start') {
+                // Handle start command logic
+                const parentQuery = await db.collection('parentNotifications')
+                    .where('telegramUserId', '==', userId.toString())
+                    .where('isActive', '==', true)
+                    .get();
+                
+                if (!parentQuery.empty) {
+                    // User is already registered as a parent
+                    const parentRegistrations = parentQuery.docs.map(doc => doc.data());
+                    const studentNamesList = parentRegistrations.map(p => {
+                        // Use Khmer name if available, otherwise use English name
+                        const displayName = p.studentKhmerName || p.studentName;
+                        return `• ${displayName}`;
+                    }).join('\n');
+                    
+                    await bot.sendMessage(chatId, 
+                        `👋 សួស្តីបង! បងបានចុះឈ្មោះទទួលការជូនដំណឹងរួចរាល់ហើយសម្រាប់៖\n\n` +
+                        `👤 **សិស្ស:**\n${studentNamesList}\n\n` +
+                        `📚 **សេវាកម្មដែលមាន:**\n` +
+                        `• ការជូនដំណឹងវត្តមាន\n` +
+                        `• ការជូនដំណឹងពេលសិស្សសុំច្បាប់\n` +
+                        `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា\n` +
+                        `• មើលលទ្ធផលប្រលង\n\n` +
+                        `ប្រសិនបើបងត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែម សូមស្នើសុំតំណចុះឈ្មោះថ្មីពីសាលា។\n\n` +
+                        `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
+                        { parse_mode: 'Markdown' }
+                    );
+                    return;
+                }
+                
+                // Not registered yet - send welcome message
+                await bot.sendMessage(chatId, 
+                    `👋 សួស្តីបង! ចូលមកកាន់ប្រព័ន្ធជូនដំណឹងវត្តមានសាលា Rodwell។\n\n` +
+                    `🔍 បងមិនទាន់បានចុះឈ្មោះទទួលការជូនដំណឹងអំពីកូនរបស់បងនៅឡើយទេ។\n\n` +
+                    `ដើម្បីចុះឈ្មោះទទួលការជូនដំណឹងអំពីវត្តមាន និងការស្នើសុំការអនុញ្ញាតរបស់កូន៖\n` +
+                    `1. ទាក់ទងសាលារបស់កូនរបស់បង\n` +
+                    `2. ស្នើសុំតំណចុះឈ្មោះសម្រាប់ម្តាយឪពុក\n` +
+                    `3. ចុចតំណដើម្បីចុះឈ្មោះ\n\n` +
+                    `📚 បន្ទាប់ពីចុះឈ្មោះ បងនឹងទទួលបានការជូនដំណឹងនៅពេល៖\n` +
+                    `• កូនរបស់បងមកដល់សាលា\n` +
+                    `• កូនរបស់បងស្នើសុំការអនុញ្ញាតចាកចេញមុន\n` +
+                    `• ការស្នើសុំអនុញ្ញាតត្រូវបានយល់ព្រម ឬបដិសេធ\n` +
+                    `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សារបស់កូន\n` +
+                    `• មើលលទ្ធផលប្រលងរបស់កូន\n\n` +
+                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
+                    { parse_mode: 'Markdown' }
+                );
+            } else if (command === 'parent') {
+                await handleParentInfoCommand(bot, chatId, userId);
+            } else if (command === 'payment') {
+                await handlePaymentStatusCommand(bot, chatId, userId);
+            } else if (command === 'exam') {
+                await handleMockExamResultDeepLink(bot, chatId, userId, 'check_mock_exam_result');
+            } else if (command === 'attendance') {
+                // Show calendar for attendance date selection
+                const today = new Date();
+                const calendarKeyboard = generateCalendarKeyboard(today.getFullYear(), today.getMonth());
+                
+                await bot.sendMessage(chatId, 
+                    `� **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
+                    `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
+                    `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                    { parse_mode: 'Markdown', ...calendarKeyboard }
+                );
+            } else if (command === 'help') {
+                // Resend help menu
+            const helpKeyboard = {
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            { text: '💰 ស្ថានភាពបង់ថ្លៃ', callback_data: 'help_payment' },
+                            { text: '📚 លទ្ធផលប្រលង', callback_data: 'help_exam' }
+                        ],
+                        [
+                            { text: '📍 ពិនិត្យវត្តមាន', callback_data: 'help_attendance' },
+                            { text: '❓ ជំនួយ', callback_data: 'help_help' }
+                        ],
+                    ]
+                }
+            };                await bot.sendMessage(chatId, 
+                    `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
+                    `សូមជ្រើសរើសពាក្យបញ្ជាដែលបងចង់ប្រើ៖\n\n` +
+                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076\n\n` +
+                    `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
+                    { parse_mode: 'Markdown', ...helpKeyboard }
+                );
+            }
         }
 
     } catch (error) {
@@ -3365,7 +3851,19 @@ ${attendanceStatus.statusIcon} **ស្ថានភាព:** ${attendanceStatus.
 
 ✅ កូនរបស់បងបានមកដល់សាលាដោយសុវត្ថិភាព!`;
 
-                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                const attendanceKeyboard = {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                { text: '💰 ពិនិត្យបង់ថ្លៃ', callback_data: 'check_payment' },
+                                { text: '📝 ពិនិត្យប្រលង', callback_data: 'check_mock_exam' },
+                                { text: '📅 ពិនិត្យវត្តមាន', callback_data: 'check_attendance' }
+                            ]
+                        ]
+                    }
+                };
+
+                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...attendanceKeyboard });
                 notificationsSent++;
                 
                 logger.info(`Attendance notification sent to parent chat ${chatId} for student ${studentId}`);
@@ -4669,9 +5167,13 @@ exports.notifyStudentAttendance = onDocumentCreated({
             const fcmTokens = fcmTokensSnapshot.docs.map(doc => doc.data().token);
             
             const message = {
+                notification: {
+                    title: notificationTitle,
+                    body: notificationBody
+                },
                 data: {
-                    title: notificationTitle, // Pass as data
-                    body: notificationBody,   // Pass as data
+                    title: notificationTitle, // Pass as data for Android compatibility
+                    body: notificationBody,   // Pass as data for Android compatibility
                     type: 'attendance',
                     status: status,
                     arrivalTime: timeIn,
@@ -4682,6 +5184,18 @@ exports.notifyStudentAttendance = onDocumentCreated({
                     badge: '/icon-192x192-3d.png'
                 },
                 tokens: fcmTokens,
+                apns: {
+                    payload: {
+                        aps: {
+                            alert: {
+                                title: notificationTitle,
+                                body: notificationBody
+                            },
+                            sound: 'default',
+                            badge: 1
+                        }
+                    }
+                },
                 webpush: {
                     fcmOptions: {
                         link: '/student/attendance'

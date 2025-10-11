@@ -239,6 +239,16 @@ const calculateAttendanceScore = (
   };
 };
 
+// Helper function to get current date in Phnom Penh timezone (UTC+7)
+const getPhnomPenhDateString = (): string => {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Phnom_Penh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+};
+
 export default function AttendanceScorePage() {
   const { isAuthenticated, isAuthorizedAdmin, isLoading: isAuthLoading } = useAuthContext();
   
@@ -250,13 +260,20 @@ export default function AttendanceScorePage() {
   
   // Date range state
   const [startDate, setStartDate] = useState(() => {
-    const date = new Date();
-    date.setDate(1); // First day of current month
-    return date.toISOString().split('T')[0];
+    // Get first day of current month in Phnom Penh timezone
+    const now = new Date();
+    const phnomPenhTime = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Phnom_Penh',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(now);
+    const [year, month] = phnomPenhTime.split('-');
+    return `${year}-${month}-01`;
   });
   
   const [endDate, setEndDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
+    return getPhnomPenhDateString(); // Use Phnom Penh timezone
   });
 
   // Date picker state
@@ -1309,7 +1326,7 @@ export default function AttendanceScorePage() {
                       </button>
                       <button
                         onClick={() => {
-                          const today = new Date().toISOString().split('T')[0];
+                          const today = getPhnomPenhDateString();
                           setStartDate(today);
                           setShowStartDatePicker(false);
                         }}
@@ -1387,7 +1404,7 @@ export default function AttendanceScorePage() {
                       </button>
                       <button
                         onClick={() => {
-                          const today = new Date().toISOString().split('T')[0];
+                          const today = getPhnomPenhDateString();
                           setEndDate(today);
                           setShowEndDatePicker(false);
                         }}

@@ -79,11 +79,7 @@ export const getStudentDailyStatus = (
     if (studentCreatedAt && checkDate <= studentCreatedAt && (!attendanceRecord || !attendanceRecord.status || attendanceRecord.status !== "present")) return { status: "Not Yet Enrolled" };
     if (!isSchoolDay(checkDate, classStudyDays)) return { status: "No School" };
 
-    // Check for permissions first - permissions take precedence over attendance records
-    if (approvedPermissionsForStudent && approvedPermissionsForStudent.some(p => checkDateStr >= p.permissionStartDate && checkDateStr <= p.permissionEndDate)) {
-        return { status: "Permission" };
-    }
-
+    // Check attendance record first - prioritize actual attendance over permissions
     if (attendanceRecord) {
         // Check if the attendance record has a valid status property
         if (!attendanceRecord.status) {
@@ -91,14 +87,44 @@ export const getStudentDailyStatus = (
             return { status: "Unknown" };
         }
         
-        const status = attendanceRecord.status === 'present' ? "Present" :
-                       attendanceRecord.status === 'late'    ? "Late"    : "Unknown";
-        let time;
-        if (attendanceRecord.timestamp) {
-            const recordTime = attendanceRecord.timestamp instanceof Timestamp ? attendanceRecord.timestamp.toDate() : attendanceRecord.timestamp as Date;
-            time = recordTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+        // Verify that the attendance record's shift matches the student's current shift
+        // This is important for students who might have multiple shifts or flip-flop schedules
+        if (attendanceRecord.shift && student.shift) {
+            const recordShift = attendanceRecord.shift.toLowerCase();
+            const studentShift = student.shift.toLowerCase();
+            
+            // If shifts don't match, ignore this attendance record and continue to check permissions/absence
+            if (recordShift !== studentShift) {
+                console.warn(`Attendance record shift (${recordShift}) does not match student shift (${studentShift}) for student ${student.studentId} on ${checkDateStr}`);
+                // Don't return here - fall through to check permissions or mark as absent
+            } else {
+                // Shifts match, return the attendance status
+                const status = attendanceRecord.status === 'present' ? "Present" :
+                               attendanceRecord.status === 'late'    ? "Late"    : "Unknown";
+                let time;
+                if (attendanceRecord.timestamp) {
+                    const recordTime = attendanceRecord.timestamp instanceof Timestamp ? attendanceRecord.timestamp.toDate() : attendanceRecord.timestamp as Date;
+                    time = recordTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                }
+                return { status, time };
+            }
+        } else {
+            // If shift information is missing from either record or student, accept the attendance record as valid
+            // This maintains backward compatibility with older records
+            const status = attendanceRecord.status === 'present' ? "Present" :
+                           attendanceRecord.status === 'late'    ? "Late"    : "Unknown";
+            let time;
+            if (attendanceRecord.timestamp) {
+                const recordTime = attendanceRecord.timestamp instanceof Timestamp ? attendanceRecord.timestamp.toDate() : attendanceRecord.timestamp as Date;
+                time = recordTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            }
+            return { status, time };
         }
-        return { status, time };
+    }
+
+    // Check for permissions only if no attendance record exists
+    if (approvedPermissionsForStudent && approvedPermissionsForStudent.some(p => checkDateStr >= p.permissionStartDate && checkDateStr <= p.permissionEndDate)) {
+        return { status: "Permission" };
     } else { // No attendance record
         if (checkDate.getTime() === today.getTime()) {
             const studentShiftKey = student.shift;
@@ -223,12 +249,29 @@ export const calculateMonthlyLates = (
     return { count: lateCount, details: `${lateCount} lates in ${monthLabel}` };
 };
 
-// Function to parse timeIn string (24-hour format like "07:15") to minutes since midnight
+// Function to parse timeIn string (12-hour format like "03:36 PM") to minutes since midnight
 function parseTimeInToMinutes(timeInString: string): number | null {
   if (!timeInString) return null;
 
   try {
-    const [hours, minutes] = timeInString.split(':').map(Number);
+    // Handle 12-hour format with AM/PM
+    const match = timeInString.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) {
+      // Fallback to 24-hour if no AM/PM
+      const [hours, minutes] = timeInString.split(':').map(Number);
+      return hours * 60 + minutes;
+    }
+    
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    const ampm = match[3].toUpperCase();
+    
+    if (ampm === 'PM' && hours !== 12) {
+      hours += 12;
+    } else if (ampm === 'AM' && hours === 12) {
+      hours = 0;
+    }
+    
     return hours * 60 + minutes;
   } catch (error) {
     console.error(`Error parsing timeIn: ${timeInString}`, error);
@@ -314,6 +357,12 @@ export const calculateAverageArrivalTime = (
             // If difference is more negative than -30 (e.g., -45), set it to -30
             if (difference < -30) {
                 difference = -30;
+            }
+            
+            // Cap late arrivals at 90 minutes late maximum
+            // If difference is more positive than 90 (e.g., 120), set it to 90
+            if (difference > 90) {
+                difference = 90;
             }
             
             arrivalDifferences.push(difference);

@@ -6,6 +6,9 @@ export const useStudentForm = (initialData) => {
   const [nameKhmer, setNameKhmer] = useState('');
   const [phone, setPhone] = useState('');
   const [scheduleType, setScheduleType] = useState('');
+  const [birthDay, setBirthDay] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthYear, setBirthYear] = useState('');
   const [motherName, setMotherName] = useState('');
   const [motherPhone, setMotherPhone] = useState('');
   const [fatherName, setFatherName] = useState('');
@@ -39,6 +42,22 @@ export const useStudentForm = (initialData) => {
       setShift(initialData.shift || '');
       setScheduleType(initialData.scheduleType || '');
       
+      // Handle date of birth - could be in different formats
+      if (initialData.dateOfBirth) {
+        // If dateOfBirth is a string in YYYY-MM-DD format
+        if (typeof initialData.dateOfBirth === 'string') {
+          const [year, month, day] = initialData.dateOfBirth.split('-');
+          setBirthYear(year || '');
+          setBirthMonth(month || '');
+          setBirthDay(day || '');
+        }
+      } else if (initialData.birthYear || initialData.birthMonth || initialData.birthDay) {
+        // If already split into separate fields
+        setBirthYear(initialData.birthYear || '');
+        setBirthMonth(initialData.birthMonth || '');
+        setBirthDay(initialData.birthDay || '');
+      }
+      
       setMotherName(initialData.motherName || '');
       setMotherPhone(initialData.motherPhone || '');
       setFatherName(initialData.fatherName || '');
@@ -64,6 +83,9 @@ export const useStudentForm = (initialData) => {
       setStudentClass('');
       setShift('');
       setScheduleType('');
+      setBirthDay('');
+      setBirthMonth('');
+      setBirthYear('');
       setMotherName('');
       setMotherPhone('');
       setFatherName('');
@@ -136,6 +158,11 @@ export const useStudentForm = (initialData) => {
     // Late fee permission is a boolean, so we always include it
     data.lateFeePermission = lateFeePermission;
     
+    // Combine birth date fields into dateOfBirth
+    if (birthYear && birthMonth && birthDay) {
+      data.dateOfBirth = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
+    }
+    
     // If adding to waitlist, set waitlistDate to current timestamp
     if (onWaitlist) {
       data.waitlistDate = new Date();
@@ -162,6 +189,9 @@ export const useStudentForm = (initialData) => {
     nameKhmer, setNameKhmer,
     phone, setPhone,
     scheduleType, setScheduleType,
+    birthDay, setBirthDay,
+    birthMonth, setBirthMonth,
+    birthYear, setBirthYear,
     motherName, setMotherName,
     motherPhone, setMotherPhone,
     fatherName, setFatherName,

@@ -91,6 +91,16 @@ const getCurrentShift = (): 'Morning' | 'Afternoon' | 'Evening' => {
   }
 };
 
+// Helper function to get current date in Phnom Penh timezone (UTC+7)
+const getPhnomPenhDateString = (): string => {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Phnom_Penh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+};
+
 export default function AttendanceRecordPage() {
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [rawAttendanceRecords, setRawAttendanceRecords] = useState<RawAttendanceRecord[]>([]);
@@ -122,7 +132,7 @@ export default function AttendanceRecordPage() {
   const [currentShift, setCurrentShift] = useState<'Morning' | 'Afternoon' | 'Evening'>(getCurrentShift());
 
   // Date filter state
-  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState<string>(getPhnomPenhDateString());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -130,8 +140,7 @@ export default function AttendanceRecordPage() {
 
   // Get today's date string for filtering
   const today = useMemo(() => {
-    const now = new Date();
-    return now.toISOString().split('T')[0]; // YYYY-MM-DD format
+    return getPhnomPenhDateString(); // Use Phnom Penh timezone
   }, []);
 
   // Date picker functionality
@@ -206,7 +215,7 @@ export default function AttendanceRecordPage() {
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentMonth, currentYear);
     const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
-    const days = [];
+    const days: React.ReactElement[] = [];
     const todayDate = new Date();
     const selectedDateObj = selectedDate ? new Date(selectedDate + 'T00:00:00') : null;
 
@@ -470,6 +479,8 @@ export default function AttendanceRecordPage() {
           timestamp: attendanceRecord.timestamp instanceof Date 
             ? Timestamp.fromDate(attendanceRecord.timestamp)
             : attendanceRecord.timestamp,
+          shift: attendanceRecord.shift || student.shift, // Include shift from record or fallback to student shift
+          class: attendanceRecord.class || student.class, // Include class info
         } : undefined,
         allClassConfigs,
         approvedPermissionsForStudent
@@ -1159,7 +1170,7 @@ export default function AttendanceRecordPage() {
                   </button>
                   <button
                     onClick={() => {
-                      const today = new Date().toISOString().split('T')[0];
+                      const today = getPhnomPenhDateString();
                       setSelectedDate(today);
                       setShowDatePicker(false);
                     }}

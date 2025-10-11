@@ -28,7 +28,6 @@ import { offlineAttendanceManager, OfflineAttendanceRecord } from './utils/offli
 const FaceApiAttendanceScanner = () => {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Initializing...');
@@ -57,6 +56,8 @@ const FaceApiAttendanceScanner = () => {
     { value: 'Evening', label: 'Evening Session' }
   ]);
   const [classConfigs, setClassConfigs] = useState<any>(null); // Store class configurations
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isDetectingRef = useRef(false);
@@ -303,35 +304,34 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
     }
   }, [minFaceSize, maxFaceSize, recognitionThreshold, detectionInterval, selectedShift, isInitialized]);
 
-  // Initialize success sound
+  // Initialize success sound using Web Audio API
   useEffect(() => {
-    const audio = new Audio('/success_sound_3.mp3');
-    audio.preload = 'auto';
-    audio.volume = 0.8;
-    audioRef.current = audio;
-    
-    // Test if audio can be played
-    const testAudio = () => {
-      if (audioRef.current) {
-        audioRef.current.play().then(() => {
-          audioRef.current?.pause();
-          audioRef.current!.currentTime = 0;
-        }).catch(e => {
-          // Audio test failed silently
-        });
+    const initAudio = async () => {
+      try {
+        // Create audio context on user interaction
+        const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+        setAudioContext(context);
+
+        // Load audio file
+        const response = await fetch('/success_sound_3.mp3');
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = await context.decodeAudioData(arrayBuffer);
+        setAudioBuffer(buffer);
+      } catch (error) {
+        console.error('Failed to initialize audio:', error);
       }
     };
-    
-    // Test audio on first user interaction
+
+    // Initialize on first user interaction
     const enableAudio = () => {
-      testAudio();
+      initAudio();
       document.removeEventListener('click', enableAudio);
       document.removeEventListener('touchstart', enableAudio);
     };
-    
+
     document.addEventListener('click', enableAudio);
     document.addEventListener('touchstart', enableAudio);
-    
+
     return () => {
       document.removeEventListener('click', enableAudio);
       document.removeEventListener('touchstart', enableAudio);
@@ -339,12 +339,21 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   }, []);
 
   const playSuccessSound = () => {
-    if (audioRef.current) {
-      // Reset audio to beginning
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(e => {
-        console.error("❌ Error playing sound:", e);
-        // Fallback: try to create a new audio instance
+    if (audioContext && audioBuffer) {
+      try {
+        // Resume context if suspended
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+
+        // Create source and play
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+        source.start(0);
+      } catch (e) {
+        console.error("❌ Error playing sound with Web Audio API:", e);
+        // Fallback to HTML5 Audio
         try {
           const fallbackAudio = new Audio('/success_sound_3.mp3');
           fallbackAudio.volume = 0.8;
@@ -352,7 +361,9 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         } catch (fallbackError) {
           console.error("❌ Fallback audio also failed:", fallbackError);
         }
-      });
+      }
+    } else {
+      console.warn("Audio not initialized yet");
     }
   };
 

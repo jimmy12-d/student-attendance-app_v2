@@ -1,6 +1,6 @@
 
 // Service Worker Version - Update this to force cache refresh
-const SW_VERSION = 'v2.2.0-android-fix';
+const SW_VERSION = 'v2.3.0-ios-notification-fix';
 console.log('[firebase-messaging-sw.js] Version:', SW_VERSION);
 
 // Import the Firebase app and messaging services
@@ -43,17 +43,20 @@ self.addEventListener('activate', (event) => {
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message', payload);
   
-  // IMPORTANT: With data-only payloads, title and body are in payload.data, not payload.notification
-  const notificationTitle = payload.data?.title || 'New Notification';
+  // Check both notification and data payloads for iOS/Android compatibility
+  // iOS may receive notification object, Android typically uses data
+  const notificationTitle = payload.notification?.title || payload.data?.title || 'New Notification';
+  const notificationBody = payload.notification?.body || payload.data?.body || 'You have a new notification';
+  
   const notificationOptions = {
-    body: payload.data?.body || 'You have a new notification',
-    icon: payload.data?.icon || "/icon-192x192-3d.png",
+    body: notificationBody,
+    icon: payload.data?.icon || payload.notification?.icon || "/icon-192x192-3d.png",
     badge: payload.data?.badge || "/icon-192x192-3d.png",
     tag: payload.data?.notificationId || payload.data?.permissionId || payload.data?.requestId || 'default',
     requireInteraction: false,
     silent: false,
     vibrate: [200, 100, 200], // Android: vibration pattern
-    timestamp: Date.now(), // Android: timestamp
+    timestamp: Date.now(),
     data: {
       url: payload.data?.url || '/student/notifications',
       notificationId: payload.data?.notificationId,
@@ -63,7 +66,7 @@ messaging.onBackgroundMessage((payload) => {
     }
   };
 
-  console.log('[firebase-messaging-sw.js] Showing notification:', notificationTitle);
+  console.log('[firebase-messaging-sw.js] Showing notification:', notificationTitle, notificationOptions);
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 

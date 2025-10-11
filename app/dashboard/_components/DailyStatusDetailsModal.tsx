@@ -37,6 +37,7 @@ interface Props {
   isActive: boolean;
   onClose: () => void;
   initialMonthValue?: string;
+  viewContext?: 'regular' | '12BP'; // Optional context to indicate which class view this is from
 }
 
 const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -49,6 +50,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
   isActive,
   onClose,
   initialMonthValue,
+  viewContext, // Context: 'regular' or '12BP'
 }) => {
   const [calendarGrid, setCalendarGrid] = useState<CalendarCell[][]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +58,27 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     initialMonthValue || getCurrentYearMonthString()
   );
   const [monthlyAttendanceRecords, setMonthlyAttendanceRecords] = useState<RawAttendanceRecord[]>([]);
+  
+  // Create a context-aware student object for BP students
+  // If viewContext is '12BP' or student has BP overrides, use Evening shift and 12BP class
+  const contextualStudent = React.useMemo(() => {
+    // If the student object already has 12BP class (from bpStudents array), use it as-is
+    if (student.class === '12BP') {
+      return student;
+    }
+    
+    // If viewContext is explicitly '12BP', apply the overrides
+    if (viewContext === '12BP' && student.inBPClass) {
+      return {
+        ...student,
+        class: '12BP',
+        shift: 'Evening'
+      };
+    }
+    
+    // Otherwise, use the student as-is (regular class view)
+    return student;
+  }, [student, viewContext]);
   
   // Function to fetch attendance records for a specific month
   const fetchAttendanceForMonth = async (studentId: string, yearMonth: string) => {
@@ -136,7 +159,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     };
     
     loadMonthData();
-  }, [isActive, student?.id, allClassConfigs, approvedPermissions, modalSelectedMonth]);
+  }, [isActive, student?.id, allClassConfigs, approvedPermissions, modalSelectedMonth, viewContext]);
   
   const generateCalendar = (records: RawAttendanceRecord[]) => {
     const [yearStr, monthNumStr] = modalSelectedMonth.split('-');
@@ -172,7 +195,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
       const attendanceRecord = attendanceMap.get(dateStr);
 
       const calculatedStatus = getStudentDailyStatus(
-        student,
+        contextualStudent, // Use context-aware student object
         dateStr,
         attendanceRecord,
         allClassConfigs,
@@ -237,9 +260,19 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     }
     return { isPrevDisabled: prevDisabled, isNextDisabled: nextDisabled };
   }, [modalSelectedMonth, student.createdAt]); 
+  
+  // Create modal title with class context
+  const modalTitle = React.useMemo(() => {
+    const baseTitle = `Attendance: ${student.fullName}`;
+    if (contextualStudent.class === '12BP') {
+      return `${baseTitle} (12BP - Evening Shift)`;
+    }
+    return baseTitle;
+  }, [student.fullName, contextualStudent.class]);
+  
   return (
     <CardBoxModal
-      title={`Attendance: ${student.fullName}`}
+      title={modalTitle}
       isActive={isActive}
      // onConfirm={onClose}
       onCancel={onClose}

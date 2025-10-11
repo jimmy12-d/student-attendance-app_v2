@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { mdiAccountPlus, mdiClockOutline, mdiAccountClock } from "@mdi/js";
+import { mdiAccountPlus, mdiClockOutline, mdiAccountClock, mdiEye } from "@mdi/js";
 import Icon from "../../../_components/Icon";
-import Button from "../../../_components/Button";
-import CardBox from "../../../_components/CardBox";
 import { Student } from "../../../_interfaces";
 import { Timestamp } from "firebase/firestore";
 import { db } from "../../../../firebase-config";
@@ -144,183 +142,122 @@ const WaitlistStudentsSection: React.FC<WaitlistStudentsSectionProps> = ({
   }, [waitlistStudents]);
 
   return (
-    <CardBox className="mb-6 border-l-4 border-l-blue-400 ">
-      <div className="p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Icon 
-                path={mdiAccountClock} 
-                size={20} 
-                className="text-blue-600 dark:text-blue-400" 
-              />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-blue-700 dark:text-blue-400">
-                Waitlist Students
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {waitlistStudents.length} student{waitlistStudents.length !== 1 ? 's' : ''} waiting for enrollment
-              </p>
-            </div>
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-blue-200 dark:border-blue-800 mb-6">
+      <div 
+        className="flex items-center justify-between p-4 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+        onClick={onToggleShow}
+      >
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+            <Icon 
+              path={mdiAccountClock} 
+              size={20} 
+              className="text-blue-600 dark:text-blue-400" 
+            />
           </div>
-          <Button
-            onClick={onToggleShow}
-            label={showWaitlistStudents ? "Hide" : "Show"}
-            color="info"
-            small
-            outline
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Waitlist Students
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {waitlistStudents.length} student{waitlistStudents.length !== 1 ? 's' : ''} waiting for enrollment
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          {waitlistStudents.length > 0 && (
+            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+              {waitlistStudents.length}
+            </span>
+          )}
+          <Icon 
+            path={showWaitlistStudents ? "M7.41,8.58L12,13.17L16.59,8.58L18,10L12,16L6,10L7.41,8.58Z" : "M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"} 
+            size={20} 
+            className="text-gray-400" 
           />
         </div>
+      </div>
         
-        {/* Collapsible Content */}
-        {showWaitlistStudents && (
-          <div className="space-y-6">
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-              <div className="flex items-center space-x-2 mb-3">
-                <Icon 
-                  path={mdiClockOutline} 
-                  size={16} 
-                  className="text-blue-600 dark:text-blue-400" 
-                />
-                <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                  Students on Waitlist ({waitlistStudents.length})
-                </span>
+      {showWaitlistStudents && (
+        <div className="border-t border-blue-200 dark:border-blue-800">
+          {waitlistStudents.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                <Icon path={mdiAccountClock} size={32} className="text-blue-400" />
               </div>
-              
-              {/* Waitlist Students Grid */}
-              <div className="grid gap-4">
+              <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No Students on Waitlist
+              </h4>
+              <p className="text-gray-500 dark:text-gray-400">
+                All waitlist students have been processed.
+              </p>
+            </div>
+          ) : (
+            <div className="p-4">
+              <div className="space-y-3">
                 {waitlistStudents.map((student) => {
                   const waitlistDate = student.waitlistDate || student.createdAt;
                   const timeAgo = getTimeAgo(waitlistDate);
                   const formattedDate = formatWaitlistDate(waitlistDate);
                   
                   return (
-                    <div
-                      key={student.id}
-                      className="bg-white dark:bg-gray-700 p-5 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200"
+                    <div 
+                      key={student.id} 
+                      className="backdrop-blur-sm bg-white/10 dark:bg-black/10 border border-white/20 dark:border-white/10 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300"
                     >
-                      <div className="flex items-start justify-between">
-                        {/* Student Info */}
+                      <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          {/* Student Details */}
-                          <div className="grid grid-cols-1 md:grid-cols-[40%_1fr_1fr] gap-3 mb-3">
-                            <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3 flex items-center gap-3">
-                              {/* Avatar */}
-                              <div className="relative group/avatar flex-shrink-0">
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center transition-all duration-200 hover:shadow-lg">
-                                  <span className="text-white font-semibold text-sm group-hover/avatar:opacity-0 transition-opacity duration-200">
-                                    {student.fullName.charAt(0).toUpperCase()}
-                                  </span>
-                                </div>
-                                {onViewDetails && (
-                                  <div
-                                    className="absolute inset-0 bg-blue-600 bg-opacity-90 rounded-full flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 cursor-pointer"
-                                    onClick={() => onViewDetails(student)}
-                                    title="View student details"
-                                  >
-                                    <svg
-                                      className="w-5 h-5 text-white"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Names stacked vertically */}
-                              <div className="flex flex-col">
-                                <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-lg">
-                                  {student.fullName}
-                                </h3>
-                                {student.nameKhmer && (
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-                                    {student.nameKhmer}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">
-                              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                Preferred Class & Shift
-                              </p>
-                              <p className="font-semibold text-gray-800 dark:text-gray-200">
-                                {student.class} ({student.shift})
-                              </p>
-                              {classCapacities[`${student.class}-${student.shift}`] && (
-                                <div className="mt-2">
-                                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                    Status: {classCapacities[`${student.class}-${student.shift}`].current} / {classCapacities[`${student.class}-${student.shift}`].max} students
-                                  </p>
-                                  <div className="mt-1">
-                                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                                      <div 
-                                        className={`h-1.5 rounded-full ${
-                                          classCapacities[`${student.class}-${student.shift}`].current >= classCapacities[`${student.class}-${student.shift}`].max 
-                                            ? 'bg-red-500' 
-                                            : classCapacities[`${student.class}-${student.shift}`].current >= classCapacities[`${student.class}-${student.shift}`].max * 0.9 
-                                            ? 'bg-orange-500' 
-                                            : 'bg-green-500'
-                                        }`}
-                                        style={{ 
-                                          width: `${Math.min((classCapacities[`${student.class}-${student.shift}`].current / classCapacities[`${student.class}-${student.shift}`].max) * 100, 100)}%` 
-                                        }}
-                                      ></div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            {student.phone && (
-                              <div className="bg-gray-50 dark:bg-gray-600 rounded-lg p-3">
-                                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                  Contact
-                                </p>
-                                <p className="font-semibold text-gray-800 dark:text-gray-200">
-                                  {student.phone}
-                                </p>
-                              </div>
-                            )}
+                          <div className="flex items-center space-x-3 mb-2">
+                            <h4 className="font-medium text-gray-900 dark:text-white">
+                              {student.fullName}
+                            </h4>
+                            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded dark:bg-blue-900 dark:text-blue-300">
+                              Waitlist
+                            </span>
                           </div>
                           
-                          {/* Waitlist Time Info */}
-                          <div className="flex items-center space-x-2 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
-                            <Icon 
-                              path={mdiClockOutline} 
-                              size={16} 
-                              className="text-blue-600 dark:text-blue-400" 
-                            />
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <div>
-                              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                                On waitlist for {timeAgo}
-                              </p>
-                              <p className="text-xs text-blue-600 dark:text-blue-400">
-                                Since: {formattedDate}
-                              </p>
-                              {student.waitlistReason && (
-                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                  Reason: {student.waitlistReason}
-                                </p>
-                              )}
+                              <span className="font-medium">Phone:</span> {student.phone || 'N/A'}
+                            </div>
+                            <div>
+                              <span className="font-medium">Class:</span> {student.class || 'N/A'}
+                            </div>
+                            <div>
+                              <span className="font-medium">Shift:</span> {student.shift || 'N/A'}
                             </div>
                           </div>
+                          
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            Waitlisted: {formattedDate} ({timeAgo})
+                          </div>
+                          
+                          {student.waitlistReason && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              Reason: {student.waitlistReason}
+                            </div>
+                          )}
                         </div>
                         
-                        {/* Action Buttons */}
-                        <div className="ml-4 flex flex-col space-y-2">
-                          <Button
+                        <div className="flex items-center justify-center ml-4">
+                          {onViewDetails && (
+                            <button
+                              onClick={() => onViewDetails(student)}
+                              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-900/20 rounded-lg transition-colors mr-2"
+                              title="View Details"
+                            >
+                              <Icon path={mdiEye} size={16} />
+                            </button>
+                          )}
+                          
+                          <button
                             onClick={() => onActivateStudent(student)}
-                            icon={mdiAccountPlus}
-                            label="Activate"
-                            color="success"
-                            small
-                            className="whitespace-nowrap"
-                          />
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center min-w-[100px]"
+                            title="Enroll Student"
+                          >
+                            <Icon path={mdiAccountPlus} size={16} className="mr-2" />
+                            Enroll
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -328,10 +265,10 @@ const WaitlistStudentsSection: React.FC<WaitlistStudentsSectionProps> = ({
                 })}
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </CardBox>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -22,11 +22,12 @@ import { getStudentDailyStatus } from "../_lib/attendanceLogic";
 export const dynamic = 'force-dynamic';
 
 const getTodayDateString = (): string => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Phnom_Penh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
 };
 
 const FEEDBACK_DISPLAY_MS = 3000;
