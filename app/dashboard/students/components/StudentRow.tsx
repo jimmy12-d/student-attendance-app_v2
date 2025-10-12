@@ -44,6 +44,7 @@ interface StudentRowProps {
   isSelected?: boolean;
   onSelect?: (studentId: string, isSelected: boolean) => void;
   getAttendanceStatus?: (student: Student) => string;
+  // Note: These functions are wrapped by ClassTable with class/shift context already applied
   getTodayAttendanceStatus?: (student: Student) => { status?: string; time?: string };
   isStudentCurrentlyPresent?: (student: Student) => boolean;
   onAttendanceChange?: (studentId: string, isPresent: boolean) => void;
@@ -70,8 +71,27 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   searchQuery = '',
   highlightText
 }) => {
+  // DEBUG: Log the full student object for Test Testing on October 11th
+  if (student.fullName === "Test Testing" && new Date().toISOString().split('T')[0] === "2025-10-11") {
+    console.log("🔍 StudentRow - Full student object for Test Testing:");
+    console.log("  - student:", student);
+    console.log("  - student.id:", student.id);
+    console.log("  - student.class:", student.class);
+    console.log("  - student.shift:", student.shift);
+    console.log("  - student.inBPClass:", (student as any).inBPClass);
+  }
+  
   // Check if student has warning and is absent today
+  // CRITICAL: getTodayAttendanceStatus is already wrapped with class/shift context by ClassTable
   const todayStatus = getTodayAttendanceStatus ? getTodayAttendanceStatus(student) : { status: 'Unknown' };
+  
+  // DEBUG: Log for Test Testing on October 11th
+  if (student.fullName === "Test Testing" && new Date().toISOString().split('T')[0] === "2025-10-11") {
+    console.log("🎯 StudentRow calling getTodayAttendanceStatus for Test Testing:");
+    console.log("  - Context already wrapped by ClassTable");
+    console.log("  - Returned status:", todayStatus);
+  }
+  
   const isWarningAbsent = student.warning && todayStatus.status === 'Absent';
   
   // Check if it's the student's birthday

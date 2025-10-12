@@ -1,3 +1,5 @@
+"use client";
+
 import { Question, QuestionOption } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
 import { mdiPlus, mdiDelete, mdiDragVertical, mdiAlertCircle, mdiContentCopy, mdiAccount } from "@mdi/js";

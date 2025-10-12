@@ -1,6 +1,10 @@
 // app/dashboard/record/page.tsx (REAL-TIME ATTENDANCE DASHBOARD)
 "use client";
 
+// Force dynamic rendering - this page uses real-time Firebase listeners
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { 
   mdiClipboardListOutline, 
@@ -374,8 +378,12 @@ export default function AttendanceRecordPage() {
         return false;
       });
 
-      // Filter students by current shift
-      const shiftStudents = students.filter(student => student.shift === currentShift);
+      // Filter students by current shift (include BP students for Evening shift)
+      const shiftStudents = students.filter(student => {
+        const isRegularShift = student.shift === currentShift;
+        const isBPForEvening = currentShift === 'Evening' && (student as any).inBPClass === true;
+        return isRegularShift || isBPForEvening;
+      });
       const shiftStudentIds = new Set(shiftStudents.map(student => student.id));
 
       // Filter attendance records for students in the current shift
@@ -411,8 +419,12 @@ export default function AttendanceRecordPage() {
     let permissionCount = 0;
 
     // Filter students by current shift for expected count, excluding "No School" students
+    // Include BP students when Evening shift is selected
     const shiftStudents = students.filter(student => {
-      if (student.shift !== currentShift) return false;
+      const isRegularShift = student.shift === currentShift;
+      const isBPForEvening = currentShift === 'Evening' && (student as any).inBPClass === true;
+      
+      if (!isRegularShift && !isBPForEvening) return false;
       
       // Check if student has "No School" status for this date
       const result = getStudentDailyStatus(
@@ -427,8 +439,11 @@ export default function AttendanceRecordPage() {
     });
 
     students.forEach(student => {
-      // Only process students for the current shift
-      if (student.shift !== currentShift) return;
+      // Only process students for the current shift (include BP students for Evening)
+      const isRegularShift = student.shift === currentShift;
+      const isBPForEvening = currentShift === 'Evening' && (student as any).inBPClass === true;
+      
+      if (!isRegularShift && !isBPForEvening) return;
 
       // Find this student's attendance record for selected date
       const attendanceRecord = attendanceRecords.find(att => {
@@ -703,12 +718,14 @@ export default function AttendanceRecordPage() {
                 } as AttendanceRecord;
               }
 
+              // CRITICAL BUG FIX: Use class and shift from attendance data, not from student
+              // This ensures BP class records show the correct class (e.g., 12BP, not 12A)
               return {
                 id: docSnap.id,
                 studentName: student.fullName,
                 studentId: data.studentId,
-                class: student.class || 'N/A',
-                shift: student.shift || 'N/A',
+                class: data.class || student.class || 'N/A', // Use attendance record's class first
+                shift: data.shift || student.shift || 'N/A', // Use attendance record's shift first
                 status: data.status || 'Unknown',
                 date: data.date,
                 timestamp: data.timestamp,

@@ -20,13 +20,13 @@ export default function AsideMenu({
     <>
       <AsideMenuLayer
         menu={props.menu}
-        className={`${isAsideMobileExpanded ? "left-0" : "-left-60 lg:left-0"} ${
+        className={`${isAsideMobileExpanded ? "left-0" : "-left-full sm:-left-60 lg:left-0"} ${
           !isAsideLgActive ? "lg:hidden xl:flex" : ""
         }`}
         onAsideLgCloseClick={props.onAsideLgClose}
         onRouteChange={props.onRouteChange}
       />
-      {isAsideLgActive && (
+      {(isAsideLgActive || isAsideMobileExpanded) && (
         <OverlayLayer zIndex="z-30" onClick={props.onAsideLgClose} />
       )}
     </>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../../../firebase-config';
 import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getStudentDailyStatus, RawAttendanceRecord, calculateMonthlyAbsencesLogic, getMonthDetailsForLogic } from '../../_lib/attendanceLogic';
 import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
 import { AbsentFollowUp, AbsentStatus, PermissionRecord } from '../../../_interfaces';
@@ -83,6 +84,42 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
   const [statusFilter, setStatusFilter] = useState<AbsentStatus | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'high'>('all');
   const [monthlyAbsenceCounts, setMonthlyAbsenceCounts] = useState<{[studentId: string]: number}>({});
+  const [sendingNotifications, setSendingNotifications] = useState<{[key: string]: boolean}>({});
+
+  const handleSendParentNotification = async (followUp: AbsentFollowUpWithDetails) => {
+    const key = `${followUp.studentId}-${followUp.date}`;
+    
+    try {
+      setSendingNotifications(prev => ({ ...prev, [key]: true }));
+      
+      const functions = getFunctions(undefined, 'asia-southeast1');
+      const notifyParentAbsence = httpsCallable(functions, 'notifyParentAbsence');
+      
+      const result = await notifyParentAbsence({
+        studentId: followUp.studentId,
+        studentName: followUp.studentName,
+        date: followUp.date,
+        absentFollowUpId: followUp.id
+      });
+      
+      const data = result.data as any;
+      
+      if (data.success) {
+        toast.success(`Sent ${data.notificationsSent} notification(s) to parent(s)`);
+        // Refresh the data to show updated notification status
+        await fetchAbsentFollowUpsAndAbsentStudents();
+      } else if (data.status === 'no_parent') {
+        toast.info('No active parent registered for this student');
+      } else {
+        toast.error(data.error || 'Failed to send notification');
+      }
+    } catch (error: any) {
+      console.error('Error sending parent notification:', error);
+      toast.error(error.message || 'Failed to send parent notification');
+    } finally {
+      setSendingNotifications(prev => ({ ...prev, [key]: false }));
+    }
+  };
 
   useEffect(() => {
     fetchAbsentFollowUpsAndAbsentStudents();
@@ -141,7 +178,11 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
           status: data.status,
           notes: data.notes,
           updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
-          updatedBy: data.updatedBy
+          updatedBy: data.updatedBy,
+          parentNotificationStatus: data.parentNotificationStatus || null,
+          parentNotificationTimestamp: data.parentNotificationTimestamp instanceof Timestamp ? data.parentNotificationTimestamp.toDate() : data.parentNotificationTimestamp || null,
+          parentNotificationsSent: data.parentNotificationsSent || 0,
+          parentNotificationError: data.parentNotificationError || null
         });
       });
 
@@ -229,7 +270,12 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
               isUrgent,
               nameKhmer: student.nameKhmer, // Add Khmer name to the object
               student: student, // Add full student data for priority calculation
-              monthlyAbsentCount: monthlyAbsenceCountsMap[student.id] || 0
+              monthlyAbsentCount: monthlyAbsenceCountsMap[student.id] || 0,
+              // Add parent notification fields for students without follow-up records
+              parentNotificationStatus: null,
+              parentNotificationTimestamp: null,
+              parentNotificationsSent: 0,
+              parentNotificationError: null
             };
             
             return studentWithFollowUp;
@@ -451,100 +497,6 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
           )}
         </td>
         
-        {/* Message Template Column */}
-        <td className="p-4 whitespace-nowrap">
-          {(() => {
-            // Only show message templates for Absent status - these are for contacting students
-            if (followUp.status === 'Absent') {
-              let message = '';
-              let previewText = '';
-              let bgColor = 'bg-blue-100 dark:bg-blue-900/30';
-              let textColor = 'text-blue-800 dark:text-blue-300';
-              let borderColor = 'border-blue-200 dark:border-blue-800';
-              let hoverColor = 'hover:bg-blue-200 dark:hover:bg-blue-800/50';
-              
-              // Handle daysSinceAbsent cases (including 0 or null)
-              const daysAbsent = followUp.daysSinceAbsent || 0;
-              
-              if (daysAbsent === 0 || daysAbsent === 1) {
-                message = `Hi ${followUp.studentName}, why didn't you come to school today?`;
-                previewText = 'Why absent today?';
-              } else if (daysAbsent === 2) {
-                message = `Hi ${followUp.studentName}, you've been absent for 2 days now. We're concerned about you. Please contact us when you get this message.`;
-                previewText = '2 days absent - need contact...';
-              } else if (daysAbsent >= 3 && daysAbsent <= 4) {
-                message = `Hi ${followUp.studentName}, you've missed ${daysAbsent} days of class. This is affecting your learning. Please come to school or let us know what's happening.`;
-                previewText = `${daysAbsent} days - affecting learning...`;
-                bgColor = 'bg-orange-100 dark:bg-orange-900/30';
-                textColor = 'text-orange-800 dark:text-orange-300';
-                borderColor = 'border-orange-200 dark:border-orange-800';
-                hoverColor = 'hover:bg-orange-200 dark:hover:bg-orange-800/50';
-              } else if (daysAbsent >= 5 && daysAbsent <= 7) {
-                message = `Hi ${followUp.studentName}, you've been absent for ${daysAbsent} days. You're missing important lessons and falling behind. Please return to school immediately or contact us to discuss your situation.`;
-                previewText = `${daysAbsent} days - falling behind...`;
-                bgColor = 'bg-red-100 dark:bg-red-900/30';
-                textColor = 'text-red-800 dark:text-red-300';
-                borderColor = 'border-red-200 dark:border-red-800';
-                hoverColor = 'hover:bg-red-200 dark:hover:bg-red-800/50';
-              } else if (daysAbsent >= 8) {
-                message = `Hi ${followUp.studentName}, you've been absent for over a week (${daysAbsent} days). This is very concerning. Please contact the school urgently to discuss your continued enrollment.`;
-                previewText = `${daysAbsent} days - urgent action...`;
-                bgColor = 'bg-red-100 dark:bg-red-900/30';
-                textColor = 'text-red-800 dark:text-red-300';
-                borderColor = 'border-red-200 dark:border-red-800';
-                hoverColor = 'hover:bg-red-200 dark:hover:bg-red-800/50';
-              }
-
-              // Only show the template button if we have a message
-              if (message && previewText) {
-                return (
-                  <div className="group/message relative">
-                    <button
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(message);
-                          toast.success('Message template copied to clipboard!');
-                        } catch (err) {
-                          // Fallback for older browsers
-                          const textArea = document.createElement('textarea');
-                          textArea.value = message;
-                          document.body.appendChild(textArea);
-                          textArea.select();
-                          document.execCommand('copy');
-                          document.body.removeChild(textArea);
-                          toast.success('Message template copied to clipboard!');
-                        }
-                      }}
-                      className={`inline-flex items-center px-3 py-2 rounded-lg text-xs font-medium ${bgColor} ${textColor} border ${borderColor} ${hoverColor} transition-colors duration-200 cursor-pointer max-w-xs`}
-                      title="Click to copy message template"
-                    >
-                      <svg className="w-3 h-3 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      <span className="truncate">
-                        {previewText}
-                      </span>
-                    </button>
-                    
-                    {/* Tooltip with full message */}
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover/message:opacity-100 transition-opacity duration-200 pointer-events-none z-[9999] max-w-sm whitespace-normal">
-                      {message}
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
-                    </div>
-                  </div>
-                );
-              }
-            }
-            
-            // For non-absent statuses or when no message template is available, show N/A
-            return (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-                N/A
-              </span>
-            );
-          })()}
-        </td>
-        
         <td className="p-4">
           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
             {new Date(followUp.date).toLocaleDateString('en-US', {
@@ -606,6 +558,71 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                 </svg>
               </span>
             )}
+          </div>
+        </td>
+        
+        {/* Parent Notification Column */}
+        <td className="p-4">
+          <div className="flex flex-col space-y-2">
+            {followUp.parentNotificationStatus ? (
+              <div className="space-y-1">
+                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  followUp.parentNotificationStatus === 'success' ? 'bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/50 dark:text-green-300' :
+                  followUp.parentNotificationStatus === 'failed' ? 'bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/50 dark:text-red-300' :
+                  followUp.parentNotificationStatus === 'no_parent' ? 'bg-gray-100 text-gray-800 border border-gray-200 dark:bg-gray-700 dark:text-gray-300' :
+                  'bg-yellow-100 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300'
+                }`}>
+                  {followUp.parentNotificationStatus === 'success' && '✓ Sent'}
+                  {followUp.parentNotificationStatus === 'failed' && '✗ Failed'}
+                  {followUp.parentNotificationStatus === 'no_parent' && 'No Parent'}
+                  {followUp.parentNotificationStatus === 'pending' && '⏳ Pending'}
+                  {followUp.parentNotificationsSent && followUp.parentNotificationsSent > 0 && ` (${followUp.parentNotificationsSent})`}
+                </div>
+                
+                {followUp.parentNotificationTimestamp && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(followUp.parentNotificationTimestamp instanceof Date ? 
+                      followUp.parentNotificationTimestamp : 
+                      followUp.parentNotificationTimestamp.toDate()).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                  </div>
+                )}
+                
+                {followUp.parentNotificationError && (
+                  <div className="text-xs text-red-600 dark:text-red-400" title={followUp.parentNotificationError}>
+                    Error: {followUp.parentNotificationError.substring(0, 30)}...
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500 dark:text-gray-400">Not sent</div>
+            )}
+            
+            {/* Send Notification Button */}
+            <button
+              onClick={() => handleSendParentNotification(followUp)}
+              disabled={sendingNotifications[`${followUp.studentId}-${followUp.date}`]}
+              className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Send notification to parent"
+            >
+              {sendingNotifications[`${followUp.studentId}-${followUp.date}`] ? (
+                <>
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-700 dark:border-blue-400 mr-1"></div>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  Send Notification
+                </>
+              )}
+            </button>
           </div>
         </td>
         
@@ -681,9 +698,6 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                     Phone/Telegram
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Message Template
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Absent Date
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
@@ -694,6 +708,9 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Priority
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Parent Notification
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Last Updated
@@ -766,9 +783,6 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                     Phone/Telegram
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Message Template
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Absent Date
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
@@ -779,6 +793,9 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Priority
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Parent Notification
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Last Updated

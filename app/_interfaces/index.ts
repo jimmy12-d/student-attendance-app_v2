@@ -208,6 +208,22 @@ export interface AbsentFollowUp {
   notes?: string;
   updatedAt: Date | Timestamp;
   updatedBy: string; // Admin identifier
+  // Parent notification fields
+  parentNotificationStatus?: 'success' | 'failed' | 'pending' | 'no_parent' | null;
+  parentNotificationTimestamp?: Date | Timestamp | null;
+  parentNotificationsSent?: number;
+  parentNotificationError?: string | null;
+}
+
+// Absent Parent Notification Settings
+export interface AbsentNotificationSettings {
+  id?: string; // Document ID (usually 'default')
+  morningTriggerTime: string; // HH:mm format (e.g., "09:00")
+  afternoonTriggerTime: string; // HH:mm format (e.g., "14:00")
+  eveningTriggerTime: string; // HH:mm format (e.g., "18:00")
+  enabled: boolean;
+  updatedAt?: Date | Timestamp;
+  updatedBy?: string;
 }
 
 // Print Request System Interfaces

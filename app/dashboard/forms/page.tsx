@@ -1,5 +1,9 @@
 "use client";
 
+// Force dynamic rendering - this page uses real-time Firebase listeners
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { collection, query, onSnapshot, orderBy, deleteDoc, doc, Timestamp, where, getDocs, addDoc, updateDoc } from "firebase/firestore";

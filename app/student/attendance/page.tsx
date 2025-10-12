@@ -193,8 +193,14 @@ const AttendancePage = () => {
             permsUnsubscribe = onSnapshot(permsQuery, (permsSnap) => {
               const approvedPermissions = permsSnap.docs.map(doc => doc.data() as PermissionRecord);
               
-              // Real-time listener for attendance records
-              const attendanceQuery = query(collection(db, "attendance"), where("authUid", "==", studentUid), where("date", "in", schoolDays));
+              // Real-time listener for attendance records - Filter by student's REGULAR shift only (not BP Evening)
+              // CRITICAL: Only show Morning/Afternoon attendance, exclude BP Evening attendance
+              const attendanceQuery = query(
+                collection(db, "attendance"), 
+                where("authUid", "==", studentUid), 
+                where("date", "in", schoolDays),
+                where("shift", "==", studentDataFromDb.shift) // Only filter by shift, not class
+              );
               attendanceUnsubscribe = onSnapshot(attendanceQuery, (snapshot) => {
                 const fetchedRecords: { [date: string]: AttendanceRecord } = {};
                 snapshot.docs.forEach(doc => { fetchedRecords[doc.data().date] = { ...doc.data(), id: doc.id } as AttendanceRecord; });

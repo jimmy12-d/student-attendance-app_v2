@@ -1,10 +1,15 @@
 "use client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { 
   doc, 
-  getDoc, 
+  getDoc,
+  setDoc,
   collection, 
   query, 
   where, 
@@ -18,8 +23,18 @@ import {
 import { db } from "@/firebase-config";
 import { Form, FormResponse, ApprovalStatus } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
+import ApprovalActionsConfig from "../../_components/ApprovalActionsConfig";
+import CardBoxModal from "@/app/_components/CardBox/Modal";
+
+interface ApprovalAction {
+  type: 'updateField';
+  collection: string;
+  field: string;
+  value: boolean | string | number;
+}
 import { 
   mdiArrowLeft, 
+  mdiCog,
   mdiDownload, 
   mdiAccountGroup,
   mdiCheckCircle,
@@ -57,10 +72,34 @@ const FormResponsesPage = () => {
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [responseToDelete, setResponseToDelete] = useState<FormResponse | null>(null);
+  const [approvalActions, setApprovalActions] = useState<ApprovalAction[]>([]);
+  const [showApprovalActionsModal, setShowApprovalActionsModal] = useState(false);
+
+  const handleApprovalActionsChange = async (actions: ApprovalAction[]) => {
+    setApprovalActions(actions);
+    await saveApprovalActions(actions);
+  };
+
+  const executeApprovalActions = async (response: FormResponse) => {
+    for (const action of approvalActions) {
+      if (action.type === 'updateField') {
+        try {
+          // Use setDoc with merge: true to create document if it doesn't exist, or update if it does
+          await setDoc(doc(db, action.collection, response.studentId), {
+            [action.field]: action.value
+          }, { merge: true });
+        } catch (error) {
+          console.error(`Error executing action: update ${action.collection}.${action.field} to ${action.value}`, error);
+          toast.error(`Failed to execute action: update ${action.field}`);
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     loadForm();
     loadResponses();
+    loadApprovalActions();
   }, [formId]);
 
   const loadForm = async () => {
@@ -101,6 +140,30 @@ const FormResponsesPage = () => {
     return unsubscribe;
   };
 
+  const loadApprovalActions = async () => {
+    try {
+      const approvalActionsDoc = await getDoc(doc(db, "formApprovalActions", formId));
+      if (approvalActionsDoc.exists()) {
+        setApprovalActions(approvalActionsDoc.data().actions || []);
+      }
+    } catch (error) {
+      console.error("Error loading approval actions:", error);
+    }
+  };
+
+  const saveApprovalActions = async (actions: ApprovalAction[]) => {
+    try {
+      await setDoc(doc(db, "formApprovalActions", formId), {
+        actions,
+        updatedAt: Timestamp.now(),
+        updatedBy: adminUid
+      });
+    } catch (error) {
+      console.error("Error saving approval actions:", error);
+      toast.error("Failed to save approval actions");
+    }
+  };
+
   const handleApproval = async (responseId: string, status: ApprovalStatus, note?: string) => {
     setApprovingId(responseId);
     try {
@@ -116,6 +179,15 @@ const FormResponsesPage = () => {
       }
       
       await updateDoc(doc(db, "form_responses", responseId), updateData);
+
+      // Execute configured actions if approved
+      if (status === 'approved') {
+        const response = responses.find(r => r.id === responseId);
+        if (response) {
+          await executeApprovalActions(response);
+        }
+      }
+
       toast.success(`Response ${status === 'approved' ? 'approved' : 'rejected'} successfully`);
     } catch (error) {
       console.error("Error updating approval status:", error);
@@ -139,6 +211,15 @@ const FormResponsesPage = () => {
       );
       
       await Promise.all(promises);
+
+      // Execute configured actions if approved
+      if (status === 'approved') {
+        const selectedResponsesData = responses.filter(r => selectedIds.includes(r.id));
+        for (const response of selectedResponsesData) {
+          await executeApprovalActions(response);
+        }
+      }
+
       toast.success(`${selectedIds.length} responses ${status === 'approved' ? 'approved' : 'rejected'} successfully`);
       setSelectedResponses(new Set());
       setShowBulkActions(false);
@@ -442,6 +523,23 @@ const FormResponsesPage = () => {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               {form.description}
             </p>
+          )}
+
+          {form.requiresApproval && (
+            <div className="mb-6">
+              <button
+                onClick={() => setShowApprovalActionsModal(true)}
+                className="inline-flex items-center px-4 py-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg transition-all duration-200 group"
+              >
+                <Icon path={mdiCog} size={16} className="mr-2 group-hover:rotate-12 transition-transform duration-200" />
+                <span className="font-medium">Configure Approval Actions</span>
+                {approvalActions.length > 0 && (
+                  <span className="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs rounded-full">
+                    {approvalActions.length}
+                  </span>
+                )}
+              </button>
+            </div>
           )}
 
           {/* Search and Filters */}
@@ -1004,6 +1102,19 @@ const FormResponsesPage = () => {
           </div>
         </div>
       )}
+
+      {/* Approval Actions Modal */}
+      <CardBoxModal
+        title="Approval Actions Configuration"
+        isActive={showApprovalActionsModal}
+        onCancel={() => setShowApprovalActionsModal(false)}
+        modalClassName="w-11/12 md:w-4/5 lg:w-3/5 xl:w-2/5"
+      >
+        <ApprovalActionsConfig
+          actions={approvalActions}
+          onActionsChange={handleApprovalActionsChange}
+        />
+      </CardBoxModal>
     </div>
   );
 };

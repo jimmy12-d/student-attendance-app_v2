@@ -1,5 +1,9 @@
 "use client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import React, { useState, useEffect, useMemo } from "react";
 import {
   mdiSchoolOutline,

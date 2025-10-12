@@ -1,5 +1,9 @@
 "use client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Webcam from 'react-webcam';

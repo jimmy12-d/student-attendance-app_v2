@@ -1,5 +1,9 @@
 "use client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import React, { useState, useEffect, useCallback } from "react";
 import { mdiMagnify, mdiClipboardListOutline, mdiChevronLeft, mdiChevronRight } from "@mdi/js";
 import SectionMain from "../../_components/Section/Main";
@@ -17,9 +21,6 @@ import { db } from "../../../firebase-config";
 import { collection, getDocs, query, where, orderBy, CollectionReference, DocumentData, QuerySnapshot } from "firebase/firestore";
 import { AllClassConfigs, getCurrentYearMonthString } from "../_lib/configForAttendanceLogic";
 import { getStudentDailyStatus } from "../_lib/attendanceLogic";
-
-// Force dynamic rendering to avoid build issues
-export const dynamic = 'force-dynamic';
 
 const getTodayDateString = (): string => {
   return new Intl.DateTimeFormat('en-CA', {

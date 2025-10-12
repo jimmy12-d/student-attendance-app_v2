@@ -22,9 +22,9 @@ interface ClassTableProps {
   onStudentSelect?: (studentId: string, isSelected: boolean) => void;
   onSelectAll?: (studentIds: string[], isSelected: boolean) => void;
   getAttendanceStatus?: (student: Student) => string;
-  getTodayAttendanceStatus?: (student: Student) => { status?: string; time?: string };
-  isStudentCurrentlyPresent?: (student: Student) => boolean;
-  onAttendanceChange?: (studentId: string, isPresent: boolean) => void;
+  getTodayAttendanceStatus?: (student: Student, classContext?: string, shiftContext?: string) => { status?: string; time?: string };
+  isStudentCurrentlyPresent?: (student: Student, classContext?: string, shiftContext?: string) => boolean;
+  onAttendanceChange?: (studentId: string, isPresent: boolean, classContext?: string, shiftContext?: string) => void;
   calculateAverageArrivalTime?: (student: Student) => string;
   shiftRankings?: { earliest: { [studentId: string]: number }, latest: { [studentId: string]: number } };
   forceCollapsed?: boolean;
@@ -203,7 +203,8 @@ export const ClassTable: React.FC<ClassTableProps> = ({
     const attendanceColumnEnabled = enabledColumns.some(col => col.id === 'todayAttendance');
     if (attendanceColumnEnabled && getTodayAttendanceStatus) {
       const attendedCount = studentList.filter(student => {
-        const status = getTodayAttendanceStatus(student);
+        // CRITICAL: Use className and shift context when checking attendance
+        const status = getTodayAttendanceStatus(student, className, shift);
         return status.status === 'Present' || status.status === 'Late';
       }).length;
       stats.push({
@@ -280,6 +281,32 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   // Wrapper function to pass the studentList context
   const handleViewDetails = (student: Student) => {
     onViewDetails(student, studentList);
+  };
+
+  // Wrapper function to pass the class and shift context for attendance
+  const handleAttendanceChange = (studentId: string, isPresent: boolean) => {
+    if (onAttendanceChange) {
+      // Pass the current class and shift context
+      onAttendanceChange(studentId, isPresent, className, shift);
+    }
+  };
+
+  // Wrapper function to pass class and shift context to getTodayAttendanceStatus
+  const wrappedGetTodayAttendanceStatus = (student: Student) => {
+    if (getTodayAttendanceStatus) {
+      // CRITICAL: Pass className and shift as context parameters
+      return getTodayAttendanceStatus(student, className, shift);
+    }
+    return { status: 'Unknown' };
+  };
+
+  // Wrapper function to pass class and shift context to isStudentCurrentlyPresent
+  const wrappedIsStudentCurrentlyPresent = (student: Student) => {
+    if (isStudentCurrentlyPresent) {
+      // CRITICAL: Pass className and shift as context parameters
+      return isStudentCurrentlyPresent(student, className, shift);
+    }
+    return false;
   };
 
   // Determine badge colors based on display shift
@@ -511,9 +538,9 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   isSelected={selectedStudents.has(student.id)}
                   onSelect={onStudentSelect}
                   getAttendanceStatus={getAttendanceStatus}
-                  getTodayAttendanceStatus={getTodayAttendanceStatus}
-                  isStudentCurrentlyPresent={isStudentCurrentlyPresent}
-                  onAttendanceChange={onAttendanceChange}
+                  getTodayAttendanceStatus={wrappedGetTodayAttendanceStatus}
+                  isStudentCurrentlyPresent={wrappedIsStudentCurrentlyPresent}
+                  onAttendanceChange={handleAttendanceChange}
                   calculateAverageArrivalTime={calculateAverageArrivalTime}
                   shiftRankings={shiftRankings}
                   searchQuery={searchQuery}

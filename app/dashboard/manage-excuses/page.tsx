@@ -1,6 +1,10 @@
 // app/dashboard/manage-excuses/page.tsx
 "use client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { mdiAccountClockOutline, mdiReload } from "@mdi/js";
 import SectionMain from "../../_components/Section/Main";

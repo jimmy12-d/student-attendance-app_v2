@@ -456,19 +456,23 @@ export const filterStudentsByShift = (studentsList: Student[], shift: string, en
     const shifts = studentShift.toString().split(',').map((s: string) => s.trim().toLowerCase());
     const inShift = shifts.includes(shift.toLowerCase());
     
+    // Special case: When Evening shift is selected, also include BP class students
+    const isBPStudentForEvening = shift.toLowerCase() === 'evening' && (s as any).inBPClass === true;
+    
     const meetsEnrollmentCriteria = enrolledOnly ? !!s.faceDescriptor : true;
-    return inShift && meetsEnrollmentCriteria;
+    return (inShift || isBPStudentForEvening) && meetsEnrollmentCriteria;
   });
 };
 
 // Advanced late marking logic using class configurations with special case for 12NKGS on Saturday
-export const determineAttendanceStatus = (student: any, selectedShift: string, classConfigs: any): { status: string; cutoffTime: string; startTime: string } => {
+export const determineAttendanceStatus = (student: any, selectedShift: string, classConfigs: any): { status: string; cutoffTime: string; startTime: string; sendHomeCutoff?: string } => {
   const now = new Date();
   
   // Default to present
   let attendanceStatus = 'present';
   let cutoffTime = '';
   let startTime = '';
+  let sendHomeCutoff = '';
 
   try {
     // Handle class name mismatch: student.class = "Class 12B" but doc ID = "12B"
@@ -493,7 +497,7 @@ export const determineAttendanceStatus = (student: any, selectedShift: string, c
       shiftStartTimeDate.setHours(startHour, startMinute, 0, 0);
       
       // Use student-specific grace period with fallback to default
-      let graceMinutes = 15; // Default grace period
+      let graceMinutes = STANDARD_ON_TIME_GRACE_MINUTES; // Default grace period
       const studentGracePeriod = student.gracePeriodMinutes ?? student.gradePeriodMinutes;
       
       if (typeof studentGracePeriod === 'number' && !isNaN(studentGracePeriod)) {
@@ -506,15 +510,27 @@ export const determineAttendanceStatus = (student: any, selectedShift: string, c
       const onTimeDeadline = new Date(shiftStartTimeDate);
       onTimeDeadline.setMinutes(shiftStartTimeDate.getMinutes() + graceMinutes);
       
-      // Store cutoff time for display
+      // Calculate send-home deadline (start time + grace period + late window)
+      const sendHomeDeadline = new Date(onTimeDeadline);
+      sendHomeDeadline.setMinutes(onTimeDeadline.getMinutes() + LATE_WINDOW_DURATION_MINUTES);
+      
+      // Store cutoff times for display
       cutoffTime = onTimeDeadline.toLocaleTimeString([], { 
         hour: '2-digit', 
         minute: '2-digit', 
         hour12: true 
       });
       
-      // Determine status
-      if (now > onTimeDeadline) {
+      sendHomeCutoff = sendHomeDeadline.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+      
+      // Determine status based on current time
+      if (now > sendHomeDeadline) {
+        attendanceStatus = 'send-home';
+      } else if (now > onTimeDeadline) {
         attendanceStatus = 'late';
       }
 
@@ -536,13 +552,25 @@ export const determineAttendanceStatus = (student: any, selectedShift: string, c
         const cutoffDate = new Date();
         cutoffDate.setHours(fallbackCutoff.hour, fallbackCutoff.minute, 0, 0);
         
+        // Calculate send-home deadline using fallback
+        const sendHomeDeadlineDate = new Date(cutoffDate);
+        sendHomeDeadlineDate.setMinutes(cutoffDate.getMinutes() + LATE_WINDOW_DURATION_MINUTES);
+        
         cutoffTime = cutoffDate.toLocaleTimeString([], { 
           hour: '2-digit', 
           minute: '2-digit', 
           hour12: true 
         });
         
-        if (now > cutoffDate) {
+        sendHomeCutoff = sendHomeDeadlineDate.toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        
+        if (now > sendHomeDeadlineDate) {
+          attendanceStatus = 'send-home';
+        } else if (now > cutoffDate) {
           attendanceStatus = 'late';
         }
       }
@@ -551,7 +579,7 @@ export const determineAttendanceStatus = (student: any, selectedShift: string, c
     console.error('Error in late calculation:', error);
   }
 
-  return { status: attendanceStatus, cutoffTime, startTime };
+  return { status: attendanceStatus, cutoffTime, startTime, sendHomeCutoff };
 };
 
 // Calculate shift rankings for leaderboard (top 3 earliest and latest per shift)
@@ -656,7 +684,8 @@ export const markAttendance = async (
   playSuccessSound: () => void,
   maxRetries: number = 3,
   selectedDate?: string,
-  method: string = 'face-api'
+  method: string = 'face-api',
+  selectedClass?: string // NEW: Optional class parameter for context-aware attendance
 ): Promise<string> => {
   // Use Phnom Penh timezone for attendance date
   const dateStr = new Date().toLocaleString('en-US', { 
@@ -672,20 +701,21 @@ export const markAttendance = async (
   const attemptMarkAttendance = async (attempt: number): Promise<string> => {
     try {
       
-      // Check if already marked today for this shift
+      // Check if already marked today for this shift AND class
       const attendanceRef = collection(db, 'attendance');
       const attendanceQuery = query(
         attendanceRef,
         where('studentId', '==', student.id),
         where('date', '==', attendanceDate),
-        where('shift', '==', selectedShift) // Check for specific shift
+        where('shift', '==', selectedShift), // Check for specific shift
+        where('class', '==', selectedClass || (student as any).class) // CRITICAL: Also check class to allow multiple classes
       );
       
       const attendanceSnapshot = await getDocs(attendanceQuery);
       
       if (!attendanceSnapshot.empty) {
         const existingRecord = attendanceSnapshot.docs[0].data();
-        toast.warning(`${student.fullName} already marked ${existingRecord.status} for ${selectedShift} shift on ${attendanceDate}`);
+        toast.warning(`${student.fullName} already marked ${existingRecord.status} for ${selectedClass || (student as any).class} ${selectedShift} shift on ${attendanceDate}`);
         return existingRecord.status; // Return the existing status
       }
 
@@ -712,7 +742,7 @@ export const markAttendance = async (
         timestamp: new Date(),
         startTime: startTime, // Add startTime in 24-hour format instead of cutoffTime
         // Additional fields for advanced tracking
-        class: (student as any).class || null,
+        class: selectedClass || (student as any).class || null, // CRITICAL: Use context-aware class
         gracePeriodMinutes: (student as any).gracePeriodMinutes || 15,
         // Add retry tracking
         attemptNumber: attempt,
@@ -734,7 +764,8 @@ export const markAttendance = async (
         collection(db, 'attendance'),
         where('studentId', '==', student.id),
         where('date', '==', attendanceDate),
-        where('shift', '==', selectedShift)
+        where('shift', '==', selectedShift),
+        where('class', '==', selectedClass || (student as any).class) // CRITICAL: Include class in verification
       );
       
       const verifySnapshot = await getDocs(verifyQuery);
@@ -756,7 +787,9 @@ export const markAttendance = async (
           studentId: student.id,
           studentName: student.fullName,
           timestamp: now.toISOString(),
-          method: 'attendance-system'
+          method: 'attendance-system',
+          class: selectedClass || (student as any).class, // Pass the actual class where attendance was marked
+          shift: selectedShift // Pass the actual shift where attendance was marked
         });
         
         // Extract notification result
@@ -793,7 +826,9 @@ export const markAttendance = async (
       // Show success message with shift information
       const message = `${student.fullName} marked ${status} for ${selectedShift} shift at ${timeString}`;
       
-      if (status === 'late') {
+      if (status === 'send-home') {
+        toast.error(`${student.fullName} - Too late! Must return home`, { duration: 6000 });
+      } else if (status === 'late') {
         toast.warning(message);
       } else {
         toast.success(message);

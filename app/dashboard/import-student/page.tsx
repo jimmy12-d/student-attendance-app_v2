@@ -1,6 +1,10 @@
 // app/dashboard/import-students/page.tsx
 "use client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import React, { useState } from 'react';
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app as firebaseApp } from "../../../firebase-config";

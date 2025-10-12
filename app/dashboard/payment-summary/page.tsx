@@ -1,4 +1,8 @@
 "use client";
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { db } from "../../../firebase-config";

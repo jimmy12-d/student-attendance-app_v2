@@ -1,6 +1,10 @@
 // app/dashboard/page.tsx
 "use client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   mdiAccountMultiple, mdiChevronDown, mdiClockAlertOutline, mdiAccountOff, mdiTimerSand, mdiChartTimelineVariant, mdiAlertOctagonOutline, mdiReload, mdiTrendingUp,
@@ -8,8 +12,6 @@ import {
   // Add any other icons used by your new section titles
 } from "@mdi/js";
 
-// Force dynamic rendering to avoid build issues
-export const dynamic = 'force-dynamic';
 import Button from "../_components/Button";
 import SectionMain from "../_components/Section/Main";
 import SectionTitleLineWithButton from "../_components/Section/TitleLineWithButton";

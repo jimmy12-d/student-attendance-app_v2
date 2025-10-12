@@ -1,5 +1,9 @@
 "use client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import {mdiQrcode} from "@mdi/js";
 import Head from "next/head";
 import SectionMain from "../../_components/Section/Main";

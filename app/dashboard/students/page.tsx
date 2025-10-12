@@ -1,5 +1,9 @@
 "use client";
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import React, { useState, useEffect } from "react";
 import {
   mdiAccountPlus,
@@ -29,6 +33,7 @@ import PendingRegistrationsSection from "./_components/PendingRegistrationsSecti
 import { StudentDetailsModal } from "./components/StudentDetailsModal";
 import { ExportStudentsModal } from "./components/ExportStudentsModal";
 import { AbsentFollowUpDashboard } from "./components/AbsentFollowUpDashboard";
+import { AbsentNotificationSettingsComponent } from "./components/AbsentNotificationSettings";
 import { FlipFlopStatusIndicator } from "./components/FlipFlopStatusIndicator";
 import { flipFlopService } from "./_services/flipFlopService";
 import { toast } from 'sonner';
@@ -51,6 +56,7 @@ export default function StudentsPage() {
   const [showPendingRequests, setShowPendingRequests] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false); // New state
   const [showAbsentFollowUp, setShowAbsentFollowUp] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -791,21 +797,38 @@ export default function StudentsPage() {
       {showAbsentFollowUp && !isFormActive && !isDeleteModalActive && (
         <CardBox className="mb-6">
           <div className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Absent Follow-Up Dashboard</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">
+                {showNotificationSettings ? "Notification Settings" : "Absent Follow-Up Dashboard"}
+              </h2>
+              <Button
+                onClick={() => setShowNotificationSettings(!showNotificationSettings)}
+                icon={showNotificationSettings ? mdiChevronUp : mdiClipboardCheck}
+                label={showNotificationSettings ? "Back to Dashboard" : "Notification Settings"}
+                color={showNotificationSettings ? "info" : "success"}
+                roundedFull
+                small
+              />
+            </div>
             
-            {/* Date and Filter Controls */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:text-white"
-                />
-              </div>
+            {/* Render Notification Settings or Dashboard */}
+            {showNotificationSettings ? (
+              <AbsentNotificationSettingsComponent />
+            ) : (
+              <>
+                {/* Date and Filter Controls */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:text-white"
+                    />
+                  </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -849,6 +872,8 @@ export default function StudentsPage() {
               selectedShift={selectedShift}
               onViewDetails={handleViewDetails}
             />
+              </>
+            )}
           </div>
         </CardBox>
       )}

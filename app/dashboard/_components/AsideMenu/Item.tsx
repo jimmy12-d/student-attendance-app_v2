@@ -190,7 +190,7 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
   );
 
   return (
-    <li className="relative">
+    <li>
       {/* Render as Link if href is present AND it's NOT a logout item AND not a dropdown parent */}
       {item.href && !item.menu && !item.isLogout ? (
         <Link href={item.href} target={item.target} className="block">

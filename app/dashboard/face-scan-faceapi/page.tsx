@@ -1,7 +1,10 @@
 "use client";
 
+// Force dynamic rendering - this page uses webcam and cannot be statically generated
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Head from 'next/head';
 import Webcam from 'react-webcam';
 import { toast } from 'sonner';
 import { collection, getDocs, onSnapshot } from 'firebase/firestore';
@@ -9,13 +12,12 @@ import { db } from '../../../firebase-config';
 
 import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiCog, mdiInformation } from '@mdi/js';
 import CardBox from "../../_components/CardBox";
-import { getPageTitle } from "../../_lib/config";
 import CustomDropdown from '../students/components/CustomDropdown';
 import Icon from '../../_components/Icon';
 
 // Import utilities
 import { Student } from '../../_interfaces';
-import { filterStudentsByShift, markAttendance } from '../_lib/attendanceLogic';
+import { filterStudentsByShift, markAttendance, determineAttendanceStatus } from '../_lib/attendanceLogic';
 import { TrackedFace, initializeFaceApi, detectAllFaces, calculateFaceDistance } from './utils/faceDetection';
 import ZoomModeOverlay from './components/ZoomModeOverlay';
 import RecognitionControls from './components/RecognitionControls';
@@ -23,6 +25,7 @@ import ShiftSelector from './components/ShiftSelector';
 import CameraShutdownHandler from './components/CameraShutdownHandler';
 import ShutdownTransition from './components/ShutdownTransition';
 import FailedAttendanceManager from './components/FailedAttendanceManager';
+import { SendHomeOverlay } from './components/SendHomeOverlay';
 import { offlineAttendanceManager, OfflineAttendanceRecord } from './utils/offlineAttendanceManager';
 
 const FaceApiAttendanceScanner = () => {
@@ -58,6 +61,8 @@ const FaceApiAttendanceScanner = () => {
   const [classConfigs, setClassConfigs] = useState<any>(null); // Store class configurations
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const [showSendHomeOverlay, setShowSendHomeOverlay] = useState(false);
+  const [sendHomeStudent, setSendHomeStudent] = useState<{ name: string; cutoff?: string } | null>(null);
   
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isDetectingRef = useRef(false);
@@ -98,6 +103,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
             // Include shift and class data
             shift: data.shift,
             class: data.class,
+            inBPClass: data.inBPClass, // Make sure to include inBPClass field
             authUid: data.authUid // Add authUid for student portal access
           } as any);
         });
@@ -244,7 +250,16 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
           }
 
           // Use the enhanced markAttendance with retry logic
-          const result = await markAttendance(student, record.shift, classConfigs || {}, () => {}, 2, record.date); // 2 retry attempts for auto-retry, use original date
+          const result = await markAttendance(
+            student, 
+            record.shift, 
+            classConfigs || {}, 
+            () => {}, 
+            2, // 2 retry attempts for auto-retry
+            record.date, // use original date
+            'face-api', // method
+            record.class || undefined // CRITICAL: Use the class from the failed record
+          );
           return result !== 'present'; // Return true if not default fallback
         } catch (error) {
           console.error('Retry callback failed:', error);
@@ -689,9 +704,143 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                 // Play success sound immediately when face is recognized
                 playSuccessSound();
                 
+                // Determine the correct shift and class for attendance marking
+                // For BP students (inBPClass: true) recognized during Evening shift, use "Evening" and BP class
+                const isBPStudent = (bestMatch.student as any).inBPClass === true;
+                const isEveningShift = selectedShift?.toLowerCase() === 'evening';
+                
+                const attendanceShift = (isBPStudent && isEveningShift) 
+                  ? 'Evening' 
+                  : selectedShift || '';
+                
+                // Determine the attendance class
+                // If BP student in Evening shift, use "12BP" (or the actual BP class from configs)
+                // Otherwise, use student's regular class
+                let attendanceClass = (bestMatch.student as any).class;
+                if (isBPStudent && isEveningShift) {
+                  // Try to get BP class name from configs, fallback to "12BP"
+                  attendanceClass = classConfigs?.['12BP']?.name || '12BP';
+                }
+                
+                // Check if student should be sent home (too late)
+                const { status: attendanceCheckStatus, sendHomeCutoff } = determineAttendanceStatus(
+                  bestMatch.student, 
+                  attendanceShift, 
+                  classConfigs || {}
+                );
+                
+                if (attendanceCheckStatus === 'send-home') {
+                  // Student arrived too late - show send home overlay AND record in database
+                  setSendHomeStudent({
+                    name: bestMatch.student.fullName,
+                    cutoff: sendHomeCutoff
+                  });
+                  setShowSendHomeOverlay(true);
+                  
+                  // Update face to show send-home status immediately
+                  const sendHomeUpdatedFace = {
+                    ...face,
+                    status: 'recognizing' as const,
+                    name: bestMatch.student.fullName,
+                    confidence: finalConfidence,
+                    lastRecognized: now,
+                    message: `⛔ Too Late - Send Home`,
+                    isScanning: true,
+                    scanMessage: `⛔ ${bestMatch.student.fullName} - Too Late!`
+                  };
+                  
+                  // Mark attendance with 'send-home' status in database
+                  markAttendance(
+                    bestMatch.student, 
+                    attendanceShift, 
+                    classConfigs || {}, 
+                    () => {}, 
+                    3, // 3 retry attempts
+                    undefined, // use current date
+                    'face-api', // method
+                    attendanceClass // CRITICAL: Pass context-aware class
+                  )
+                    .then((attendanceStatus) => {
+                      console.log(`⛔ Send-home recorded for ${bestMatch.student.fullName}: ${attendanceStatus}`);
+                      
+                      // Set cooldown to prevent duplicate scans
+                      recentlyMarkedStudents.current.set(studentKey, Date.now());
+                      console.log(`🔒 Cooldown set for ${bestMatch.student.fullName} - send-home recorded`);
+                      
+                      // Notify other components
+                      window.dispatchEvent(new CustomEvent('attendanceMarked', {
+                        detail: {
+                          studentId: bestMatch.student.id,
+                          studentName: bestMatch.student.fullName,
+                          status: attendanceStatus,
+                          shift: attendanceShift,
+                          timestamp: new Date(),
+                          method: 'face-api'
+                        }
+                      }));
+                      
+                      // Update face to show send-home recorded
+                      setTrackedFaces(prevFaces => 
+                        prevFaces.map(f => 
+                          f.id === face.id 
+                            ? { 
+                                ...f, 
+                                attendanceStatus: 'send-home',
+                                status: 'recognized' as const,
+                                message: `⛔ Send Home - ${bestMatch.student.fullName}`,
+                                isScanning: false
+                              } 
+                            : f
+                        )
+                      );
+                      
+                      // Auto-dismiss overlay after 5 seconds and clear face
+                      setTimeout(() => {
+                        setShowSendHomeOverlay(false);
+                        setSendHomeStudent(null);
+                        setTrackedFaces(prevFaces => prevFaces.filter(f => f.id !== face.id));
+                      }, 5000);
+                    })
+                    .catch(error => {
+                      console.error('❌ Failed to record send-home status:', error);
+                      
+                      // Remove from cooldown on failure
+                      recentlyMarkedStudents.current.delete(studentKey);
+                      
+                      toast.error(`Failed to record send-home for ${bestMatch.student.fullName}`, {
+                        duration: 5000
+                      });
+                      
+                      // Update face to show error
+                      setTrackedFaces(prevFaces => 
+                        prevFaces.map(f => 
+                          f.id === face.id 
+                            ? { 
+                                ...f, 
+                                status: 'unknown' as const,
+                                message: `❌ Error recording send-home`,
+                                isScanning: false
+                              } 
+                            : f
+                        )
+                      );
+                    });
+                  
+                  return sendHomeUpdatedFace;
+                }
+                
                 // Mark attendance for the recognized student (async) with enhanced error handling
                 // Don't pass playSuccessSound since we already played it
-                markAttendance(bestMatch.student, selectedShift || '', classConfigs || {}, () => {}, 3) // 3 retry attempts
+                markAttendance(
+                  bestMatch.student, 
+                  attendanceShift, 
+                  classConfigs || {}, 
+                  () => {}, 
+                  3, // 3 retry attempts
+                  undefined, // use current date
+                  'face-api', // method
+                  attendanceClass // CRITICAL: Pass context-aware class
+                )
                   .then((attendanceStatus) => {
                     console.log(`✅ Attendance marking completed for ${bestMatch.student.fullName}: ${attendanceStatus}`);
                     
@@ -711,7 +860,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                         studentId: bestMatch.student.id,
                         studentName: bestMatch.student.fullName,
                         status: attendanceStatus,
-                        shift: selectedShift || '',
+                        shift: attendanceShift, // Use the determined shift
                         timestamp: new Date(),
                         method: 'face-api'
                       }
@@ -1080,7 +1229,10 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       // Dynamic color logic - prioritize current state but respect attendance status
       if (face.isScanning) {
         // Scanning state - use color based on attendance status
-        if (face.attendanceStatus === 'late') {
+        if (face.attendanceStatus === 'send-home') {
+          borderColor = '#dc2626'; // Bright red for send-home scanning
+          label = face.name ? `${face.name} - TOO LATE!` : 'TOO LATE!';
+        } else if (face.attendanceStatus === 'late') {
           borderColor = '#f59e0b'; // Amber for late scanning
           label = face.name ? `${face.name} - Late...` : 'Late...';
         } else {
@@ -1101,7 +1253,10 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         label = 'Recognizing...';
       } else if (face.status === 'recognized' && face.name) {
         // Successfully recognized - use attendance status for color
-        if (face.attendanceStatus === 'late') {
+        if (face.attendanceStatus === 'send-home') {
+          borderColor = '#dc2626'; // Bright red for send-home
+          label = `${face.name} - SEND HOME`;
+        } else if (face.attendanceStatus === 'late') {
           borderColor = '#f59e0b'; // Amber for late arrival
           label = `${face.name} - Late Arrival`;
         } else {
@@ -1188,6 +1343,22 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   return (
     <>
+      {/* Send Home Overlay */}
+      <SendHomeOverlay
+        isVisible={showSendHomeOverlay}
+        studentName={sendHomeStudent?.name || ''}
+        sendHomeCutoff={sendHomeStudent?.cutoff}
+        onDismiss={() => {
+          setShowSendHomeOverlay(false);
+          setSendHomeStudent(null);
+          // Clear the tracked face from the canvas so it's not visible anymore
+          setTrackedFaces(prevFaces => prevFaces.filter(f => 
+            f.attendanceStatus !== 'send-home' && 
+            f.message?.includes('Send Home') === false
+          ));
+        }}
+      />
+
       {/* Camera Shutdown Handler */}
       <CameraShutdownHandler
         isZoomMode={isZoomMode}
@@ -1603,6 +1774,17 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         </div>
       </div>
 
+      {/* Send Home Overlay */}
+      <SendHomeOverlay
+        isVisible={showSendHomeOverlay}
+        studentName={sendHomeStudent?.name || ''}
+        sendHomeCutoff={sendHomeStudent?.cutoff}
+        onDismiss={() => {
+          setShowSendHomeOverlay(false);
+          setSendHomeStudent(null);
+        }}
+      />
+
       {/* Failed Attendance Manager */}
       <FailedAttendanceManager 
         onRetryAttendance={(studentId, studentName) => {
@@ -1613,13 +1795,4 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   );
 };
 
-export default function FaceApiAttendancePage() {
-  return (
-    <>
-      <Head>
-        <title>{getPageTitle('Face-API Attendance')}</title>
-      </Head>
-      <FaceApiAttendanceScanner />
-    </>
-  );
-}
+export default FaceApiAttendanceScanner;

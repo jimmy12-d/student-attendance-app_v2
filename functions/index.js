@@ -164,6 +164,24 @@ const getUserLanguage = async (authUid) => {
     }
 };
 
+// --- Helper function to create standardized parent bot menu keyboard ---
+const getParentBotMenuKeyboard = () => {
+    return {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: '📅 ពិនិត្យវត្តមាន', callback_data: 'check_attendance' },
+                    { text: '💰 ពិនិត្យបង់ថ្លៃ', callback_data: 'check_payment' }
+                ],
+                [
+                    { text: '📝 លទ្ធផលប្រលង', callback_data: 'check_mock_exam' },
+                    { text: '❓ ជំនួយ', callback_data: 'show_help' }
+                ]
+            ]
+        }
+    };
+};
+
 const calculateAttendanceStatus = (attendanceTime, classStartTime) => {
     if (!classStartTime) return null;
     
@@ -659,7 +677,7 @@ exports.parentBotWebhook = onRequest({
                     `• មើលលទ្ធផលប្រលង\n\n` +
                     `ប្រសិនបើបងត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែម សូមស្នើសុំតំណចុះឈ្មោះថ្មីពីសាលា។\n\n` +
                     `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
-                    { parse_mode: 'Markdown' }
+                    { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() }
                 );
                 return res.status(200).send('OK');
             }
@@ -679,14 +697,12 @@ exports.parentBotWebhook = onRequest({
                 `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សារបស់កូន\n` +
                 `• មើលលទ្ធផលប្រលងរបស់កូន\n\n` +
                 `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() }
             );
         } else if (text === '/parent' || text === '/parentinfo') {
             await handleParentInfoCommand(bot, chatId, userId);
         } else if (text === '/check_mock_exam_result') {
             await handleMockExamResultDeepLink(bot, chatId, userId, 'check_mock_exam_result');
-        } else if (text === '/payment') {
-            await handlePaymentStatusCommand(bot, chatId, userId);
         } else if (text === '/attendance') {
             // Check attendance for registered students
             const parentQuery = await db.collection('parentNotifications')
@@ -698,7 +714,8 @@ exports.parentBotWebhook = onRequest({
                 await bot.sendMessage(chatId, 
                     `🔍 បងមិនទាន់បានចុះឈ្មោះទទួលការជូនដំណឹងអំពីកូនរបស់បងនៅឡើយទេ។\n\n` +
                     `ដើម្បីពិនិត្យវត្តមាន សូមចុះឈ្មោះជាមុនសិន។\n\n` +
-                    `វាយ /start ដើម្បីចាប់ផ្តើម។`
+                    `វាយ /start ដើម្បីចាប់ផ្តើម។`,
+                    getParentBotMenuKeyboard()
                 );
                 return res.status(200).send('OK');
             }
@@ -706,7 +723,7 @@ exports.parentBotWebhook = onRequest({
             const today = new Date();
             const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
             
-            let attendanceMessage = `📍 **ពិនិត្យវត្តមានសិស្ស**\n\n`;
+            let attendanceMessage = `� **ពិនិត្យវត្តមានសិស្ស**\n\n`;
             
             for (const doc of parentQuery.docs) {
                 const parentData = doc.data();
@@ -714,27 +731,82 @@ exports.parentBotWebhook = onRequest({
                 const studentName = parentData.studentKhmerName || parentData.studentName;
                 
                 try {
-                    // Query attendance for today
+                    // Query ALL attendance records for today (both regular class and BP class)
                     const attendanceQuery = await db.collection('attendance')
                         .where('studentId', '==', studentId)
                         .where('date', '==', todayString)
-                        .limit(1)
                         .get();
                     
                     if (!attendanceQuery.empty) {
-                        const attendanceData = attendanceQuery.docs[0].data();
-                        const attendanceTimeUTC = attendanceData.timestamp.toDate();
-                        // Convert to Phnom Penh time (UTC+7)
-                        const attendanceTime = new Date(attendanceTimeUTC.getTime() + (7 * 60 * 60 * 1000));
-                        const status = calculateAttendanceStatus(attendanceTime, parentData.classStartTime);
-                        
                         attendanceMessage += `👤 **${studentName}**\n`;
-                        attendanceMessage += `✅ បានមកដល់សាលា\n`;
-                        attendanceMessage += `🕐 ម៉ោង: ${formatTimeInKhmer(attendanceTime)}\n`;
-                        if (status) {
-                            attendanceMessage += `📊 ស្ថានភាព: ${status.status} ${status.statusIcon}\n`;
-                        }
-                        attendanceMessage += `\n`;
+                        
+                        // Group attendance by shift
+                        const attendanceByShift = {};
+                        attendanceQuery.docs.forEach(attendanceDoc => {
+                            const data = attendanceDoc.data();
+                            attendanceByShift[data.shift] = data;
+                        });
+                        
+                        // Display each shift's attendance
+                        const shifts = Object.keys(attendanceByShift).sort((a, b) => {
+                            const shiftOrder = { 'Morning': 1, 'Afternoon': 2, 'Evening': 3 };
+                            return (shiftOrder[a] || 99) - (shiftOrder[b] || 99);
+                        });
+                        
+                        shifts.forEach(shift => {
+                            const attendanceData = attendanceByShift[shift];
+                            const attendanceTimeUTC = attendanceData.timestamp.toDate();
+                            // Convert to Phnom Penh time (UTC+7)
+                            const attendanceTime = new Date(attendanceTimeUTC.getTime() + (7 * 60 * 60 * 1000));
+                            
+                            // Look up class start time for this shift from class configuration
+                            let startTime = null;
+                            if (attendanceData.class && attendanceData.shift) {
+                                const classConfigs = {
+                                    '12A': {
+                                        'Morning': { startTime: '07:30' },
+                                        'Afternoon': { startTime: '13:30' },
+                                        'Evening': { startTime: '17:30' }
+                                    },
+                                    '12BP': {
+                                        'Evening': { startTime: '17:30' }
+                                    },
+                                    '11A': {
+                                        'Morning': { startTime: '07:30' },
+                                        'Afternoon': { startTime: '13:30' }
+                                    },
+                                    '10A': {
+                                        'Morning': { startTime: '07:30' },
+                                        'Afternoon': { startTime: '13:30' }
+                                    },
+                                    '9A': {
+                                        'Morning': { startTime: '07:30' },
+                                        'Afternoon': { startTime: '13:30' }
+                                    }
+                                };
+                                
+                                // Normalize class name (remove "Class " prefix if present)
+                                const normalizedClass = attendanceData.class.replace(/^Class\s+/i, '');
+                                
+                                if (classConfigs[normalizedClass] && classConfigs[normalizedClass][attendanceData.shift]) {
+                                    startTime = classConfigs[normalizedClass][attendanceData.shift].startTime;
+                                }
+                            }
+                            
+                            const status = calculateAttendanceStatus(attendanceTime, startTime);
+                            
+                            const shiftDisplay = formatShiftInKhmer(shift);
+                            const classDisplay = containsEnglish(attendanceData.class) ? formatClassInKhmer(attendanceData.class) : attendanceData.class;
+                            
+                            attendanceMessage += `   🏫 **${classDisplay}** (${shiftDisplay})\n`;
+                            attendanceMessage += `   ✅ បានមកដល់សាលា\n`;
+                            attendanceMessage += `   🕐 ${formatTimeInKhmer(attendanceTime)}\n`;
+                            if (status) {
+                                attendanceMessage += `   📊 ${status.status} ${status.statusIcon}\n`;
+                            }
+                            attendanceMessage += `\n`;
+                        });
+                        
                     } else {
                         attendanceMessage += `👤 **${studentName}**\n`;
                         attendanceMessage += `❌ កូនរបស់បងមិនទាន់មកដល់សាលានៅឡើយទេ\n\n`;
@@ -746,36 +818,22 @@ exports.parentBotWebhook = onRequest({
                 }
             }
             
-            await bot.sendMessage(chatId, attendanceMessage, { parse_mode: 'Markdown' });
+            await bot.sendMessage(chatId, attendanceMessage, { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
         } else if (text === '/help') {
-            const helpKeyboard = {
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '💰 ស្ថានភាពបង់ថ្លៃ', callback_data: 'help_payment' },
-                            { text: '📚 លទ្ធផលប្រលង', callback_data: 'help_exam' }
-                        ],
-                        [
-                            { text: '📍 ពិនិត្យវត្តមាន', callback_data: 'help_attendance' },
-                            { text: '❓ ជំនួយ', callback_data: 'help_help' }
-                        ],
-                    ]
-                }
-            };
-
             await bot.sendMessage(chatId, 
                 `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
                 `សូមជ្រើសរើសពាក្យបញ្ជាដែលបងចង់ប្រើ៖\n\n` +
                 `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076\n\n` +
                 `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
-                { parse_mode: 'Markdown', ...helpKeyboard }
+                { parse_mode: 'Markdown', ...getHelpMenuKeyboard() }
             );
         } else {
             // Send helpful message for unrecognized commands
             await bot.sendMessage(chatId, 
                 '🤖 នេះគ្រាន់តែជា Bot។\n'
                 `ខ្ញុំមិនយល់ពាក្យបញ្ជានេះទេ។ សូមចុច /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។\n\n` +
-                `ឬ សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`
+                `ឬ សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
+                getParentBotMenuKeyboard()
             );
         }
 
@@ -846,7 +904,7 @@ const handleParentInfoCommand = async (bot, chatId, userId) => {
                 `• Your child arrives at school\n` +
                 `• Your child requests permission to leave early\n` +
                 `• Permission requests are approved or denied`,
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() }
             );
             return;
         }
@@ -869,11 +927,11 @@ const handleParentInfoCommand = async (bot, chatId, userId) => {
                        `• ការស្នើសុំអនុញ្ញាតត្រូវបានយល់ព្រម ឬបដិសេធ\n\n` +
                        `ត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែមទៀត? ទាក់ទងសាលាសម្រាប់តំណចុះឈ្មោះថ្មី។`;
         
-        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
         
     } catch (error) {
         console.error('Error in handleParentInfoCommand:', error);
-        await bot.sendMessage(chatId, "❌ An error occurred while checking your parent registration status.");
+        await bot.sendMessage(chatId, "❌ An error occurred while checking your parent registration status.", getParentBotMenuKeyboard());
     }
 };
 
@@ -893,7 +951,7 @@ const handlePaymentStatusCommand = async (bot, chatId, userId) => {
                 `🔍 បងមិនទាន់បានចុះឈ្មោះទទួលការជូនដំណឹងអំពីកូនរបស់បងនៅឡើយទេ។\n\n` +
                 `ដើម្បីពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា សូមចុះឈ្មោះជាមុនសិន។\n\n` +
                 `វាយ /start ដើម្បីចាប់ផ្តើម។`,
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() }
             );
             return;
         }
@@ -1049,11 +1107,11 @@ const handlePaymentStatusCommand = async (bot, chatId, userId) => {
             }
         }
         
-        await bot.sendMessage(chatId, paymentInfo, { parse_mode: 'Markdown' });
+        await bot.sendMessage(chatId, paymentInfo, { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
         
     } catch (error) {
         console.error('Error in handlePaymentStatusCommand:', error);
-        await bot.sendMessage(chatId, "❌ មានកំហុសក្នុងការពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា។ សូមព្យាយាមម្តងទៀតក្រោយមួយរំពេច។");
+        await bot.sendMessage(chatId, "❌ មានកំហុសក្នុងការពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា។ សូមព្យាយាមម្តងទៀតក្រោយមួយរំពេច។", getParentBotMenuKeyboard());
     }
 };
 
@@ -1169,6 +1227,69 @@ const generateCalendarKeyboard = (year, month) => {
 };
 
 /**
+ * Get calendar selection message text (reusable component)
+ * @returns {string} Calendar instruction message in Khmer
+ */
+const getCalendarMessage = () => {
+    return `📅 **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
+           `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
+           `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`;
+};
+
+/**
+ * Get attendance notification keyboard (reusable component)
+ * @returns {Object} Inline keyboard markup for attendance notifications
+ */
+const getAttendanceNotificationKeyboard = () => {
+    return {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: '💰 ពិនិត្យបង់ថ្លៃ', callback_data: 'check_payment' },
+                    { text: '📝 ពិនិត្យប្រលង', callback_data: 'check_mock_exam' },
+                    { text: '📅 ពិនិត្យវត្តមាន', callback_data: 'check_attendance' }
+                ]
+            ]
+        }
+    };
+};
+
+/**
+ * Get help menu keyboard (reusable component)
+ * @returns {Object} Inline keyboard markup for help menu
+ */
+const getHelpMenuKeyboard = () => {
+    return {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: '💰 ពិនិត្យបង់ថ្លៃ', callback_data: 'help_payment' },
+                    { text: '📚 លទ្ធផលប្រលង', callback_data: 'help_exam' }
+                ],
+                [
+                    { text: '📍 ពិនិត្យវត្តមាន', callback_data: 'help_attendance' },
+                    { text: '❓ ជំនួយ', callback_data: 'help_help' }
+                ]
+            ]
+        }
+    };
+};
+
+/**
+ * Get back to calendar keyboard (reusable component)
+ * @returns {Object} Inline keyboard markup for back to calendar button
+ */
+const getBackToCalendarKeyboard = () => {
+    return {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: '⬅️ ត្រឡប់ទៅប្រតិទិន', callback_data: 'calendar_back_to_calendar' }]
+            ]
+        }
+    };
+};
+
+/**
  * Handle /start command for parent registration
  */
 const handleParentStartCommand = async (bot, chatId, userId, token) => {
@@ -1180,14 +1301,14 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
         const studentId = decodedToken.split('_')[1];
         
         if (!studentId) {
-            await bot.sendMessage(chatId, "❌ ថូខនិងចុះឈ្មោះមិនត្រឹមត្រូវ។ សូមស្នើសុំតំណថ្មីពីសាលារបស់កូនរបស់បង។");
+            await bot.sendMessage(chatId, "❌ ថូខនិងចុះឈ្មោះមិនត្រឹមត្រូវ។ សូមស្នើសុំតំណថ្មីពីសាលារបស់កូនរបស់បង។", getParentBotMenuKeyboard());
             return;
         }
 
         // Get student information
         const studentDoc = await db.collection('students').doc(studentId).get();
         if (!studentDoc.exists) {
-            await bot.sendMessage(chatId, "❌ រកមិនឃើញសិស្ស។ សូមទាក់ទងសាលាសម្រាប់ជំនួយ។");
+            await bot.sendMessage(chatId, "❌ រកមិនឃើញសិស្ស។ សូមទាក់ទងសាលាសម្រាប់ជំនួយ។", getParentBotMenuKeyboard());
             return;
         }
 
@@ -1245,13 +1366,13 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
 
 វាយ /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។`;
 
-        await bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
+        await bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
         
         logger.info(`Parent successfully registered for student ${studentId}`);
         
     } catch (error) {
         logger.error('Error in parent registration:', error);
-        await bot.sendMessage(chatId, "❌ ការចុះឈ្មោះបានបរាជ័យ។ សូមព្យាយាមម្តងទៀត ឬទាក់ទងការគាំទ្រ​សាលា។");
+        await bot.sendMessage(chatId, "❌ ការចុះឈ្មោះបានបរាជ័យ។ សូមព្យាយាមម្តងទៀត ឬទាក់ទងការគាំទ្រ​សាលា។", getParentBotMenuKeyboard());
     }
 };
 
@@ -1273,7 +1394,7 @@ const handleMockExamResultDeepLink = async (bot, chatId, userId, deepLinkParam) 
                 `❌ សូមទោស!\n\n` +
                 `បងមិនទាន់បានចុះឈ្មោះជាម្តាយឪពុកនៅឡើយទេ។ សូមចុះឈ្មោះជាមុនសិនដើម្បីមើលលទ្ធផលប្រលងរបស់កូន។\n\n` +
                 `ទាក់ទងសាលាសម្រាប់ការចុះឈ្មោះ។`,
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() }
             );
             return;
         }
@@ -1292,7 +1413,7 @@ const handleMockExamResultDeepLink = async (bot, chatId, userId, deepLinkParam) 
                 `📚 **លទ្ធផលប្រលង**\n\n` +
                 `🔍 ប្រលងណាមួយមិនទាន់មានលទ្ធផលនៅឡើយទេ...\n\n` +
                 `សូមរង់ចាំការជូនដំណឹងពីសាលានៅពេលលទ្ធផលត្រៀមរួចរាល់។`,
-                { parse_mode: 'Markdown' }
+                { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() }
             );
             return;
         }
@@ -1322,7 +1443,7 @@ const handleMockExamResultDeepLink = async (bot, chatId, userId, deepLinkParam) 
 
     } catch (error) {
         logger.error('Error in handleMockExamResultDeepLink:', error);
-        await bot.sendMessage(chatId, "❌ មានបញ្ហាក្នុងការទាញយកលទ្ធផលប្រលង។ សូមព្យាយាមម្តងទៀត។");
+        await bot.sendMessage(chatId, "❌ មានបញ្ហាក្នុងការទាញយកលទ្ធផលប្រលង។ សូមព្យាយាមម្តងទៀត។", getParentBotMenuKeyboard());
     }
 };
 
@@ -1356,9 +1477,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
             const calendarKeyboard = generateCalendarKeyboard(currentYear, currentMonth);
             await bot.sendMessage(
                 chatId,
-                `📅 **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
-                `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
-                `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                getCalendarMessage(),
                 {
                     parse_mode: 'Markdown',
                     ...calendarKeyboard
@@ -1380,9 +1499,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
             
             const calendarKeyboard = generateCalendarKeyboard(newYear, newMonth);
             await bot.editMessageText(
-                `📅 **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
-                `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
-                `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                getCalendarMessage(),
                 {
                     chat_id: chatId,
                     message_id: messageId,
@@ -1406,9 +1523,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
             
             const calendarKeyboard = generateCalendarKeyboard(newYear, newMonth);
             await bot.editMessageText(
-                `📅 **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
-                `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
-                `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                getCalendarMessage(),
                 {
                     chat_id: chatId,
                     message_id: messageId,
@@ -1418,21 +1533,6 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
             );
         } else if (data === 'calendar_back') {
             // Handle back button - return to help menu
-            const helpKeyboard = {
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '💰 ស្ថានភាពបង់ថ្លៃ', callback_data: 'help_payment' },
-                            { text: '📚 លទ្ធផលប្រលង', callback_data: 'help_exam' }
-                        ],
-                        [
-                            { text: '📍 ពិនិត្យវត្តមាន', callback_data: 'help_attendance' },
-                            { text: '❓ ជំនួយ', callback_data: 'help_help' }
-                        ],
-                    ]
-                }
-            };
-            
             await bot.editMessageText(
                 `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
                 `សូមជ្រើសរើសពាក្យបញ្ជាដែលបងចង់ប្រើ៖\n\n` +
@@ -1442,7 +1542,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
                     chat_id: chatId,
                     message_id: messageId,
                     parse_mode: 'Markdown',
-                    ...helpKeyboard
+                    ...getHelpMenuKeyboard()
                 }
             );
         } else if (data.startsWith('attendance_date_')) {
@@ -1525,19 +1625,11 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
             }
             
             // Add back button to return to calendar
-            const backKeyboard = {
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: '⬅️ ត្រឡប់ទៅប្រតិទិន', callback_data: 'calendar_back_to_calendar' }]
-                    ]
-                }
-            };
-            
             await bot.editMessageText(attendanceMessage, {
                 chat_id: chatId,
                 message_id: messageId,
                 parse_mode: 'Markdown',
-                ...backKeyboard
+                ...getBackToCalendarKeyboard()
             });
         } else if (data === 'calendar_back_to_calendar') {
             // Return to calendar view
@@ -1545,9 +1637,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
             const calendarKeyboard = generateCalendarKeyboard(today.getFullYear(), today.getMonth());
             
             await bot.editMessageText(
-                `📅 **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
-                `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
-                `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                getCalendarMessage(),
                 {
                     chat_id: chatId,
                     message_id: messageId,
@@ -1617,32 +1707,17 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
                 const calendarKeyboard = generateCalendarKeyboard(today.getFullYear(), today.getMonth());
                 
                 await bot.sendMessage(chatId, 
-                    `� **ជ្រើសរើសថ្ងៃដើម្បីពិនិត្យវត្តមាន**\n\n` +
-                    `សូមចុចលើថ្ងៃដែលបងចង់ពិនិត្យវត្តមានរបស់កូន។\n\n` +
-                    `● សញ្ញានេះបង្ហាញថ្ងៃនេះ`,
+                    getCalendarMessage(),
                     { parse_mode: 'Markdown', ...calendarKeyboard }
                 );
             } else if (command === 'help') {
                 // Resend help menu
-            const helpKeyboard = {
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            { text: '💰 ស្ថានភាពបង់ថ្លៃ', callback_data: 'help_payment' },
-                            { text: '📚 លទ្ធផលប្រលង', callback_data: 'help_exam' }
-                        ],
-                        [
-                            { text: '📍 ពិនិត្យវត្តមាន', callback_data: 'help_attendance' },
-                            { text: '❓ ជំនួយ', callback_data: 'help_help' }
-                        ],
-                    ]
-                }
-            };                await bot.sendMessage(chatId, 
+                await bot.sendMessage(chatId, 
                     `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
                     `សូមជ្រើសរើសពាក្យបញ្ជាដែលបងចង់ប្រើ៖\n\n` +
                     `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076\n\n` +
                     `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
-                    { parse_mode: 'Markdown', ...helpKeyboard }
+                    { parse_mode: 'Markdown', ...getHelpMenuKeyboard() }
                 );
             }
         }
@@ -3765,7 +3840,7 @@ exports.notifyParentAttendance = onCall({
 }, async (request) => {
     try {
         logger.info('📱 notifyParentAttendance called with data:', request.data);
-        const { studentId, studentName, timestamp, method = 'face-scan' } = request.data;
+        const { studentId, studentName, timestamp, method = 'face-scan', class: attendanceClass, shift: attendanceShift } = request.data;
         
         if (!studentId || !studentName) {
             logger.error('Missing required fields:', { studentId, studentName });
@@ -3812,6 +3887,27 @@ exports.notifyParentAttendance = onCall({
         // Adjust for Cambodia timezone
         const cambodiaTime = new Date(attendanceDate.getTime() + (7 * 60 * 60 * 1000));
         const attendanceTime = formatTimeInKhmer(cambodiaTime);
+        
+        // CRITICAL: Look up the correct class start time based on actual attendance class/shift
+        // This handles BP class (12BP Evening) vs regular class (12A Morning/Afternoon)
+        let actualStartTime = null;
+        if (attendanceClass && attendanceShift) {
+            try {
+                const classesSnap = await db.collection('classes').get();
+                const classConfigs = classesSnap.docs.reduce((acc, doc) => ({ ...acc, [doc.id]: doc.data() }), {});
+                
+                // Handle "Class 12A" vs "12A" format
+                const classKey = attendanceClass.replace(/^Class\s+/i, '');
+                const classConfig = classConfigs[classKey];
+                
+                if (classConfig && classConfig.shifts && classConfig.shifts[attendanceShift]) {
+                    actualStartTime = classConfig.shifts[attendanceShift].startTime;
+                    logger.info(`Found start time ${actualStartTime} for ${attendanceClass} ${attendanceShift}`);
+                }
+            } catch (error) {
+                logger.warn('Failed to look up class start time:', error);
+            }
+        }
 
         for (const doc of parentQuery.docs) {
             const parentData = doc.data();
@@ -3820,12 +3916,20 @@ exports.notifyParentAttendance = onCall({
             try {
                 // Use Khmer name if available, otherwise use regular name
                 const khmerName = parentData.studentKhmerName || studentName;
-                const classDisplay = containsEnglish(parentData.studentClass) ? formatClassInKhmer(parentData.studentClass) : (parentData.studentClass || 'មិនបានបញ្ជាក់');
-                const shiftDisplay = formatShiftInKhmer(parentData.studentShift) || 'មិនបានបញ្ជាក់';
                 
-                // Calculate attendance status if start time is available
-                const attendanceStatus = parentData.classStartTime ? 
-                    calculateAttendanceStatus(cambodiaTime, parentData.classStartTime) : null;
+                // Use actual attendance class/shift if provided, otherwise fall back to parent data
+                const displayClass = attendanceClass || parentData.studentClass;
+                const displayShift = attendanceShift || parentData.studentShift;
+                
+                const classDisplay = containsEnglish(displayClass) ? formatClassInKhmer(displayClass) : (displayClass || 'មិនបានបញ្ជាក់');
+                const shiftDisplay = formatShiftInKhmer(displayShift) || 'មិនបានបញ្ជាក់';
+                
+                // Use actual start time if found, otherwise fall back to parent data
+                const startTimeToUse = actualStartTime || parentData.classStartTime;
+                
+                // Calculate attendance status using the correct start time
+                const attendanceStatus = startTimeToUse ? 
+                    calculateAttendanceStatus(cambodiaTime, startTimeToUse) : null;
                 
                 let message = `🎒 **ការជូនដំណឹងវត្តមាន**
 
@@ -3835,7 +3939,8 @@ exports.notifyParentAttendance = onCall({
                 
                 // Add class start time and status if available
                 if (attendanceStatus) {
-                    message += ` 🔔 **ម៉ោងចាប់ផ្តើម:** ${attendanceStatus.startTime}`;
+                    message += `
+🔔 **ម៉ោងចាប់ផ្តើម:** ${attendanceStatus.startTime}`;
                 }
                 
                 message += `
@@ -3851,19 +3956,7 @@ ${attendanceStatus.statusIcon} **ស្ថានភាព:** ${attendanceStatus.
 
 ✅ កូនរបស់បងបានមកដល់សាលាដោយសុវត្ថិភាព!`;
 
-                const attendanceKeyboard = {
-                    reply_markup: {
-                        inline_keyboard: [
-                            [
-                                { text: '💰 ពិនិត្យបង់ថ្លៃ', callback_data: 'check_payment' },
-                                { text: '📝 ពិនិត្យប្រលង', callback_data: 'check_mock_exam' },
-                                { text: '📅 ពិនិត្យវត្តមាន', callback_data: 'check_attendance' }
-                            ]
-                        ]
-                    }
-                };
-
-                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...attendanceKeyboard });
+                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...getAttendanceNotificationKeyboard() });
                 notificationsSent++;
                 
                 logger.info(`Attendance notification sent to parent chat ${chatId} for student ${studentId}`);
@@ -5904,6 +5997,363 @@ exports.cleanupOldAttendanceBackups = onSchedule({
         
     } catch (error) {
         logger.error('❌ Error in cleanupOldAttendanceBackups:', error);
+        throw error;
+    }
+});
+
+/**
+ * Cloud Function to notify parents when their child is absent
+ * Manually callable from the admin dashboard
+ */
+exports.notifyParentAbsence = onCall({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
+}, async (request) => {
+    try {
+        logger.info('📱 notifyParentAbsence called with data:', request.data);
+        const { studentId, studentName, date, absentFollowUpId } = request.data;
+        
+        if (!studentId || !studentName || !date) {
+            logger.error('Missing required fields:', { studentId, studentName, date });
+            return { 
+                success: false, 
+                status: 'failed',
+                error: 'Missing required fields: studentId, studentName, and date are required',
+                notificationsSent: 0 
+            };
+        }
+
+        // Get student data
+        const studentDoc = await db.collection('students').doc(studentId).get();
+        if (!studentDoc.exists) {
+            logger.error(`Student ${studentId} not found`);
+            return {
+                success: false,
+                status: 'failed',
+                error: 'Student not found',
+                notificationsSent: 0
+            };
+        }
+        
+        const studentData = studentDoc.data();
+
+        // Get parent notification settings for this student
+        const parentQuery = await db.collection('parentNotifications')
+            .where('studentId', '==', studentId)
+            .where('isActive', '==', true)
+            .get();
+
+        if (parentQuery.empty) {
+            logger.info(`No active parent notifications found for student ${studentId}`);
+            
+            // Update or create absentFollowUp record
+            const followUpData = {
+                parentNotificationStatus: 'no_parent',
+                parentNotificationTimestamp: admin.firestore.Timestamp.now(),
+                parentNotificationsSent: 0,
+                parentNotificationError: null
+            };
+
+            if (absentFollowUpId) {
+                await db.collection('absentFollowUps').doc(absentFollowUpId).update(followUpData);
+            } else {
+                // Create new record if it doesn't exist
+                await db.collection('absentFollowUps').add({
+                    studentId,
+                    studentName,
+                    date,
+                    status: 'Absent',
+                    notes: '',
+                    updatedAt: admin.firestore.Timestamp.now(),
+                    updatedBy: 'system',
+                    ...followUpData
+                });
+                logger.info(`Created new absentFollowUp record with no_parent status for student ${studentId} on ${date}`);
+            }
+            
+            return { 
+                success: true, 
+                status: 'no_parent',
+                message: 'No active parent registered for this student',
+                notificationsSent: 0 
+            };
+        }
+
+        // Initialize Telegram parent bot
+        const bot = initializeParentBot();
+        if (!bot) {
+            logger.error('Parent bot not initialized - missing TELEGRAM_PARENT_BOT_TOKEN');
+            
+            // Update absentFollowUp record
+            if (absentFollowUpId) {
+                await db.collection('absentFollowUps').doc(absentFollowUpId).update({
+                    parentNotificationStatus: 'failed',
+                    parentNotificationTimestamp: admin.firestore.Timestamp.now(),
+                    parentNotificationsSent: 0,
+                    parentNotificationError: 'Parent bot configuration error - missing token'
+                });
+            }
+            
+            return { 
+                success: false, 
+                status: 'failed',
+                error: 'Parent bot configuration error - missing token',
+                notificationsSent: 0 
+            };
+        }
+
+        let notificationsSent = 0;
+        let failedNotifications = 0;
+        const errors = [];
+        const absentDate = new Date(date);
+        
+        // Adjust for Cambodia timezone
+        const cambodiaTime = new Date(absentDate.getTime() + (7 * 60 * 60 * 1000));
+        const formattedDate = formatTimeInKhmer(cambodiaTime);
+
+        for (const doc of parentQuery.docs) {
+            const parentData = doc.data();
+            const chatId = parentData.chatId;
+
+            try {
+                // Use Khmer name if available, otherwise use regular name
+                const khmerName = parentData.studentKhmerName || studentName;
+                
+                const displayClass = studentData.class;
+                const displayShift = studentData.shift;
+                
+                const classDisplay = containsEnglish(displayClass) ? formatClassInKhmer(displayClass) : (displayClass || 'មិនបានបញ្ជាក់');
+                const shiftDisplay = formatShiftInKhmer(displayShift) || 'មិនបានបញ្ជាក់';
+                
+                const message = `⚠️ **ការជូនដំណឹងអវត្តមាន**
+
+👤 **សិស្ស:** ${khmerName}
+🏫 **ថ្នាក់:** ${classDisplay}
+⏰ **វេន:** ${shiftDisplay}
+📅 **កាលបរិច្ឆេទ:** ${formattedDate}
+
+❌ កូនរបស់បងមិនបានមកសាលារៀននៅថ្ងៃនេះទេ។
+
+សូមទាក់ទងសាលារៀនប្រសិនបើមានបញ្ហាឬហេតុផលអ្វីមួយ។`;
+
+                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                notificationsSent++;
+                
+                logger.info(`Absence notification sent to parent chat ${chatId} for student ${studentId}`);
+                
+            } catch (error) {
+                failedNotifications++;
+                const errorMessage = error.message || 'Unknown error';
+                errors.push(`Chat ${chatId}: ${errorMessage}`);
+                logger.error(`Failed to send absence notification to chat ${chatId}:`, error);
+                
+                // If it's a blocked bot error, deactivate notifications for this parent
+                if (error.response && error.response.body && 
+                    (error.response.body.error_code === 403 || error.response.body.description?.includes('blocked'))) {
+                    await doc.ref.update({ isActive: false, deactivatedAt: admin.firestore.Timestamp.now() });
+                    logger.info(`Deactivated notifications for blocked chat ${chatId}`);
+                }
+            }
+        }
+
+        // Determine overall status
+        let status = 'success';
+        let message = `Sent ${notificationsSent} notification(s) successfully`;
+        let errorMessage = null;
+        
+        if (notificationsSent === 0 && failedNotifications > 0) {
+            status = 'failed';
+            message = `Failed to send all ${failedNotifications} notification(s)`;
+            errorMessage = errors.join('; ');
+        } else if (failedNotifications > 0) {
+            status = 'partial';
+            message = `Sent ${notificationsSent} notification(s), ${failedNotifications} failed`;
+            errorMessage = errors.join('; ');
+        }
+
+        // Update or create absentFollowUp record
+        const followUpData = {
+            parentNotificationStatus: status,
+            parentNotificationTimestamp: admin.firestore.Timestamp.now(),
+            parentNotificationsSent: notificationsSent,
+            parentNotificationError: errorMessage
+        };
+
+        if (absentFollowUpId) {
+            // Update existing record
+            await db.collection('absentFollowUps').doc(absentFollowUpId).update(followUpData);
+        } else {
+            // Create new record if it doesn't exist
+            await db.collection('absentFollowUps').add({
+                studentId,
+                studentName,
+                date,
+                status: 'Absent',
+                notes: '',
+                updatedAt: admin.firestore.Timestamp.now(),
+                updatedBy: 'system',
+                ...followUpData
+            });
+            logger.info(`Created new absentFollowUp record for student ${studentId} on ${date}`);
+        }
+
+        return { 
+            success: notificationsSent > 0, 
+            status,
+            message,
+            notificationsSent,
+            failedNotifications,
+            errors: errorMessage
+        };
+        
+    } catch (error) {
+        logger.error('Error in notifyParentAbsence:', error);
+        
+        // Try to update the follow-up record with error
+        if (request.data.absentFollowUpId) {
+            try {
+                await db.collection('absentFollowUps').doc(request.data.absentFollowUpId).update({
+                    parentNotificationStatus: 'failed',
+                    parentNotificationTimestamp: admin.firestore.Timestamp.now(),
+                    parentNotificationsSent: 0,
+                    parentNotificationError: error.message || 'Unknown error'
+                });
+            } catch (updateError) {
+                logger.error('Failed to update absent follow-up record:', updateError);
+            }
+        }
+        
+        throw new HttpsError('internal', error.message || 'Failed to send parent absence notification');
+    }
+});
+
+/**
+ * Scheduled function to automatically send parent notifications for absent students
+ * Runs every hour and checks if it's time to send notifications based on trigger settings
+ */
+exports.scheduledAbsentParentNotifications = onSchedule({
+    schedule: 'every 1 hours',
+    region: 'asia-southeast1',
+    timeZone: 'Asia/Phnom_Penh',
+    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
+}, async (event) => {
+    try {
+        logger.info('⏰ Scheduled absent parent notifications started');
+        
+        // Get notification settings
+        const settingsDoc = await db.collection('absentNotificationSettings').doc('default').get();
+        
+        if (!settingsDoc.exists) {
+            logger.info('No notification settings configured');
+            return null;
+        }
+        
+        const settings = settingsDoc.data();
+        
+        if (!settings.enabled) {
+            logger.info('Absent notifications are disabled');
+            return null;
+        }
+        
+        const now = new Date();
+        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        const currentHour = now.getHours();
+        
+        // Determine which shift to check based on current time
+        let targetShift = null;
+        let triggerTime = null;
+        
+        // Check if current time matches any trigger time (with 1-hour window)
+        const morningHour = parseInt(settings.morningTriggerTime.split(':')[0]);
+        const afternoonHour = parseInt(settings.afternoonTriggerTime.split(':')[0]);
+        const eveningHour = parseInt(settings.eveningTriggerTime.split(':')[0]);
+        
+        if (currentHour === morningHour) {
+            targetShift = 'Morning';
+            triggerTime = settings.morningTriggerTime;
+        } else if (currentHour === afternoonHour) {
+            targetShift = 'Afternoon';
+            triggerTime = settings.afternoonTriggerTime;
+        } else if (currentHour === eveningHour) {
+            targetShift = 'Evening';
+            triggerTime = settings.eveningTriggerTime;
+        } else {
+            logger.info(`Current time ${currentTime} does not match any trigger times`);
+            return null;
+        }
+        
+        logger.info(`Processing ${targetShift} shift absent notifications at ${currentTime}`);
+        
+        // Get today's date in YYYY-MM-DD format
+        const today = now.toISOString().split('T')[0];
+        
+        // Get all absent follow-ups for today with the target shift
+        const absentFollowUpsQuery = await db.collection('absentFollowUps')
+            .where('date', '==', today)
+            .where('status', '==', 'Absent')
+            .get();
+        
+        if (absentFollowUpsQuery.empty) {
+            logger.info(`No absent students found for ${targetShift} shift on ${today}`);
+            return null;
+        }
+        
+        let processed = 0;
+        let sent = 0;
+        let failed = 0;
+        
+        for (const followUpDoc of absentFollowUpsQuery.docs) {
+            const followUp = followUpDoc.data();
+            
+            // Get student to check shift
+            const studentDoc = await db.collection('students').doc(followUp.studentId).get();
+            if (!studentDoc.exists) continue;
+            
+            const student = studentDoc.data();
+            
+            // Only process students in the target shift
+            if (student.shift !== targetShift) continue;
+            
+            // Skip if already notified today
+            if (followUp.parentNotificationTimestamp) {
+                const notificationDate = followUp.parentNotificationTimestamp.toDate();
+                const notificationDay = notificationDate.toISOString().split('T')[0];
+                if (notificationDay === today) {
+                    logger.info(`Already notified parent for student ${followUp.studentId} today`);
+                    continue;
+                }
+            }
+            
+            processed++;
+            
+            try {
+                // Call the notification function
+                const result = await exports.notifyParentAbsence.run({
+                    data: {
+                        studentId: followUp.studentId,
+                        studentName: followUp.studentName,
+                        date: today,
+                        absentFollowUpId: followUpDoc.id
+                    }
+                });
+                
+                if (result.success) {
+                    sent += result.notificationsSent;
+                } else {
+                    failed++;
+                }
+            } catch (error) {
+                logger.error(`Error notifying parent for student ${followUp.studentId}:`, error);
+                failed++;
+            }
+        }
+        
+        logger.info(`✅ Scheduled notification complete: Processed ${processed}, Sent ${sent}, Failed ${failed}`);
+        
+        return { processed, sent, failed };
+        
+    } catch (error) {
+        logger.error('❌ Error in scheduledAbsentParentNotifications:', error);
         throw error;
     }
 });

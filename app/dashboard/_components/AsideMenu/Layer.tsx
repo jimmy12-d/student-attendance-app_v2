@@ -88,7 +88,7 @@ export default function AsideMenuLayer({
 
   return (
     <aside
-      className={`${className} lg:py-2 lg:pl-2 w-60 fixed flex z-110 top-0 h-screen transition-all duration-300 ease-in-out overflow-hidden`}
+      className={`${className} lg:py-2 lg:pl-2 w-full sm:w-60 fixed flex z-110 top-0 h-screen transition-all duration-300 ease-in-out overflow-hidden`}
     >
       <div className="aside lg:rounded-2xl flex-1 flex flex-col overflow-hidden bg-white dark:bg-gray-900 shadow-2xl border-r border-gray-200 dark:border-gray-700">
         {/* Enhanced Header with gradient and glow effects */}
@@ -182,15 +182,14 @@ export default function AsideMenuLayer({
         </div>
 
         {/* Enhanced Footer with Modern Logout Design */}
-        <div className="relative border-t border-gray-200/20 dark:border-gray-700/30 bg-gradient-to-r from-gray-50/80 via-gray-100/60 to-gray-50/80 dark:from-gray-800/80 dark:via-gray-700/60 dark:to-gray-800/80 backdrop-blur-sm">
-          {/* Subtle glow effect at top */}
-          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent dark:via-gray-300/20"></div>
-          
-          <div className="p-2 flex flex-col space-y-1">
-            <AsideMenuItem item={formItem} onRouteChange={props.onRouteChange} />
-            <AsideMenuItem item={paymentSummaryItem} onRouteChange={props.onRouteChange} />
-            <AsideMenuItem item={notificationItem} onRouteChange={props.onRouteChange} />
-            <AsideMenuItem item={logoutItem} onRouteChange={props.onRouteChange} />
+        <div className="relative border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="p-2">
+            <ul className="flex flex-col space-y-0.5 list-none">
+              <AsideMenuItem item={formItem} onRouteChange={props.onRouteChange} />
+              <AsideMenuItem item={paymentSummaryItem} onRouteChange={props.onRouteChange} />
+              <AsideMenuItem item={notificationItem} onRouteChange={props.onRouteChange} />
+              <AsideMenuItem item={logoutItem} onRouteChange={props.onRouteChange} />
+            </ul>
           </div>
         </div>
       </div>

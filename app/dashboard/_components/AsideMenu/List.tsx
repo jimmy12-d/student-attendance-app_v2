@@ -16,7 +16,7 @@ export default function AsideMenuList({
   ...props
 }: Props) {
   return (
-    <ul className={`${className} ${isDropdownList ? 'space-y-1' : 'space-y-1'}`}>
+    <ul className={`${className} ${isDropdownList ? 'space-y-1' : 'space-y-1'} list-none`}>
       {menu.map((item, index) => (
         item.isDivider ? (
           <div key={index} className="my-3 border-t border-gray-200 dark:border-gray-700 mx-4"></div>

@@ -1,3 +1,5 @@
+"use client";
+
 import { QuestionType } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
 import CustomCombobox, { ComboboxOption } from "@/app/_components/CustomCombobox";

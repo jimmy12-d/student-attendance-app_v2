@@ -68,6 +68,10 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   const [allClassConfigs, setAllClassConfigs] = useState<AllClassConfigs | null>(null);
   const [permissions, setPermissions] = useState<PermissionRecord[]>([]);
   const [loadingAttendanceData, setLoadingAttendanceData] = useState(true);
+  
+  // BP Class configuration state
+  const [bpClassId, setBpClassId] = useState<string>('12BP'); // Default to 12BP, can be made configurable
+  const [bpClassName, setBpClassName] = useState<string>('12BP'); // Will be fetched from Firestore
 
   // Batch edit state
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
@@ -77,6 +81,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
   // Take attendance state
   const [attendanceChanges, setAttendanceChanges] = useState<Map<string, boolean>>(new Map());
+  const [attendanceContext, setAttendanceContext] = useState<Map<string, { class: string; shift: string }>>(new Map()); // Track context for each student
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [selectedAttendanceDate, setSelectedAttendanceDate] = useState(() => getPhnomPenhDateString());
   
@@ -310,6 +315,14 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
             record.permissionEndDate >= todayStr
           ) as PermissionRecord[];
         
+        // Fetch BP class name from the class config
+        if (allConfigs[bpClassId]) {
+          const bpClassConfig = allConfigs[bpClassId];
+          if (bpClassConfig.name) {
+            setBpClassName(bpClassConfig.name);
+          }
+        }
+        
         setAttendance(attendanceData);
         setMonthlyAttendance(monthlyAttendanceData);
         setAllClassConfigs(allConfigs);
@@ -375,7 +388,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   };
 
   // Get today's detailed attendance status including time
-  const getTodayAttendanceStatus = (student: Student) => {
+  const getTodayAttendanceStatus = (student: Student, classContext?: string, shiftContext?: string) => {
     try {
       // Return loading state if configs aren't loaded yet
       if (!allClassConfigs || loadingAttendanceData) {
@@ -384,10 +397,49 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
       const todayStr = new Date().toISOString().split('T')[0];
       
-      // Find today's attendance record for this student
-      const attendanceRecord = attendance.find(record => 
-        record.studentId === student.id && record.date === todayStr
-      );
+      // DEBUG: Log for "Test Testing" student on October 11th
+      if (student.fullName === "Test Testing" && todayStr === "2025-10-11") {
+        console.log("🔍 getTodayAttendanceStatus DEBUG for Test Testing:");
+        console.log("  - shiftContext:", shiftContext);
+        console.log("  - All attendance records for this student today:", 
+          attendance.filter(r => r.studentId === student.id && r.date === todayStr)
+        );
+      }
+      
+      // Find today's attendance record for this student with shift-aware filtering
+      // CRITICAL: Only filter by SHIFT, not class!
+      // Reason: BP class is always Evening, regular classes are Morning/Afternoon
+      // Students can move between Class 12A and Class 12BP, but shifts are always different
+      const attendanceRecord = attendance.find(record => {
+        const matchesStudent = record.studentId === student.id;
+        const matchesDate = record.date === todayStr;
+        const matchesShift = !shiftContext || record.shift === shiftContext;
+        
+        // DEBUG: Log each record being checked for Test Testing
+        if (student.fullName === "Test Testing" && todayStr === "2025-10-11") {
+          console.log("  - Checking record:", {
+            recordId: record.id,
+            recordShift: record.shift,
+            recordStatus: record.status,
+            matchesStudent,
+            matchesDate,
+            matchesShift,
+            overallMatch: matchesStudent && matchesDate && matchesShift
+          });
+        }
+        
+        return matchesStudent && matchesDate && matchesShift;
+      });
+
+      // DEBUG: Log the found record for "Test Testing"
+      if (student.fullName === "Test Testing" && todayStr === "2025-10-11") {
+        console.log("  - Found attendance record:", attendanceRecord);
+        console.log("  - Record matches context?", {
+          hasRecord: !!attendanceRecord,
+          recordShift: attendanceRecord?.shift,
+          matchesShift: !shiftContext || attendanceRecord?.shift === shiftContext
+        });
+      }
 
       // Find approved permissions for this student for today
       const studentPermissions = permissions.filter(
@@ -403,6 +455,12 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         allClassConfigs,
         studentPermissions
       );
+      
+      // DEBUG: Log the final result for "Test Testing"
+      if (student.fullName === "Test Testing" && todayStr === "2025-10-11") {
+        console.log("  - Final status result:", result);
+        console.log("---");
+      }
             
       return result;
     } catch (error) {
@@ -516,17 +574,44 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   // Don't filter out BP students - they should appear in both their regular class and BP class
   const validStudents = filteredStudents.filter(student => student.class);
   
-  // Get BP students separately, sort them, and override their shift to Evening
+  // DEBUG: Check Test Testing's original data on October 11th
+  if (new Date().toISOString().split('T')[0] === "2025-10-11") {
+    const testTestingOriginal = filteredStudents.find(s => s.fullName === "Test Testing");
+    if (testTestingOriginal) {
+      console.log("👤 Test Testing Original Student Data:");
+      console.log("  - id:", testTestingOriginal.id);
+      console.log("  - class:", testTestingOriginal.class);
+      console.log("  - shift:", testTestingOriginal.shift);
+      console.log("  - inBPClass:", testTestingOriginal.inBPClass);
+      console.log("  - Will be in validStudents?", !!testTestingOriginal.class);
+    }
+  }
+  
+  // Get BP students separately, sort them, and override their shift to Evening and class to BP class ID
   const bpStudents = React.useMemo(() => {
-    return filteredStudents
+    const bpList = filteredStudents
       .filter(student => student.inBPClass)
       .map(student => ({
         ...student,
         shift: 'Evening', // Override shift to Evening for BP class
-        class: '12BP' // Override class to 12BP for consistency
+        class: bpClassId // Override class to BP class ID (e.g., '12BP')
       }))
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
-  }, [filteredStudents]);
+    
+    // DEBUG: Log Test Testing in BP students list on October 11th
+    if (new Date().toISOString().split('T')[0] === "2025-10-11") {
+      const testTesting = bpList.find(s => s.fullName === "Test Testing");
+      if (testTesting) {
+        console.log("📋 BP Students List - Test Testing found:");
+        console.log("  - Original class:", filteredStudents.find(s => s.fullName === "Test Testing")?.class);
+        console.log("  - Original shift:", filteredStudents.find(s => s.fullName === "Test Testing")?.shift);
+        console.log("  - BP override class:", testTesting.class);
+        console.log("  - BP override shift:", testTesting.shift);
+      }
+    }
+    
+    return bpList;
+  }, [filteredStudents, bpClassId]);
 
   // 1. Group students by class, then by shift
   const groupedStudents = React.useMemo(() => {
@@ -548,6 +633,17 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           classGroup[shift].sort((a, b) => a.fullName.localeCompare(b.fullName));
         }
       });
+    }
+    
+    // DEBUG: Log Test Testing in grouped students on October 11th
+    if (new Date().toISOString().split('T')[0] === "2025-10-11") {
+      const testTestingOriginal = validStudents.find(s => s.fullName === "Test Testing");
+      if (testTestingOriginal) {
+        console.log("📋 Grouped Students - Test Testing in regular class:");
+        console.log("  - Class:", testTestingOriginal.class);
+        console.log("  - Shift:", testTestingOriginal.shift);
+        console.log("  - Will appear in table:", `${testTestingOriginal.class} - ${testTestingOriginal.shift}`);
+      }
     }
 
     return grouped;
@@ -733,23 +829,46 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   };
 
   // Take attendance functions
-  const handleAttendanceChange = (studentId: string, isPresent: boolean) => {
+  const handleAttendanceChange = (studentId: string, isPresent: boolean, classContext?: string, shiftContext?: string) => {
+    // Create a unique key combining studentId + class + shift to separate regular and BP attendance
+    const contextKey = classContext && shiftContext 
+      ? `${studentId}_${classContext}_${shiftContext}`
+      : studentId;
+    
     setAttendanceChanges(prev => {
       const newMap = new Map(prev);
-      newMap.set(studentId, isPresent);
+      newMap.set(contextKey, isPresent);
       return newMap;
     });
+    
+    // Store the context (class and shift) for this student
+    if (classContext && shiftContext) {
+      setAttendanceContext(prev => {
+        const newMap = new Map(prev);
+        newMap.set(contextKey, { class: classContext, shift: shiftContext });
+        return newMap;
+      });
+    }
   };
 
-  const isStudentCurrentlyPresent = (student: Student): boolean => {
-    // Check if we have a local change first
-    if (attendanceChanges.has(student.id)) {
-      return attendanceChanges.get(student.id) || false;
+  const isStudentCurrentlyPresent = (student: Student, classContext?: string, shiftContext?: string): boolean => {
+    // Create the same unique key to check the correct table's state
+    const contextKey = classContext && shiftContext 
+      ? `${student.id}_${classContext}_${shiftContext}`
+      : student.id;
+    
+    // Check if we have a local change first for this specific context
+    if (attendanceChanges.has(contextKey)) {
+      return attendanceChanges.get(contextKey) || false;
     }
     
-    // Otherwise check existing attendance records
+    // Otherwise check existing attendance records by SHIFT ONLY
+    // CRITICAL: Don't check class because students can be in both Class 12A and Class 12BP
+    // BP class is always Evening, regular classes are Morning/Afternoon - shifts are unique!
     const existingRecord = attendance.find(record => 
-      record.studentId === student.id && record.date === selectedAttendanceDate
+      record.studentId === student.id && 
+      record.date === selectedAttendanceDate &&
+      (!shiftContext || record.shift === shiftContext)
     );
     
     return existingRecord?.status === 'present' || existingRecord?.status === 'late';
@@ -767,12 +886,19 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       const successfulMarks: string[] = [];
       const failedMarks: string[] = [];
       
-      for (const [studentId, isPresent] of attendanceChanges.entries()) {
+      for (const [contextKey, isPresent] of attendanceChanges.entries()) {
+        // Extract studentId from contextKey (format: "studentId_class_shift" or just "studentId")
+        const studentId = contextKey.split('_')[0];
         const student = students.find(s => s.id === studentId);
         if (!student) {
           failedMarks.push(`Student not found for ID: ${studentId}`);
           continue;
         }
+
+        // Get the context (class and shift) for this student using the same contextKey
+        const context = attendanceContext.get(contextKey);
+        const effectiveClass = context?.class || student.class;
+        const effectiveShift = context?.shift || student.shift || 'Morning';
 
         try {
           if (isPresent) {
@@ -780,19 +906,23 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
             // and 12NKGS Saturday handling
             const status = await markAttendance(
               student,
-              student.shift || 'Morning', // Default to Morning if shift is not set
+              effectiveShift, // Use context-aware shift
               allClassConfigs || {},
               () => {}, // Empty sound function
               3, // maxRetries
               selectedAttendanceDate, // Pass the selected date
-              'manual' // Specify manual method for dashboard attendance
+              'manual', // Specify manual method for dashboard attendance
+              effectiveClass // CRITICAL: Pass context-aware class to allow multiple class attendance
             );
             successfulMarks.push(`${student.fullName}: ${status}`);
           } else {
             // For absent students, create manual record since markAttendance doesn't handle absent
-            // Check if attendance record already exists for today
+            // Check if attendance record already exists for today with matching class/shift
             const existingRecord = attendance.find(record => 
-              record.studentId === studentId && record.date === selectedAttendanceDate
+              record.studentId === studentId && 
+              record.date === selectedAttendanceDate &&
+              record.class === effectiveClass &&
+              record.shift === effectiveShift
             );
 
             if (existingRecord) {
@@ -809,10 +939,10 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
               const attendanceRef = doc(collection(db, "attendance"));
               await setDoc(attendanceRef, {
                 authUid: student.authUid || null,
-                class: student.class,
+                class: effectiveClass, // Use context-aware class
                 date: selectedAttendanceDate,
                 method: 'manual',
-                shift: student.shift,
+                shift: effectiveShift, // Use context-aware shift
                 status: 'absent',
                 studentId: studentId,
                 studentName: student.fullName,
@@ -837,6 +967,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       }
       
       setAttendanceChanges(new Map());
+      setAttendanceContext(new Map()); // Clear context as well
       
       // Refresh attendance data
       fetchAttendanceData();
@@ -862,6 +993,26 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       const attendanceData = attendanceSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter((record: any) => record.date === selectedAttendanceDate);
+      
+      // DEBUG: Log Test Testing's attendance records on October 11th
+      if (selectedAttendanceDate === "2025-10-11") {
+        const testTestingRecords = attendanceData.filter((record: any) => 
+          record.studentName === "Test Testing" || record.studentId === "test-testing-id"
+        );
+        console.log("📊 fetchAttendanceData - Test Testing records on 2025-10-11:");
+        console.log("  Total records loaded:", attendanceData.length);
+        console.log("  Test Testing records:", testTestingRecords);
+        testTestingRecords.forEach((record: any, index: number) => {
+          console.log(`  Record ${index + 1}:`, {
+            id: record.id,
+            studentName: record.studentName,
+            class: record.class,
+            shift: record.shift,
+            status: record.status,
+            date: record.date
+          });
+        });
+      }
       
       setAttendance(attendanceData);
     } catch (error) {
@@ -1484,6 +1635,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           onDefaultModalTabChange={setDefaultModalTab}
           selectedShift={selectedShift}
           onShiftChange={setSelectedShift}
+          bpClassName={bpClassName}
         />
 
       </div>      {/* Morning & Afternoon Section */}
@@ -1657,12 +1809,12 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         </div>
       )}
 
-      {/* 12BP Class Section - Special class with custom student filtering */}
+      {/* BP Class Section - Special class with custom student filtering */}
       {(selectedShift === 'All' || selectedShift === '12BP') && bpStudents.length > 0 && (
         <div className="space-y-6 pt-8 border-t border-gray-200 dark:border-slate-700">
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-600 via-rose-600 to-red-600 bg-clip-text text-transparent">
-              12BP Class
+              {bpClassName} Class
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Bridge Program - Special Class</p>
             <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-rose-700 to-pink-700 text-white rounded-full shadow-lg">
@@ -1675,13 +1827,13 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ClassTable 
-              key="12BP-evening"
+              key={`${bpClassId}-evening`}
               studentList={bpStudents} 
               enabledColumns={enabledColumns}
               onEdit={onEdit}
               onDelete={onDelete}
               onViewDetails={handleViewDetails}
-              className="12BP"
+              className={bpClassId}
               studentCount={bpStudents.length}
               shift="Evening"
               isBatchEditMode={isBatchEditMode}
@@ -1697,7 +1849,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
               onAttendanceChange={handleAttendanceChange}
               calculateAverageArrivalTime={getAverageArrivalTime}
               shiftRankings={shiftRankings}
-              forceCollapsed={isClassCollapsed("12BP")}
+              forceCollapsed={isClassCollapsed(bpClassId)}
               onClassToggle={handleClassToggle}
               expandedClasses={expandedClasses}
               onZoomToggle={handleZoomToggle}
@@ -1720,7 +1872,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         currentIndex={selectedIndex}
         onNavigate={handleNavigate}
         defaultTab={defaultModalTab}
-        viewContext={selectedStudent?.class === '12BP' ? '12BP' : 'regular'}
+        viewContext={selectedStudent?.class === bpClassId ? '12BP' : 'regular'}
       />
 
       {/* QR Code Modal for admin (lost receipt cases) */}

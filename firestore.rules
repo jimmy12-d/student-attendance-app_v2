@@ -239,6 +239,11 @@ service cloud.firestore {
       allow read, write: if isAuthorizedUser();
     }
     
+    match /absentNotificationSettings/{settingId} {
+      // READ/WRITE: Only admins can manage absent notification settings
+      allow read, write: if isAuthorizedUser();
+    }
+    
     match /cleanupLogs/{logId} {
       // READ/WRITE: Only admins can access cleanup logs
       allow read, write: if isAuthorizedUser();
@@ -288,6 +293,11 @@ service cloud.firestore {
       
       // CREATE/UPDATE/DELETE: Only admins can manage forms
       allow create, update, delete: if isAuthorizedUser();
+    }
+
+    match /formApprovalActions/{formId} {
+      // READ/WRITE: Only admins can manage approval actions for forms
+      allow read, write: if isAuthorizedUser();
     }
     
     match /form_responses/{responseId} {

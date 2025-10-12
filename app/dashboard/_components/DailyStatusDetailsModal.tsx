@@ -81,30 +81,44 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
   }, [student, viewContext]);
   
   // Function to fetch attendance records for a specific month
-  const fetchAttendanceForMonth = async (studentId: string, yearMonth: string) => {
+  const fetchAttendanceForMonth = async (studentId: string, yearMonth: string, targetShift?: string) => {
     try {      
       const startDate = `${yearMonth}-01`;
       const endDate = `${yearMonth}-31`;
       
-      const attendanceQuery = query(
-        collection(db, 'attendance'),
-        where('studentId', '==', studentId),
-        where('date', '>=', startDate),
-        where('date', '<=', endDate),
-        orderBy('date', 'asc')
-      );
+      // Build query with shift filter if viewing from 12BP context
+      let attendanceQuery;
+      if (targetShift) {
+        attendanceQuery = query(
+          collection(db, 'attendance'),
+          where('studentId', '==', studentId),
+          where('shift', '==', targetShift),
+          where('date', '>=', startDate),
+          where('date', '<=', endDate),
+          orderBy('date', 'asc')
+        );
+      } else {
+        attendanceQuery = query(
+          collection(db, 'attendance'),
+          where('studentId', '==', studentId),
+          where('date', '>=', startDate),
+          where('date', '<=', endDate),
+          orderBy('date', 'asc')
+        );
+      }
       
       const snapshot = await getDocs(attendanceQuery);
       const records: RawAttendanceRecord[] = [];
       
       snapshot.forEach((doc) => {
-        const data = doc.data();
+        const data = doc.data() as any; // Type assertion for Firestore data
         records.push({
           id: doc.id,
           studentId: data.studentId,
           date: data.date,
           status: data.status,
           timestamp: data.timestamp,
+          shift: data.shift, // Include shift in the record
         });
       });
       return records;
@@ -151,7 +165,14 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     const loadMonthData = async () => {
       setIsLoading(true);
       
-      const records = await fetchAttendanceForMonth(student.id, modalSelectedMonth);
+      // Determine which shift to filter by based on context
+      const targetShift = contextualStudent.shift;
+      
+      const records = await fetchAttendanceForMonth(
+        student.id, 
+        modalSelectedMonth, 
+        targetShift // Pass the shift to filter attendance records
+      );
       setMonthlyAttendanceRecords(records);
       
       // Continue with calendar generation
@@ -159,7 +180,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     };
     
     loadMonthData();
-  }, [isActive, student?.id, allClassConfigs, approvedPermissions, modalSelectedMonth, viewContext]);
+  }, [isActive, student?.id, allClassConfigs, approvedPermissions, modalSelectedMonth, viewContext, contextualStudent.shift]);
   
   const generateCalendar = (records: RawAttendanceRecord[]) => {
     const [yearStr, monthNumStr] = modalSelectedMonth.split('-');
@@ -264,11 +285,15 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
   // Create modal title with class context
   const modalTitle = React.useMemo(() => {
     const baseTitle = `Attendance: ${student.fullName}`;
-    if (contextualStudent.class === '12BP') {
-      return `${baseTitle} (12BP - Evening Shift)`;
+    // Check if viewing from BP context by comparing contextual vs original student
+    if (contextualStudent.class !== student.class || contextualStudent.shift !== student.shift) {
+      // Get the BP class display name from allClassConfigs
+      const bpClassConfig = allClassConfigs?.[contextualStudent.class || ''];
+      const bpClassName = bpClassConfig?.name || contextualStudent.class;
+      return `${baseTitle} (${bpClassName} - Evening Shift)`;
     }
     return baseTitle;
-  }, [student.fullName, contextualStudent.class]);
+  }, [student.fullName, student.class, student.shift, contextualStudent.class, contextualStudent.shift, allClassConfigs]);
   
   return (
     <CardBoxModal
