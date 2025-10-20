@@ -41,7 +41,7 @@ import { collection, getDocs, Timestamp, addDoc, doc, getDoc, updateDoc, query, 
 
 // Components
 import { PrinterManager } from "./components/PrinterManager";
-import { CashDrawerManager, openCashDrawerWithBP003 } from "./components/CashDrawerManager";
+import { CashDrawerManager, openCashDrawerWithRongata } from "./components/CashDrawerManager";
 import { TransactionManager } from "./components/TransactionManager";
 import { TransactionHistory } from "./components/TransactionHistory";
 import CashierManager from "./components/CashierManager";
@@ -644,7 +644,7 @@ const POSStudentPage = () => {
             // Open cash drawer if payment method is Cash
             if (paymentMethod === 'Cash') {
                 try {
-                    const success = await openCashDrawerWithBP003();
+                    const success = await openCashDrawerWithRongata();
                     if (success) {
                         toast.success('Cash drawer opened for cash payment');
                     } else {

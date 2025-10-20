@@ -1613,22 +1613,10 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
           filteredStudentsCount={filteredStudents.length}
           filteredStudents={filteredStudents}
           onStudentSelect={(studentId: string) => {
-            // Scroll to the student row
-            const studentRow = document.querySelector(`[data-student-id="${studentId}"]`);
-            if (studentRow) {
-              studentRow.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center',
-                inline: 'nearest' 
-              });
-              
-              // Add flash highlight effect
-              studentRow.classList.add('flash-highlight');
-              
-              // Remove the flash class after animation completes
-              setTimeout(() => {
-                studentRow.classList.remove('flash-highlight');
-              }, 3000); // Match the animation duration
+            // Find the student and open the detail modal
+            const student = filteredStudents.find(s => s.id === studentId);
+            if (student) {
+              handleViewDetails(student, filteredStudents);
             }
           }}
           defaultModalTab={defaultModalTab}

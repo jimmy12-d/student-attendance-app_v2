@@ -302,17 +302,47 @@ service cloud.firestore {
     
     match /form_responses/{responseId} {
       // READ: Admins can read all responses, students can read their own
+      // Allow reading if authUid matches OR if studentUid matches (for backwards compatibility)
       allow read: if isAuthorizedUser() || 
-                     (request.auth != null && request.auth.uid == resource.data.studentUid);
+                     (request.auth != null && 
+                      (request.auth.uid == resource.data.authUid || 
+                       request.auth.uid == resource.data.studentUid));
       
-      // CREATE: Authenticated students can create their own responses
-      allow create: if request.auth != null && 
-                       request.resource.data.studentUid == request.auth.uid;
+      // CREATE: Admins can create any response (including for students without authUid),
+      //         Authenticated students can create their own responses
+      allow create: if isAuthorizedUser() ||
+                       (request.auth != null && 
+                        (request.resource.data.authUid == request.auth.uid ||
+                         request.resource.data.studentUid == request.auth.uid));
       
       // UPDATE/DELETE: Only admins can update or delete responses
       allow update, delete: if isAuthorizedUser();
     }
     
+    match /events/{eventId} {
+      // READ: Allow public read for event information
+      allow read: if true;
+      
+      // WRITE: Only admins can manage events
+      allow write: if isAuthorizedUser();
+    }
     
+    match /eventAttendance/{attendanceId} {
+      // READ: Admins can read all records, students can read their own
+      allow read: if isAuthorizedUser() || 
+                     (request.auth != null && request.auth.uid == resource.data.authUid);
+      
+      // CREATE: Authenticated users can clock in/out (face scan will create records)
+      allow create: if request.auth != null;
+      
+      // UPDATE: Admins can update any record, students can update their own (for clock-out)
+      allow update: if isAuthorizedUser() || 
+                       (request.auth != null && 
+                        request.auth.uid == resource.data.authUid &&
+                        resource.data.clockInTime != null); // Only allow updates if already clocked in
+      
+      // DELETE: Only admins can delete records
+      allow delete: if isAuthorizedUser();
+    }
   }
 }

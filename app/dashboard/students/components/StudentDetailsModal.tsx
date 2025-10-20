@@ -105,7 +105,31 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
       setActiveTab(defaultTab);
     }
   }, [defaultTab, isOpen]);
-  
+
+  // Keyboard shortcut to open edit form and switch tabs
+  useEffect(() => {
+    if (!isOpen || !student) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        onEdit(student);
+      } else if (e.key === '1') {
+        e.preventDefault();
+        setActiveTab('basic');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        setActiveTab('actions');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        setActiveTab('requests');
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, student, onEdit]);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBreakConfirm, setShowBreakConfirm] = useState(false);
   const [expectedReturnMonth, setExpectedReturnMonth] = useState('');

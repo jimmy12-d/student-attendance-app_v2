@@ -253,6 +253,67 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
         </div>
       )}
 
+      {/* File Upload Configuration */}
+      {question.type === 'file_upload' && (
+        <div className="space-y-4 ml-8">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
+                Max files
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={question.maxFiles || 1}
+                onChange={(e) => onUpdate({ ...question, maxFiles: parseInt(e.target.value) || 1 })}
+                className="w-full bg-transparent border-0 border-b-2 border-gray-200 dark:border-slate-600 rounded-none px-0 py-2 text-sm focus:outline-none focus:ring-0 focus:border-blue-400 dark:focus:border-blue-500 transition-all duration-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
+                Max size (MB)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={question.maxFileSize || 5}
+                onChange={(e) => onUpdate({ ...question, maxFileSize: parseInt(e.target.value) || 5 })}
+                className="w-full bg-transparent border-0 border-b-2 border-gray-200 dark:border-slate-600 rounded-none px-0 py-2 text-sm focus:outline-none focus:ring-0 focus:border-blue-400 dark:focus:border-blue-500 transition-all duration-200"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-600 dark:text-gray-400">
+              Accepted file types
+            </label>
+            <div className="space-y-2">
+              {[
+                { label: 'All files', value: [] },
+                { label: 'Images only', value: ['image/*'] },
+                { label: 'Documents (PDF, Word, Excel)', value: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'] },
+                { label: 'PDFs only', value: ['application/pdf'] },
+                { label: 'Images & PDFs', value: ['image/*', 'application/pdf'] },
+              ].map((option) => (
+                <label
+                  key={option.label}
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-600/50 p-2 rounded transition-colors"
+                >
+                  <input
+                    type="radio"
+                    checked={JSON.stringify(question.acceptedFileTypes || []) === JSON.stringify(option.value)}
+                    onChange={() => onUpdate({ ...question, acceptedFileTypes: option.value.length > 0 ? option.value : undefined })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="text-xs text-gray-700 dark:text-gray-300">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Class Type Filter */}
       {availableClassTypes.length > 0 && (
         <div className="space-y-3 border-t border-gray-200 dark:border-slate-700 pt-4">

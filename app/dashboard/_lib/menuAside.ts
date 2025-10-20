@@ -105,6 +105,11 @@ const menuAside: MenuAsideItem[] = [
         label: "Star Management",
         icon: mdiStar,
       },
+      {
+        href: "/dashboard/events",
+        label: "Events",
+        icon: mdiBellOutline,
+      },
     ]
   },
   // {

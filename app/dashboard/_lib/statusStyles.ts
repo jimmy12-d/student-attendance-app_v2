@@ -116,14 +116,15 @@ export const getStatusStyles = (status: string, useSvg: boolean = false): Status
         tableCell: 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200',
         svg: useSvg ? 'M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' : undefined
       };
-    case 'not yet':
+    case 'send home':
+    case 'send-home':
       return {
         badge: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800',
         cardBg: 'bg-gradient-to-br from-red-500 to-rose-600',
-        icon: mdiAccountQuestionOutline,
+        icon: mdiAccountOffOutline,
         textColor: 'text-white',
-        tableCell: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200',
-        svg: useSvg ? 'M6 18L18 6M6 6l12 12' : undefined
+        tableCell: 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200',
+        svg: useSvg ? 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' : undefined
       };
     default:
       return { 
@@ -137,6 +138,38 @@ export const getStatusStyles = (status: string, useSvg: boolean = false): Status
   }
 };
 
+/**
+ * Get readable status label for display
+ * @param status - The raw status value
+ * @returns Human-readable status label
+ */
+export const getStatusLabel = (status: string): string => {
+  const s = status.toLowerCase();
+  switch (s) {
+    case 'present':
+      return 'Present';
+    case 'late':
+      return 'Late';
+    case 'permission':
+      return 'Permission';
+    case 'pending':
+      return 'Pending';
+    case 'requested':
+      return 'Requested';
+    case 'absent':
+      return 'Absent';
+    case 'no school':
+      return 'No School';
+    case 'not yet enrolled':
+      return 'Not Yet Enrolled';
+    case 'send home':
+    case 'send-home':
+      return 'Send Home';
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  }
+};
+
 // Helper function to render status badge with SVG
 export const renderStatusBadge = (
   status: string, 
@@ -145,7 +178,7 @@ export const renderStatusBadge = (
   className?: string
 ) => {
   const styles = getStatusStyles(status, true);
-  const text = displayText || status;
+  const text = displayText || getStatusLabel(status);
   
   return `
     <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${styles.badge} ${className || ''}">

@@ -73,6 +73,7 @@ interface AttendanceStats {
   pending: number;
   requested: number;
   permission: number;
+  sendHome: number;
   expectedStudents: number; // New field for shift-specific expected students
 }
 
@@ -406,7 +407,8 @@ export default function AttendanceRecordPage() {
         absent,
         pending: 0, // No complex logic available without configs
         requested,
-        permission: 0
+        permission: 0,
+        sendHome: 0
       };
     }
 
@@ -417,6 +419,7 @@ export default function AttendanceRecordPage() {
     let pendingCount = 0;
     let requestedCount = 0;
     let permissionCount = 0;
+    let sendHomeCount = 0;
 
     // Filter students by current shift for expected count, excluding "No School" students
     // Include BP students when Evening shift is selected
@@ -519,6 +522,9 @@ export default function AttendanceRecordPage() {
         case "Permission":
           permissionCount++;
           break;
+        case "Send Home":
+          sendHomeCount++;
+          break;
         case "No School":
           // Don't count these in any category for attendance stats
           break;
@@ -536,47 +542,52 @@ export default function AttendanceRecordPage() {
       absent: absentCount,
       pending: pendingCount,
       requested: requestedCount,
-      permission: permissionCount
+      permission: permissionCount,
+      sendHome: sendHomeCount
     };
   }, [attendanceRecords, students, permissions, allClassConfigs, selectedDate, currentShift]);
 
   // Prepare chart data
   const pieChartData = {
-    labels: ['Present', 'Late', 'Absent', 'Permission'],
+    labels: ['Present', 'Late', 'Absent', 'Permission', 'Send Home'],
     datasets: [{
-      data: [attendanceStats.present, attendanceStats.late, attendanceStats.absent, attendanceStats.permission],
+      data: [attendanceStats.present, attendanceStats.late, attendanceStats.absent, attendanceStats.permission, attendanceStats.sendHome],
       backgroundColor: [
         '#10B981', // green for present
         '#F59E0B', // yellow for late  
         '#EF4444', // red for absent
         '#8B5CF6', // purple for permission
+        '#DC2626', // red for send home
       ],
       borderColor: [
         '#059669',
         '#D97706', 
         '#DC2626',
         '#7C3AED',
+        '#B91C1C',
       ],
       borderWidth: 2
     }]
   };
 
   const barChartData = {
-    labels: ['Present', 'Late', 'Absent', 'Permission'],
+    labels: ['Present', 'Late', 'Absent', 'Permission', 'Send Home'],
     datasets: [{
       label: 'Number of Students',
-      data: [attendanceStats.present, attendanceStats.late, attendanceStats.absent, attendanceStats.permission],
+      data: [attendanceStats.present, attendanceStats.late, attendanceStats.absent, attendanceStats.permission, attendanceStats.sendHome],
       backgroundColor: [
         '#10B981',
         '#F59E0B',
         '#EF4444', 
         '#8B5CF6',
+        '#DC2626',
       ],
       borderColor: [
         '#059669',
         '#D97706',
         '#DC2626',
         '#7C3AED',
+        '#B91C1C',
       ],
       borderWidth: 2
     }]

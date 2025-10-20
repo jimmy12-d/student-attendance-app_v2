@@ -21,6 +21,7 @@ const StudentTopNav = () => {
     }));
     const [fullName, setFullName] = useState<string | null>(null);
     const [userClass, setUserClass] = useState<string | null>(null);
+    const [inBPClass, setInBPClass] = useState<boolean>(false);
     const [isPanelVisible, setIsPanelVisible] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +39,7 @@ const StudentTopNav = () => {
                         : studentData.fullName;
                     setFullName(displayName);
                     setUserClass(studentData.class);
+                    setInBPClass(studentData.inBPClass || false);
                 } else {
                     setFullName(authUserName); // Fallback to auth name
                 }
@@ -81,6 +83,11 @@ const StudentTopNav = () => {
                             {userClass && (
                                 <span className={`text-xs text-gray-500 dark:text-slate-400 truncate ${locale === 'kh' ? 'khmer-font' : ''}`}>
                                     {userClass.replace('Class', tAccount('class'))}
+                                </span>
+                            )}
+                            {inBPClass && (
+                                <span className={`text-xs text-gray-500 dark:text-slate-400 truncate ${locale === 'kh' ? 'khmer-font' : ''}`}>
+                                    Class 12BP
                                 </span>
                             )}
                         </div>

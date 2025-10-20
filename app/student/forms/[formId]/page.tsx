@@ -14,7 +14,8 @@ import {
   updateDoc,
   arrayUnion
 } from "firebase/firestore";
-import { db } from "@/firebase-config";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, storage } from "@/firebase-config";
 import { Form, Question, FormAnswer, FormResponse } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
 import { 
@@ -22,7 +23,12 @@ import {
   mdiSend, 
   mdiCheckCircle, 
   mdiFormSelect,
-  mdiAlertCircle 
+  mdiAlertCircle,
+  mdiClockOutline,
+  mdiFileUpload,
+  mdiFileDocument,
+  mdiClose,
+  mdiLoading
 } from "@mdi/js";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/_stores/hooks";
@@ -51,6 +57,9 @@ const StudentFormFillerPage = () => {
   const [showQuestion, setShowQuestion] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{ [questionId: string]: string }>({});
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(new Set());
+  const [uploadedFiles, setUploadedFiles] = useState<{ [questionId: string]: File[] }>({});
+  const [uploadingFiles, setUploadingFiles] = useState<{ [questionId: string]: boolean }>({});
+  const [fileUrls, setFileUrls] = useState<{ [questionId: string]: string[] }>({});
 
   useEffect(() => {
     if (!studentUid) {
@@ -218,6 +227,114 @@ const StudentFormFillerPage = () => {
     });
   };
 
+  const handleFileChange = async (questionId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const question = form?.questions.find(q => q.id === questionId);
+    if (!question) return;
+
+    const maxFiles = question.maxFiles || 1;
+    const maxFileSize = (question.maxFileSize || 5) * 1024 * 1024; // Convert MB to bytes
+    const acceptedTypes = question.acceptedFileTypes || [];
+
+    // Validate file count
+    const currentFiles = uploadedFiles[questionId] || [];
+    const totalFiles = currentFiles.length + files.length;
+    if (totalFiles > maxFiles) {
+      setValidationErrors(prev => ({ 
+        ...prev, 
+        [questionId]: `Maximum ${maxFiles} file${maxFiles > 1 ? 's' : ''} allowed` 
+      }));
+      return;
+    }
+
+    // Validate files
+    const validFiles: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Check file size
+      if (file.size > maxFileSize) {
+        toast.error(`File "${file.name}" exceeds maximum size of ${question.maxFileSize || 5}MB`);
+        continue;
+      }
+
+      // Check file type if specified
+      if (acceptedTypes.length > 0) {
+        const fileType = file.type;
+        const isValidType = acceptedTypes.some(acceptedType => {
+          if (acceptedType.endsWith('/*')) {
+            const category = acceptedType.split('/')[0];
+            return fileType.startsWith(category + '/');
+          }
+          return fileType === acceptedType;
+        });
+
+        if (!isValidType) {
+          toast.error(`File "${file.name}" type not accepted`);
+          continue;
+        }
+      }
+
+      validFiles.push(file);
+    }
+
+    if (validFiles.length > 0) {
+      setUploadedFiles(prev => ({
+        ...prev,
+        [questionId]: [...(prev[questionId] || []), ...validFiles]
+      }));
+
+      // Clear validation error
+      setValidationErrors(prev => ({ ...prev, [questionId]: '' }));
+
+      // Mark as completed if not required or has files
+      const newCompleted = new Set(completedQuestions);
+      newCompleted.add(questionId);
+      setCompletedQuestions(newCompleted);
+
+      toast.success(`${validFiles.length} file${validFiles.length > 1 ? 's' : ''} added`);
+    }
+  };
+
+  const handleRemoveFile = (questionId: string, fileIndex: number) => {
+    setUploadedFiles(prev => {
+      const currentFiles = prev[questionId] || [];
+      const newFiles = currentFiles.filter((_, index) => index !== fileIndex);
+      
+      // Update validation
+      const question = form?.questions.find(q => q.id === questionId);
+      if (question?.required && newFiles.length === 0) {
+        setValidationErrors(prevErrors => ({ 
+          ...prevErrors, 
+          [questionId]: 'This field is required' 
+        }));
+        setCompletedQuestions(prevCompleted => {
+          const newCompleted = new Set(prevCompleted);
+          newCompleted.delete(questionId);
+          return newCompleted;
+        });
+      }
+
+      return { ...prev, [questionId]: newFiles };
+    });
+  };
+
+  const uploadFilesToStorage = async (questionId: string, files: File[]): Promise<string[]> => {
+    const uploadPromises = files.map(async (file) => {
+      const timestamp = Date.now();
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storagePath = `form_responses/${formId}/${questionId}/${timestamp}_${sanitizedFileName}`;
+      const storageRef = ref(storage, storagePath);
+      
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      return downloadURL;
+    });
+
+    return Promise.all(uploadPromises);
+  };
+
   const validateAnswers = (): boolean => {
     if (!form) return false;
 
@@ -227,13 +344,23 @@ const StudentFormFillerPage = () => {
 
     for (const question of visibleQuestions) {
       if (question.required) {
-        const answer = answers[question.id];
-        if (!answer || (Array.isArray(answer) && answer.length === 0)) {
-          newErrors[question.id] = 'This field is required';
-          hasErrors = true;
-        } else if (typeof answer === 'string' && !answer.trim()) {
-          newErrors[question.id] = 'This field cannot be empty';
-          hasErrors = true;
+        if (question.type === 'file_upload') {
+          // Validate file upload questions
+          const files = uploadedFiles[question.id];
+          if (!files || files.length === 0) {
+            newErrors[question.id] = 'This field is required';
+            hasErrors = true;
+          }
+        } else {
+          // Validate other question types
+          const answer = answers[question.id];
+          if (!answer || (Array.isArray(answer) && answer.length === 0)) {
+            newErrors[question.id] = 'This field is required';
+            hasErrors = true;
+          } else if (typeof answer === 'string' && !answer.trim()) {
+            newErrors[question.id] = 'This field cannot be empty';
+            hasErrors = true;
+          }
         }
       }
     }
@@ -268,22 +395,56 @@ const StudentFormFillerPage = () => {
         }
       }
 
-      const formAnswers: FormAnswer[] = getVisibleQuestions().map(q => ({
-        questionId: q.id,
-        answer: answers[q.id] || (q.type === 'checkboxes' ? [] : '')
-      }));
+      // Upload files for file_upload questions
+      const uploadedFileData: { [questionId: string]: { urls: string[], names: string[] } } = {};
+      const visibleQuestions = getVisibleQuestions();
+      
+      for (const question of visibleQuestions) {
+        if (question.type === 'file_upload' && uploadedFiles[question.id]?.length > 0) {
+          try {
+            setUploadingFiles(prev => ({ ...prev, [question.id]: true }));
+            const urls = await uploadFilesToStorage(question.id, uploadedFiles[question.id]);
+            const names = uploadedFiles[question.id].map(f => f.name);
+            uploadedFileData[question.id] = { urls, names };
+          } catch (uploadError) {
+            console.error(`Error uploading files for question ${question.id}:`, uploadError);
+            toast.error(`Failed to upload files for: ${question.text}`);
+            setSubmitting(false);
+            return;
+          } finally {
+            setUploadingFiles(prev => ({ ...prev, [question.id]: false }));
+          }
+        }
+      }
+
+      const formAnswers: FormAnswer[] = visibleQuestions.map(q => {
+        const baseAnswer: FormAnswer = {
+          questionId: q.id,
+          answer: answers[q.id] || (q.type === 'checkboxes' ? [] : '')
+        };
+
+        // Add file data for file_upload questions
+        if (q.type === 'file_upload' && uploadedFileData[q.id]) {
+          baseAnswer.fileUrls = uploadedFileData[q.id].urls;
+          baseAnswer.fileNames = uploadedFileData[q.id].names;
+          baseAnswer.answer = uploadedFileData[q.id].names.join(', '); // Store file names as answer text
+        }
+
+        return baseAnswer;
+      });
 
       const responseData: Omit<FormResponse, 'id'> = {
         formId,
         studentId: studentData?.studentId || studentDocId || 'unknown',
         studentName: studentName || 'Unknown',
         studentUid: studentUid || 'unknown',
+        authUid: studentUid || 'unknown', // Firebase Auth UID for security rules
         answers: formAnswers,
         submittedAt: Timestamp.now(),
         class: studentData?.class,
         shift: studentData?.shift,
         classType: studentData?.classType,
-        approvalStatus: form?.requiresApproval ? 'pending' : undefined
+        approvalStatus: form?.requiresApproval ? 'pending' : 'approved'
       };
 
       await addDoc(collection(db, "form_responses"), responseData);
@@ -498,6 +659,113 @@ const StudentFormFillerPage = () => {
           </div>
         );
 
+      case 'file_upload':
+        const files = uploadedFiles[question.id] || [];
+        const maxFiles = question.maxFiles || 1;
+        const maxFileSize = question.maxFileSize || 5;
+        const acceptedTypes = question.acceptedFileTypes || [];
+        const isUploading = uploadingFiles[question.id];
+        const acceptString = acceptedTypes.length > 0 ? acceptedTypes.join(',') : '*';
+
+        return (
+          <div className="space-y-4">
+            {/* File Upload Area */}
+            <div className="relative">
+              <input
+                type="file"
+                id={`file-${question.id}`}
+                multiple={maxFiles > 1}
+                accept={acceptString}
+                onChange={(e) => handleFileChange(question.id, e.target.files)}
+                disabled={files.length >= maxFiles || isUploading}
+                className="sr-only"
+              />
+              <label
+                htmlFor={`file-${question.id}`}
+                className={`flex flex-col items-center justify-center w-full p-8 border-3 border-dashed rounded-2xl cursor-pointer transition-all touch-manipulation ${
+                  files.length >= maxFiles || isUploading
+                    ? 'bg-gray-100 dark:bg-slate-800 border-gray-300 dark:border-slate-600 cursor-not-allowed opacity-50'
+                    : hasError
+                      ? 'bg-red-50 dark:bg-red-900/10 border-red-300 dark:border-red-600 hover:bg-red-100 dark:hover:bg-red-900/20'
+                      : 'bg-blue-50 dark:bg-blue-900/10 border-blue-300 dark:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 hover:border-blue-400 dark:hover:border-blue-500'
+                }`}
+              >
+                <Icon 
+                  path={isUploading ? mdiLoading : mdiFileUpload} 
+                  size={24} 
+                  className={`mb-3 ${
+                    isUploading 
+                      ? 'text-gray-500 dark:text-gray-400 animate-spin' 
+                      : hasError
+                        ? 'text-red-500 dark:text-red-400'
+                        : 'text-blue-500 dark:text-blue-400'
+                  }`} 
+                />
+                <p className={`text-base font-semibold mb-1 ${
+                  hasError 
+                    ? 'text-red-700 dark:text-red-300' 
+                    : 'text-gray-900 dark:text-white'
+                }`}>
+                  {isUploading 
+                    ? 'Uploading...' 
+                    : files.length >= maxFiles 
+                      ? `Maximum ${maxFiles} file${maxFiles > 1 ? 's' : ''} reached` 
+                      : 'Click to upload or drag and drop'}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {acceptedTypes.length > 0 
+                    ? `Accepted: ${acceptedTypes.map(t => t.split('/')[1] || t).join(', ')}` 
+                    : 'All file types accepted'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                  Max size: {maxFileSize}MB | Max files: {maxFiles}
+                </p>
+              </label>
+            </div>
+
+            {/* Uploaded Files List */}
+            {files.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Uploaded Files ({files.length}/{maxFiles})
+                </p>
+                <div className="space-y-2">
+                  {files.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-700/50 border-2 border-gray-200 dark:border-slate-600 rounded-xl transition-all hover:bg-gray-100 dark:hover:bg-slate-700 group"
+                    >
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <Icon 
+                          path={mdiFileDocument} 
+                          size={20} 
+                          className="text-blue-500 dark:text-blue-400 flex-shrink-0" 
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {file.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFile(question.id, index)}
+                        disabled={isUploading}
+                        className="ml-2 p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                      >
+                        <Icon path={mdiClose} size={20} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
@@ -521,17 +789,17 @@ const StudentFormFillerPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 p-8 text-center">
           <div className="relative mx-auto mb-6 w-24 h-24">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
-            <div className="relative w-24 h-24 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center shadow-lg">
-              <Icon path={mdiCheckCircle} size={16} className="text-white" />
+            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500 via-amber-500 to-orange-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
+            <div className="relative w-24 h-24 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-full flex items-center justify-center shadow-lg">
+              <Icon path={mdiClockOutline} size={16} className="text-white" />
             </div>
           </div>
           
           <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-100 dark:to-white bg-clip-text text-transparent mb-3">
-            Already Submitted!
+            Awaiting Approval
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-lg mb-8">
-            You have already submitted this form. Thank you for your response!
+            Your registration has been submitted and is pending approval.
           </p>
           
           <button

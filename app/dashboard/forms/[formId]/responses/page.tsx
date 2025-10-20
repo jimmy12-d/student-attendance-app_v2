@@ -169,6 +169,7 @@ const FormResponsesPage = () => {
     try {
       const updateData: any = {
         approvalStatus: status,
+        registrationStatus: status,
         approvedBy: adminUid,
         approvedAt: Timestamp.now()
       };
@@ -314,12 +315,11 @@ const FormResponsesPage = () => {
   };
 
   const getApprovalStats = () => {
-    const filtered = getFilteredResponses();
-    const approved = filtered.filter(r => r.approvalStatus === 'approved').length;
-    const rejected = filtered.filter(r => r.approvalStatus === 'rejected').length;
-    const pending = filtered.filter(r => !r.approvalStatus || r.approvalStatus === 'pending').length;
+    const approved = responses.filter(r => r.approvalStatus === 'approved').length;
+    const rejected = responses.filter(r => r.approvalStatus === 'rejected').length;
+    const pending = responses.filter(r => !r.approvalStatus || r.approvalStatus === 'pending').length;
     
-    return { approved, rejected, pending, total: filtered.length };
+    return { approved, rejected, pending, total: responses.length };
   };
 
   const exportToCSV = () => {
@@ -884,6 +884,30 @@ const FormResponsesPage = () => {
                                   <span className="text-gray-500 italic">No answer provided</span>
                                 )}
                               </p>
+                            </div>
+                          ) : question.type === 'file_upload' ? (
+                            <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 sm:p-4 border-l-4 border-green-500">
+                              {answer?.fileUrls && answer.fileUrls.length > 0 ? (
+                                <div className="space-y-2">
+                                  {answer.fileUrls.map((url, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-3 p-2 bg-white dark:bg-slate-800 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
+                                    >
+                                      <Icon path={mdiFile} size={20} className="text-blue-600 dark:text-blue-400" />
+                                      <span className="flex-1 text-sm text-gray-900 dark:text-white font-medium group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                        {answer.fileNames?.[idx] || `File ${idx + 1}`}
+                                      </span>
+                                      <Icon path={mdiDownload} size={16} className="text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400" />
+                                    </a>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 italic text-sm sm:text-base">No files uploaded</p>
+                              )}
                             </div>
                           ) : (
                             <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 sm:p-4">

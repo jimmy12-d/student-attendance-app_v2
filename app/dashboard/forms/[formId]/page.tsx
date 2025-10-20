@@ -29,6 +29,7 @@ const FormBuilderPage = () => {
   const [formType, setFormType] = useState<FormType>('general');
   const [deadline, setDeadline] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [isVisible, setIsVisible] = useState(true);
   const [requiresApproval, setRequiresApproval] = useState(false);
   const [maxResponses, setMaxResponses] = useState<number | undefined>(undefined);
   const [targetClassTypes, setTargetClassTypes] = useState<string[]>([]);
@@ -85,6 +86,7 @@ const FormBuilderPage = () => {
         setDeadline(formatDateTimeLocal(deadlineDate));
         
         setIsActive(formData.isActive);
+        setIsVisible(formData.isVisible !== undefined ? formData.isVisible : true); // Default to true for old forms
         setRequiresApproval(formData.requiresApproval || false);
         setMaxResponses(formData.maxResponses);
         setTargetClassTypes(formData.targetClassTypes || []);
@@ -327,6 +329,7 @@ const FormBuilderPage = () => {
         createdBy: userUid || 'unknown',
         questions,
         isActive,
+        isVisible,
         requiresApproval
       };
       
@@ -552,7 +555,7 @@ const FormBuilderPage = () => {
             </div>
           </div>
           
-          {/* Active Status and Requires Approval */}
+          {/* Active Status, Visibility, and Requires Approval */}
           <div className="space-y-3">
             <label className="flex items-center space-x-3 cursor-pointer bg-gray-50 dark:bg-slate-700/50 border-2 border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3">
               <input
@@ -563,7 +566,27 @@ const FormBuilderPage = () => {
               />
               <div className="flex-1">
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 block">
-                  Active (visible to students)
+                  Active (accepts responses)
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Students can submit responses when active
+                </span>
+              </div>
+            </label>
+            
+            <label className="flex items-center space-x-3 cursor-pointer bg-gray-50 dark:bg-slate-700/50 border-2 border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3">
+              <input
+                type="checkbox"
+                checked={isVisible}
+                onChange={(e) => setIsVisible(e.target.checked)}
+                className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+              />
+              <div className="flex-1">
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 block">
+                  Visible (show to students)
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Form appears in student list (if not active, shows "Not Open Yet")
                 </span>
               </div>
             </label>

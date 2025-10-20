@@ -182,6 +182,19 @@ const getParentBotMenuKeyboard = () => {
     };
 };
 
+// --- Helper function to get standard bot information message ---
+const getParentBotInfoMessage = () => {
+    return `📖 ប្រព័ន្ធស្វ័យតាមដានការសិក្សាសិស្សសាលារ៉ដវែល\n\n` +
+           `🤖 នេះគ្រាន់តែជាបត (Bot) ដែលផ្តល់ពត៌មានស្វ័យប្រវត្តិប៉ុណ្ណោះ មិនមែនជាមនុស្សទេ។ សូមចុចប៊ូតុងខាងក្រោមសម្រាប់ការតាមដាននានា។\n\n` +
+           `💡 ប្រសិនបើបងត្រូវការជំនួយ សូមទាក់ទងមក\n` +
+           `❤ - ក្រុមការងារ @RodwellLC096\n` +
+           `❤ - គណៈគ្រប់គ្រង @RodwellLC076\n` +
+           `☎️ - ទូរស័ព្ទ 096-763-9355 ឬ 076-763-9355\n` +
+           `🏫 - អញ្ជើញមកសាលាផ្ទាល់ តាមអាស័យដ្ឋាន\n` +
+           `📍 - https://maps.app.goo.gl/XqDs6RtHAM4yz4i16\n\n` +
+           `👇 សូមចុចប៊ូតុងខាងក្រោម ដើម្បីរើសយកពត៌មានណាមួយ 👇`;
+};
+
 const calculateAttendanceStatus = (attendanceTime, classStartTime) => {
     if (!classStartTime) return null;
     
@@ -338,12 +351,12 @@ const getPaymentStatusDisplayText = (status) => {
 };
 
 /**
- * Format payment month in Khmer
- * @param paymentMonth - Payment month in format "YYYY-MM"
- * @returns Formatted month in Khmer
+ * Format payment date in Khmer
+ * @param paymentDate - Payment date in format "YYYY-MM-DD" or "YYYY-MM"
+ * @returns Formatted date in Khmer
  */
-const formatPaymentMonthInKhmer = (paymentMonth) => {
-    if (!paymentMonth) return 'មិនបានកំណត់';
+const formatPaymentMonthInKhmer = (paymentDate) => {
+    if (!paymentDate) return 'មិនបានកំណត់';
     
     const khmerNumbers = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
     const khmerMonths = [
@@ -355,10 +368,17 @@ const formatPaymentMonthInKhmer = (paymentMonth) => {
         return num.toString().split('').map(digit => khmerNumbers[parseInt(digit)]).join('');
     };
     
-    const [year, month] = paymentMonth.split('-');
-    const khmerYear = convertToKhmerNumber(year);
-    const khmerMonth = khmerMonths[parseInt(month) - 1] || month;
+    const parts = paymentDate.split('-');
+    const khmerYear = convertToKhmerNumber(parts[0]);
+    const khmerMonth = khmerMonths[parseInt(parts[1]) - 1] || parts[1];
     
+    // Check if we have a day component (YYYY-MM-DD format)
+    if (parts.length === 3 && parts[2]) {
+        const khmerDay = convertToKhmerNumber(parseInt(parts[2]));
+        return `ថ្ងៃទី${khmerDay} ខែ${khmerMonth} ឆ្នាំ${khmerYear}`;
+    }
+    
+    // Otherwise just return month and year (YYYY-MM format)
     return `ខែ${khmerMonth} ឆ្នាំ${khmerYear}`;
 };
 
@@ -820,21 +840,11 @@ exports.parentBotWebhook = onRequest({
             
             await bot.sendMessage(chatId, attendanceMessage, { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
         } else if (text === '/help') {
-            await bot.sendMessage(chatId, 
-                `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
-                `សូមជ្រើសរើសពាក្យបញ្ជាដែលបងចង់ប្រើ៖\n\n` +
-                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076\n\n` +
-                `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
-                { parse_mode: 'Markdown', ...getHelpMenuKeyboard() }
-            );
+            // Send the standard bot info message with menu
+            await bot.sendMessage(chatId, getParentBotInfoMessage(), { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
         } else {
-            // Send helpful message for unrecognized commands
-            await bot.sendMessage(chatId, 
-                '🤖 នេះគ្រាន់តែជា Bot។\n'
-                `ខ្ញុំមិនយល់ពាក្យបញ្ជានេះទេ។ សូមចុច /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។\n\n` +
-                `ឬ សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
-                getParentBotMenuKeyboard()
-            );
+            // Handle random/unknown text - send bot info message with menu
+            await bot.sendMessage(chatId, getParentBotInfoMessage(), { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
         }
 
         res.status(200).send('OK');
@@ -938,6 +948,277 @@ const handleParentInfoCommand = async (bot, chatId, userId) => {
 /**
  * Handle /payment command - show payment status for all registered children
  */
+/**
+ * Inline version of handlePaymentStatusCommand - edits existing message
+ */
+const handlePaymentStatusCommandInline = async (bot, chatId, messageId, userId) => {
+    try {
+        // Check if this user is registered as a parent
+        const parentQuery = await db.collection('parentNotifications')
+            .where('telegramUserId', '==', userId.toString())
+            .where('isActive', '==', true)
+            .get();
+        
+        if (parentQuery.empty) {
+            await bot.editMessageText(
+                `🔍 បងមិនទាន់បានចុះឈ្មោះទទួលការជូនដំណឹងអំពីកូនរបស់បងនៅឡើយទេ។\n\n` +
+                `ដើម្បីពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា សូមចុះឈ្មោះជាមុនសិន។\n\n` +
+                `វាយ /start ដើម្បីចាប់ផ្តើម។`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    ...getParentBotMenuKeyboard()
+                }
+            );
+            return;
+        }
+        
+        let paymentInfo = `💰 **ស្ថានភាពបង់ថ្លៃសិក្សា**\n\n`;
+        
+        for (const doc of parentQuery.docs) {
+            const parentData = doc.data();
+            const studentId = parentData.studentId;
+            const studentName = parentData.studentKhmerName || parentData.studentName;
+            const studentClass = parentData.studentClass;
+            
+            try {
+                // Query for the latest transaction record for this student
+                const paymentQuery = await db.collection('transactions')
+                    .where('studentId', '==', studentId)
+                    .orderBy('date', 'desc')
+                    .limit(1)
+                    .get();
+                
+                let paymentStatus, paymentResult, lastPaymentMonth = null, lastPaymentDate = null, latestPaymentData = null;
+                
+                if (!paymentQuery.empty) {
+                    latestPaymentData = paymentQuery.docs[0].data();
+                    
+                    // Get the full payment date from the 'date' field
+                    if (latestPaymentData.date) {
+                        lastPaymentDate = latestPaymentData.date; // This should be in YYYY-MM-DD format
+                    }
+                    
+                    // Handle paymentMonth format for status calculation
+                    if (latestPaymentData.paymentMonth) {
+                        const monthNames = {
+                            'January': '01', 'February': '02', 'March': '03', 'April': '04',
+                            'May': '05', 'June': '06', 'July': '07', 'August': '08',
+                            'September': '09', 'October': '10', 'November': '11', 'December': '12'
+                        };
+                        
+                        const parts = latestPaymentData.paymentMonth.split(' ');
+                        if (parts.length === 2) {
+                            const monthName = parts[0];
+                            const year = parts[1];
+                            const monthNumber = monthNames[monthName];
+                            if (monthNumber) {
+                                lastPaymentMonth = `${year}-${monthNumber}`;
+                            }
+                        }
+                    }
+                    
+                    // If we don't have lastPaymentMonth but have date, extract month from date
+                    if (!lastPaymentMonth && lastPaymentDate) {
+                        lastPaymentMonth = lastPaymentDate.slice(0, 7); // Extract YYYY-MM from YYYY-MM-DD
+                    }
+                }
+                
+                // Calculate payment status
+                paymentResult = calculatePaymentStatus(lastPaymentMonth);
+                paymentStatus = paymentResult.status;
+                
+                // Format payment status with appropriate emoji
+                let statusEmoji = '';
+                let statusText = getPaymentStatusDisplayText(paymentStatus);
+                
+                switch (paymentStatus) {
+                    case 'paid':
+                        statusEmoji = '✅';
+                        break;
+                    case 'unpaid':
+                        statusEmoji = '❌';
+                        break;
+                    case 'no-record':
+                        statusEmoji = '⚠️';
+                        break;
+                    default:
+                        statusEmoji = '❓';
+                }
+                
+                // Get pricing information
+                let pricingInfo = null;
+                if (paymentStatus === 'unpaid' || paymentStatus === 'no-record') {
+                    pricingInfo = await getClassPricing(studentClass);
+                }
+                
+                paymentInfo += `👤 **${studentName}**\n`;
+                paymentInfo += `🏫 ${formatClassInKhmer(studentClass)}\n`;
+                
+                // Show status with amount
+                if (paymentStatus === 'paid' && latestPaymentData && latestPaymentData.amount) {
+                    const formattedAmount = new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(latestPaymentData.amount);
+                    paymentInfo += `${statusEmoji} **ស្ថានភាព:** ${statusText} (${formattedAmount})\n`;
+                } else {
+                    paymentInfo += `${statusEmoji} **ស្ថានភាព:** ${statusText}\n`;
+                    
+                    if ((paymentStatus === 'unpaid' || paymentStatus === 'no-record') && pricingInfo && pricingInfo.price) {
+                        const formattedPrice = new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(pricingInfo.price);
+                        paymentInfo += `💵 **ចំនួនទឹកប្រាក់ត្រូវបង់:** ${formattedPrice}\n`;
+                    }
+                }
+                
+                if (lastPaymentDate) {
+                    paymentInfo += `📅 **ការបង់ចុងក្រោយ:** ${formatPaymentMonthInKhmer(lastPaymentDate)}\n`;
+                } else if (lastPaymentMonth) {
+                    paymentInfo += `📅 **ការបង់ចុងក្រោយ:** ${formatPaymentMonthInKhmer(lastPaymentMonth)}\n`;
+                } else {
+                    paymentInfo += `📅 **ការបង់ចុងក្រោយ:** មិនមានកំណត់ត្រា\n`;
+                }
+                
+                // Add explanation
+                if (paymentStatus === 'unpaid') {
+                    paymentInfo += `💡 **ចំណាំ:** ការបង់ថ្លៃមិនទាន់បានដោះស្រាយ`;
+                    if (pricingInfo && pricingInfo.price) {
+                        const formattedPrice = new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(pricingInfo.price);
+                        paymentInfo += ` - សូមបង់ ${formattedPrice}`;
+                    }
+                    paymentInfo += `\n`;
+                } else if (paymentStatus === 'no-record') {
+                    paymentInfo += `💡 **ចំណាំ:** មិនមានកំណត់ត្រាការបង់ថ្លៃ`;
+                    if (pricingInfo && pricingInfo.price) {
+                        const formattedPrice = new Intl.NumberFormat('en-US', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(pricingInfo.price);
+                        paymentInfo += ` - សូមបង់ ${formattedPrice}`;
+                    }
+                    paymentInfo += `\n`;
+                } else if (paymentStatus === 'paid') {
+                    paymentInfo += `💡 **ចំណាំ:** ការបង់ថ្លៃគ្រប់គ្រាន់សម្រាប់ខែនេះ\n`;
+                }
+                
+                paymentInfo += `\n`;
+                
+            } catch (paymentError) {
+                console.error(`Error fetching payment for student ${studentId}:`, paymentError);
+                paymentInfo += `👤 **${studentName}**\n`;
+                paymentInfo += `🏫 ${formatClassInKhmer(studentClass)}\n`;
+                paymentInfo += `❓ **ស្ថានភាព:** មិនអាចពិនិត្យបាន\n`;
+                paymentInfo += `💡 **ចំណាំ:** បញ្ហាក្នុងការទាញយកទិន្នន័យ\n\n`;
+            }
+        }
+        
+        await bot.editMessageText(paymentInfo, {
+            chat_id: chatId,
+            message_id: messageId,
+            parse_mode: 'Markdown',
+            ...getParentBotMenuKeyboard()
+        });
+        
+    } catch (error) {
+        console.error('Error in handlePaymentStatusCommandInline:', error);
+        await bot.editMessageText("❌ មានកំហុសក្នុងការពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា។ សូមព្យាយាមម្តងទៀតក្រោយមួយរំពេច។", {
+            chat_id: chatId,
+            message_id: messageId,
+            ...getParentBotMenuKeyboard()
+        });
+    }
+};
+
+/**
+ * Inline version of handleMockExamResultDeepLink - edits existing message
+ */
+const handleMockExamResultDeepLinkInline = async (bot, chatId, messageId, userId) => {
+    try {
+        // Check if this user is registered as a parent
+        const parentQuery = await db.collection('parentNotifications')
+            .where('telegramUserId', '==', userId.toString())
+            .where('isActive', '==', true)
+            .get();
+        
+        if (parentQuery.empty) {
+            await bot.editMessageText(
+                `❌ សូមទោស!\n\n` +
+                `បងមិនទាន់បានចុះឈ្មោះជាម្តាយឪពុកនៅឡើយទេ។ សូមចុះឈ្មោះជាមុនសិនដើម្បីមើលលទ្ធផលប្រលងរបស់កូន។\n\n` +
+                `ទាក់ទងសាលាសម្រាប់ការចុះឈ្មោះ។`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    ...getParentBotMenuKeyboard()
+                }
+            );
+            return;
+        }
+
+        // Query examControls collection for ready exams
+        const examQuery = await db.collection('examControls')
+            .where('isReadyForStudent', '==', true)
+            .get();
+
+        if (examQuery.empty) {
+            await bot.editMessageText(
+                `📚 **លទ្ធផលប្រលង**\n\n` +
+                `🔍 ប្រលងណាមួយមិនទាន់មានលទ្ធផលនៅឡើយទេ...\n\n` +
+                `សូមរង់ចាំការជូនដំណឹងពីសាលានៅពេលលទ្ធផលត្រៀមរួចរាល់។`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown',
+                    ...getParentBotMenuKeyboard()
+                }
+            );
+            return;
+        }
+
+        // Create inline keyboard with available exams
+        const examButtons = [];
+        examQuery.docs.forEach(doc => {
+            const examData = doc.data();
+            const examNameKhmer = examData.nameKhmer || examData.name || 'ប្រលងមិនដឹងឈ្មោះ';
+            examButtons.push([{
+                text: examNameKhmer,
+                callback_data: `exam_result_${doc.id}`
+            }]);
+        });
+
+        const options = {
+            reply_markup: {
+                inline_keyboard: examButtons
+            }
+        };
+
+        await bot.editMessageText(
+            `📚 **លទ្ធផលប្រលងដែលមាន**\n\n` +
+            `សូមជ្រើសរើសប្រលងដែលបងចង់មើលលទ្ធផល៖`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                ...options
+            }
+        );
+
+    } catch (error) {
+        logger.error('Error in handleMockExamResultDeepLinkInline:', error);
+        await bot.editMessageText("❌ មានបញ្ហាក្នុងការទាញយកលទ្ធផលប្រលង។ សូមព្យាយាមម្តងទៀត។", {
+            chat_id: chatId,
+            message_id: messageId,
+            ...getParentBotMenuKeyboard()
+        });
+    }
+};
+
 const handlePaymentStatusCommand = async (bot, chatId, userId) => {
     try {
         // Check if this user is registered as a parent
@@ -975,11 +1256,16 @@ const handlePaymentStatusCommand = async (bot, chatId, userId) => {
                 
                 console.log(`Payment query result for ${studentId}: ${paymentQuery.empty ? 'EMPTY' : 'FOUND ' + paymentQuery.docs.length + ' records'}`);
                 
-                let paymentStatus, paymentResult, lastPaymentMonth = null, latestPaymentData = null;
+                let paymentStatus, paymentResult, lastPaymentMonth = null, lastPaymentDate = null, latestPaymentData = null;
                 
                 if (!paymentQuery.empty) {
                     latestPaymentData = paymentQuery.docs[0].data();
                     console.log(`Latest payment data for ${studentId}:`, latestPaymentData);
+                    
+                    // Get the full payment date from the 'date' field
+                    if (latestPaymentData.date) {
+                        lastPaymentDate = latestPaymentData.date; // This should be in YYYY-MM-DD format
+                    }
                     
                     // Handle paymentMonth format (e.g., "August 2025")
                     if (latestPaymentData.paymentMonth) {
@@ -1000,6 +1286,11 @@ const handlePaymentStatusCommand = async (bot, chatId, userId) => {
                                 console.log(`Converted paymentMonth "${latestPaymentData.paymentMonth}" to "${lastPaymentMonth}"`);
                             }
                         }
+                    }
+                    
+                    // If we don't have lastPaymentMonth but have date, extract month from date
+                    if (!lastPaymentMonth && lastPaymentDate) {
+                        lastPaymentMonth = lastPaymentDate.slice(0, 7); // Extract YYYY-MM from YYYY-MM-DD
                     }
                 }
                 
@@ -1055,14 +1346,16 @@ const handlePaymentStatusCommand = async (bot, chatId, userId) => {
                     }
                 }
                 
-                if (lastPaymentMonth) {
+                if (lastPaymentDate) {
+                    paymentInfo += `📅 **ការបង់ចុងក្រោយ:** ${formatPaymentMonthInKhmer(lastPaymentDate)}\n`;
+                } else if (lastPaymentMonth) {
                     paymentInfo += `📅 **ការបង់ចុងក្រោយ:** ${formatPaymentMonthInKhmer(lastPaymentMonth)}\n`;
                 } else {
                     paymentInfo += `📅 **ការបង់ចុងក្រោយ:** មិនមានកំណត់ត្រា\n`;
                 }
                 
                 // Add explanation based on status
-                if (paymentStatus === 'unpaid' && lastPaymentMonth) {
+                if (paymentStatus === 'unpaid' && (lastPaymentMonth || lastPaymentDate)) {
                     paymentInfo += `💡 **ចំណាំ:** ការបង់ថ្លៃមិនទាន់បានដោះស្រាយ`;
                     if (pricingInfo && pricingInfo.price) {
                         const formattedPrice = new Intl.NumberFormat('en-US', {
@@ -1468,6 +1761,16 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
             await handlePaymentStatusCommand(bot, chatId, userId);
         } else if (data === 'check_mock_exam') {
             await handleMockExamResultDeepLink(bot, chatId, userId, 'check_mock_exam_result');
+        } else if (data === 'show_help') {
+            // Show help/info message with menu (send new message instead of editing)
+            await bot.sendMessage(
+                chatId,
+                getParentBotInfoMessage(),
+                {
+                    parse_mode: 'Markdown',
+                    ...getParentBotMenuKeyboard()
+                }
+            );
         } else if (data === 'check_attendance') {
             // Show calendar for attendance checking
             const now = new Date();
@@ -1532,17 +1835,14 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
                 }
             );
         } else if (data === 'calendar_back') {
-            // Handle back button - return to help menu
+            // Handle back button - return to main menu
             await bot.editMessageText(
-                `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
-                `សូមជ្រើសរើសពាក្យបញ្ជាដែលបងចង់ប្រើ៖\n\n` +
-                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076\n\n` +
-                `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
+                getParentBotInfoMessage(),
                 {
                     chat_id: chatId,
                     message_id: messageId,
                     parse_mode: 'Markdown',
-                    ...getHelpMenuKeyboard()
+                    ...getParentBotMenuKeyboard()
                 }
             );
         } else if (data.startsWith('attendance_date_')) {
@@ -1698,26 +1998,35 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
             } else if (command === 'parent') {
                 await handleParentInfoCommand(bot, chatId, userId);
             } else if (command === 'payment') {
-                await handlePaymentStatusCommand(bot, chatId, userId);
+                // Show payment status inline
+                await handlePaymentStatusCommandInline(bot, chatId, messageId, userId);
             } else if (command === 'exam') {
-                await handleMockExamResultDeepLink(bot, chatId, userId, 'check_mock_exam_result');
+                // Show exam results inline
+                await handleMockExamResultDeepLinkInline(bot, chatId, messageId, userId);
             } else if (command === 'attendance') {
                 // Show calendar for attendance date selection
                 const today = new Date();
                 const calendarKeyboard = generateCalendarKeyboard(today.getFullYear(), today.getMonth());
                 
-                await bot.sendMessage(chatId, 
+                await bot.editMessageText(
                     getCalendarMessage(),
-                    { parse_mode: 'Markdown', ...calendarKeyboard }
+                    {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        parse_mode: 'Markdown',
+                        ...calendarKeyboard
+                    }
                 );
             } else if (command === 'help') {
-                // Resend help menu
-                await bot.sendMessage(chatId, 
-                    `📖 *ជំនួយប្រព័ន្ធជូនដំណឹងវត្តមាន*\n\n` +
-                    `សូមជ្រើសរើសពាក្យបញ្ជាដែលបងចង់ប្រើ៖\n\n` +
-                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076\n\n` +
-                    `💡 ប្រសិនបើបងមានបញ្ហា សូមទាក់ទងអ្នកគ្រប់គ្រងសាលា។`,
-                    { parse_mode: 'Markdown', ...getHelpMenuKeyboard() }
+                // Edit message to show the standard bot info message with menu
+                await bot.editMessageText(
+                    getParentBotInfoMessage(),
+                    {
+                        chat_id: chatId,
+                        message_id: messageId,
+                        parse_mode: 'Markdown',
+                        ...getParentBotMenuKeyboard()
+                    }
                 );
             }
         }
@@ -2648,75 +2957,6 @@ const handleTokenInput = async (bot, chatId, userId, token) => {
 
     } catch (error) {
         console.error('Error handling token input:', error);
-        await bot.sendMessage(chatId, "❌ Registration failed. Please try again.");
-    }
-};
-
-/**
- * Handle username input during registration (legacy - kept for backward compatibility)
- */
-const handleUsernameInput = async (bot, chatId, userId, username) => {
-    try {
-        if (!username || username.length < 2) {
-            await bot.sendMessage(chatId, "Please enter a valid username (at least 2 characters):");
-            return;
-        }
-
-        // Find student by username (assuming username is stored in a field like 'username' or 'studentId')
-        const studentQuery = await db.collection("students")
-            .where("username", "==", username)
-            .limit(1)
-            .get();
-
-        if (studentQuery.empty) {
-            await bot.sendMessage(chatId, `❌ Username "${username}" not found in our records. Please check your username and try again:`);
-            return;
-        }
-
-        const studentDoc = studentQuery.docs[0];
-        const studentData = studentDoc.data();
-
-        // Check if this student is already linked to another chat
-        if (studentData.chatId && studentData.chatId !== chatId.toString()) {
-            await bot.sendMessage(chatId, "❌ This student account is already registered with another user.");
-            await db.collection("telegramUserStates").doc(chatId.toString()).delete();
-            return;
-        }
-
-        // Link the student account without password (user must set custom password)
-        await studentDoc.ref.update({
-            chatId: chatId.toString(),
-            userId: userId,
-            registeredAt: FieldValue.serverTimestamp()
-        });
-
-        // Update user state for direct password setup (no buttons)
-        await db.collection("telegramUserStates").doc(chatId.toString()).set({
-            userId: userId,
-            chatId: chatId,
-            state: "waiting_custom_password_initial",
-            studentId: studentDoc.id,
-            timestamp: FieldValue.serverTimestamp()
-        });
-
-        await bot.sendMessage(chatId, 
-            `✅ Registration successful!\n\n` +
-            `👋 Welcome ${studentData.fullName || username}!\n\n` +
-            `🔐 **Complete Your Setup: Set Your Password**\n\n` +
-            `Please enter your new password. It must meet these requirements:\n` +
-            `• At least 8 characters long\n` +
-            `• Contains uppercase letters (A-Z)\n` +
-            `• Contains lowercase letters (a-z)\n\n` +
-            `Type your password in the next message. You'll get an option to delete the password message after processing for security.\n\n` +
-            `📱 You'll use your phone (${studentData.phone}) and password to login at:\n` +
-            `🌐 **portal.rodwell.center/login\n\n` +
-            `Type /cancel to cancel this operation.`
-        );
-
-        console.log(`Successfully registered student ${studentDoc.id} with chatId ${chatId}`);
-
-    } catch (error) {
-        console.error('Error handling username input:', error);
         await bot.sendMessage(chatId, "❌ Registration failed. Please try again.");
     }
 };
@@ -4622,43 +4862,6 @@ exports.getNextReceiptNumber = onCall({
     }
 });
 
-/**
- * [Firestore Trigger]
- * DEPRECATED: Auto-generate QR code when a new student is created (now using on-demand tokens)
- */
-// exports.autoGenerateQROnStudentCreate = onDocumentCreated({
-//     document: "students/{studentId}",
-//     region: "asia-southeast1"
-// }, async (event) => {
-//     const studentData = event.data?.data();
-//     const studentId = event.params?.studentId;
-// 
-//     if (!studentData || !studentId) {
-//         console.log("No student data or ID provided");
-//         return;
-//     }
-// 
-//     try {
-//         console.log(`Auto-generating QR code for new student: ${studentData.fullName} (${studentId})`);
-//         
-//         // Generate one-time registration token
-//         const token = generateOneTimeToken();
-//         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-//         
-//         // Update the student document with registration token
-//         await db.collection("students").doc(studentId).update({
-//             registrationToken: token,
-//             tokenGeneratedAt: FieldValue.serverTimestamp(),
-//             tokenExpiresAt: expiresAt,
-//             telegramAuthEnabled: true
-//         });
-// 
-//         console.log(`QR code auto-generated for student ${studentId} with token: ${token}`);
-//         
-//     } catch (error) {
-//         console.error(`Error auto-generating QR code for student ${studentId}:`, error);
-//     }
-// });
 
 // NEW: Callable function to store temporary registration token (used by PrintNode API)
 exports.storeTempRegistrationToken = onCall({

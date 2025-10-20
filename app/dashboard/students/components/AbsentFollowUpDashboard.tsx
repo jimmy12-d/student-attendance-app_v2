@@ -97,7 +97,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
       
       const result = await notifyParentAbsence({
         studentId: followUp.studentId,
-        studentName: followUp.studentName,
+        studentName: followUp.studentName || 'Unknown Student',
         date: followUp.date,
         absentFollowUpId: followUp.id
       });
@@ -375,8 +375,10 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
       return shiftA - shiftB;
     }
     
-    // If same shift, sort by student name
-    return a.studentName.localeCompare(b.studentName);
+    // If same shift, sort by student name (handle undefined names)
+    const nameA = a.studentName || '';
+    const nameB = b.studentName || '';
+    return nameA.localeCompare(nameB);
   });
 
   // Group follow-ups by shift
@@ -437,22 +439,22 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                 className="font-semibold text-gray-900 dark:text-gray-100 cursor-pointer hover:underline transition-colors duration-200 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                 onClick={async () => {
                   try {
-                    await navigator.clipboard.writeText(followUp.studentName);
-                    toast.success(`Copied "${followUp.studentName}" to clipboard`);
+                    await navigator.clipboard.writeText(followUp.studentName || 'Unknown Student');
+                    toast.success(`Copied "${followUp.studentName || 'Unknown Student'}" to clipboard`);
                   } catch (err) {
                     // Fallback for older browsers
                     const textArea = document.createElement('textarea');
-                    textArea.value = followUp.studentName;
+                    textArea.value = followUp.studentName || 'Unknown Student';
                     document.body.appendChild(textArea);
                     textArea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textArea);
-                    toast.success(`Copied "${followUp.studentName}" to clipboard`);
+                    toast.success(`Copied "${followUp.studentName || 'Unknown Student'}" to clipboard`);
                   }
                 }}
-                title={`Click to copy "${followUp.studentName}"`}
+                title={`Click to copy "${followUp.studentName || 'Unknown Student'}"`}
               >
-                {followUp.studentName}
+                {followUp.studentName || 'Unknown Student'}
               </div>
               <div className="text-sm khmer-font text-gray-500 dark:text-gray-400">
                 {(followUp as any).nameKhmer || 'N/A'}
@@ -470,7 +472,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-600 hover:text-blue-900 dark:hover:text-blue-100 transition-colors duration-200 cursor-pointer whitespace-nowrap"
-                title={`Contact ${followUp.studentName} on Telegram (@${student.telegramUsername})`}
+                title={`Contact ${followUp.studentName || 'Unknown Student'} on Telegram (@${student.telegramUsername})`}
               >
                 <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
@@ -479,7 +481,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
               </a>
             ) : student.hasTelegramUsername && !student.telegramUsername ? (
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-700 hover:bg-orange-200 dark:hover:bg-orange-800/50 transition-colors duration-200 whitespace-nowrap"
-                    title={`${followUp.studentName} needs Telegram username setup`}>
+                    title={`${followUp.studentName || 'Unknown Student'} needs Telegram username setup`}>
                 <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
@@ -532,7 +534,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
         <td className="p-4">
           <AbsentStatusTracker
             studentId={followUp.studentId}
-            studentName={followUp.studentName}
+            studentName={followUp.studentName || 'Unknown Student'}
             date={followUp.date}
             currentStatus={followUp.status}
             onStatusUpdate={(newStatus) => handleStatusUpdate(followUp.studentId, followUp.date, newStatus)}
@@ -566,17 +568,42 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
           <div className="flex flex-col space-y-2">
             {followUp.parentNotificationStatus ? (
               <div className="space-y-1">
-                <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  followUp.parentNotificationStatus === 'success' ? 'bg-green-100 text-green-800 border border-green-200 dark:bg-green-900/50 dark:text-green-300' :
-                  followUp.parentNotificationStatus === 'failed' ? 'bg-red-100 text-red-800 border border-red-200 dark:bg-red-900/50 dark:text-red-300' :
-                  followUp.parentNotificationStatus === 'no_parent' ? 'bg-gray-100 text-gray-800 border border-gray-200 dark:bg-gray-700 dark:text-gray-300' :
-                  'bg-yellow-100 text-yellow-800 border border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300'
+                <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
+                  followUp.parentNotificationStatus === 'success' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                  followUp.parentNotificationStatus === 'failed' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                  followUp.parentNotificationStatus === 'no_parent' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
+                  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
                 }`}>
-                  {followUp.parentNotificationStatus === 'success' && '✓ Sent'}
-                  {followUp.parentNotificationStatus === 'failed' && '✗ Failed'}
-                  {followUp.parentNotificationStatus === 'no_parent' && 'No Parent'}
-                  {followUp.parentNotificationStatus === 'pending' && '⏳ Pending'}
-                  {followUp.parentNotificationsSent && followUp.parentNotificationsSent > 0 && ` (${followUp.parentNotificationsSent})`}
+                  {followUp.parentNotificationStatus === 'success' ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <polyline points="20,6 9,17 4,12"></polyline>
+                      </svg>
+                      <span>Sent{followUp.parentNotificationsSent && followUp.parentNotificationsSent > 0 ? ` (${followUp.parentNotificationsSent})` : ''}</span>
+                    </>
+                  ) : followUp.parentNotificationStatus === 'failed' ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M18 6L6 18"></path>
+                        <path d="M6 6l12 12"></path>
+                      </svg>
+                      <span>Failed</span>
+                    </>
+                  ) : followUp.parentNotificationStatus === 'no_parent' ? (
+                    <>
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M12 9v2m0 4h.01"></path>
+                      </svg>
+                      <span>No Parent</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M12 2v6m0 0l-4 4m4-4l4 4m-4 4v6"></path>
+                      </svg>
+                      <span>Pending</span>
+                    </>
+                  )}
                 </div>
                 
                 {followUp.parentNotificationTimestamp && (
@@ -601,29 +628,32 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
             ) : (
               <div className="text-xs text-gray-500 dark:text-gray-400">Not sent</div>
             )}
-            
-            {/* Send Notification Button */}
-            <button
-              onClick={() => handleSendParentNotification(followUp)}
-              disabled={sendingNotifications[`${followUp.studentId}-${followUp.date}`]}
-              className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Send notification to parent"
-            >
-              {sendingNotifications[`${followUp.studentId}-${followUp.date}`] ? (
-                <>
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-700 dark:border-blue-400 mr-1"></div>
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
-                  Send Notification
-                </>
-              )}
-            </button>
           </div>
+        </td>
+        
+        {/* Send Notification Column */}
+        <td className="p-4">
+          <button
+            onClick={() => handleSendParentNotification(followUp)}
+            disabled={sendingNotifications[`${followUp.studentId}-${followUp.date}`]}
+            className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 dark:from-blue-600 dark:to-blue-700 dark:hover:from-blue-700 dark:hover:to-blue-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-sm transform hover:scale-105 active:scale-95"
+            title="Send notification to parent"
+          >
+            {sendingNotifications[`${followUp.studentId}-${followUp.date}`] ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                Sending...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                  <path d="M22 2L11 13"></path>
+                  <path d="M22 2L15 22 11 13 2 9 22 2z"></path>
+                </svg>
+                Send Notif
+              </>
+            )}
+          </button>
         </td>
         
         <td className="p-4 text-sm text-gray-500 dark:text-gray-400">
@@ -713,6 +743,9 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                     Parent Notification
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Send Notif
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Last Updated
                   </th>
                 </tr>
@@ -726,7 +759,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                     ))}
                     {lowPriorityInShift.length > 0 && (
                       <tr>
-                        <td colSpan={8} className="px-4 py-2">
+                        <td colSpan={9} className="px-4 py-2">
                           <div className="border-t border-gray-300 dark:border-slate-600"></div>
                         </td>
                       </tr>
@@ -796,6 +829,9 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Parent Notification
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    Send Notif
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Last Updated

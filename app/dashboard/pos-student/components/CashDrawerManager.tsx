@@ -11,9 +11,9 @@ interface CashDrawerManagerProps {
 }
 
 // Export the cash drawer opening function for use in other components
-export const openCashDrawerWithBP003 = async (): Promise<boolean> => {
+export const openCashDrawerWithRongata = async (): Promise<boolean> => {
     try {
-        // First, get the list of printers to find BP003
+        // First, get the list of printers to find Rongata 80mm
         const printersResponse = await fetch('/api/printnode?action=printers');
         const printersData = await printersResponse.json();
         
@@ -22,17 +22,17 @@ export const openCashDrawerWithBP003 = async (): Promise<boolean> => {
             return false;
         }
 
-        const bp003Printer = printersData.printers.find((printer: any) => 
-            printer.name.includes('BP003')
+        const rongataPrinter = printersData.printers.find((printer: any) => 
+            printer.name.toLowerCase().includes('rongta 80mm')
         );
 
-        if (!bp003Printer) {
-            console.error('BP003 printer not found for cash drawer');
+        if (!rongataPrinter) {
+            console.error('Rongata 80mm printer not found for cash drawer');
             return false;
         }
 
-        if (bp003Printer.computer?.state !== 'connected') {
-            console.error('BP003 printer is offline');
+        if (rongataPrinter.computer?.state !== 'connected') {
+            console.error('Rongata 80mm printer is offline');
             return false;
         }
 
@@ -41,7 +41,7 @@ export const openCashDrawerWithBP003 = async (): Promise<boolean> => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                printerId: bp003Printer.id,
+                printerId: rongataPrinter.id,
                 action: 'openCashDrawer'
             }),
         });
@@ -105,13 +105,11 @@ export const CashDrawerManager = ({ selectedPrinter, onCashDrawerOpen }: CashDra
                 
                 setPrinters(printNodePrinters);
                 
-                // Auto-select BP003 printer if available
-                const bp003Printer = printNodePrinters.find(p => p.name.includes('BP003'));
-                if (bp003Printer) {
-                    setCashDrawerPrinter(bp003Printer);
-                    console.log('✅ BP003 printer auto-selected for cash drawer:', bp003Printer.name);
-                } else {
-                    console.log('⚠️ BP003 printer not found, cash drawer functionality may not work');
+                // Auto-select Rongata 80mm printer if available
+                const rongataPrinter = printNodePrinters.find(p => p.name.toLowerCase().includes('rongta 80mm'));
+                
+                if (rongataPrinter) {
+                    setCashDrawerPrinter(rongataPrinter);
                 }
             } else {
                 toast.error(data.error || 'Failed to load printers from PrintNode');
@@ -130,12 +128,12 @@ export const CashDrawerManager = ({ selectedPrinter, onCashDrawerOpen }: CashDra
 
     const handleOpenCashDrawer = async () => {
         if (!cashDrawerPrinter || !cashDrawerPrinter.printNodeId) {
-            toast.error("BP003 printer not found. Cannot open cash drawer.");
+            toast.error("Rongata 80mm printer not found. Cannot open cash drawer.");
             return;
         }
 
         if (!cashDrawerPrinter.online) {
-            toast.error("BP003 printer is offline. Cannot open cash drawer.");
+            toast.error("Rongata 80mm printer is offline. Cannot open cash drawer.");
             return;
         }
 
@@ -207,7 +205,7 @@ export const CashDrawerManager = ({ selectedPrinter, onCashDrawerOpen }: CashDra
                         ) : (
                             <div>
                                 <div className="text-sm font-medium text-red-600 dark:text-red-400">
-                                    Cash Drawer (BP003 Not Found)
+                                    Cash Drawer (Rongata 80mm Not Found)
                                 </div>
                                 <div className="text-xs text-gray-500 dark:text-gray-400">
                                     Click to refresh

@@ -5,9 +5,10 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Webcam from 'react-webcam';
 import { toast } from 'sonner';
-import { collection, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
 
 import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiCog, mdiInformation } from '@mdi/js';
@@ -17,7 +18,7 @@ import Icon from '../../_components/Icon';
 
 // Import utilities
 import { Student } from '../../_interfaces';
-import { filterStudentsByShift, markAttendance, determineAttendanceStatus } from '../_lib/attendanceLogic';
+import { filterStudentsByShift, markAttendance, determineAttendanceStatus, isSchoolDay } from '../_lib/attendanceLogic';
 import { TrackedFace, initializeFaceApi, detectAllFaces, calculateFaceDistance } from './utils/faceDetection';
 import ZoomModeOverlay from './components/ZoomModeOverlay';
 import RecognitionControls from './components/RecognitionControls';
@@ -25,12 +26,17 @@ import ShiftSelector from './components/ShiftSelector';
 import CameraShutdownHandler from './components/CameraShutdownHandler';
 import ShutdownTransition from './components/ShutdownTransition';
 import FailedAttendanceManager from './components/FailedAttendanceManager';
-import { SendHomeOverlay } from './components/SendHomeOverlay';
+import { OverlayTemplate, OverlayConfig } from './components/OverlayTemplate';
+import { OVERLAY_CONFIGS, getOverlayConfig } from './components/overlayConfigs';
+import { OverlaySettings } from './components/OverlaySettings';
 import { offlineAttendanceManager, OfflineAttendanceRecord } from './utils/offlineAttendanceManager';
+import EventSelector from './components/EventSelector';
+import { clockInStudent, clockOutStudent, checkClockInStatus } from '@/utils/eventAttendanceManager';
 
 const FaceApiAttendanceScanner = () => {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const searchParams = useSearchParams();
   
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Initializing...');
@@ -61,8 +67,21 @@ const FaceApiAttendanceScanner = () => {
   const [classConfigs, setClassConfigs] = useState<any>(null); // Store class configurations
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
-  const [showSendHomeOverlay, setShowSendHomeOverlay] = useState(false);
-  const [sendHomeStudent, setSendHomeStudent] = useState<{ name: string; cutoff?: string } | null>(null);
+  
+  // Overlay state - now handles multiple overlay conditions
+  const [currentOverlay, setCurrentOverlay] = useState<{
+    config: OverlayConfig | null;
+    studentName?: string;
+  } | null>(null);
+  const [showOverlaySettings, setShowOverlaySettings] = useState(false);
+  
+  // Event attendance mode states - will be set from URL params if present
+  const [attendanceMode, setAttendanceMode] = useState<'regular' | 'event'>('regular');
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
+  const [selectedEventName, setSelectedEventName] = useState<string>('');
+  const [selectedEventFormId, setSelectedEventFormId] = useState<string>(''); // Track associated form ID
+  const [eventScanMode, setEventScanMode] = useState<'clock-in' | 'clock-out'>('clock-in'); // Separate modes for events
+  const [registeredStudentIds, setRegisteredStudentIds] = useState<Set<string>>(new Set()); // Students approved for event
   
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isDetectingRef = useRef(false);
@@ -140,6 +159,43 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
     }
   }, []);
 
+  // Load registered students for selected event
+  const loadEventRegistrations = useCallback(async (formId: string) => {
+    if (!formId) {
+      setRegisteredStudentIds(new Set());
+      return;
+    }
+
+    try {
+      console.log(`Loading registrations for form ID: ${formId}`);
+      const responsesRef = collection(db, 'form_responses');
+      // Use 'registrationStatus' field instead of 'approvalStatus'
+      const q = query(responsesRef, where('formId', '==', formId), where('registrationStatus', '==', 'approved'));
+      
+      const snapshot = await getDocs(q);
+      const approvedStudentIds = new Set<string>();
+      
+      snapshot.forEach(doc => {
+        const data = doc.data() as any;
+        if (data.studentId) {
+          approvedStudentIds.add(data.studentId);
+        }
+      });
+      
+      console.log(`Found ${approvedStudentIds.size} approved students for event`);
+      setRegisteredStudentIds(approvedStudentIds);
+      
+      if (approvedStudentIds.size === 0) {
+        toast.info('No approved registrations for this event yet');
+      }
+    } catch (error) {
+      console.error('Failed to load event registrations:', error);
+      toast.error('Failed to load event registrations');
+      setRegisteredStudentIds(new Set());
+    }
+  }, []);
+
+  // Load class configurations for shift start times
   // Auto-select shift based on current time
   const autoSelectShift = useCallback(() => {
     const now = new Date();
@@ -235,6 +291,27 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     initialize();
   }, [loadStudents, loadClassConfigs, autoSelectShift, loadCameras]);
+
+  // Read URL parameters and set up event mode if coming from event page
+  useEffect(() => {
+    const eventId = searchParams.get('eventId');
+    const eventName = searchParams.get('eventName');
+    const formId = searchParams.get('formId');
+    
+    if (eventId && eventName && formId) {
+      // Set event mode
+      setAttendanceMode('event');
+      setSelectedEventId(eventId);
+      setSelectedEventName(eventName);
+      setSelectedEventFormId(formId);
+      
+      // Load registered students for this event
+      loadEventRegistrations(formId);
+      
+      toast.success(`Event mode: ${eventName}`);
+      console.log('Event mode activated from URL params:', { eventId, eventName, formId });
+    }
+  }, [searchParams]);
 
   // Setup retry manager callback when students or classConfigs change
   useEffect(() => {
@@ -631,8 +708,30 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
           // Perform recognition
           if (face.descriptor && face.status !== 'recognized') {
-            // Filter students by shift using helper function
-            const targetStudents = filterStudentsByShift(students.filter(s => s.faceDescriptor), selectedShift || 'All');
+            // Filter students based on mode
+            let targetStudents: Student[];
+            
+            if (attendanceMode === 'event' && selectedEventId) {
+              // EVENT MODE: Only scan students registered and approved for this event
+              targetStudents = students.filter(s => 
+                s.faceDescriptor && 
+                registeredStudentIds.has(s.id)
+              );
+              
+              if (targetStudents.length === 0) {
+                return {
+                  ...face,
+                  status: 'unknown',
+                  message: 'No approved students for this event'
+                };
+              }
+            } else {
+              // REGULAR MODE: Filter by shift
+              targetStudents = filterStudentsByShift(
+                students.filter(s => s.faceDescriptor), 
+                selectedShift || 'All'
+              );
+            }
 
             let bestMatch: { student: Student, distance: number } | null = null;
 
@@ -704,6 +803,112 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                 // Play success sound immediately when face is recognized
                 playSuccessSound();
                 
+                // Check if we're in event attendance mode
+                if (attendanceMode === 'event' && selectedEventId) {
+                  // EVENT ATTENDANCE MODE - Clock in/out logic with dedicated modes
+                  checkClockInStatus(selectedEventId, bestMatch.student.id)
+                    .then(async (status) => {
+                      // CLOCK-IN MODE: Only allow clock-in
+                      if (eventScanMode === 'clock-in') {
+                        if (status === 'not-started') {
+                          // Clock in the student
+                          const result = await clockInStudent(
+                            selectedEventId,
+                            selectedEventName,
+                            bestMatch.student,
+                            face.descriptor || new Float32Array(),
+                            finalConfidence
+                          );
+                          
+                          if (result === 'success') {
+                            recentlyMarkedStudents.current.set(studentKey, Date.now());
+                            
+                            setTrackedFaces(prevFaces => 
+                              prevFaces.map(f => 
+                                f.id === face.id 
+                                  ? { 
+                                      ...f, 
+                                      status: 'recognized' as const,
+                                      attendanceStatus: 'present',
+                                      message: `✅ Clocked In - ${bestMatch.student.fullName}`,
+                                      isScanning: false
+                                    } 
+                                  : f
+                              )
+                            );
+                            
+                            // Dispatch event
+                            window.dispatchEvent(new CustomEvent('eventAttendanceMarked', {
+                              detail: {
+                                studentId: bestMatch.student.id,
+                                studentName: bestMatch.student.fullName,
+                                eventId: selectedEventId,
+                                eventName: selectedEventName,
+                                action: 'clock-in',
+                                timestamp: new Date()
+                              }
+                            }));
+                          }
+                        } else {
+                          toast.info(`${bestMatch.student.fullName} has already clocked in. Switch to Clock-Out mode.`);
+                        }
+                      } 
+                      // CLOCK-OUT MODE: Only allow clock-out
+                      else if (eventScanMode === 'clock-out') {
+                        if (status === 'clocked-in') {
+                          // Clock out the student
+                          const result = await clockOutStudent(
+                            selectedEventId,
+                            bestMatch.student,
+                            face.descriptor || new Float32Array(),
+                            finalConfidence
+                          );
+                          
+                          if (result === 'success') {
+                            recentlyMarkedStudents.current.set(studentKey, Date.now());
+                            
+                            setTrackedFaces(prevFaces => 
+                              prevFaces.map(f => 
+                                f.id === face.id 
+                                  ? { 
+                                      ...f, 
+                                      status: 'recognized' as const,
+                                      attendanceStatus: 'late', // Use different color for clock-out
+                                      message: `👋 Clocked Out - ${bestMatch.student.fullName}`,
+                                      isScanning: false
+                                    } 
+                                  : f
+                              )
+                            );
+                            
+                            // Dispatch event
+                            window.dispatchEvent(new CustomEvent('eventAttendanceMarked', {
+                              detail: {
+                                studentId: bestMatch.student.id,
+                                studentName: bestMatch.student.fullName,
+                                eventId: selectedEventId,
+                                eventName: selectedEventName,
+                                action: 'clock-out',
+                                timestamp: new Date()
+                              }
+                            }));
+                          }
+                        } else if (status === 'not-started') {
+                          toast.info(`${bestMatch.student.fullName} has not clocked in yet. Switch to Clock-In mode.`);
+                        } else {
+                          toast.info(`${bestMatch.student.fullName} has already clocked out.`);
+                        }
+                      }
+                    })
+                    .catch(error => {
+                      console.error('Event attendance error:', error);
+                      toast.error('Failed to process event attendance');
+                    });
+                  
+                  return updatedFace;
+                }
+                
+                // REGULAR ATTENDANCE MODE - Continue with normal logic
                 // Determine the correct shift and class for attendance marking
                 // For BP students (inBPClass: true) recognized during Evening shift, use "Evening" and BP class
                 const isBPStudent = (bestMatch.student as any).inBPClass === true;
@@ -723,19 +928,26 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                 }
                 
                 // Check if student should be sent home (too late)
+                // CRITICAL FIX: Pass attendanceClass to use correct start time (e.g., 12BP start time for BP students)
                 const { status: attendanceCheckStatus, sendHomeCutoff } = determineAttendanceStatus(
                   bestMatch.student, 
                   attendanceShift, 
-                  classConfigs || {}
+                  classConfigs || {},
+                  attendanceClass // CRITICAL: Pass the context-aware class
                 );
                 
                 if (attendanceCheckStatus === 'send-home') {
                   // Student arrived too late - show send home overlay AND record in database
-                  setSendHomeStudent({
-                    name: bestMatch.student.fullName,
-                    cutoff: sendHomeCutoff
-                  });
-                  setShowSendHomeOverlay(true);
+                  const sendHomeConfig = getOverlayConfig('SEND_HOME');
+                  if (sendHomeConfig) {
+                    setCurrentOverlay({
+                      config: {
+                        ...sendHomeConfig,
+                        subtitle: sendHomeCutoff ? `Late arrival limit: ${sendHomeCutoff}` : sendHomeConfig.subtitle
+                      },
+                      studentName: bestMatch.student.fullName
+                    });
+                  }
                   
                   // Update face to show send-home status immediately
                   const sendHomeUpdatedFace = {
@@ -787,27 +999,24 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                                 ...f, 
                                 attendanceStatus: 'send-home',
                                 status: 'recognized' as const,
-                                message: `⛔ Send Home - ${bestMatch.student.fullName}`,
-                                isScanning: false
-                              } 
-                            : f
-                        )
-                      );
-                      
-                      // Auto-dismiss overlay after 5 seconds and clear face
-                      setTimeout(() => {
-                        setShowSendHomeOverlay(false);
-                        setSendHomeStudent(null);
-                        setTrackedFaces(prevFaces => prevFaces.filter(f => f.id !== face.id));
-                      }, 5000);
-                    })
-                    .catch(error => {
-                      console.error('❌ Failed to record send-home status:', error);
-                      
-                      // Remove from cooldown on failure
-                      recentlyMarkedStudents.current.delete(studentKey);
-                      
-                      toast.error(`Failed to record send-home for ${bestMatch.student.fullName}`, {
+                              message: `⛔ Send Home - ${bestMatch.student.fullName}`,
+                              isScanning: false
+                            } 
+                          : f
+                      )
+                    );
+                    
+                    // Auto-dismiss overlay after 5 seconds and clear face
+                    setTimeout(() => {
+                      setCurrentOverlay(null);
+                      setTrackedFaces(prevFaces => prevFaces.filter(f => f.id !== face.id));
+                    }, 5000);
+                  })
+                  .catch(error => {
+                    console.error('❌ Failed to record send-home status:', error);
+                    
+                    // Remove from cooldown on failure
+                    recentlyMarkedStudents.current.delete(studentKey);                      toast.error(`Failed to record send-home for ${bestMatch.student.fullName}`, {
                         duration: 5000
                       });
                       
@@ -827,6 +1036,101 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                     });
                   
                   return sendHomeUpdatedFace;
+                }
+                
+                // 📝 MISSED QUIZ CHECK: Check IMMEDIATELY (in parallel with attendance marking)
+                // This runs fast without waiting for attendance save to complete
+                const missedQuizConfig = getOverlayConfig('MISSED_QUIZ');
+                if (missedQuizConfig) {
+                  const missedQuizDate = '2025-10-14';
+                  
+                  // Calculate yesterday's date
+                  const today = new Date();
+                  const yesterday = new Date(today);
+                  yesterday.setDate(today.getDate() - 1);
+                  
+                  // Start from the day after missed quiz date
+                  const startDate = new Date(missedQuizDate);
+                  startDate.setDate(startDate.getDate() + 1); // Oct 15, 2025
+                  
+                  // Generate list of school days from start date to yesterday
+                  const schoolDaysToCheck: string[] = [];
+                  const currentCheckDate = new Date(startDate);
+                  
+                  // Get student's class configuration for school day checking
+                  const studentClassKey = bestMatch.student.class?.replace(/^Class\s+/i, '') || '';
+                  const classConfig = studentClassKey && classConfigs ? classConfigs[studentClassKey] : undefined;
+                  const classStudyDays = classConfig?.studyDays;
+                  
+                  while (currentCheckDate <= yesterday) {
+                    // Check if this is a school day
+                    if (isSchoolDay(currentCheckDate, classStudyDays)) {
+                      const dateStr = `${currentCheckDate.getFullYear()}-${String(currentCheckDate.getMonth() + 1).padStart(2, '0')}-${String(currentCheckDate.getDate()).padStart(2, '0')}`;
+                      schoolDaysToCheck.push(dateStr);
+                    }
+                    currentCheckDate.setDate(currentCheckDate.getDate() + 1);
+                  }
+                  
+                  // If no school days to check, don't show overlay
+                  if (schoolDaysToCheck.length === 0) {
+                    console.log(`📝 ${bestMatch.student.fullName} - No school days between ${missedQuizDate} and yesterday to check`);
+                  } else {
+                    // Query all attendance records for these school days
+                    const attendanceRef = collection(db, 'attendance');
+                    
+                    // For more than 10 days, we need to split into multiple queries (Firestore 'in' operator limited to 10 items)
+                    const queryPromises: Promise<any>[] = [];
+                    for (let i = 0; i < schoolDaysToCheck.length; i += 10) {
+                      const batch = schoolDaysToCheck.slice(i, i + 10);
+                      const batchQuery = query(
+                        attendanceRef,
+                        where('studentId', '==', bestMatch.student.id),
+                        where('date', 'in', batch)
+                      );
+                      queryPromises.push(getDocs(batchQuery));
+                    }
+                    
+                    // Start query immediately (don't wait for attendance marking)
+                    Promise.all(queryPromises)
+                      .then((snapshots: any[]) => {
+                        // Check if student was present on any of the makeup days
+                        let wasPresentOnAnyDay = false;
+                        
+                        for (const snapshot of snapshots) {
+                          if (!snapshot.empty) {
+                            // Check if any record shows the student was present
+                            for (const doc of snapshot.docs) {
+                              const record = doc.data();
+                              if (record.status === 'present' || record.status === 'late') {
+                                wasPresentOnAnyDay = true;
+                                console.log(`✅ ${bestMatch.student.fullName} was present on ${record.date} - quiz made up, no overlay needed`);
+                                break;
+                              }
+                            }
+                            if (wasPresentOnAnyDay) break;
+                          }
+                        }
+                        
+                        if (!wasPresentOnAnyDay) {
+                          // Student was absent on all makeup days = still hasn't made up the quiz
+                          console.log(`📝 ${bestMatch.student.fullName} was absent on all ${schoolDaysToCheck.length} school days from ${schoolDaysToCheck[0]} to ${schoolDaysToCheck[schoolDaysToCheck.length - 1]} - showing overlay`);
+                          setCurrentOverlay({
+                            config: missedQuizConfig,
+                            studentName: bestMatch.student.fullName
+                          });
+                          
+                          // Auto-dismiss overlay after configured delay
+                          if (missedQuizConfig.autoHideDelay) {
+                            setTimeout(() => {
+                              setCurrentOverlay(null);
+                            }, missedQuizConfig.autoHideDelay);
+                          }
+                        }
+                      })
+                      .catch(error => {
+                        console.error('Error checking missed quiz makeup days:', error);
+                      });
+                  }
                 }
                 
                 // Mark attendance for the recognized student (async) with enhanced error handling
@@ -964,7 +1268,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
     } catch (error) {
       console.error('Face detection error:', error);
     }
-  }, [isCameraActive, minFaceSize, maxFaceSize, recognitionThreshold, selectedShift, students]);
+  }, [isCameraActive, minFaceSize, maxFaceSize, recognitionThreshold, selectedShift, students, attendanceMode, selectedEventId, selectedEventName, eventScanMode, registeredStudentIds]);
 
   // Helper function to get start time for a student's class/shift combination
   const getStudentStartTime = useCallback((student: Student): Date | null => {
@@ -1343,22 +1647,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   return (
     <>
-      {/* Send Home Overlay */}
-      <SendHomeOverlay
-        isVisible={showSendHomeOverlay}
-        studentName={sendHomeStudent?.name || ''}
-        sendHomeCutoff={sendHomeStudent?.cutoff}
-        onDismiss={() => {
-          setShowSendHomeOverlay(false);
-          setSendHomeStudent(null);
-          // Clear the tracked face from the canvas so it's not visible anymore
-          setTrackedFaces(prevFaces => prevFaces.filter(f => 
-            f.attendanceStatus !== 'send-home' && 
-            f.message?.includes('Send Home') === false
-          ));
-        }}
-      />
-
       {/* Camera Shutdown Handler */}
       <CameraShutdownHandler
         isZoomMode={isZoomMode}
@@ -1433,12 +1721,50 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
         {/* Status Cards */}
         {!isLoading && (
-          <ShiftSelector
-            selectedShift={selectedShift}
-            setSelectedShift={setSelectedShift}
-            availableShifts={availableShifts}
-            autoSelectShift={autoSelectShift}
-          />
+          <div className="space-y-4">
+            {/* Attendance Mode Display/Selector */}
+            <CardBox className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+              {attendanceMode === 'event' ? (
+                // Event Mode - Show event info only
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Event Attendance</h3>
+                    <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm font-medium">
+                      🎉 Event Mode
+                    </span>
+                  </div>
+                  
+                  {selectedEventName && (
+                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800 mb-4">
+                      <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-2">{selectedEventName}</h4>
+                      {registeredStudentIds.size > 0 && (
+                        <p className="text-sm text-purple-700 dark:text-purple-300">
+                          ✓ {registeredStudentIds.size} approved students loaded
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Regular Mode - Show shift selector
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Regular Class Attendance</h3>
+                    <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
+                      📋 Class Mode
+                    </span>
+                  </div>
+                  
+                  <ShiftSelector
+                    selectedShift={selectedShift}
+                    setSelectedShift={setSelectedShift}
+                    availableShifts={availableShifts}
+                    autoSelectShift={autoSelectShift}
+                  />
+                </div>
+              )}
+            </CardBox>
+          </div>
         )}
 
         {/* Loading State */}
@@ -1475,6 +1801,19 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
           />
         )}
 
+        {/* Overlay Settings Button */}
+        {!isLoading && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => setShowOverlaySettings(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md"
+            >
+              <Icon path={mdiCog} size={20} />
+              Overlay Settings
+            </button>
+          </div>
+        )}
+
         {/* Camera Section */}
         {!isLoading && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -1494,47 +1833,145 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <button
-                        onClick={async () => {
-                          if (isCameraActive) {
-                            // Use proper stop camera function when stopping
-                            stopCamera();
-                          } else {
-                            // Only start camera if shift is selected
-                            if (!selectedShift) {
-                              toast.error('Please select a shift before starting scan');
-                              return;
+                      {attendanceMode === 'event' ? (
+                        // Event mode: Two separate buttons for Clock In and Clock Out
+                        <>
+                          <button
+                            onClick={async () => {
+                              if (isCameraActive) {
+                                stopCamera();
+                              } else {
+                                // Validate event selection
+                                if (!selectedEventId) {
+                                  toast.error('Please select an event before starting scan');
+                                  return;
+                                }
+                                if (registeredStudentIds.size === 0) {
+                                  toast.error('No approved students for this event');
+                                  return;
+                                }
+                                
+                                // Set to clock-in mode and start camera
+                                setEventScanMode('clock-in');
+                                setIsCameraLoading(true);
+                                toast.info('Starting Clock-In scan...');
+                                
+                                setIsCameraActive(true);
+                                setIsZoomMode(true);
+                                document.body.style.overflow = 'hidden';
+                                
+                                toast.success('Initializing face recognition for Clock-In...');
+                              }
+                            }}
+                            disabled={(!selectedEventId || registeredStudentIds.size === 0) && !isCameraActive || isCameraLoading}
+                            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-md flex items-center space-x-2 ${
+                              ((!selectedEventId || registeredStudentIds.size === 0) && !isCameraActive) || isCameraLoading
+                                ? 'bg-gray-400 text-white cursor-not-allowed'
+                                : isCameraActive && eventScanMode === 'clock-in'
+                                ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                                : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                            }`}
+                          >
+                            {isCameraLoading && eventScanMode === 'clock-in' ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span>Starting...</span>
+                              </>
+                            ) : (
+                              <span>{isCameraActive && eventScanMode === 'clock-in' ? 'Stop' : '🟢 Clock In'}</span>
+                            )}
+                          </button>
+                          
+                          <button
+                            onClick={async () => {
+                              if (isCameraActive) {
+                                stopCamera();
+                              } else {
+                                // Validate event selection
+                                if (!selectedEventId) {
+                                  toast.error('Please select an event before starting scan');
+                                  return;
+                                }
+                                if (registeredStudentIds.size === 0) {
+                                  toast.error('No approved students for this event');
+                                  return;
+                                }
+                                
+                                // Set to clock-out mode and start camera
+                                setEventScanMode('clock-out');
+                                setIsCameraLoading(true);
+                                toast.info('Starting Clock-Out scan...');
+                                
+                                setIsCameraActive(true);
+                                setIsZoomMode(true);
+                                document.body.style.overflow = 'hidden';
+                                
+                                toast.success('Initializing face recognition for Clock-Out...');
+                              }
+                            }}
+                            disabled={(!selectedEventId || registeredStudentIds.size === 0) && !isCameraActive || isCameraLoading}
+                            className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-md flex items-center space-x-2 ${
+                              ((!selectedEventId || registeredStudentIds.size === 0) && !isCameraActive) || isCameraLoading
+                                ? 'bg-gray-400 text-white cursor-not-allowed'
+                                : isCameraActive && eventScanMode === 'clock-out'
+                                ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                                : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white'
+                            }`}
+                          >
+                            {isCameraLoading && eventScanMode === 'clock-out' ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span>Starting...</span>
+                              </>
+                            ) : (
+                              <span>{isCameraActive && eventScanMode === 'clock-out' ? 'Stop' : '🔴 Clock Out'}</span>
+                            )}
+                          </button>
+                        </>
+                      ) : (
+                        // Regular mode: Single Start/Stop button
+                        <button
+                          onClick={async () => {
+                            if (isCameraActive) {
+                              // Use proper stop camera function when stopping
+                              stopCamera();
+                            } else {
+                              // Only start camera if shift is selected
+                              if (!selectedShift) {
+                                toast.error('Please select a shift before starting scan');
+                                return;
+                              }
+                              setIsCameraLoading(true);
+                              toast.info('Starting camera...');
+                              
+                              // Immediately activate zoom mode and camera
+                              setIsCameraActive(true);
+                              setIsZoomMode(true);
+                              document.body.style.overflow = 'hidden';
+                              
+                              // Keep loading state - will be cleared by onUserMedia when camera is ready
+                              toast.success('Initializing face recognition...');
                             }
-                            setIsCameraLoading(true);
-                            toast.info('Starting camera...');
-                            
-                            // Immediately activate zoom mode and camera
-                            setIsCameraActive(true);
-                            setIsZoomMode(true);
-                            document.body.style.overflow = 'hidden';
-                            
-                            // Keep loading state - will be cleared by onUserMedia when camera is ready
-                            toast.success('Initializing face recognition...');
-                          }
-                        }}
-                        disabled={(!selectedShift && !isCameraActive) || isCameraLoading}
-                        className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-md flex items-center space-x-2 ${
-                          (!selectedShift && !isCameraActive) || isCameraLoading
-                            ? 'bg-gray-400 text-white cursor-not-allowed'
-                            : isCameraActive
-                            ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
-                            : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
-                        }`}
-                      >
-                        {isCameraLoading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span>Starting...</span>
-                          </>
-                        ) : (
-                          <span>{isCameraActive ? 'Stop Scan' : 'Start Scan'}</span>
-                        )}
-                      </button>
+                          }}
+                          disabled={(!selectedShift && !isCameraActive) || isCameraLoading}
+                          className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 shadow-md flex items-center space-x-2 ${
+                            (!selectedShift && !isCameraActive) || isCameraLoading
+                              ? 'bg-gray-400 text-white cursor-not-allowed'
+                              : isCameraActive
+                              ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                              : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white'
+                          }`}
+                        >
+                          {isCameraLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Starting...</span>
+                            </>
+                          ) : (
+                            <span>{isCameraActive ? 'Stop Scan' : 'Start Scan'}</span>
+                          )}
+                        </button>
+                      )}
                     </div>
                     
                     {/* test sound removed */}
@@ -1774,21 +2211,30 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         </div>
       </div>
 
-      {/* Send Home Overlay */}
-      <SendHomeOverlay
-        isVisible={showSendHomeOverlay}
-        studentName={sendHomeStudent?.name || ''}
-        sendHomeCutoff={sendHomeStudent?.cutoff}
-        onDismiss={() => {
-          setShowSendHomeOverlay(false);
-          setSendHomeStudent(null);
-        }}
-      />
+      {/* Overlay Settings Modal */}
+      {showOverlaySettings && (
+        <OverlaySettings onClose={() => setShowOverlaySettings(false)} />
+      )}
 
       {/* Failed Attendance Manager */}
       <FailedAttendanceManager 
         onRetryAttendance={(studentId, studentName) => {
           toast.info(`Please position ${studentName} in front of the camera to retry attendance marking`);
+        }}
+      />
+
+      {/* Universal Overlay Template - Rendered LAST to ensure it's on top */}
+      <OverlayTemplate
+        isVisible={currentOverlay !== null}
+        config={currentOverlay?.config || null}
+        studentName={currentOverlay?.studentName}
+        onDismiss={() => {
+          setCurrentOverlay(null);
+          // Clear the tracked face from the canvas so it's not visible anymore
+          setTrackedFaces(prevFaces => prevFaces.filter(f => 
+            f.attendanceStatus !== 'send-home' && 
+            f.message?.includes('Send Home') === false
+          ));
         }}
       />
     </>

@@ -9,7 +9,8 @@ import {
   mdiRadioboxMarked, 
   mdiCheckboxMultipleMarked,
   mdiMenuDown,
-  mdiNumeric
+  mdiNumeric,
+  mdiFileUpload
 } from "@mdi/js";
 
 interface QuestionTypeSelectorProps {
@@ -24,6 +25,7 @@ const questionTypes: { type: QuestionType; label: string; icon: string }[] = [
   { type: 'checkboxes', label: 'Checkboxes', icon: mdiCheckboxMultipleMarked },
   { type: 'dropdown', label: 'Dropdown', icon: mdiMenuDown },
   { type: 'linear_scale', label: 'Linear Scale', icon: mdiNumeric },
+  { type: 'file_upload', label: 'File Upload', icon: mdiFileUpload },
 ];
 
 const options: ComboboxOption[] = questionTypes.map(qt => ({ value: qt.type, label: qt.label, icon: qt.icon }));

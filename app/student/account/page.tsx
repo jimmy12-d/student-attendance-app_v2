@@ -378,8 +378,8 @@ const AccountPage = () => {
               <SettingsListItem
                 iconPath={mdiCakeVariant}
                 iconBgColor="bg-gradient-to-br from-pink-500 to-rose-600"
-                title="View Birthday"
-                subtitle="Check your registered date of birth"
+                title={t('viewBirthday')}
+                subtitle={t('dateOfBirth.title.year')}
                 onClick={handleViewBirthday}
                 titleClassName={khmerFont()}
                 subtitleClassName={khmerFont()}

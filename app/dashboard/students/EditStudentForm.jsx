@@ -147,6 +147,19 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     checkEnrollmentEligibility();
   }, [studentClass, shift, onWaitlist, studentData?.id]);
 
+  // Keyboard shortcut for cancel/go back
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
+
   // Effect to update class options with student counts
   useEffect(() => {
     const updateClassOptionsWithCounts = async () => {
@@ -625,7 +638,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                             id="telegramUsername"
                             name="telegramUsername"
                             value={telegramUsername}
-                            onChange={(e) => setTelegramUsername(e.target.value)}
+                            onChange={(e) => setTelegramUsername(e.target.value.replace(/@/g, ''))}
                             placeholder="username"
                             className="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black transition-all duration-200 ease-in-out"
                           />

@@ -25,7 +25,7 @@ export interface RawAttendanceRecord {
 
 // Interfaces (can be moved to a shared file later)
 export interface CalculatedStatus {
-  status?: "Present" | "Late" | "Absent" | "Permission" | "No School" | "Not Yet Enrolled" | "Pending" | "Unknown" | "Absent (Config Missing)";
+  status?: "Present" | "Late" | "Absent" | "Permission" | "No School" | "Not Yet Enrolled" | "Pending" | "Unknown" | "Absent (Config Missing)" | "Send Home";
   time?: string;
 }
 
@@ -100,7 +100,8 @@ export const getStudentDailyStatus = (
             } else {
                 // Shifts match, return the attendance status
                 const status = attendanceRecord.status === 'present' ? "Present" :
-                               attendanceRecord.status === 'late'    ? "Late"    : "Unknown";
+                               attendanceRecord.status === 'late'    ? "Late"    :
+                               attendanceRecord.status === 'send-home' || attendanceRecord.status === 'send home' ? "Send Home" : "Unknown";
                 let time;
                 if (attendanceRecord.timestamp) {
                     const recordTime = attendanceRecord.timestamp instanceof Timestamp ? attendanceRecord.timestamp.toDate() : attendanceRecord.timestamp as Date;
@@ -112,7 +113,8 @@ export const getStudentDailyStatus = (
             // If shift information is missing from either record or student, accept the attendance record as valid
             // This maintains backward compatibility with older records
             const status = attendanceRecord.status === 'present' ? "Present" :
-                           attendanceRecord.status === 'late'    ? "Late"    : "Unknown";
+                           attendanceRecord.status === 'late'    ? "Late"    :
+                           attendanceRecord.status === 'send-home' || attendanceRecord.status === 'send home' ? "Send Home" : "Unknown";
             let time;
             if (attendanceRecord.timestamp) {
                 const recordTime = attendanceRecord.timestamp instanceof Timestamp ? attendanceRecord.timestamp.toDate() : attendanceRecord.timestamp as Date;
@@ -465,7 +467,7 @@ export const filterStudentsByShift = (studentsList: Student[], shift: string, en
 };
 
 // Advanced late marking logic using class configurations with special case for 12NKGS on Saturday
-export const determineAttendanceStatus = (student: any, selectedShift: string, classConfigs: any): { status: string; cutoffTime: string; startTime: string; sendHomeCutoff?: string } => {
+export const determineAttendanceStatus = (student: any, selectedShift: string, classConfigs: any, selectedClass?: string): { status: string; cutoffTime: string; startTime: string; sendHomeCutoff?: string } => {
   const now = new Date();
   
   // Default to present
@@ -475,8 +477,10 @@ export const determineAttendanceStatus = (student: any, selectedShift: string, c
   let sendHomeCutoff = '';
 
   try {
-    // Handle class name mismatch: student.class = "Class 12B" but doc ID = "12B"
-    const studentClassKey = student.class ? student.class.replace(/^Class\s+/, '') : null;
+    // CRITICAL FIX: Use selectedClass (e.g., "12BP") if provided, otherwise fall back to student.class (e.g., "Class 12B")
+    // This allows BP class students to be marked with BP class start times instead of their original class start times
+    const classToUse = selectedClass || student.class;
+    const studentClassKey = classToUse ? classToUse.replace(/^Class\s+/, '') : null;
     const classConfig = studentClassKey && classConfigs ? classConfigs[studentClassKey] : null;
     let shiftConfig = (student.shift && classConfig?.shifts) ? classConfig.shifts[student.shift] : null;
 
@@ -719,8 +723,8 @@ export const markAttendance = async (
         return existingRecord.status; // Return the existing status
       }
 
-      // Use advanced late marking logic
-      const { status, cutoffTime, startTime } = determineAttendanceStatus(student as any, selectedShift, classConfigs);
+      // Use advanced late marking logic - CRITICAL: Pass selectedClass parameter
+      const { status, cutoffTime, startTime } = determineAttendanceStatus(student as any, selectedShift, classConfigs, selectedClass);
       
       const now = new Date();
       const timeString = now.toLocaleTimeString([], { 
@@ -898,8 +902,8 @@ export const markAttendance = async (
         
         console.error(`💥 Final failure details: Status=${networkStatus}, Error=${errorDetails}`);
         
-        // Determine the status using the advanced logic
-        const { status: attendanceStatus } = determineAttendanceStatus(student as any, selectedShift, classConfigs);
+        // Determine the status using the advanced logic - CRITICAL: Pass selectedClass parameter
+        const { status: attendanceStatus } = determineAttendanceStatus(student as any, selectedShift, classConfigs, selectedClass);
         
         // Create comprehensive offline record
         const offlineRecord = {

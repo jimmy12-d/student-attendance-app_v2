@@ -435,6 +435,8 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                     renderStatusBadge(todayStatus.status, 'Join Today')
                   ) : todayStatus.status === 'Late' ? (
                     renderStatusBadge(todayStatus.status, 'Late', todayStatus.time)
+                  ) : todayStatus.status.toLowerCase() === 'send home' || todayStatus.status.toLowerCase() === 'send-home' ? (
+                    renderStatusBadge(todayStatus.status, 'Send Home')
                   ) : (
                     renderStatusBadge(
                       todayStatus.status || 'Unknown', 

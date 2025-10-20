@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to read and write files in form_responses
+    match /form_responses/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow authenticated users to read and write event tickets
+    match /event-tickets/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Allow authenticated users to read and write documents
+    match /documents/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Default deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

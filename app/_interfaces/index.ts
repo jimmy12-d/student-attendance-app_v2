@@ -302,6 +302,6 @@ export interface StudentWithStars extends Student {
 // Keep these interfaces here as they are specific to this component's view model
 export interface DailyStatusInfo {
   date: string;
-  status?: "Present" | "Late" | "Absent" | "Permission" | "No School" | "Not Yet Enrolled" | "Pending" | "Unknown" | "Absent (Config Missing)";
+  status?: "Present" | "Late" | "Absent" | "Permission" | "No School" | "Not Yet Enrolled" | "Pending" | "Unknown" | "Absent (Config Missing)" | "Send Home";
   time?: string;
 }

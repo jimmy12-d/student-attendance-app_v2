@@ -335,7 +335,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
                             {cell.dayOfMonth}
                           </div>
                           <div className="absolute inset-0 top-5 md:top-6 flex flex-col items-center justify-start pt-1 px-0.5 text-center">
-                            {cell.status && ["Present", "Late", "Absent", "Pending", "Permission", "Absent (Config Missing)", "Unknown"].includes(cell.status) && (
+                            {cell.status && ["Present", "Late", "Absent", "Pending", "Permission", "Absent (Config Missing)", "Unknown", "Send Home"].includes(cell.status) && (
                               <span className={`px-1.5 py-0.5 text-xs sm:text-xs rounded-full leading-tight whitespace-nowrap border ${getStatusColor(cell.status)}`}>
                                 {cell.status === "Absent (Config Missing)" ? "Absent_@" : cell.status}
                               </span>

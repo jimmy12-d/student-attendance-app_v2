@@ -725,22 +725,23 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                   {/* Parent Notification Status */}
                   {record.parentNotificationStatus === 'success' ? (
                     <div className="inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" title={`Sent to ${record.parentNotificationsSent || 0} parent(s)`}>
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <polyline points="20,6 9,17 4,12"></polyline>
                       </svg>
                       <span className="text-xs font-medium">{record.parentNotificationsSent || 1}</span>
                     </div>
                   ) : record.parentNotificationStatus === 'no_parent' ? (
-                    <div className="inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" title="No parent registered">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <div className="inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" title="No parent registered">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M12 9v2m0 4h.01"></path>
                       </svg>
                       <span className="text-xs">No Parent</span>
                     </div>
                   ) : record.parentNotificationStatus === 'failed' ? (
                     <div className="group relative inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 cursor-help" title={record.parentNotificationError || 'Failed to send notification'}>
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M18 6L6 18"></path>
+                        <path d="M6 6l12 12"></path>
                       </svg>
                       <span className="text-xs font-medium">Failed</span>
                       {record.parentNotificationError && (
@@ -755,8 +756,10 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                     </div>
                   ) : record.parentNotificationStatus === 'partial' ? (
                     <div className="group relative inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 cursor-help" title={record.parentNotificationError || 'Some notifications failed'}>
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
                       </svg>
                       <span className="text-xs font-medium">{record.parentNotificationsSent || 0}/{(record.parentNotificationsSent || 0) + 1}</span>
                       {record.parentNotificationError && (
@@ -771,8 +774,9 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                     </div>
                   ) : (
                     <div className="inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500" title="Notification status unknown">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <path d="M12 17h.01"></path>
                       </svg>
                       <span className="text-xs">N/A</span>
                     </div>

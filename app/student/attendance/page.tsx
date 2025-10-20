@@ -14,6 +14,7 @@ import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from './_components/PermissionRequestForm';
 import { LeaveEarlyRequestForm } from './_components/LeaveEarlyRequestForm';
 import StudentFormsList from './_components/StudentFormsList';
+import StudentEvents from './_components/StudentEvents';
 import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
 import OngoingPermissions from './_components/OngoingPermissions';
@@ -793,6 +794,13 @@ const AttendancePage = () => {
                  khmerFont={khmerFont}
                  createRipple={createRipple}
                />
+             </div>
+           )}
+
+           {/* Events Section */}
+           {studentUid && (
+             <div className="pt-4">
+               <StudentEvents studentUid={studentUid} />
              </div>
            )}
 

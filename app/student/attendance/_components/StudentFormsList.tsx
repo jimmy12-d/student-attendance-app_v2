@@ -6,6 +6,7 @@ import { collection, query, where, onSnapshot, Timestamp, getDocs } from "fireba
 import { db } from "@/firebase-config";
 import { Form, FormWithResponseStatus } from "@/app/_interfaces/forms";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from 'next-intl';
 
 interface StudentFormsListProps {
   studentUid: string;
@@ -21,6 +22,37 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
   createRipple 
 }) => {
   const router = useRouter();
+  const t = useTranslations('student.forms');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
+  
+  // Helper function for single language display (uses current locale)
+  const getText = (key: string) => {
+    return t(key);
+  };
+  
+  // Helper function for bilingual display (for status badges that need both)
+  const bilingualText = (key: string) => {
+    const englishTranslations = {
+      activeForms: "Active Forms",
+      allCaughtUp: "All Caught Up!",
+      noActiveForms: "No active forms at the moment",
+      approved: "Approved",
+      rejected: "Rejected", 
+      pending: "Pending",
+      done: "Done",
+      urgent: "Urgent",
+      approvedStatus: "Approved",
+      rejectedStatus: "Rejected",
+      pendingReview: "Pending Review",
+      completed: "Completed",
+      questions: "questions"
+    };
+    
+    // For inline status text, just return the translation
+    return t(key);
+  };
+  
   const [forms, setForms] = useState<FormWithResponseStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [dismissedForms, setDismissedForms] = useState<Set<string>>(new Set());
@@ -44,22 +76,34 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
       return;
     }
 
-    // Query active forms with deadline >= current time (includes forms due today)
-    const now = Timestamp.now();
-    const formsQuery = query(
-      collection(db, "forms"),
-      where("isActive", "==", true),
-      where("deadline", ">=", now)
-    );
+    // Query all forms (no deadline filter)
+    // We'll filter by isVisible client-side, and show visible forms even after deadline
+    const formsQuery = query(collection(db, "forms"));
 
     const unsubscribe = onSnapshot(formsQuery, async (snapshot) => {
-      const fetchedForms = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Form));
+      // Filter by isVisible on client side (undefined or true = visible, false = hidden)
+      // No deadline filter - visible forms show even after deadline expires
+      const fetchedForms = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Form))
+        .filter(form => form.isVisible !== false); // Only exclude if explicitly false
 
-      // Filter forms by student's class type
+      // Get all form IDs that are linked to events
+      const eventsQuery = query(collection(db, "events"));
+      const eventsSnapshot = await getDocs(eventsQuery);
+      const eventFormIds = new Set(
+        eventsSnapshot.docs.map(doc => doc.data().formId).filter(Boolean)
+      );
+
+      // Filter forms by student's class type and exclude event forms
       const filteredForms = fetchedForms.filter(form => {
+        // Exclude forms that are linked to events
+        if (eventFormIds.has(form.id)) {
+          return false;
+        }
+        
         // If form has no targetClassTypes, it's available to all
         if (!form.targetClassTypes || form.targetClassTypes.length === 0) {
           return true;
@@ -72,6 +116,9 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
         return false;
       });
 
+      // Get current timestamp for deadline comparison
+      const now = Timestamp.now();
+
       // Check which forms the student has already responded to
       const formsWithStatus = await Promise.all(
         filteredForms.map(async (form) => {
@@ -79,19 +126,31 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
           const studentResponseQuery = query(
             collection(db, "form_responses"),
             where("formId", "==", form.id),
-            where("studentUid", "==", studentUid)
+            where("authUid", "==", studentUid)
           );
           const studentResponseSnap = await getDocs(studentResponseQuery);
           
           // Get approval status if response exists
           let approvalStatus = undefined;
-          if (!studentResponseSnap.empty) {
+          const hasSubmitted = !studentResponseSnap.empty;
+          
+          if (hasSubmitted) {
             const responseData = studentResponseSnap.docs[0].data();
             approvalStatus = responseData.approvalStatus || 'pending';
             
             // Debug logging
             console.log('Form:', form.id, 'Response data:', responseData);
             console.log('Approval status from DB:', responseData.approvalStatus, 'Final approvalStatus:', approvalStatus);
+          }
+          
+          // Hide forms past deadline if student hasn't submitted
+          if (!hasSubmitted && form.deadline) {
+            const deadlineTime = form.deadline instanceof Timestamp 
+              ? form.deadline.toMillis() 
+              : form.deadline.getTime();
+            if (deadlineTime < now.toMillis()) {
+              return null; // Mark for filtering
+            }
           }
           
           const formWithStatus = {
@@ -110,8 +169,8 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
         })
       );
 
-      // Show all available forms (maxResponses will be enforced server-side on submission)
-      const availableForms = formsWithStatus;
+      // Filter out null values (forms past deadline that student hasn't submitted)
+      const availableForms = formsWithStatus.filter(form => form !== null);
       setForms(availableForms);
       setLoading(false);
     }, (error) => {
@@ -122,9 +181,15 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
     return () => unsubscribe();
   }, [studentUid, studentClassType]);
 
-  const handleFormClick = (formId: string, hasResponded: boolean, e: React.MouseEvent<HTMLDivElement>) => {
+  const handleFormClick = (formId: string, hasResponded: boolean, isActive: boolean, e: React.MouseEvent<HTMLDivElement>) => {
     if (createRipple) {
       createRipple(e, 'rgba(59, 130, 246, 0.3)');
+    }
+    
+    // If form is not active, show a message
+    if (!isActive) {
+      toast.info(t('notOpenYet'));
+      return;
     }
     
     if (hasResponded) {
@@ -274,7 +339,9 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
       <div className="space-y-4 mx-1">
         {/* Header for Empty State - Aligned with Quick Actions */}
         <div className="flex items-center gap-4 pt-2 mb-4">
-          <h2 className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>Active Forms</h2>
+          <div className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>
+            {bilingualText('activeForms')}
+          </div>
         </div>
 
         {/* Empty State - Aligned with Quick Actions */}
@@ -285,10 +352,10 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
             </svg>
           </div>
           <h3 className={khmerFont('font-semibold text-base text-gray-900 dark:text-white mb-1')}>
-            All Caught Up!
+            {bilingualText('allCaughtUp')}
           </h3>
           <p className={khmerFont('text-sm text-gray-500 dark:text-gray-400')}>
-            No active forms at the moment
+            {bilingualText('noActiveForms')}
           </p>
         </div>
       </div>
@@ -303,7 +370,9 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
     <div className="space-y-4 mx-1">
       {/* Header - Aligned with Quick Actions */}
       <div className="flex items-center gap-4 mb-4">
-        <h2 className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>Active Forms</h2>
+        <div className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>
+          {bilingualText('activeForms')}
+        </div>
         {pendingCount > 0 && (
           <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
             <span className="text-white text-xs font-bold">{pendingCount}</span>
@@ -354,7 +423,7 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                 onTouchEnd={() => isSubmitted && handleTouchEnd(form.id)}
                 onClick={(e) => {
                   if (swipeX === 0) {
-                    handleFormClick(form.id, isSubmitted || false, e as any);
+                    handleFormClick(form.id, isSubmitted || false, form.isActive, e as any);
                   } else {
                     // Reset swipe if card is swiped (only applicable to submitted forms)
                     if (isSubmitted) {
@@ -379,7 +448,9 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
               
               {/* Main Card Content - Aligned with Quick Actions */}
               <div className={`relative w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm px-4 py-3 rounded-3xl shadow-xl border min-h-[80px] flex items-center transition-transform duration-150 ${
-                isSubmitted 
+                !form.isActive && !isSubmitted
+                  ? 'border-gray-300/80 dark:border-gray-600/80'
+                  : isSubmitted 
                   ? form.requiresApproval
                     ? form.approvalStatus === 'approved'
                       ? 'border-green-200/80 dark:border-green-700/80'
@@ -392,7 +463,15 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                 
                 {/* Status Badge - Top Right */}
                 <div className="absolute top-3 right-3 z-10">
-                  {isSubmitted ? (
+                  {!form.isActive && !isSubmitted ? (
+                    // Show "Not Open Yet" badge only for visible but inactive forms that haven't been submitted
+                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-400 dark:bg-gray-600 text-white text-xs font-medium rounded-full shadow-sm">
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12,1L21,5V11C21,16.55 17.16,21.74 12,23C6.84,21.74 3,16.55 3,11V5L12,1M12,5A3,3 0 0,0 9,8A3,3 0 0,0 12,11A3,3 0 0,0 15,8A3,3 0 0,0 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z"/>
+                      </svg>
+                      <span className={khmerFont()}>Not Open Yet</span>
+                    </div>
+                  ) : isSubmitted ? (
                     // Show approval status badge if form requires approval
                     form.requiresApproval ? (
                       form.approvalStatus === 'approved' ? (
@@ -400,21 +479,21 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9L10,17Z"/>
                           </svg>
-                          <span className={khmerFont()}>Approved</span>
+                          <span className={khmerFont()}>{t('approved')}</span>
                         </div>
                       ) : form.approvalStatus === 'rejected' ? (
                         <div className="flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs font-medium rounded-full shadow-sm">
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12,2C17.53,2 22,6.47 22,12C22,17.53 17.53,22 12,22C6.47,22 2,17.53 2,12C2,6.47 6.47,2 12,2M15.59,7L12,10.59L8.41,7L7,8.41L10.59,12L7,15.59L8.41,17L12,13.41L15.59,17L17,15.59L13.41,12L17,8.41L15.59,7Z"/>
                           </svg>
-                          <span className={khmerFont()}>Rejected</span>
+                          <span className={khmerFont()}>{t('rejected')}</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1 px-2 py-1 bg-orange-500 text-white text-xs font-medium rounded-full shadow-sm">
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12.5,7V13H11V7H12.5M12,15.5A1,1 0 0,1 11,16.5A1,1 0 0,1 10,15.5A1,1 0 0,1 11,14.5A1,1 0 0,1 12,15.5Z"/>
                           </svg>
-                          <span className={khmerFont()}>Pending</span>
+                          <span className={khmerFont()}>{t('pending')}</span>
                         </div>
                       )
                     ) : (
@@ -423,7 +502,7 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M10,9L7,12L10,15L17,8L15.59,6.58L10,12.17L8.41,10.59L10,9Z"/>
                         </svg>
-                        <span className={khmerFont()}>Done</span>
+                        <span className={khmerFont()}>{t('done')}</span>
                       </div>
                     )
                   ) : deadlineInfo.urgent ? (
@@ -431,7 +510,7 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12.5,7V13H11V7H12.5M12,15.5A1,1 0 0,1 11,16.5A1,1 0 0,1 10,15.5A1,1 0 0,1 11,14.5A1,1 0 0,1 12,15.5Z"/>
                       </svg>
-                      <span className={khmerFont()}>Urgent</span>
+                      <span className={khmerFont()}>{t('urgent')}</span>
                     </div>
                   ) : null}
                 </div>
@@ -440,7 +519,9 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                   {/* Icon Section - Aligned with Quick Actions */}
                   <div className="relative flex-shrink-0">
                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg ${
-                      isSubmitted
+                      !form.isActive && !isSubmitted
+                        ? 'bg-gradient-to-br from-gray-400 to-gray-500'
+                        : isSubmitted
                         ? form.requiresApproval
                           ? form.approvalStatus === 'approved'
                             ? 'bg-gradient-to-br from-green-500 to-emerald-600'
@@ -451,7 +532,11 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                         : 'bg-gradient-to-br from-blue-500 to-purple-600'
                     }`}>
                       <div className="absolute inset-0 bg-white/15 rounded-2xl backdrop-blur-sm"></div>
-                      {isSubmitted 
+                      {!form.isActive && !isSubmitted
+                        ? <svg className="text-white relative z-10 w-6.5 h-6.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,1L21,5V11C21,16.55 17.16,21.74 12,23C6.84,21.74 3,16.55 3,11V5L12,1M12,5A3,3 0 0,0 9,8A3,3 0 0,0 12,11A3,3 0 0,0 15,8A3,3 0 0,0 12,5M17.13,17C15.92,18.85 14.11,20.24 12,20.92C9.89,20.24 8.08,18.85 6.87,17C6.53,16.5 6.24,16 6,15.47C6,13.82 8.71,12.47 12,12.47C15.29,12.47 18,13.79 18,15.47C17.76,16 17.47,16.5 17.13,17Z"/>
+                          </svg>
+                        : isSubmitted 
                         ? form.requiresApproval
                           ? form.approvalStatus === 'approved'
                             ? <svg className="text-white relative z-10 w-6.5 h-6.5" fill="currentColor" viewBox="0 0 24 24">
@@ -485,7 +570,9 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                       {/* Deadline Status */}
                       <div className="flex items-center space-x-2">
                         <div className={`w-1.5 h-1.5 rounded-full ${
-                          isSubmitted 
+                          !form.isActive
+                            ? 'bg-gray-400'
+                            : isSubmitted 
                             ? form.requiresApproval
                               ? form.approvalStatus === 'approved'
                                 ? 'bg-green-500'
@@ -498,7 +585,9 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                               : 'bg-blue-500'
                         }`}></div>
                         <span className={khmerFont(`text-xs font-medium ${
-                          isSubmitted 
+                          !form.isActive
+                            ? 'text-gray-500 dark:text-gray-400'
+                            : isSubmitted 
                             ? form.requiresApproval
                               ? form.approvalStatus === 'approved'
                                 ? 'text-green-600 dark:text-green-400'
@@ -510,14 +599,16 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                               ? 'text-red-600 dark:text-red-400' 
                               : 'text-blue-600 dark:text-blue-400'
                         }`)}>
-                          {isSubmitted 
+                          {!form.isActive
+                            ? 'Not Open Yet'
+                            : isSubmitted 
                             ? form.requiresApproval
                               ? form.approvalStatus === 'approved'
-                                ? <span className={khmerFont()}>Approved</span>
+                                ? bilingualText('approvedStatus')
                                 : form.approvalStatus === 'rejected'
-                                  ? <span className={khmerFont()}>Rejected</span>
-                                  : <span className={khmerFont()}>{`Pending Review (status: ${form.approvalStatus})`}</span>
-                              : <span className={khmerFont()}>Completed</span>
+                                  ? bilingualText('rejectedStatus')
+                                  : bilingualText('pendingReview')
+                              : bilingualText('completed')
                             : deadlineInfo.text
                           }
                         </span>
@@ -525,15 +616,15 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
                       
                       {/* Questions Count */}
                       <span className={khmerFont('text-xs text-gray-500 dark:text-gray-400')}>
-                        • {form.questions.length} questions
+                        • {form.questions.length} {t('questions')}
                       </span>
                     </div>
                     
                   </div>
 
                   {/* Arrow - Aligned with Quick Actions */}
-                  {!isSubmitted && (
-                    <div className="text-gray-400 dark:text-gray-500 flex-shrink-0">
+                  {(!isSubmitted || !form.isActive) && (
+                    <div className={`flex-shrink-0 ${!form.isActive ? 'text-gray-400 dark:text-gray-500' : 'text-gray-400 dark:text-gray-500'}`}>
                       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8.59,16.58L13.17,12L8.59,7.41L10,6L16,12L10,18L8.59,16.58Z"/>
                       </svg>

@@ -1,8 +1,10 @@
+import { t } from "framer-motion/dist/types.d-BSoEx4Ea";
+
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: false, // Handle manually for better update UX
-  disable: process.env.NODE_ENV === 'development', // Disable in dev, enable in production
+  disable: true, // Disable PWA in development mode
   runtimeCaching: [
     {
       urlPattern: /^https?:\/\/firestore\.googleapis\.com\/.*$/,

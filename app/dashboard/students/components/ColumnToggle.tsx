@@ -65,9 +65,37 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
     setFocusedStudentIndex(-1);
   }, [searchQuery]);
 
+  // Global keyboard shortcut to focus search input
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Focus search input when "/" is pressed (but not when already typing in inputs)
+      if (e.key === '/' && e.target instanceof HTMLElement) {
+        // Don't trigger if already focused on the search input
+        if (e.target === searchInputRef.current) return;
+        
+        // Don't trigger if typing in other input fields
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) && e.target !== searchInputRef.current) return;
+        
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        
+        // Clear any "/" that might have been typed
+        setTimeout(() => {
+          if (searchInputRef.current && searchInputRef.current.value === '/') {
+            searchInputRef.current.value = '';
+            onSearchChange?.('');
+          }
+        }, 0);
+      }
+    };
+
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [onSearchChange]);
+
   // Keyboard navigation handler
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    const hasMatchingStudents = filteredStudentsCount > 0 && filteredStudentsCount < 10 && filteredStudents.length > 0;
+    const hasMatchingStudents = filteredStudentsCount > 0 && filteredStudents.length > 0;
     
     if (!hasMatchingStudents) return;
 
@@ -151,8 +179,9 @@ export const ColumnToggle: React.FC<ColumnToggleProps> = ({
         break;
       case 'Enter':
         e.preventDefault();
-        if (focusedStudentIndex >= 0 && focusedStudentIndex < filteredStudents.length) {
-          onStudentSelect?.(filteredStudents[focusedStudentIndex].id);
+        if (filteredStudents.length > 0) {
+          // Always select the first student when Enter is pressed
+          onStudentSelect?.(filteredStudents[0].id);
           setFocusedStudentIndex(-1);
           searchInputRef.current?.focus();
         }

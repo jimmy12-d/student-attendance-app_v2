@@ -1,5 +1,5 @@
 /**
- * Script to add "inBPClass" field to all students, set to false
+ * Script to check visibility of forms in the "forms" collection
  */
 
 const admin = require('firebase-admin');
@@ -29,41 +29,45 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-async function addInBPClassToStudents() {
+async function checkFormsVisibility() {
   try {
-    console.log('🚀 Adding "inBPClass" field to all students...\n');
+    console.log('🚀 Counting visibility of forms in the "forms" collection...\n');
 
-    const studentsRef = db.collection('students');
-    const snapshot = await studentsRef.get();
+    const formsRef = db.collection('forms');
+    const snapshot = await formsRef.get();
 
     if (snapshot.empty) {
-      console.log('❌ No students found!');
+      console.log('❌ No forms found in the collection!');
       return;
     }
 
-    console.log(`📋 Found ${snapshot.size} students. Updating...\n`);
+    console.log(`📋 Found ${snapshot.size} forms. Counting visibility...\n`);
 
-    const batch = db.batch();
-    let updateCount = 0;
+    let visibleCount = 0;
+    let invisibleCount = 0;
 
     snapshot.forEach((doc) => {
-      const studentRef = studentsRef.doc(doc.id);
-      batch.update(studentRef, { inBPClass: false });
-      updateCount++;
+      const data = doc.data();
+      if (data.isVisible) {
+        visibleCount++;
+      } else {
+        invisibleCount++;
+      }
     });
 
-    await batch.commit();
-    console.log(`✅ Successfully updated ${updateCount} students with "inBPClass": false`);
+    console.log(`Visible forms: ${visibleCount}`);
+    console.log(`Invisible forms: ${invisibleCount}`);
+    console.log(`✅ Successfully counted visibility for ${snapshot.size} forms`);
 
   } catch (error) {
-    console.error('❌ Error updating students:', error);
+    console.error('❌ Error checking forms visibility:', error);
     throw error;
   }
 }
 
 // Main execution
 if (require.main === module) {
-  addInBPClassToStudents()
+  checkFormsVisibility()
     .then(() => {
       console.log('\n✨ Script completed successfully!');
       process.exit(0);
@@ -74,4 +78,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { addInBPClassToStudents };
+module.exports = { checkFormsVisibility };

@@ -1,0 +1,448 @@
+[
+  {
+    "studentId": "01hgKu62uL8zAQUu8YQU",
+    "studentName": "Dina Molika",
+    "class": "Class 12M",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "0GR4lS3h7PZ3cWeK1Baj",
+    "studentName": "Simvi Sopheaknita",
+    "class": "Class 11A",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "0aIqAeI6nMX5T1qWjFQt",
+    "studentName": "Chea Sokchay",
+    "class": "Class 12E",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "4yQzyU5tkVenGUu32mZA",
+    "studentName": "Phal Chansovandy",
+    "class": "Class 11A",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "6KNdx0kJiZoAbAcSW9lN",
+    "studentName": "Tat Sovanlida",
+    "class": "Class 11A",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "7ktL9d8X6VSzGIaCR4LW",
+    "studentName": "Cheu Chhailinh",
+    "class": "Class 12T",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "9dgcKzksomzde827tvnp",
+    "studentName": "Ja Morant",
+    "class": "Class 12A",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "AnCloe0hy7l8IxCSdMaJ",
+    "studentName": "Sophat Sophanan",
+    "class": "Class 8E",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "BG3VMnmNK8hZFTurzmpd",
+    "studentName": "Ross K-Ro",
+    "class": "Class 12I",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "CWkkSLh7OknrUz8hUbdj",
+    "studentName": "Meng SereySirayuth",
+    "class": "Class 11F",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "CdqIqUTPJ4FdNvkgUlo4",
+    "studentName": "Soeng SotheaPich",
+    "class": "Class 12P",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "GQuGOO80iMF4p3SxqGQm",
+    "studentName": "Thornteth Sopheaktra",
+    "class": "Class 12T",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "HK05CK84nIBtgG1hz8mr",
+    "studentName": "Cheng Porhak",
+    "class": "Class 12C",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "Iz8gu2Qx39qk6Sf0JyAa",
+    "studentName": "Kem Odamvuttey",
+    "class": "Class 12S",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "JALDr66p7jz7upAvHaId",
+    "studentName": "Srun Sarathtepy",
+    "class": "Class 9G",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "L21ttJcwPIpet6juO4ZF",
+    "studentName": "Reth Rechborneath",
+    "class": "Class 12I",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "O05sDTm8CHg4o8DcyyT2",
+    "studentName": "Bun Sivyean",
+    "class": "Class 12S",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "OLedwJKgvNMhQmrkmT9V",
+    "studentName": "Hul Chinchanleena",
+    "class": "Class 8E",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "ONMImN4vlbrfKSMtd0VR",
+    "studentName": "Meach Sovannmenghong",
+    "class": "Class 12P",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "OgnnceGrwu6xy8qre7Mb",
+    "studentName": "Chhoem Rithyvong",
+    "class": "Class 12S",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "Or5KU25Y8ET1Oyli7JVF",
+    "studentName": "Pang Meykim",
+    "class": "Class 12S",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "PWV6C5l0zaxW6rjPV2kR",
+    "studentName": "Kao Chanpunleu",
+    "class": "Class 12P",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "QpCCTbNn2UY9X70ZeIl4",
+    "studentName": "Khimsambo Rithipong",
+    "class": "Class 7F",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "SWjjTae9oifJsuMJP0bu",
+    "studentName": "Chhorn Panha",
+    "class": "Class 10G",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "SsR39bEAXYFWORaPBKBY",
+    "studentName": "Bourvann Phary",
+    "class": "Class 12B",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "UBlyHa2yrV5qpxzGDJNq",
+    "studentName": "Lim Panhabo",
+    "class": "Class 7F",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "WlpaUOjvdZz8W3vmnt5c",
+    "studentName": "Sok Meanthornvuthnak",
+    "class": "Class 10F",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "ZNkOsCynQ70ucRrDAwRs",
+    "studentName": "Reth Dahlia",
+    "class": "Class 11E",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "ZsHj0iB9e4iKWaCy39L3",
+    "studentName": "Khun Soktin",
+    "class": "Class 12T",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "ceoFJuqp4Ym09LelGFpo",
+    "studentName": "Lak Bunhour",
+    "class": "Class 10E",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "gydClP0TYQZvcFfeDdDf",
+    "studentName": "Vuth Leangmeng",
+    "class": "Class 12NKGS",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "hGZU0JIwhcb9WtHqaZxi4a5CsUi2",
+    "studentName": "Unknown",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "hOLM7PxbBd8yJawPitBY",
+    "studentName": "Heng Panhasoth",
+    "class": "Class 12B",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "j8iwi03tylPB9EOEDeEF",
+    "studentName": "Kheav Munineath",
+    "class": "Class 9E",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "jEI5PKOrX0OGmOeJYD99",
+    "studentName": "Kong Reachraksa",
+    "class": "Class 11A",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "lgsxrHrwZh1R1kKCPq3Z",
+    "studentName": "Pich Monika",
+    "class": "Class 12C",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "n0s9wKiOJJD4uwkIHC6C",
+    "studentName": "Ra Nary",
+    "class": "Class 10E",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "pDStLz4iTuSOfZjlOYsg",
+    "studentName": "Sereykol Nectar",
+    "class": "Class 12S",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "puKtVxy3kya4kPq8MI5WkJLepUI2",
+    "studentName": "Unknown",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "r4NXokherYxBx08qzbRx",
+    "studentName": "Buth Jihong",
+    "class": "Class 12T",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "sDwdLoRhn04bEcs24ceY",
+    "studentName": "Eng Aliya",
+    "class": "Class 11A",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "sDyTVn0EIw4Beq15ogpY",
+    "studentName": "Rath Yurik",
+    "class": "Class 10E",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "sc70pWVCNqiYanOcqLon",
+    "studentName": "Lyn Munykouchreach",
+    "class": "Class 9G",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "tlxrwdQpMBo2CCgwoeqj",
+    "studentName": "Srun Chanvotey",
+    "class": "Class 9G",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "wFwldiTZHUlViwUG1ITX",
+    "studentName": "Buoy Sofia",
+    "class": "Class 8F",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "wrMUHu1g6Z3o8oVWSWdy",
+    "studentName": "Ly Sengkeang",
+    "class": "Class 12C",
+    "shift": "Morning",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "xSZm547NSPLvz6XNsRe0",
+    "studentName": "Test Testing",
+    "class": "Class 12B",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "xTZmhX6z6EWFBnHqAW6z",
+    "studentName": "Yano Nyyaboth",
+    "class": "Class 12S",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "xrRHW5kArclIikVGbbhY",
+    "studentName": "Leang Vengsean",
+    "class": "Class 12T",
+    "shift": "Afternoon",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  },
+  {
+    "studentId": "zrVLxmQ1pHqO8e6AvN4u",
+    "studentName": "Chheak Sophalina",
+    "class": "Class 9F",
+    "shift": "Evening",
+    "date": "2025-10-14",
+    "status": "absent",
+    "reason": "No attendance record on school day"
+  }
+]

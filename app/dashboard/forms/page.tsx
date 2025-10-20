@@ -24,6 +24,7 @@ import {
   mdiTrendingUp,
   mdiClockAlertOutline,
   mdiEyeOutline,
+  mdiEyeOffOutline,
   mdiContentCopy,
   mdiClose,
   mdiShieldCheck
@@ -166,6 +167,19 @@ const FormsListPage = () => {
     } catch (error) {
       console.error("Error toggling form status:", error);
       toast.error("Failed to update form status");
+    }
+  };
+
+  const handleToggleVisibility = async (formId: string, currentVisibility: boolean) => {
+    try {
+      await updateDoc(doc(db, "forms", formId), {
+        isVisible: !currentVisibility,
+        updatedAt: Timestamp.now()
+      });
+      toast.success(`Form ${!currentVisibility ? 'shown' : 'hidden'} successfully`);
+    } catch (error) {
+      console.error("Error toggling form visibility:", error);
+      toast.error("Failed to update form visibility");
     }
   };
 
@@ -319,8 +333,29 @@ const FormsListPage = () => {
                   className="group relative"
                 >
                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border border-gray-200 dark:border-gray-700 group-hover:scale-[1.02]">
-                    {/* Active Toggle Switch */}
-                    <div className="absolute top-4 right-4 z-10">
+                    {/* Active and Visibility Toggle Switches */}
+                    <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+                      {/* Visibility Toggle */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleVisibility(form.id, form.isVisible !== false); // Default to true for old forms
+                        }}
+                        className={`p-2 rounded-full transition-all duration-300 shadow-sm ${
+                          form.isVisible !== false
+                            ? 'bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50'
+                            : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                        title={`Click to ${form.isVisible !== false ? 'hide' : 'show'} form in student list`}
+                      >
+                        <Icon 
+                          path={form.isVisible !== false ? mdiEyeOutline : mdiEyeOffOutline} 
+                          size={16}
+                          className={form.isVisible !== false ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}
+                        />
+                      </button>
+                      
+                      {/* Active Toggle */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
