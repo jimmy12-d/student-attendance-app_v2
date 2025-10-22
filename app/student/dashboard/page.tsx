@@ -56,7 +56,7 @@ const StudentDashboard = () => {
   const [__, setLoading] = useState(true);
 
   // State for the mock exam results
-  const [___, setAvailableTabs] = useState(['mock1', 'mock2']);
+  const [availableTabs, setAvailableTabs] = useState(['mock1', 'mock2']);
   const [selectedTab, setSelectedTab] = useState('mock1');
   const [examSettings, setExamSettings] = useState<ExamSettings>({});
   const [examScores, setExamScores] = useState<ExamScores>({});
@@ -429,7 +429,7 @@ const StudentDashboard = () => {
           <div className="p-4 max-w-2xl mx-auto">
 
             {/* Progress Bar Section */}
-            <ProgressBar status={progressStatus} loading={isProgressLoading} />
+            <ProgressBar status={progressStatus} loading={isProgressLoading} availableTabs={availableTabs} currentMockId={selectedTab} />
             
             {/* New Room and Seat Widgets - Only show after loading is complete */}
             {!isProgressLoading && (

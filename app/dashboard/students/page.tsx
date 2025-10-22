@@ -89,6 +89,7 @@ export default function StudentsPage() {
   const [currentStudentList, setCurrentStudentList] = useState<Student[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalDefaultTab, setModalDefaultTab] = useState<'basic' | 'actions' | 'requests'>('basic');
+  const [viewContext, setViewContext] = useState<'regular' | '12BP'>('regular');
 
   // Export modal state
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -628,10 +629,15 @@ export default function StudentsPage() {
     }
 
     const index = studentList.findIndex(s => s.id === student.id);
+    
+    // Determine view context based on BP class status
+    const viewContextValue = student.inBPClass ? '12BP' : 'regular';
+    
     setSelectedStudent(student);
     setSelectedIndex(index);
     setCurrentStudentList(studentList);
     setModalDefaultTab(defaultTab);
+    setViewContext(viewContextValue);
     setIsModalOpen(true);
   };
 
@@ -813,7 +819,9 @@ export default function StudentsPage() {
             
             {/* Render Notification Settings or Dashboard */}
             {showNotificationSettings ? (
-              <AbsentNotificationSettingsComponent />
+              <AbsentNotificationSettingsComponent 
+                onSave={() => setShowNotificationSettings(false)} 
+              />
             ) : (
               <>
                 {/* Date and Filter Controls */}
@@ -1028,6 +1036,7 @@ export default function StudentsPage() {
         onNavigate={handleNavigate}
         onBreak={() => {}} // No need to manually refresh - real-time listener handles updates
         defaultTab={modalDefaultTab}
+        viewContext={viewContext}
       />
 
       {/* Export Students Modal */}

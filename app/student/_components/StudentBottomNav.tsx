@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Icon from '@/app/_components/Icon';
-import { mdiHome, mdiFileDocumentEdit, mdiAccountCircle } from '@mdi/js';
+import { mdiHome, mdiFileDocumentEdit, mdiAccountCircle, mdiCalendarStar } from '@mdi/js';
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
@@ -13,6 +13,7 @@ import { useTranslations, useLocale } from 'next-intl';
 export const navItems = [
   { name: 'Home', href: '/student/attendance', icon: mdiHome, translationKey: 'home' },
   { name: 'Mock Exam', href: '/student/mock-exam', icon: mdiFileDocumentEdit, translationKey: 'mockExam' },
+  { name: 'Activities', href: '/student/activities', icon: mdiCalendarStar, translationKey: 'activities' },
   { name: 'Account', href: '/student/account', icon: mdiAccountCircle, translationKey: 'account' },
 ];
 
@@ -52,8 +53,12 @@ export default function StudentBottomNav() {
   return (
     <nav
       // Use iOS safe area inset to keep the nav clearly separated from any system UI
-      style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
-      className="fixed left-1/2 -translate-x-1/2 w-[280px] sm:w-[320px] mx-auto z-40"
+      style={{ 
+        bottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+        transform: 'translate3d(-50%, 0, 0)',
+        willChange: 'transform'
+      }}
+      className="fixed left-1/2 w-[280px] sm:w-[320px] mx-auto z-40"
     >
       <div className="relative flex items-center justify-around bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg rounded-full shadow-lg border border-white/20 px-2">
         {currentNavItems.map((item) => {
@@ -62,6 +67,8 @@ export default function StudentBottomNav() {
             ? (pathname === '/student' || pathname === '/student/attendance')
             : item.href === '/student/account'
             ? (pathname.startsWith(item.href) || pathname === '/student/payment-history')
+            : item.href === '/student/activities'
+            ? pathname.startsWith(item.href)
             : pathname.startsWith(item.href);
           return (
             <Link

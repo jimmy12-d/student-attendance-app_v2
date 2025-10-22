@@ -10,11 +10,11 @@ import { doc, getDoc, setDoc, Timestamp, updateDoc, collection, getDocs } from "
 import { db } from "@/firebase-config";
 import { Form, Question, FormType } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
-import { mdiPlus, mdiContentSave, mdiArrowLeft, mdiFormSelect, mdiCheckCircle, mdiAccountMultiple } from "@mdi/js";
+import { mdiPlus, mdiContentSave, mdiArrowLeft, mdiFormSelect } from "@mdi/js";
 import { toast } from "sonner";
 import QuestionEditor from "../_components/QuestionEditor";
+import FormTypeSelector from "../_components/FormTypeSelector";
 import { useAppSelector } from "@/app/_stores/hooks";
-import { FORM_TYPES, getFormTypeConfig } from "@/app/_constants/formTypes";
 
 const FormBuilderPage = () => {
   const router = useRouter();
@@ -56,10 +56,31 @@ const FormBuilderPage = () => {
       const classTypesRef = collection(db, "classTypes");
       const classTypesSnapshot = await getDocs(classTypesRef);
       const types = classTypesSnapshot.docs.map(doc => doc.id);
-      setAvailableClassTypes(types.sort());
+      
+      // Sort grades from Grade 7 to Grade 12
+      const sortedTypes = types.sort((a, b) => {
+        // Extract grade number from strings like "Grade 7", "Grade 11A", etc.
+        const getGradeNumber = (gradeStr: string) => {
+          const match = gradeStr.match(/Grade (\d+)/);
+          return match ? parseInt(match[1]) : 0;
+        };
+        
+        const aNum = getGradeNumber(a);
+        const bNum = getGradeNumber(b);
+        
+        // First sort by grade number
+        if (aNum !== bNum) {
+          return aNum - bNum;
+        }
+        
+        // If same grade number, sort alphabetically (e.g., Grade 11A before Grade 11E)
+        return a.localeCompare(b);
+      });
+      
+      setAvailableClassTypes(sortedTypes);
     } catch (error) {
       console.error("Error loading class types:", error);
-      // Fallback to hardcoded values
+      // Fallback to hardcoded values, already sorted from Grade 7 to Grade 12
       setAvailableClassTypes(['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11A', 'Grade 11E', 'Grade 12', 'Grade 12 Social']);
     }
   };
@@ -450,17 +471,10 @@ const FormBuilderPage = () => {
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Form Type *
             </label>
-            <select
-              value={formType}
-              onChange={(e) => setFormType(e.target.value as FormType)}
-              className="w-full bg-gray-50 dark:bg-slate-700/50 border-2 border-gray-200 dark:border-slate-600 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            >
-              {FORM_TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label} - {type.description}
-                </option>
-              ))}
-            </select>
+            <FormTypeSelector
+              selectedType={formType}
+              onTypeChange={setFormType}
+            />
           </div>
 
           {/* Target Class Types */}

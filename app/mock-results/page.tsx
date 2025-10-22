@@ -112,9 +112,10 @@ export default function Mock3ResultPage() {
   const [loading, setLoading] = useState(false);
   const [isAllMocksLoading, setIsAllMocksLoading] = useState(false);
   const [selectedTab, setSelectedTab] = useState('mock3');
-  const [availableTabs, setAvailableTabs] = useState(['mock1', 'mock2', 'mock3']);
+  const [availableTabs, setAvailableTabs] = useState<string[]>([]);
   const [mock4Ready, setMock4Ready] = useState(false);
   const [availableMocks, setAvailableMocks] = useState<string[]>([]);
+  const [mockReadiness, setMockReadiness] = useState<{ [mockId: string]: boolean }>({});
 
   const handleFetchResult = async () => {
     if (!id || !/^\d{4,5}$/.test(id.trim())) {
@@ -165,6 +166,23 @@ export default function Mock3ResultPage() {
       
       setAvailableMocks(readyMocks);
       setAvailableTabs(readyMocks);
+
+      // Fetch mock readiness for published results
+      const readinessData: { [mockId: string]: boolean } = {};
+      for (const mockId of mockControls) {
+        try {
+          const controlDocRef = doc(db, "examControls", mockId);
+          const controlDocSnap = await getDoc(controlDocRef);
+          
+          if (controlDocSnap.exists()) {
+            const controlData = controlDocSnap.data();
+            readinessData[mockId] = controlData.isReadyToPublishedResult === true;
+          }
+        } catch (error) {
+          console.warn(`Failed to check ${mockId} published readiness:`, error);
+        }
+      }
+      setMockReadiness(readinessData);
       
       // Set default selected tab to the highest available mock
       if (readyMocks.length > 0) {
@@ -477,6 +495,7 @@ export default function Mock3ResultPage() {
                   seatInfo={studentData.seat}
                   phoneInfo={null}
                   studentName={studentData.fullName}
+                  isReadyToPublishResult={mockReadiness[selectedTab] || false}
                 />
               </div>
             </div>
@@ -492,7 +511,8 @@ export default function Mock3ResultPage() {
                       Object.entries(allMockScores).filter(([key]) => availableMocks.includes(key))
                     )}
                     studentClassType={studentData.class.includes('12R') || studentData.class.includes('12S') || studentData.class.includes('12T') ? "Grade 12 Social" : "Grade 12"} 
-                    allExamSettings={allExamSettings} 
+                    allExamSettings={allExamSettings}
+                    mockReadiness={mockReadiness}
                   />
               )}
             </div>

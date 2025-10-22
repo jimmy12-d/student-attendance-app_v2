@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/firebase-config';
 import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, getDoc, getDocs } from 'firebase/firestore';
 import Icon from '@/app/_components/Icon';
-import { mdiCalendarStar, mdiTicket, mdiClose, mdiCalendar, mdiFormSelect, mdiCheckCircle, mdiCloseCircle, mdiClockOutline, mdiChevronRight, mdiLock, mdiAlertCircle } from '@mdi/js';
+import { mdiCalendarStar, mdiTicket, mdiClose, mdiCalendar, mdiFormSelect, mdiCheckCircle, mdiCloseCircle, mdiClockOutline, mdiChevronRight, mdiLock, mdiAlertCircle, mdiImage } from '@mdi/js';
 import { useTranslations } from 'next-intl';
 
 interface Event {
@@ -15,6 +15,16 @@ interface Event {
   formTitle?: string;
   ticketImageUrl: string;
   createdAt: Timestamp | Date;
+  isFree?: boolean;
+  pricingOptions?: any[];
+  allowBorrow?: boolean;
+  attendanceData?: {
+    confidence?: number;
+    clockInTime?: Timestamp | Date;
+    clockOutTime?: Timestamp | Date;
+    status?: string;
+    totalDuration?: number;
+  };
 }
 
 interface FormStatus {
@@ -54,6 +64,7 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
       // Check registration status and form status for each event
       const statuses: Record<string, string> = {};
       const formStatusMap: Record<string, FormStatus> = {};
+      const attendanceDataMap: Record<string, any> = {};
       
       for (const event of fetchedEvents) {
         // Check form status
@@ -114,13 +125,44 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
           const responseData = responsesSnapshot.docs[0].data();
           statuses[event.id] = responseData.registrationStatus || 'pending';
         }
+
+        // Check attendance data for past events
+        if (!isUpcoming(event.date)) {
+          try {
+            const attendanceQuery = query(
+              collection(db, "eventAttendance"),
+              where("eventId", "==", event.id),
+              where("authUid", "==", studentUid)
+            );
+            const attendanceSnapshot = await getDocs(attendanceQuery);
+            if (!attendanceSnapshot.empty) {
+              const attendanceData = attendanceSnapshot.docs[0].data();
+              attendanceDataMap[event.id] = {
+                confidence: attendanceData.confidence,
+                clockInTime: attendanceData.clockInTime,
+                clockOutTime: attendanceData.clockOutTime,
+                status: attendanceData.status,
+                totalDuration: attendanceData.totalDuration
+              };
+            }
+          } catch (error) {
+            console.error("Error checking attendance data:", error);
+          }
+        }
       }
 
       setFormStatuses(formStatusMap);
       setRegistrationStatuses(statuses);
       console.log('Final registration statuses:', statuses);
       console.log('Final form statuses:', formStatusMap);
-      setEvents(fetchedEvents);
+      
+      // Add attendance data to events
+      const eventsWithAttendance = fetchedEvents.map(event => ({
+        ...event,
+        attendanceData: attendanceDataMap[event.id]
+      }));
+      
+      setEvents(eventsWithAttendance);
       setLoading(false);
     };
 
@@ -133,6 +175,16 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
       month: 'long',
       day: 'numeric',
       year: 'numeric',
+      timeZone: 'Asia/Phnom_Penh'
+    });
+  };
+
+  const formatTime = (timestamp: Timestamp | Date) => {
+    const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
       timeZone: 'Asia/Phnom_Penh'
     });
   };
@@ -211,11 +263,14 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
 
     // Already registered but pending approval
     if (registrationStatus === 'pending') {
+      const isPaidEvent = event.isFree === false && event.pricingOptions && event.pricingOptions.length > 0;
       return (
         <div className="flex-1 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-lg">
           <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm">
             <Icon path={mdiClockOutline} size={16} />
-            <span className="font-medium">{t('awaitingApproval')}</span>
+            <span className="font-medium">
+              {isPaidEvent ? t('awaitingPayment') : t('awaitingApproval')}
+            </span>
           </div>
         </div>
       );
@@ -289,7 +344,7 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
     <>
       <div className="space-y-4 px-2">
         {/* Upcoming Events */}
-        {upcomingEvents.length > 0 && (
+        {upcomingEvents.length > 0 ? (
           <div>
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
               <Icon path={mdiCalendarStar} size={20} />
@@ -303,11 +358,17 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
                 >
                   {/* Event Header with Image */}
                   <div className="relative h-40 overflow-hidden">
-                    <img
-                      src={event.ticketImageUrl}
-                      alt={event.name}
-                      className="w-full h-full object-cover"
-                    />
+                    {event.ticketImageUrl ? (
+                      <img
+                        src={event.ticketImageUrl}
+                        alt={event.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
+                        <Icon path={mdiImage} size={48} className="text-blue-400 dark:text-blue-500" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Event Details */}
@@ -345,11 +406,24 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
               ))}
             </div>
           </div>
+        ) : (
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
+              <Icon path={mdiCalendarStar} size={20} />
+              {t('upcomingEvents')}
+            </h2>
+            <div className="text-center">
+              <Icon path={mdiCalendar} size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                {t('noUpcomingEvents')}
+              </h3>
+            </div>
+          </div>
         )}
 
-        {/* Past Events - Collapsed by default */}
+        {/* Past Events - Expanded by default */}
         {pastEvents.length > 0 && (
-          <details className="group">
+          <details className="group" open>
             <summary className="cursor-pointer list-none">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
                 <Icon path={mdiCalendarStar} size={20} />
@@ -368,20 +442,46 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
                   className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden opacity-60 hover:opacity-80 transition-opacity duration-200"
                 >
                   <div className="relative h-32 overflow-hidden">
-                    <img
-                      src={event.ticketImageUrl}
-                      alt={event.name}
-                      className="w-full h-full object-cover"
-                    />
+                    {event.ticketImageUrl ? (
+                      <img
+                        src={event.ticketImageUrl}
+                        alt={event.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                        <Icon path={mdiImage} size={32} className="text-gray-400 dark:text-gray-500" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-4">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
-                      {event.name}
-                    </h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                      <Icon path={mdiCalendar} size={16} />
-                      <span>{formatDate(event.date)}</span>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">
+                          {event.name}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                          <Icon path={mdiCalendar} size={16} />
+                          <span>{formatDate(event.date)}</span>
+                        </div>
+                      </div>
+                      {event.attendanceData && (
+                        <div className="flex flex-col gap-1 ml-4">
+                          {event.attendanceData.clockInTime && (
+                            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                              <Icon path={mdiCheckCircle} size={16} />
+                              <span>{t('checkIn')} {formatTime(event.attendanceData.clockInTime)}</span>
+                            </div>
+                          )}
+                          {event.attendanceData.clockOutTime && (
+                            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                              <Icon path={mdiCheckCircle} size={16} />
+                              <span>{t('checkOut')} {formatTime(event.attendanceData.clockOutTime)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {registrationStatuses[event.id] === 'approved' && (
                       <button
@@ -438,11 +538,17 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
               </div>
 
               <div className="rounded-xl overflow-hidden shadow-lg mb-6">
-                <img
-                  src={selectedTicket.ticketImageUrl}
-                  alt={selectedTicket.name}
-                  className="w-full h-auto"
-                />
+                {selectedTicket.ticketImageUrl ? (
+                  <img
+                    src={selectedTicket.ticketImageUrl}
+                    alt={selectedTicket.name}
+                    className="w-full h-auto"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gradient-to-br from-emerald-100 to-blue-100 dark:from-emerald-900/20 dark:to-blue-900/20 flex items-center justify-center rounded-xl">
+                    <Icon path={mdiImage} size={64} className="text-emerald-400 dark:text-emerald-500" />
+                  </div>
+                )}
               </div>
 
               <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/30 rounded-xl">

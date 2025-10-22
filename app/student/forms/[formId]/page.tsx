@@ -922,10 +922,21 @@ const StudentFormFillerPage = () => {
                   )}
                 </div>
                 <div className="flex-1 min-w-0 w-full sm:w-auto">
-                  <h3 className="text-lg sm:text-xl font-medium text-gray-900 dark:text-white leading-relaxed break-words">
+                  <h3 className="text-lg sm:text-xl font-medium text-gray-900 dark:text-white leading-relaxed break-words whitespace-pre-wrap">
                     {question.text}
                     {question.required && <span className="text-red-500 ml-2 text-lg">*</span>}
                   </h3>
+                  
+                  {/* Display question image if available */}
+                  {question.imageUrl && (
+                    <div className="mt-4 rounded-2xl overflow-hidden border-2 border-gray-200 dark:border-slate-600 shadow-md">
+                      <img
+                        src={question.imageUrl}
+                        alt={question.imageFileName || "Question image"}
+                        className="w-full h-auto max-h-96 object-contain bg-gray-50 dark:bg-slate-700/30"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="space-y-3">

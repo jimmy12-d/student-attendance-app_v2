@@ -86,8 +86,8 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
           return;
         }
 
-        // Skip students who are on waitlist or not active
-        if (studentData.onWaitlist || studentData.isActive === false) {
+        // Skip students who are on break, waitlist, dropped, or not active (match page.tsx logic)
+        if (studentData.onBreak || studentData.onWaitlist || studentData.dropped || studentData.isActive === false) {
           return;
         }
 

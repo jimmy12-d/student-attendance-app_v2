@@ -93,6 +93,24 @@ const formatTimeInKhmer = (date) => {
     return `ម៉ោង${hours}:${minutes} ថ្ងៃទី${day} ខែ${month} ឆ្នាំ${year}`;
 };
 
+const formatDateInKhmer = (date) => {
+    const khmerNumbers = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+    const khmerMonths = [
+        'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+        'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+    ];
+    
+    const convertToKhmerNumber = (num) => {
+        return num.toString().split('').map(digit => khmerNumbers[parseInt(digit)]).join('');
+    };
+    
+    const day = convertToKhmerNumber(date.getDate());
+    const month = khmerMonths[date.getMonth()];
+    const year = convertToKhmerNumber(date.getFullYear());
+    
+    return `ថ្ងៃទី${day} ខែ${month} ឆ្នាំ${year}`;
+};
+
 const formatClassInKhmer = (classLevel) => {
     if (!classLevel) return 'មិនបានកំណត់';
     
@@ -1164,7 +1182,7 @@ const handleMockExamResultDeepLinkInline = async (bot, chatId, messageId, userId
 
         // Query examControls collection for ready exams
         const examQuery = await db.collection('examControls')
-            .where('isReadyForStudent', '==', true)
+            .where('isReadyToPublishedResult', '==', true)
             .get();
 
         if (examQuery.empty) {
@@ -1698,7 +1716,7 @@ const handleMockExamResultDeepLink = async (bot, chatId, userId, deepLinkParam) 
         
         // Query examControls collection for ready exams
         const examQuery = await db.collection('examControls')
-            .where('isReadyForStudent', '==', true)
+            .where('isReadyToPublishedResult', '==', true)
             .get();
 
         if (examQuery.empty) {
@@ -5420,8 +5438,8 @@ exports.notifyStudentAttendance = onDocumentCreated({
         // Get user's language preference
         const userLang = await getUserLanguage(authUid);
         
-        // Format date as dd/mm/yyyy
-        const formattedDate = formatDateDDMMYYYY(date);
+        // Format date in Khmer format
+        const formattedDate = formatDateInKhmer(new Date(date));
         
         // Format notification based on status and language
         const statusEmoji = status === 'late' ? '⚠️' : '✅';
@@ -6312,7 +6330,7 @@ exports.notifyParentAbsence = onCall({
         
         // Adjust for Cambodia timezone
         const cambodiaTime = new Date(absentDate.getTime() + (7 * 60 * 60 * 1000));
-        const formattedDate = formatTimeInKhmer(cambodiaTime);
+        const formattedDate = formatDateInKhmer(cambodiaTime);
 
         for (const doc of parentQuery.docs) {
             const parentData = doc.data();
@@ -6447,16 +6465,21 @@ exports.scheduledAbsentParentNotifications = onSchedule({
         const settingsDoc = await db.collection('absentNotificationSettings').doc('default').get();
         
         if (!settingsDoc.exists) {
-            logger.info('No notification settings configured');
+            logger.info('❌ No notification settings configured');
             return null;
         }
         
         const settings = settingsDoc.data();
         
+        // Log the current state for debugging
+        logger.info(`📊 Settings check - enabled: ${settings.enabled}, morningTriggerTime: ${settings.morningTriggerTime}, afternoonTriggerTime: ${settings.afternoonTriggerTime}, eveningTriggerTime: ${settings.eveningTriggerTime}`);
+        
         if (!settings.enabled) {
-            logger.info('Absent notifications are disabled');
+            logger.info('❌ Absent notifications are disabled in settings');
             return null;
         }
+        
+        logger.info('✅ Absent notifications are ENABLED - proceeding with time check');
         
         const now = new Date();
         const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
@@ -6481,79 +6504,125 @@ exports.scheduledAbsentParentNotifications = onSchedule({
             targetShift = 'Evening';
             triggerTime = settings.eveningTriggerTime;
         } else {
-            logger.info(`Current time ${currentTime} does not match any trigger times`);
+            logger.info(`⏭️ Current time ${currentTime} (hour: ${currentHour}) does not match any trigger times. Morning: ${morningHour}:00, Afternoon: ${afternoonHour}:00, Evening: ${eveningHour}:00`);
             return null;
         }
         
-        logger.info(`Processing ${targetShift} shift absent notifications at ${currentTime}`);
+        logger.info(`🎯 Processing ${targetShift} shift absent notifications at ${currentTime}`);
         
         // Get today's date in YYYY-MM-DD format
         const today = now.toISOString().split('T')[0];
+        logger.info(`📅 Checking for absent students on ${today} for ${targetShift} shift`);
         
-        // Get all absent follow-ups for today with the target shift
-        const absentFollowUpsQuery = await db.collection('absentFollowUps')
+        // STEP 1: Get all active students in the target shift
+        const studentsSnapshot = await db.collection('students').get();
+        const allStudents = studentsSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(s => 
+                !s.dropped && 
+                !s.onBreak && 
+                !s.onWaitlist && 
+                s.shift === targetShift
+            );
+        
+        logger.info(`👥 Found ${allStudents.length} active students in ${targetShift} shift`);
+        
+        // STEP 2: Get all attendance records for today
+        const attendanceSnapshot = await db.collection('attendance')
             .where('date', '==', today)
-            .where('status', '==', 'Absent')
             .get();
         
-        if (absentFollowUpsQuery.empty) {
-            logger.info(`No absent students found for ${targetShift} shift on ${today}`);
-            return null;
+        const attendedStudentIds = new Set();
+        attendanceSnapshot.docs.forEach(doc => {
+            const record = doc.data();
+            attendedStudentIds.add(record.studentId);
+        });
+        
+        logger.info(`✅ ${attendedStudentIds.size} students have attendance records today`);
+        
+        // STEP 3: Find students WITHOUT attendance (these are absent)
+        const absentStudents = allStudents.filter(s => !attendedStudentIds.has(s.id));
+        
+        logger.info(`❌ Found ${absentStudents.length} absent students in ${targetShift} shift`);
+        
+        if (absentStudents.length === 0) {
+            logger.info(`✨ No absent students found for ${targetShift} shift on ${today}`);
+            return { processed: 0, sent: 0, failed: 0, shift: targetShift };
         }
         
-        let processed = 0;
-        let sent = 0;
-        let failed = 0;
+        // STEP 4: Check if students were already notified
+        const absentFollowUpsSnapshot = await db.collection('absentFollowUps')
+            .where('date', '==', today)
+            .get();
         
-        for (const followUpDoc of absentFollowUpsQuery.docs) {
-            const followUp = followUpDoc.data();
-            
-            // Get student to check shift
-            const studentDoc = await db.collection('students').doc(followUp.studentId).get();
-            if (!studentDoc.exists) continue;
-            
-            const student = studentDoc.data();
-            
-            // Only process students in the target shift
-            if (student.shift !== targetShift) continue;
-            
-            // Skip if already notified today
+        const notifiedToday = new Set();
+        absentFollowUpsSnapshot.docs.forEach(doc => {
+            const followUp = doc.data();
             if (followUp.parentNotificationTimestamp) {
                 const notificationDate = followUp.parentNotificationTimestamp.toDate();
                 const notificationDay = notificationDate.toISOString().split('T')[0];
                 if (notificationDay === today) {
-                    logger.info(`Already notified parent for student ${followUp.studentId} today`);
-                    continue;
+                    notifiedToday.add(followUp.studentId);
                 }
+            }
+        });
+        
+        logger.info(`📨 ${notifiedToday.size} students already notified today`);
+        
+        // STEP 5: Send notifications to absent students who haven't been notified
+        let processed = 0;
+        let sent = 0;
+        let failed = 0;
+        let skipped = 0;
+        
+        for (const student of absentStudents) {
+            // Skip if already notified today
+            if (notifiedToday.has(student.id)) {
+                logger.info(`⏭️  Skipping ${student.englishName || student.khmerName} - already notified today`);
+                skipped++;
+                continue;
             }
             
             processed++;
             
             try {
                 // Call the notification function
+                logger.info(`📤 Sending notification for ${student.englishName || student.khmerName} (${student.id})`);
+                
                 const result = await exports.notifyParentAbsence.run({
                     data: {
-                        studentId: followUp.studentId,
-                        studentName: followUp.studentName,
+                        studentId: student.id,
+                        studentName: student.englishName || student.khmerName || 'Unknown',
                         date: today,
-                        absentFollowUpId: followUpDoc.id
+                        absentFollowUpId: null // Will be created by notifyParentAbsence if needed
                     }
                 });
                 
                 if (result.success) {
                     sent += result.notificationsSent;
+                    logger.info(`✅ Successfully notified parent(s) for ${student.englishName || student.khmerName}`);
                 } else {
                     failed++;
+                    logger.warn(`⚠️  Failed to notify parent for ${student.englishName || student.khmerName}: ${result.error}`);
                 }
             } catch (error) {
-                logger.error(`Error notifying parent for student ${followUp.studentId}:`, error);
+                logger.error(`❌ Error notifying parent for student ${student.id}:`, error);
                 failed++;
             }
         }
         
-        logger.info(`✅ Scheduled notification complete: Processed ${processed}, Sent ${sent}, Failed ${failed}`);
+        logger.info(`✅ Scheduled notification complete for ${targetShift} shift: Processed ${processed}, Sent ${sent}, Failed ${failed}, Skipped ${skipped} (already notified)`);
         
-        return { processed, sent, failed };
+        return { 
+            success: true,
+            shift: targetShift, 
+            totalAbsent: absentStudents.length,
+            processed, 
+            sent, 
+            failed,
+            skipped,
+            date: today
+        };
         
     } catch (error) {
         logger.error('❌ Error in scheduledAbsentParentNotifications:', error);

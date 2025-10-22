@@ -29,6 +29,8 @@
     "attendance": "Attendance",
     "payments": "Payments",
     "mockExam": "Mock Exam",
+    "activities": "Activities",
+    "event": "Events",
     "account": "Account",
     "dashboard": "Dashboard"
   },
@@ -47,6 +49,19 @@
     "getStarted": "Get Started"
   },
   "student": {
+    "checkingStatus": "Checking account status...",
+    "accountInactive": {
+      "droppedTitle": "Account Inactive",
+      "droppedMessage": "Your account is currently inactive. Please contact the school to reactivate your account.",
+      "onBreakTitle": "Account on Break",
+      "onBreakMessage": "Your account is currently on break. Please contact the school for more information.",
+      "waitlistTitle": "Account on Waitlist",
+      "waitlistMessage": "Your account is currently on the waitlist. You will be notified when a spot becomes available.",
+      "reason": "Reason",
+      "expectedReturn": "Expected Return",
+      "contactSchool": "Please contact the school for assistance",
+      "noActions": "You cannot perform any actions while your account is inactive"
+    },
     "dashboard": {
       "title": "Dashboard",
       "welcomeMessage": "Welcome back!",
@@ -168,12 +183,15 @@
     "events": {
       "upcomingEvents": "Upcoming Events",
       "pastEvents": "Past Events",
+      "noUpcomingEvents": "No Upcoming Events",
+      "checkBackLater": "Check back later for new events",
       "registered": "Registered",
       "rejected": "Rejected",
       "pending": "Pending",
       "viewTicket": "View Ticket",
       "registerNow": "Register Now",
       "awaitingApproval": "Awaiting Approval",
+      "awaitingPayment": "Awaiting Payment",
       "registrationRejected": "Registration Rejected",
       "registrationClosed": "Registration Closed",
       "formNotAvailable": "Form Not Available",
@@ -181,7 +199,9 @@
       "closed": "Closed",
       "eventTicket": "Event Ticket",
       "registrationApproved": "Registration Approved",
-      "showTicketMessage": "Show this ticket at the event entrance"
+      "showTicketMessage": "Show this ticket at the event entrance",
+      "checkIn": "Check-in:",
+      "checkOut": "Check-out:"
     },
     "forms": {
       "activeForms": "Active Forms",
@@ -198,6 +218,15 @@
       "completed": "Completed",
       "questions": "questions",
       "notOpenYet": "This form is not open yet"
+    },
+    "activities": {
+      "title": "Events & Forms",
+      "events": "Events",
+      "forms": "Forms",
+      "eventsTitle": "School Events",
+      "eventsDescription": "Discover and register for upcoming school events and activities",
+      "formsTitle": "Active Forms",
+      "formsDescription": "Complete required forms and view your submissions"
     },
     "mockExam": {
       "title": "Mock Exam",
@@ -393,6 +422,11 @@
       "yearMobile": "Birth Year",
       "monthMobile": "Birth Month",
       "dayMobile": "Birth Day"
+    },
+    "subtitle": {
+      "year": "Choose the year you were born",
+      "month": "Select your birth month",
+      "day": "Pick your birth day"
     },
     "validation": {
       "incompleteFields": "Please complete all date fields",

@@ -1,6 +1,5 @@
 // app/_stores/mainSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Timestamp } from 'firebase/firestore';
 
 // Define the User type to allow for null values, as Firebase User properties can be null
 export interface User {
@@ -19,7 +18,7 @@ export interface AppNotification {
   title: string;
   body: string;
   link?: string;
-  createdAt: Timestamp;
+  createdAt: string; // Changed to string (ISO date) for serialization
   isRead: boolean;
 }
 

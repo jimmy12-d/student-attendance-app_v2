@@ -38,7 +38,7 @@ const QuestionTypeSelector: React.FC<QuestionTypeSelectorProps> = ({ selectedTyp
     <div className="relative nokora-font">
       <CustomCombobox
         options={options}
-        selectedValue=""
+        selectedValue={selectedType}
         onChange={onTypeChange}
         placeholder={placeholder}
         fieldData={{ className: "w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 pr-8 text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer placeholder:text-white" }}

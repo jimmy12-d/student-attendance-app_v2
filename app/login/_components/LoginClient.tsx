@@ -9,21 +9,38 @@ import SectionFullScreen from '../../_components/Section/FullScreen';
 import StudentSignIn from './StudentSignIn';
 import { usePWANavigation } from '../../_hooks/usePWANavigation';
 import { useAuthContext } from '../../_contexts/AuthContext';
+import LoadingScreen from '../../_components/LoadingScreen';
 
 const LoginClient = () => {
   const router = useRouter();
   const { navigateWithinPWA } = usePWANavigation();
   const { currentUser, isAuthenticated, userRole, isLoading } = useAuthContext();
-  const [checkingProfile, setCheckingProfile] = useState(false);
+  const [checkingProfile, setCheckingProfile] = useState(true); // Start as true to prevent flash
 
   useEffect(() => {
     const checkUserProfile = async () => {
-      // Only check profile if we're not currently loading auth state
-      if (isLoading) return;
+      // If still loading auth, keep showing loading
+      if (isLoading) {
+        setCheckingProfile(true);
+        return;
+      }
       
+      // IMMEDIATELY redirect if authenticated with role
+      if (isAuthenticated && userRole) {
+        setCheckingProfile(true); // Keep loading screen visible
+        // Don't stop checking - keep loading screen until navigation completes
+        if (userRole === 'admin') {
+          navigateWithinPWA('/dashboard', { replace: true });
+        } else if (userRole === 'teacher') {
+          navigateWithinPWA('/teacher', { replace: true });
+        } else if (userRole === 'student') {
+          navigateWithinPWA('/student/attendance', { replace: true });
+        }
+        return; // Don't set checkingProfile to false
+      }
+      
+      // Check if authenticated but no role (might be student)
       if (isAuthenticated && currentUser && !userRole) {
-        // User is authenticated but we don't know their role yet
-        // Check if they are a student with a complete profile
         setCheckingProfile(true);
         
         try {
@@ -36,43 +53,30 @@ const LoginClient = () => {
             const studentData = studentDoc.data();
 
             if (studentData && studentData.class && studentData.class !== 'Unassigned') {
-              // User has a complete profile, redirect them using PWA navigation
+              // User has a complete profile, redirect and keep loading
               navigateWithinPWA('/student/attendance', { replace: true });
-              return;
+              return; // Don't set checkingProfile to false
             }
           }
         } catch (error) {
           console.error('Error checking user profile:', error);
-        } finally {
-          setCheckingProfile(false);
         }
-      } else if (isAuthenticated && userRole) {
-        // User is authenticated and has a role, redirect to appropriate dashboard
-        if (userRole === 'admin') {
-          navigateWithinPWA('/dashboard', { replace: true });
-        } else if (userRole === 'teacher') {
-          navigateWithinPWA('/teacher', { replace: true });
-        } else if (userRole === 'student') {
-          navigateWithinPWA('/student/attendance', { replace: true });
-        }
+        // If we get here, user is authenticated but doesn't have valid profile
+        // Fall through to show login form
+      }
+      
+      // Only show login form if definitely not authenticated
+      if (!isAuthenticated && !isLoading) {
+        setCheckingProfile(false);
       }
     };
 
-    // Add a small delay to prevent race conditions with main page navigation
-    const timeoutId = setTimeout(checkUserProfile, 100);
-    
-    return () => clearTimeout(timeoutId);
+    checkUserProfile();
   }, [isAuthenticated, currentUser, userRole, isLoading, navigateWithinPWA]);
 
+  // Show loading screen while checking auth or profile
   if (isLoading || checkingProfile) {
-    // Show a loading indicator while we check for an active session.
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="text-center">
-          <p className="text-lg">Checking authentication...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen message="Checking authentication..." />;
   }
 
   return (

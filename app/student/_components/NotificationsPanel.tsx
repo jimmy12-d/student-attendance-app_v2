@@ -87,7 +87,16 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
                 snapshots.forEach(snapshot => {
                     snapshot.forEach(doc => {
                         if (!fetchedNotificationsMap.has(doc.id)) {
-                            fetchedNotificationsMap.set(doc.id, { id: doc.id, ...doc.data() } as AppNotification);
+                            const data = doc.data();
+                            // Only pick the fields we need and convert Timestamps to ISO strings
+                            fetchedNotificationsMap.set(doc.id, { 
+                                id: doc.id, 
+                                title: data.title,
+                                body: data.body,
+                                link: data.link,
+                                createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+                                isRead: false // Will be updated below
+                            } as AppNotification);
                         }
                     });
                 });
@@ -103,7 +112,7 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
                 }));
 
                 // Sort by creation date
-                const sortedNotifications = finalNotifications.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+                const sortedNotifications = finalNotifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
                 dispatch(setNotifications(sortedNotifications));
             } catch (error) {
@@ -246,7 +255,7 @@ const NotificationsPanel = ({ isVisible, onClose }: { isVisible: boolean, onClos
                             </div>
                             <p className="text-xs text-slate-300 mt-1">{notif.body}</p>
                             <p className="text-xs text-slate-500 mt-2">
-                                <TimeAgo date={notif.createdAt.toDate()} live={false} />
+                                <TimeAgo date={new Date(notif.createdAt)} live={false} />
                             </p>
                         </div>
                     ))

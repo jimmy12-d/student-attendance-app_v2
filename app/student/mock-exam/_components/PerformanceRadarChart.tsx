@@ -31,6 +31,7 @@ interface PerformanceRadarChartProps {
   allMockData: AllMockData;
   studentClassType?: string | null;
   allExamSettings?: { [mockName: string]: ExamSettings };
+  mockReadiness?: { [mockId: string]: boolean };
 }
 
 const SUBJECT_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history'];
@@ -132,7 +133,7 @@ const CustomLegend = ({ datasets, totals, toggleDataset, hiddenDatasets }: any) 
     );
 };
 
-const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, studentClassType, allExamSettings }) => {
+const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, studentClassType, allExamSettings, mockReadiness }) => {
   const [hiddenDatasets, setHiddenDatasets] = useState<string[]>([]);
 
   const toggleDataset = (label: string) => {
@@ -177,6 +178,9 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
     Object.entries(allMockData).forEach(([mockKey, scores]) => {
         if (!scores) return;
 
+        // Don't display results if isReadyToPublishedResult is false
+        if (mockReadiness && mockReadiness[mockKey] === false) return;
+
         const mockLabel = `Mock ${mockKey.replace('mock', '')}`;
         const color = MOCK_COLORS[mockKey as keyof typeof MOCK_COLORS] || 'rgba(255, 255, 255, 1)';
         const settingsForMock = allExamSettings?.[mockKey];
@@ -202,7 +206,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
     });
 
     return { labels, datasets };
-  }, [allMockData, hiddenDatasets, studentClassType, allExamSettings]);
+  }, [allMockData, hiddenDatasets, studentClassType, allExamSettings, mockReadiness]);
   
   const chartOptions: any = {
     maintainAspectRatio: false,

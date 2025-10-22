@@ -34,6 +34,7 @@ interface MockExamResultsProps {
   seatInfo: string | null;
   phoneInfo: string | null;
   studentName?: string;
+  isReadyToPublishResult: boolean;
 }
 
 const capitalize = (s: string) => {
@@ -56,7 +57,10 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
   SUBJECT_ORDER,
   SOCIAL_STUDIES_LABELS,
   studentName,
+  isReadyToPublishResult,
 }) => {
+
+  // Real-time readiness is now managed by parent component
   const getGradeDependentStyles = (grade: string) => {
     switch (grade) {
         case 'A': return {
@@ -118,6 +122,13 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
       <ExamTabs tabs={availableTabs} selectedTab={selectedTab} setSelectedTab={handleTabChange} disabled={isExamLoading} />
       {isExamLoading ? (
         <div className="text-center text-gray-400 p-8">Loading scores...</div>
+      ) : !isReadyToPublishResult ? (
+        <div className="text-center text-yellow-400 bg-yellow-500/10 py-8 px-6 border border-yellow-500/30 rounded-2xl">
+          <p className="font-bold text-lg">Results Not Available</p>
+          <p className="mt-2 text-sm">
+            The results for this mock exam are not yet ready to be published.
+          </p>
+        </div>
       ) : (
         <>
           <div className="space-y-6">

@@ -4,7 +4,8 @@ import {
   mdiCalendarStar, 
   mdiPoll, 
   mdiCommentQuote, 
-  mdiFormSelect 
+  mdiFormSelect,
+  mdiBookOpenPageVariant
 } from "@mdi/js";
 import { FormType } from "@/app/_interfaces/forms";
 
@@ -29,13 +30,13 @@ export const FORM_TYPES: FormTypeConfig[] = [
     description: 'Daily attendance and class registration'
   },
   {
-    value: 'mock_register',
-    label: 'Mock Exam Register',
-    icon: mdiSchool,
-    color: 'text-purple-600 dark:text-purple-400',
-    bgColor: 'bg-purple-50',
-    darkBgColor: 'dark:bg-purple-900/20',
-    description: 'Mock exam attendance registration'
+    value: 'mock_exam',
+    label: 'Mock Exam',
+    icon: mdiBookOpenPageVariant,
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bgColor: 'bg-indigo-50',
+    darkBgColor: 'dark:bg-indigo-900/20',
+    description: 'Mock exam questions and answers'
   },
   {
     value: 'event',

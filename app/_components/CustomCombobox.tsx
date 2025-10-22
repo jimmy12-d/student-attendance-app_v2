@@ -19,6 +19,7 @@ interface Props {
   placeholder?: string;
   id?: string;
   fieldData?: { className?: string };
+  editable?: boolean; // If true, allows custom input; defaults to true for backward compatibility
 }
 
 const CustomCombobox: React.FC<Props> = ({
@@ -28,6 +29,7 @@ const CustomCombobox: React.FC<Props> = ({
   placeholder = "Select or type an option...",
   id,
   fieldData,
+  editable = true, // Default to true for backward compatibility
 }) => {
   const [query, setQuery] = useState('');
 
@@ -41,10 +43,10 @@ const CustomCombobox: React.FC<Props> = ({
             .includes(query.toLowerCase().replace(/\s+/g, ''))
         );
 
-  const displayValue = () => {
-    if (!selectedValue) return '';
-    const selectedOption = options.find(opt => opt.value === selectedValue);
-    return selectedOption ? selectedOption.label : selectedValue;
+  const displayValue = (value: string) => {
+    if (!value) return '';
+    const selectedOption = options.find(opt => opt.value === value);
+    return selectedOption ? selectedOption.label : value;
   };
 
   const getSelectedIcon = () => {
@@ -61,34 +63,56 @@ const CustomCombobox: React.FC<Props> = ({
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = event.target.value;
     setQuery(newValue);
-    onChange(newValue); // Allow free text input
+    if (editable) {
+      onChange(newValue); // Allow free text input when editable
+    }
   };
 
-  const defaultInputClasses = "w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-left cursor-default focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm dark:bg-slate-800 dark:border-gray-600 dark:text-white";
+  const defaultInputClasses = editable 
+    ? "w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-left cursor-default focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm dark:bg-slate-800 dark:border-gray-600 dark:text-white"
+    : "w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-left cursor-default focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm dark:bg-slate-800 dark:border-gray-600 dark:text-white bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors";
+  
+  const buttonLikeClasses = !editable 
+    ? "w-full bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg px-4 py-2.5 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 flex items-center justify-between text-white"
+    : "";
+  
   const finalInputClasses = fieldData?.className
     ? fieldData.className
-    : defaultInputClasses;
+    : editable ? defaultInputClasses : buttonLikeClasses;
 
   return (
     <div className="relative w-full">
       <Combobox value={selectedValue} onChange={handleSelection}>
         <div className="relative">
-          <Combobox.Input
-            id={id}
-            className={`${finalInputClasses} ${getSelectedIcon() ? 'pl-8' : ''}`}
-            value={selectedValue}
-            onChange={handleInputChange}
-            placeholder={placeholder}
-            displayValue={displayValue}
-          />
-          {getSelectedIcon() && (
-            <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
-              <Icon path={getSelectedIcon()!} w="w-4 h-4" className="text-gray-500" />
-            </div>
+          {editable ? (
+            <>
+              <Combobox.Input
+                id={id}
+                className={`${finalInputClasses} ${getSelectedIcon() ? 'pl-8' : ''}`}
+                onChange={handleInputChange}
+                placeholder={placeholder}
+                displayValue={displayValue}
+                readOnly={!editable}
+              />
+              {getSelectedIcon() && (
+                <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                  <Icon path={getSelectedIcon()!} w="w-4 h-4" className="text-gray-500" />
+                </div>
+              )}
+              <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
+                <Icon path={mdiChevronDown} w="w-5 h-5" className="text-gray-400" />
+              </Combobox.Button>
+            </>
+          ) : (
+            <Combobox.Button className={finalInputClasses}>
+              <div className="flex items-center justify-between w-full">
+                <span className="block truncate text-white">
+                  {selectedValue ? displayValue(selectedValue) : placeholder}
+                </span>
+                <Icon path={mdiChevronDown} w="w-5 h-5" className="text-gray-400 ml-2 flex-shrink-0" />
+              </div>
+            </Combobox.Button>
           )}
-          <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
-            <Icon path={mdiChevronDown} w="w-5 h-5" className="text-gray-400" />
-          </Combobox.Button>
         </div>
         <Transition
           as={Fragment}
@@ -98,7 +122,7 @@ const CustomCombobox: React.FC<Props> = ({
           afterLeave={() => setQuery('')}
         >
           <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm dark:bg-gray-700">
-            {filteredOptions.length === 0 && query !== '' ? (
+            {filteredOptions.length === 0 && query !== '' && editable ? (
               <Combobox.Option
                 key="custom-option"
                 className={({ active }) =>
@@ -116,7 +140,7 @@ const CustomCombobox: React.FC<Props> = ({
                           selected ? 'font-medium' : 'font-normal'
                         }`}
                       >
-                        "{query}"
+                        Create "{query}"
                       </span>
                     </div>
                     {selectedValue === query ? (

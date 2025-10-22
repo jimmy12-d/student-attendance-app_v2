@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { toast } from "sonner";
 import Icon from "@/app/_components/Icon";
+import CustomCombobox, { ComboboxOption } from "@/app/_components/CustomCombobox";
 import { 
   mdiArrowLeft,
   mdiAccount,
@@ -34,7 +35,14 @@ import {
   mdiClockOut,
   mdiPencil,
   mdiDelete,
-  mdiDotsVertical
+  mdiDotsVertical,
+  mdiStar,
+  mdiTag,
+  mdiCurrencyUsd,
+  mdiHandCoin,
+  mdiCreditCard,
+  mdiChevronDown,
+  mdiCart
 } from "@mdi/js";
 import AddStudentModal from "./AddStudentModal";
 
@@ -55,6 +63,17 @@ interface FormResponse {
   responses: Record<string, any>;
   submittedAt: Timestamp | Date;
   registrationStatus?: 'pending' | 'approved' | 'rejected';
+  paymentStatus?: 'unpaid' | 'paid' | 'borrowed';
+  pricingOptionId?: string; // Which pricing tier they selected
+  amountPaid?: {
+    stars?: number;
+    money?: number;
+  };
+  borrowAmount?: {
+    stars?: number;
+    money?: number;
+  };
+  paidAt?: Timestamp | Date;
 }
 
 interface Event {
@@ -64,6 +83,18 @@ interface Event {
   formId: string;
   formTitle?: string;
   ticketImageUrl: string;
+  isFree?: boolean;
+  pricingOptions?: Array<{
+    id: string;
+    type?: 'stars' | 'money' | 'combo';
+    starPrice?: number;
+    moneyPrice?: number;
+    starWithMoney?: { stars: number; money: number };
+    stock?: number;
+    soldCount?: number;
+  }>;
+  allowBorrow?: boolean;
+  isTakeAttendance?: boolean; // Whether to show clock in/out buttons
 }
 
 interface AttendanceRecord {
@@ -94,6 +125,22 @@ const EventRegistrationsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingAttendance, setEditingAttendance] = useState<{studentId: string, studentName: string, record: AttendanceRecord} | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [selectedPricingOptions, setSelectedPricingOptions] = useState<Record<string, string>>({});
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
+  const [showBorrowOptions, setShowBorrowOptions] = useState(false);
+  const [paymentModal, setPaymentModal] = useState<{
+    registrationId: string;
+    pricingOptions: any[];
+    selectedOptionId: string;
+    totalStars: number;
+    totalMoney: number;
+  } | null>(null);
+  const [paymentForm, setPaymentForm] = useState({
+    paidStars: 0,
+    paidMoney: 0,
+    borrowedStars: 0,
+    borrowedMoney: 0
+  });
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -233,6 +280,202 @@ const EventRegistrationsPage = () => {
     } catch (error) {
       console.error("Error rejecting registration:", error);
       toast.error("Failed to reject registration");
+    }
+  };
+
+  const selectPricingOption = (registrationId: string, optionId: string) => {
+    setSelectedPricingOptions(prev => ({
+      ...prev,
+      [registrationId]: optionId
+    }));
+    toast.success("Pricing option selected! You can now record payment.");
+  };
+
+  const openPaymentModal = (registrationId: string) => {
+    const selectedOptionId = selectedPricingOptions[registrationId];
+    if (!selectedOptionId) {
+      toast.error("Please select a pricing option first");
+      return;
+    }
+
+    if (!event?.pricingOptions) return;
+    
+    const selectedOption = event.pricingOptions.find(opt => opt.id === selectedOptionId);
+    if (!selectedOption) {
+      toast.error("Selected pricing option not found");
+      return;
+    }
+
+    // Check if option is still available
+    const isOutOfStock = selectedOption.stock !== undefined && (selectedOption.soldCount || 0) >= selectedOption.stock;
+    if (isOutOfStock) {
+      toast.error("Selected option is no longer available");
+      return;
+    }
+
+    setPaymentModal({
+      registrationId,
+      pricingOptions: [selectedOption], // Only show the selected option
+      selectedOptionId: selectedOption.id,
+      totalStars: selectedOption.starPrice || selectedOption.starWithMoney?.stars || 0,
+      totalMoney: selectedOption.moneyPrice || selectedOption.starWithMoney?.money || 0
+    });
+
+    // Reset form with full payment as default
+    setPaymentForm({
+      paidStars: selectedOption.starPrice || selectedOption.starWithMoney?.stars || 0,
+      paidMoney: selectedOption.moneyPrice || selectedOption.starWithMoney?.money || 0,
+      borrowedStars: 0,
+      borrowedMoney: 0
+    });
+
+    // Reset borrow options visibility
+    setShowBorrowOptions(false);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!paymentModal || !event?.pricingOptions) return;
+
+    const { registrationId, selectedOptionId, totalStars, totalMoney } = paymentModal;
+
+    // Validate that paid + borrowed = total
+    const totalPaidStars = paymentForm.paidStars + paymentForm.borrowedStars;
+    const totalPaidMoney = paymentForm.paidMoney + paymentForm.borrowedMoney;
+
+    if (totalPaidStars !== totalStars || totalPaidMoney !== totalMoney) {
+      toast.error("Paid + Borrowed amounts must equal the total price");
+      return;
+    }
+
+    setProcessingPayment(registrationId);
+    try {
+      const selectedOption = event.pricingOptions.find(opt => opt.id === selectedOptionId);
+      if (!selectedOption) {
+        toast.error("Selected pricing option not found");
+        return;
+      }
+
+      const amountPaid = {
+        stars: paymentForm.paidStars,
+        money: paymentForm.paidMoney
+      };
+
+      const borrowAmount = {
+        stars: paymentForm.borrowedStars,
+        money: paymentForm.borrowedMoney
+      };
+
+      // Determine payment status
+      let paymentStatus: 'paid' | 'borrowed' | 'unpaid' = 'paid';
+      if (borrowAmount.stars > 0 || borrowAmount.money > 0) {
+        paymentStatus = 'borrowed';
+      }
+
+      // Update registration with payment info
+      await updateDoc(doc(db, "form_responses", registrationId), {
+        pricingOptionId: selectedOptionId,
+        paymentStatus: paymentStatus,
+        amountPaid: amountPaid,
+        borrowAmount: borrowAmount,
+        paidAt: Timestamp.now(),
+        registrationStatus: 'approved'
+      });
+
+      // Update stock count
+      if (selectedOption.stock !== undefined) {
+        const eventRef = doc(db, "events", event.id);
+        const updatedOptions = event.pricingOptions.map(opt => {
+          if (opt.id === selectedOptionId) {
+            return { ...opt, soldCount: (opt.soldCount || 0) + 1 };
+          }
+          return opt;
+        });
+        await updateDoc(eventRef, {
+          pricingOptions: updatedOptions
+        });
+      }
+
+      toast.success("Payment recorded successfully");
+      setPaymentModal(null);
+    } catch (error) {
+      console.error("Error processing payment:", error);
+      toast.error("Failed to process payment");
+    } finally {
+      setProcessingPayment(null);
+    }
+  };
+
+  const handleBuyOption = async (registrationId: string, pricingOptionId: string, isBorrow: boolean = false) => {
+    if (!event?.pricingOptions) return;
+
+    setProcessingPayment(registrationId);
+    try {
+      const selectedOption = event.pricingOptions.find(opt => opt.id === pricingOptionId);
+      if (!selectedOption) {
+        toast.error("Pricing option not found");
+        return;
+      }
+
+      // Calculate amounts
+      let amountPaid = { stars: 0, money: 0 };
+      let borrowAmount = { stars: 0, money: 0 };
+
+      if (isBorrow) {
+        // If borrowing, set borrow amounts
+        if (selectedOption.starPrice !== undefined) {
+          borrowAmount.stars = selectedOption.starPrice;
+        }
+        if (selectedOption.moneyPrice !== undefined) {
+          borrowAmount.money = selectedOption.moneyPrice;
+        }
+        if (selectedOption.starWithMoney) {
+          borrowAmount.stars = selectedOption.starWithMoney.stars;
+          borrowAmount.money = selectedOption.starWithMoney.money;
+        }
+      } else {
+        // If paying, set paid amounts
+        if (selectedOption.starPrice !== undefined) {
+          amountPaid.stars = selectedOption.starPrice;
+        }
+        if (selectedOption.moneyPrice !== undefined) {
+          amountPaid.money = selectedOption.moneyPrice;
+        }
+        if (selectedOption.starWithMoney) {
+          amountPaid.stars = selectedOption.starWithMoney.stars;
+          amountPaid.money = selectedOption.starWithMoney.money;
+        }
+      }
+
+      // Update registration with payment info
+      await updateDoc(doc(db, "form_responses", registrationId), {
+        pricingOptionId: pricingOptionId,
+        paymentStatus: isBorrow ? 'borrowed' : 'paid',
+        amountPaid: amountPaid,
+        borrowAmount: borrowAmount,
+        paidAt: Timestamp.now(),
+        registrationStatus: 'approved'
+      });
+
+      // Update stock count
+      if (selectedOption.stock !== undefined) {
+        const eventRef = doc(db, "events", event.id);
+        const updatedOptions = event.pricingOptions.map(opt => {
+          if (opt.id === pricingOptionId) {
+            return { ...opt, soldCount: (opt.soldCount || 0) + 1 };
+          }
+          return opt;
+        });
+        await updateDoc(eventRef, {
+          pricingOptions: updatedOptions
+        });
+      }
+
+      toast.success(isBorrow ? "Payment borrowed successfully" : "Payment completed successfully");
+    } catch (error) {
+      console.error("Error processing payment:", error);
+      toast.error("Failed to process payment");
+    } finally {
+      setProcessingPayment(null);
     }
   };
 
@@ -693,7 +936,7 @@ const EventRegistrationsPage = () => {
       {/* Combined Filters */}
       <div className="max-w-7xl mx-auto mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className={`grid grid-cols-1 ${(event?.isTakeAttendance === true || event?.isTakeAttendance === undefined) ? 'lg:grid-cols-2' : ''} gap-6`}>
             {/* Registration Status */}
             <div>
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
@@ -717,43 +960,45 @@ const EventRegistrationsPage = () => {
               </div>
             </div>
 
-            {/* Attendance Status */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                <Icon path={mdiClockOutline} size={18} />
-                Attendance Status
-              </h3>
-              <div className="flex gap-2 flex-wrap">
-                {([
-                  { value: 'all', label: 'All', count: registrations.length, color: 'gray' },
-                  { value: 'not-clocked-in', label: 'Not Clocked In', count: notClockedInCount, color: 'red' },
-                  { value: 'clocked-in', label: 'Clocked In', count: clockedInCount, color: 'green' },
-                  { value: 'clocked-out', label: 'Clocked Out', count: clockedOutCount, color: 'blue' },
-                ] as const).map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setAttendanceFilter(option.value)}
-                    className={`px-3 py-2 rounded-lg font-medium transition-all flex items-center gap-2 text-sm ${
-                      attendanceFilter === option.value
-                        ? option.color === 'gray' ? 'bg-gray-600 text-white shadow-md' :
-                          option.color === 'red' ? 'bg-red-600 text-white shadow-md' :
-                          option.color === 'green' ? 'bg-green-600 text-white shadow-md' :
-                          'bg-blue-600 text-white shadow-md'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    <span>{option.label}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                      attendanceFilter === option.value
-                        ? 'bg-white/20 text-white'
-                        : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
-                    }`}>
-                      {option.count}
-                    </span>
-                  </button>
-                ))}
+            {/* Attendance Status - Only show if attendance tracking is enabled */}
+            {(event?.isTakeAttendance === true || event?.isTakeAttendance === undefined) && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                  <Icon path={mdiClockOutline} size={18} />
+                  Attendance Status
+                </h3>
+                <div className="flex gap-2 flex-wrap">
+                  {([
+                    { value: 'all', label: 'All', count: registrations.length, color: 'gray' },
+                    { value: 'not-clocked-in', label: 'Not Clocked In', count: notClockedInCount, color: 'red' },
+                    { value: 'clocked-in', label: 'Clocked In', count: clockedInCount, color: 'green' },
+                    { value: 'clocked-out', label: 'Clocked Out', count: clockedOutCount, color: 'blue' },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setAttendanceFilter(option.value)}
+                      className={`px-3 py-2 rounded-lg font-medium transition-all flex items-center gap-2 text-sm ${
+                        attendanceFilter === option.value
+                          ? option.color === 'gray' ? 'bg-gray-600 text-white shadow-md' :
+                            option.color === 'red' ? 'bg-red-600 text-white shadow-md' :
+                            option.color === 'green' ? 'bg-green-600 text-white shadow-md' :
+                            'bg-blue-600 text-white shadow-md'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      <span>{option.label}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                        attendanceFilter === option.value
+                          ? 'bg-white/20 text-white'
+                          : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
+                      }`}>
+                        {option.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -807,7 +1052,7 @@ const EventRegistrationsPage = () => {
               return (
               <div
                 key={registration.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 px-6 py-4 hover:shadow-md transition-shadow"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   {/* Student Info */}
@@ -825,6 +1070,7 @@ const EventRegistrationsPage = () => {
                           {registration.shift && ` · ${registration.shift}`}
                         </p>
                       </div>
+                      {getStatusBadge(registration.registrationStatus)}
                     </div>
 
                     <div className="space-y-1 ml-15">
@@ -834,63 +1080,65 @@ const EventRegistrationsPage = () => {
                       </div>
 
                       {/* Attendance Status */}
-                      <div className="flex items-center gap-2">
-                        <div className={`px-3 py-1 ${attendanceStatus.bgColor} rounded-lg flex items-center gap-2`}>
-                          <Icon path={mdiClockOutline} size={14} className={attendanceStatus.color} />
-                          <span className={`text-sm font-medium ${attendanceStatus.color}`}>
-                            {attendanceStatus.text}
-                          </span>
-                        </div>
-                        
-                        {/* Edit/Delete Menu for clocked-in or clocked-out students */}
-                        {(attendanceStatus.status === 'clocked-in' || attendanceStatus.status === 'clocked-out') && (
-                          <div className="relative attendance-menu">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(openMenuId === registration.studentId ? null : registration.studentId);
-                              }}
-                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                              title="Manage attendance"
-                            >
-                              <Icon path={mdiDotsVertical} size={16} className="text-gray-600 dark:text-gray-400" />
-                            </button>
-                            
-                            {openMenuId === registration.studentId && (
-                              <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-10 min-w-[180px]">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const record = attendance.find(att => att.studentId === registration.studentId);
-                                    if (record) {
-                                      setEditingAttendance({
-                                        studentId: registration.studentId,
-                                        studentName: registration.studentName,
-                                        record
-                                      });
-                                      setOpenMenuId(null);
-                                    }
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2 text-gray-700 dark:text-gray-300 rounded-t-lg"
-                                >
-                                  <Icon path={mdiPencil} size={16} />
-                                  Edit Times
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteAttendance(registration.studentId, registration.studentName);
-                                  }}
-                                  className="w-full px-4 py-2 text-left text-sm hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-2 text-red-600 dark:text-red-400 rounded-b-lg"
-                                >
-                                  <Icon path={mdiDelete} size={16} />
-                                  Remove Record
-                                </button>
-                              </div>
-                            )}
+                      {(event?.isTakeAttendance === true || event?.isTakeAttendance === undefined) && (
+                        <div className="flex items-center gap-2">
+                          <div className={`px-3 py-1 ${attendanceStatus.bgColor} rounded-lg flex items-center gap-2`}>
+                            <Icon path={mdiClockOutline} size={14} className={attendanceStatus.color} />
+                            <span className={`text-sm font-medium ${attendanceStatus.color}`}>
+                              {attendanceStatus.text}
+                            </span>
                           </div>
-                        )}
-                      </div>
+                          
+                          {/* Edit/Delete Menu for clocked-in or clocked-out students */}
+                          {(attendanceStatus.status === 'clocked-in' || attendanceStatus.status === 'clocked-out') && (
+                            <div className="relative attendance-menu">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuId(openMenuId === registration.studentId ? null : registration.studentId);
+                                }}
+                                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                                title="Manage attendance"
+                              >
+                                <Icon path={mdiDotsVertical} size={16} className="text-gray-600 dark:text-gray-400" />
+                              </button>
+                              
+                              {openMenuId === registration.studentId && (
+                                <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-700 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 z-10 min-w-[180px]">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const record = attendance.find(att => att.studentId === registration.studentId);
+                                      if (record) {
+                                        setEditingAttendance({
+                                          studentId: registration.studentId,
+                                          studentName: registration.studentName,
+                                          record
+                                        });
+                                        setOpenMenuId(null);
+                                      }
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-600 flex items-center gap-2 text-gray-700 dark:text-gray-300 rounded-t-lg"
+                                  >
+                                    <Icon path={mdiPencil} size={16} />
+                                    Edit Times
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteAttendance(registration.studentId, registration.studentName);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-2 text-red-600 dark:text-red-400 rounded-b-lg"
+                                  >
+                                    <Icon path={mdiDelete} size={16} />
+                                    Remove Record
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Response Details */}
@@ -915,10 +1163,221 @@ const EventRegistrationsPage = () => {
 
                   {/* Status and Actions */}
                   <div className="flex flex-col items-end gap-3">
-                    {getStatusBadge(registration.registrationStatus)}
                     
-                    {/* Manual Clock-In/Out Button - Hide if pending or already clocked out */}
-                    {registration.registrationStatus === 'approved' && attendanceStatus.status !== "clocked-out" && (
+                    {/* Payment Information - Show for paid events */}
+                    {!event?.isFree && event?.pricingOptions && event.pricingOptions.length > 0 && (
+                      <div className="w-full max-w-xs">
+                        {/* Show payment details if approved/rejected or if pending and has selected option */}
+                        {(registration.registrationStatus === 'approved' || registration.registrationStatus === 'rejected' || registration.pricingOptionId) && registration.pricingOptionId && (() => {
+                          const selectedOption = event.pricingOptions?.find(opt => opt.id === registration.pricingOptionId);
+                          if (!selectedOption) return null;
+                          
+                          // Calculate total price
+                          const totalPrice = {
+                            stars: selectedOption.starPrice || selectedOption.starWithMoney?.stars || 0,
+                            money: selectedOption.moneyPrice || selectedOption.starWithMoney?.money || 0
+                          };
+                          
+                          // Calculate paid amount
+                          const paidAmount = {
+                            stars: registration.amountPaid?.stars || 0,
+                            money: registration.amountPaid?.money || 0
+                          };
+                          
+                          // Calculate borrowed amount
+                          const borrowedAmount = {
+                            stars: registration.borrowAmount?.stars || 0,
+                            money: registration.borrowAmount?.money || 0
+                          };
+                          
+                          // Calculate remaining (what's still owed)
+                          const remainingAmount = {
+                            stars: totalPrice.stars - paidAmount.stars - borrowedAmount.stars,
+                            money: totalPrice.money - paidAmount.money - borrowedAmount.money
+                          };
+                          
+                          return (
+                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                              <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                <Icon path={mdiCreditCard} size={14} className="inline mr-1" />
+                                Payment Details
+                              </h4>
+                              
+                              {/* Payment Status */}
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs text-gray-600 dark:text-gray-400">Status:</span>
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                  registration.paymentStatus === 'paid' 
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                    : registration.paymentStatus === 'borrowed'
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                                    : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                                }`}>
+                                  {registration.paymentStatus === 'paid' ? '✓ Paid' : 
+                                   registration.paymentStatus === 'borrowed' ? 'Borrowed' : 
+                                   'Unpaid'}
+                                </span>
+                              </div>
+
+                              {/* Total Price */}
+                              <div className="mb-2 pb-2 border-b border-gray-200 dark:border-gray-600">
+                                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 font-semibold">Total Price:</div>
+                                <div className="flex flex-wrap gap-2">
+                                  {totalPrice.stars > 0 && (
+                                    <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded font-semibold">
+                                      <Icon path={mdiStar} size={12} />
+                                      {totalPrice.stars} stars
+                                    </div>
+                                  )}
+                                  {totalPrice.money > 0 && (
+                                    <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded font-semibold">
+                                      <Icon path={mdiCurrencyUsd} size={12} />
+                                      ${totalPrice.money.toFixed(2)}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Amount Paid */}
+                              {(paidAmount.stars > 0 || paidAmount.money > 0) && (
+                                <div className="mb-2">
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Amount Paid:</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {paidAmount.stars > 0 && (
+                                      <div className="flex items-center gap-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded">
+                                        <Icon path={mdiStar} size={12} />
+                                        {paidAmount.stars} stars
+                                      </div>
+                                    )}
+                                    {paidAmount.money > 0 && (
+                                      <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                                        <Icon path={mdiCurrencyUsd} size={12} />
+                                        ${paidAmount.money.toFixed(2)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Borrowed Amount */}
+                              {(borrowedAmount.stars > 0 || borrowedAmount.money > 0) && (
+                                <div className="mb-2">
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                    <Icon path={mdiHandCoin} size={12} className="inline mr-1" />
+                                    Borrowed:
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {borrowedAmount.stars > 0 && (
+                                      <div className="flex items-center gap-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded">
+                                        <Icon path={mdiStar} size={12} />
+                                        {borrowedAmount.stars} stars
+                                      </div>
+                                    )}
+                                    {borrowedAmount.money > 0 && (
+                                      <div className="flex items-center gap-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded">
+                                        <Icon path={mdiCurrencyUsd} size={12} />
+                                        ${borrowedAmount.money.toFixed(2)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Remaining Amount (if any) */}
+                              {(remainingAmount.stars > 0 || remainingAmount.money > 0) && (
+                                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 font-semibold">Amount Left to Pay:</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {remainingAmount.stars > 0 && (
+                                      <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-1 rounded font-semibold">
+                                        <Icon path={mdiStar} size={12} />
+                                        {remainingAmount.stars} stars
+                                      </div>
+                                    )}
+                                    {remainingAmount.money > 0 && (
+                                      <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-1 rounded font-semibold">
+                                        <Icon path={mdiCurrencyUsd} size={12} />
+                                        ${remainingAmount.money.toFixed(2)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                        
+                        {/* Simple Pricing Option Selector */}
+                        {(!registration.registrationStatus || registration.registrationStatus === 'pending') && !registration.pricingOptionId && (
+                          <div className="space-y-3">
+                            {/* Enhanced Pricing Option Selector */}
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl px-4 py-2 border border-blue-200 dark:border-blue-800 shadow-sm">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Icon path={mdiTag} size={16} className="text-blue-600 dark:text-blue-400" />
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">Choose Options</span>
+                              </div>
+                              <CustomCombobox
+                                options={event.pricingOptions
+                                  .filter(option => {
+                                    const isOutOfStock = option.stock !== undefined && (option.soldCount || 0) >= option.stock;
+                                    return !isOutOfStock;
+                                  })
+                                  .map((option): ComboboxOption => {
+                                    let label = '';
+                                    if (option.type === 'stars') {
+                                      label = `${option.starPrice} stars`;
+                                    } else if (option.type === 'money') {
+                                      label = `$${option.moneyPrice?.toFixed(2)}`;
+                                    } else if (option.type === 'combo') {
+                                      label = `${option.starWithMoney?.stars} stars + $${option.starWithMoney?.money?.toFixed(2)}`;
+                                    }
+
+                                    const stockLeft = option.stock !== undefined ? option.stock - (option.soldCount || 0) : null;
+                                    if (stockLeft !== null) {
+                                      label += ` (${stockLeft} left)`;
+                                    }
+
+                                    return {
+                                      value: option.id,
+                                      label: label
+                                    };
+                                  })}
+                                selectedValue={selectedPricingOptions[registration.id] || ''}
+                                onChange={(optionId) => {
+                                  if (optionId) {
+                                    selectPricingOption(registration.id, optionId);
+                                  } else {
+                                    // Clear selection
+                                    setSelectedPricingOptions(prev => {
+                                      const newState = { ...prev };
+                                      delete newState[registration.id];
+                                      return newState;
+                                    });
+                                  }
+                                }}
+                                placeholder="Pay"
+                                editable={false}
+                              />
+                            </div>
+
+                            {/* Record Payment Button - Only show if option is selected */}
+                            {selectedPricingOptions[registration.id] && (
+                              <button
+                                onClick={() => openPaymentModal(registration.id)}
+                                disabled={processingPayment === registration.id}
+                                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <Icon path={mdiCreditCard} size={16} className="inline mr-2" />
+                                {processingPayment === registration.id ? 'Processing...' : 'Record Payment'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Manual Clock-In/Out Button - Only show if attendance tracking is enabled */}
+                    {(event?.isTakeAttendance === true || event?.isTakeAttendance === undefined) && registration.registrationStatus === 'approved' && attendanceStatus.status !== "clocked-out" && (
                       <>
                         {attendanceStatus.status === "clocked-in" ? (
                           <button
@@ -942,7 +1401,8 @@ const EventRegistrationsPage = () => {
                       </>
                     )}
                     
-                    {(!registration.registrationStatus || registration.registrationStatus === 'pending') && (
+                    {/* Approve/Reject buttons - Only show for free events or when registration is pending */}
+                    {(!registration.registrationStatus || registration.registrationStatus === 'pending') && event?.isFree && (
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleApprove(registration.id)}
@@ -1096,6 +1556,243 @@ const EventRegistrationsPage = () => {
         eventDate={event.date}
         existingRegistrations={registrations}
       />
+
+      {/* Payment Modal */}
+      {paymentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                Record Payment
+              </h3>
+
+              {/* Total Price Display */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-5 mb-6 border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <Icon path={mdiCreditCard} size={20} className="text-blue-600 dark:text-blue-400" />
+                  <h4 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Total Price
+                  </h4>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {paymentModal.totalStars > 0 && (
+                    <div className="flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200 px-4 py-2 rounded-lg font-bold text-lg shadow-sm">
+                      <Icon path={mdiStar} size={20} />
+                      {paymentModal.totalStars} stars
+                    </div>
+                  )}
+                  {paymentModal.totalMoney > 0 && (
+                    <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-200 px-4 py-2 rounded-lg font-bold text-lg shadow-sm">
+                      <Icon path={mdiCurrencyUsd} size={20} />
+                      ${paymentModal.totalMoney.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Payment Form */}
+              <div className="space-y-6">
+                {/* Quick Pay Section - Only show when partial options are hidden */}
+                {!showBorrowOptions && (
+                  <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Icon path={mdiCreditCard} size={18} className="text-blue-600 dark:text-blue-400" />
+                      <h5 className="font-semibold text-gray-900 dark:text-white">Quick Payment</h5>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Pay the full amount now to complete registration
+                    </p>
+                    <button
+                      onClick={() => {
+                        setPaymentForm({
+                          paidStars: paymentModal.totalStars,
+                          paidMoney: paymentModal.totalMoney,
+                          borrowedStars: 0,
+                          borrowedMoney: 0
+                        });
+                        handleConfirmPayment();
+                      }}
+                      disabled={processingPayment === paymentModal.registrationId}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {processingPayment === paymentModal.registrationId ? 'Processing...' : 'Pay Full Amount'}
+                    </button>
+                  </div>
+                )}
+
+                {/* Partial Payment Toggle */}
+                <div className="text-center">
+                  <button
+                    onClick={() => setShowBorrowOptions(!showBorrowOptions)}
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                  >
+                    {showBorrowOptions ? 'Hide' : 'Show'} partial payment options
+                  </button>
+                </div>
+
+                {/* Partial Payment Section - Only show when toggled */}
+                {showBorrowOptions && (
+                  <>
+                    {/* Stars Payment Section */}
+                    {paymentModal.totalStars > 0 && (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Icon path={mdiStar} size={18} className="text-yellow-600 dark:text-yellow-400" />
+                          <h5 className="font-semibold text-gray-900 dark:text-white">Star Payment</h5>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Stars Paid Now
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max={paymentModal.totalStars}
+                              value={paymentForm.paidStars || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const paid = value === '' ? 0 : Math.min(Number(value) || 0, paymentModal.totalStars);
+                                setPaymentForm(prev => ({
+                                  ...prev,
+                                  paidStars: paid,
+                                  borrowedStars: paymentModal.totalStars - paid
+                                }));
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-gray-700 dark:text-white transition-colors"
+                              placeholder="0"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Stars to Borrow
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max={paymentModal.totalStars}
+                              value={paymentForm.borrowedStars || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const borrowed = value === '' ? 0 : Math.min(Number(value) || 0, paymentModal.totalStars);
+                                setPaymentForm(prev => ({
+                                  ...prev,
+                                  borrowedStars: borrowed,
+                                  paidStars: paymentModal.totalStars - borrowed
+                                }));
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-white transition-colors"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Money Payment Section */}
+                    {paymentModal.totalMoney > 0 && (
+                      <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Icon path={mdiCurrencyUsd} size={18} className="text-green-600 dark:text-green-400" />
+                          <h5 className="font-semibold text-gray-900 dark:text-white">Money Payment</h5>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Money Paid Now ($)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max={paymentModal.totalMoney}
+                              step="0.01"
+                              value={paymentForm.paidMoney || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const paid = value === '' ? 0 : Math.min(Number(value) || 0, paymentModal.totalMoney);
+                                setPaymentForm(prev => ({
+                                  ...prev,
+                                  paidMoney: paid,
+                                  borrowedMoney: paymentModal.totalMoney - paid
+                                }));
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white transition-colors"
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Money to Borrow ($)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max={paymentModal.totalMoney}
+                              step="0.01"
+                              value={paymentForm.borrowedMoney || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                const borrowed = value === '' ? 0 : Math.min(Number(value) || 0, paymentModal.totalMoney);
+                                setPaymentForm(prev => ({
+                                  ...prev,
+                                  borrowedMoney: borrowed,
+                                  paidMoney: paymentModal.totalMoney - borrowed
+                                }));
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-white transition-colors"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Partial Payment Button */}
+                    <button
+                      onClick={handleConfirmPayment}
+                      disabled={processingPayment === paymentModal.registrationId ||
+                               (paymentForm.paidStars + paymentForm.borrowedStars !== paymentModal.totalStars && paymentModal.totalStars > 0) ||
+                               (paymentForm.paidMoney + paymentForm.borrowedMoney !== paymentModal.totalMoney && paymentModal.totalMoney > 0)}
+                      className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {processingPayment === paymentModal.registrationId ? 'Processing...' : 'Record Partial Payment'}
+                    </button>
+
+                    {/* Validation Message - Only show when partial payment is visible */}
+                    {((paymentForm.paidStars + paymentForm.borrowedStars !== paymentModal.totalStars && paymentModal.totalStars > 0) ||
+                      (paymentForm.paidMoney + paymentForm.borrowedMoney !== paymentModal.totalMoney && paymentModal.totalMoney > 0)) && (
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Icon path={mdiCloseCircle} size={20} className="text-red-500 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-red-800 dark:text-red-200">
+                              Payment amounts don't add up
+                            </p>
+                            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                              Paid + Borrowed must equal the total price for each currency type
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setPaymentModal(null)}
+                  disabled={processingPayment !== null}
+                  className="flex-1 px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

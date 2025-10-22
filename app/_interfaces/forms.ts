@@ -2,7 +2,7 @@ import { Timestamp } from "firebase/firestore";
 
 export type QuestionType = 'short_answer' | 'paragraph' | 'multiple_choice' | 'checkboxes' | 'dropdown' | 'linear_scale' | 'file_upload';
 
-export type FormType = 'class_register' | 'mock_register' | 'event' | 'survey' | 'feedback' | 'general';
+export type FormType = 'class_register' | 'mock_register' | 'mock_exam' | 'event' | 'survey' | 'feedback' | 'general';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
@@ -25,6 +25,8 @@ export interface Question {
   acceptedFileTypes?: string[]; // For file_upload (e.g., ['image/*', 'application/pdf'])
   maxFileSize?: number; // For file_upload (in MB)
   maxFiles?: number; // For file_upload (max number of files, default 1)
+  imageUrl?: string; // Optional image/media attachment for the question
+  imageFileName?: string; // Original filename of the uploaded image
 }
 
 export interface Form {

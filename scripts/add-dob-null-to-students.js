@@ -1,5 +1,5 @@
 /**
- * Script to set dateOfBirth to null for all students
+ * Script to remove isReady and isReadyToPublished fields from all examControls
  */
 
 const admin = require('firebase-admin');
@@ -29,34 +29,37 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-async function setDateOfBirthNull() {
+async function setExamControlsReadyStatus() {
   try {
-    console.log('🚀 Setting dateOfBirth to null for all students...\n');
+    console.log('🚀 Updating examControls: removing isReady and isReadyToPublished fields...\n');
 
-    // Query for all students
-    const studentsQuery = db.collection('students');
+    // Query for all examControls
+    const examControlsQuery = db.collection('examControls');
 
-    const studentsSnapshot = await studentsQuery.get();
+    const examControlsSnapshot = await examControlsQuery.get();
 
-    if (studentsSnapshot.empty) {
-      console.log('⚠️  No students found.');
+    if (examControlsSnapshot.empty) {
+      console.log('⚠️  No examControls found.');
       return;
     }
 
-    console.log(`📊 Found ${studentsSnapshot.size} total students...\n`);
+    console.log(`📊 Found ${examControlsSnapshot.size} total examControls...\n`);
 
     let updatedCount = 0;
     let skippedCount = 0;
 
-    // Process each student
-    for (const doc of studentsSnapshot.docs) {
+    // Process each examControl
+    for (const doc of examControlsSnapshot.docs) {
       const data = doc.data();
-      const fullName = data.fullName || 'Unknown Student';
+      const examName = data.examName || 'Unknown Exam';
 
-      // Update the document with dateOfBirth set to null
+      // Update the document: remove isReady and isReadyToPublished fields
       try {
-        await doc.ref.update({ dateOfBirth: null });
-        console.log(`✅ Updated ${fullName} (ID: ${doc.id}) - dateOfBirth set to null`);
+        await doc.ref.update({ 
+          isReady: admin.firestore.FieldValue.delete(),
+          isReadyToPublished: admin.firestore.FieldValue.delete()
+        });
+        console.log(`✅ Updated ${examName} (ID: ${doc.id}) - isReady and isReadyToPublished fields removed`);
         updatedCount++;
       } catch (error) {
         console.error(`❌ Failed to update ${doc.id}:`, error);
@@ -64,12 +67,12 @@ async function setDateOfBirthNull() {
       }
     }
 
-    console.log('\n📋 Date of Birth Nullification Summary:');
-    console.log(`   📊 Total students processed: ${studentsSnapshot.size}`);
-    console.log(`   ✅ Students updated: ${updatedCount}`);
-    console.log(`   ⚠️  Students skipped: ${skippedCount}`);
+    console.log('\n📋 Exam Controls Update Summary:');
+    console.log(`   📊 Total examControls processed: ${examControlsSnapshot.size}`);
+    console.log(`   ✅ ExamControls updated: ${updatedCount}`);
+    console.log(`   ⚠️  ExamControls skipped: ${skippedCount}`);
 
-    console.log('\n🎉 Date of birth nullification complete!');
+    console.log('\n🎉 Exam controls update complete!');
 
   } catch (error) {
     console.error('❌ Error during operation:', error);
@@ -79,7 +82,7 @@ async function setDateOfBirthNull() {
 
 // Main execution
 if (require.main === module) {
-  setDateOfBirthNull()
+  setExamControlsReadyStatus()
     .then(() => {
       console.log('\n✨ Script completed successfully!');
       process.exit(0);
@@ -90,4 +93,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { setDateOfBirthNull };
+module.exports = { setExamControlsReadyStatus };

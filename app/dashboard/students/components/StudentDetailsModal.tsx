@@ -543,9 +543,28 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
     setShowDeleteConfirm(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     setShowDeleteConfirm(false);
-    onDelete(student);
+    
+    try {
+      if (viewContext === '12BP') {
+        // For BP class students, remove from BP class instead of dropping
+        const studentRef = doc(db, 'students', student.id);
+        await updateDoc(studentRef, {
+          inBPClass: false,
+          removedFromBPAt: Timestamp.now()
+        });
+        
+        toast.success(`${student.fullName} has been removed from BP class`);
+        console.log("Student removed from BP class:", student.id);
+      } else {
+        // Normal drop functionality
+        onDelete(student);
+      }
+    } catch (error) {
+      console.error('Error removing student from BP class:', error);
+      toast.error('Failed to remove student from BP class. Please try again.');
+    }
   };
 
   const cancelDelete = () => {
@@ -1112,12 +1131,16 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   </div>
                   <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                     <h3 className="text-base font-semibold leading-6 text-gray-900 dark:text-gray-100">
-                      Delete Student
+                      {viewContext === '12BP' ? 'Remove from BP Class' : 'Delete Student'}
                     </h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Are you sure you want to drop <span className="font-semibold text-gray-900 dark:text-gray-100">{student.fullName}</span>? 
-                        This action cannot be undone and will permanently remove all student data.
+                        {viewContext === '12BP' ? (
+                          <>Are you sure you want to remove <span className="font-semibold text-gray-900 dark:text-gray-100">{student.fullName}</span> from the BP class? The student will remain in the regular class system.</>
+                        ) : (
+                          <>Are you sure you want to drop <span className="font-semibold text-gray-900 dark:text-gray-100">{student.fullName}</span>? 
+                          This action cannot be undone and will permanently remove all student data.</>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1129,7 +1152,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                   className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:ml-3 sm:w-auto"
                   onClick={confirmDelete}
                 >
-                  Drop
+                  {viewContext === '12BP' ? 'Remove from BP Class' : 'Drop'}
                 </button>
                 <button
                   type="button"

@@ -4,7 +4,7 @@ import { useAppDispatch } from "../_stores/hooks";
 import { setUser } from '../_stores/mainSlice';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../../firebase-config';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, limit, doc, getDoc } from 'firebase/firestore';
 import React, { ReactNode, useEffect, useState } from "react";
 import StudentBottomNav from "./_components/StudentBottomNav";
 import { usePWANavigation } from "@/app/_hooks/usePWANavigation";
@@ -18,12 +18,22 @@ import StudentLayoutContent from "./_components/StudentLayoutContent";
 import { usePathname } from "next/navigation";
 import { PWACache } from "../_utils/pwaCache";
 import DateOfBirthPrompt from "./_components/DateOfBirthPrompt";
+import LoadingScreen from "../_components/LoadingScreen";
+import AccountInactiveScreen from "../_components/AccountInactiveScreen";
+import { Student } from "../_interfaces";
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
   const { navigateWithinPWA } = usePWANavigation();
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+  const [studentStatus, setStudentStatus] = useState<{
+    isActive: boolean;
+    reason?: 'dropped' | 'onBreak' | 'waitlist';
+    expectedReturnMonth?: string;
+    breakReason?: string;
+    waitlistReason?: string;
+  } | null>(null);
 
   const showTopNav = !pathname.includes('/student/payment-history');
 
@@ -37,11 +47,47 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
         if (!querySnapshot.empty) {
             const studentDoc = querySnapshot.docs[0];
-            const studentData = studentDoc.data();
+            const studentData = studentDoc.data() as Student;
             
             // A user is only fully onboarded if their record has a valid class.
             if (studentData && studentData.class && studentData.class !== 'Unassigned') {
-                // SUCCESS: User is fully linked. Load their profile and let them proceed.
+                // Check if student account is active BEFORE allowing access
+                // Priority: dropped > onBreak > onWaitlist
+                if (studentData.dropped === true) {
+                  // Student is dropped - show inactive screen
+                  setStudentStatus({
+                    isActive: false,
+                    reason: 'dropped',
+                  });
+                  setLoading(false);
+                  return; // Stop here - don't allow access
+                }
+
+                if (studentData.onBreak === true) {
+                  // Student is on break - show inactive screen
+                  setStudentStatus({
+                    isActive: false,
+                    reason: 'onBreak',
+                    expectedReturnMonth: studentData.expectedReturnMonth,
+                    breakReason: studentData.breakReason,
+                  });
+                  setLoading(false);
+                  return; // Stop here - don't allow access
+                }
+
+                if (studentData.onWaitlist === true) {
+                  // Student is on waitlist - show inactive screen
+                  setStudentStatus({
+                    isActive: false,
+                    reason: 'waitlist',
+                    waitlistReason: studentData.waitlistReason,
+                  });
+                  setLoading(false);
+                  return; // Stop here - don't allow access
+                }
+
+                // SUCCESS: User is fully linked AND active. Load their profile and let them proceed.
+                setStudentStatus({ isActive: true });
                 dispatch(
                   setUser({
                     name: studentData.fullName,
@@ -98,11 +144,20 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   }, [dispatch, navigateWithinPWA]);
 
 
+  // Show loading screen while checking authentication and status
   if (loading) {
+    return <LoadingScreen message="Loading..." />;
+  }
+
+  // Show inactive screen if student is not active (blocked access)
+  if (studentStatus && !studentStatus.isActive) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-slate-900">
-        <div className="loader"></div>
-      </div>
+      <AccountInactiveScreen
+        reason={studentStatus.reason}
+        expectedReturnMonth={studentStatus.expectedReturnMonth}
+        breakReason={studentStatus.breakReason}
+        waitlistReason={studentStatus.waitlistReason}
+      />
     );
   }
 

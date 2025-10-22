@@ -379,7 +379,7 @@ const AccountPage = () => {
                 iconPath={mdiCakeVariant}
                 iconBgColor="bg-gradient-to-br from-pink-500 to-rose-600"
                 title={t('viewBirthday')}
-                subtitle={t('dateOfBirth.title.year')}
+                subtitle={t('viewBirthdaySubtitle')}
                 onClick={handleViewBirthday}
                 titleClassName={khmerFont()}
                 subtitleClassName={khmerFont()}

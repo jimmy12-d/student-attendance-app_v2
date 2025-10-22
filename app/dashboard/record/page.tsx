@@ -5,7 +5,7 @@
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { 
   mdiClipboardListOutline, 
   mdiAlertCircleOutline, 
@@ -28,6 +28,7 @@ import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
 import CardBox from "../../_components/CardBox";
 import CardBoxModal from "../../_components/CardBox/Modal";
+import DatePicker from "../../_components/DatePicker";
 import NotificationBar from "../../_components/NotificationBar";
 import LoadingSpinner from "../../_components/LoadingSpinner";
 import Icon from "../../_components/Icon";
@@ -138,122 +139,11 @@ export default function AttendanceRecordPage() {
 
   // Date filter state
   const [selectedDate, setSelectedDate] = useState<string>(getPhnomPenhDateString());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const datePickerRef = useRef<HTMLDivElement>(null);
 
   // Get today's date string for filtering
   const today = useMemo(() => {
     return getPhnomPenhDateString(); // Use Phnom Penh timezone
   }, []);
-
-  // Date picker functionality
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
-        setShowDatePicker(false);
-      }
-    };
-
-    if (showDatePicker) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showDatePicker]);
-
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  const getDaysInMonth = (month: number, year: number) => {
-    return new Date(year, month + 1, 0).getDate();
-  };
-
-  const getFirstDayOfMonth = (month: number, year: number) => {
-    return new Date(year, month, 1).getDay();
-  };
-
-  const handleDateSelect = (day: number) => {
-    const year = currentYear;
-    const month = String(currentMonth + 1).padStart(2, '0');
-    const dayStr = String(day).padStart(2, '0');
-    const dateString = `${year}-${month}-${dayStr}`;
-    setSelectedDate(dateString);
-    setShowDatePicker(false);
-  };
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    if (direction === 'prev') {
-      if (currentMonth === 0) {
-        setCurrentMonth(11);
-        setCurrentYear(currentYear - 1);
-      } else {
-        setCurrentMonth(currentMonth - 1);
-      }
-    } else {
-      if (currentMonth === 11) {
-        setCurrentMonth(0);
-        setCurrentYear(currentYear + 1);
-      } else {
-        setCurrentMonth(currentMonth + 1);
-      }
-    }
-  };
-
-  const formatDisplayDate = (dateString: string) => {
-    if (!dateString) return 'Select date';
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short',
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric',
-      timeZone: 'Asia/Phnom_Penh'
-    });
-  };
-
-  const renderCalendar = () => {
-    const daysInMonth = getDaysInMonth(currentMonth, currentYear);
-    const firstDay = getFirstDayOfMonth(currentMonth, currentYear);
-    const days: React.ReactElement[] = [];
-    const todayDate = new Date();
-    const selectedDateObj = selectedDate ? new Date(selectedDate + 'T00:00:00') : null;
-
-    // Empty cells for days before the first day of the month
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="w-8 h-8"></div>);
-    }
-
-    // Days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(currentYear, currentMonth, day);
-      const isToday = date.toDateString() === todayDate.toDateString();
-      const isSelected = selectedDateObj && date.toDateString() === selectedDateObj.toDateString();
-
-      days.push(
-        <button
-          key={day}
-          onClick={() => handleDateSelect(day)}
-          className={`w-8 h-8 text-sm rounded-xl transition-all duration-300 backdrop-blur-sm ${
-            isSelected
-              ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 scale-105'
-              : isToday
-              ? 'bg-gradient-to-br from-blue-100/80 to-blue-200/60 dark:from-blue-900/60 dark:to-blue-800/40 text-blue-600 dark:text-blue-400 font-medium shadow-md shadow-blue-500/10 hover:shadow-lg hover:shadow-blue-500/20'
-              : 'hover:bg-white/60 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-300 hover:shadow-md hover:shadow-black/5'
-          }`}
-        >
-          {day}
-        </button>
-      );
-    }
-
-    return days;
-  };
 
   // Filter attendance records by selected date
   const filteredAttendanceRecords = useMemo(() => {
@@ -1141,75 +1031,12 @@ export default function AttendanceRecordPage() {
             </div>
           </div>
         </div>
-          <div className="relative" ref={datePickerRef}>
-            <button
-              type="button"
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-white/80 to-white/60 dark:from-gray-800/80 dark:to-gray-800/60 backdrop-blur-xl border border-white/30 dark:border-gray-600/30 rounded-xl hover:bg-white/90 dark:hover:bg-gray-700/90 transition-all duration-300 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10"
-            >
-              <Icon path={mdiCalendar} size={20} className="text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {formatDisplayDate(selectedDate)}
-              </span>
-            </button>
-             {/* Date Filter */}
-            {showDatePicker && (
-              <div className="absolute top-full right-0 mt-2 bg-gradient-to-br from-white/90 via-white/70 to-white/50 dark:from-gray-800/90 dark:via-gray-800/70 dark:to-gray-800/50 backdrop-blur-2xl border border-white/30 dark:border-gray-600/30 rounded-2xl shadow-2xl shadow-black/10 z-50 p-4 min-w-[320px]">
-                {/* Calendar Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <button
-                    onClick={() => navigateMonth('prev')}
-                    className="flex items-center justify-center w-10 h-10 hover:bg-white/80 dark:hover:bg-gray-700/80 backdrop-blur-md rounded-xl transition-all duration-300 border border-white/30 dark:border-gray-600/30 bg-white/60 dark:bg-gray-800/60 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10"
-                  >
-                    <Icon path={mdiChevronLeft} size={20} className="text-blue-600 dark:text-blue-400" />
-                  </button>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {months[currentMonth]} {currentYear}
-                  </h3>
-                  <button
-                    onClick={() => navigateMonth('next')}
-                    className="flex items-center justify-center w-10 h-10 hover:bg-white/80 dark:hover:bg-gray-700/80 backdrop-blur-md rounded-xl transition-all duration-300 border border-white/30 dark:border-gray-600/30 bg-white/60 dark:bg-gray-800/60 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-black/10"
-                  >
-                    <Icon path={mdiChevronRight} size={20} className="text-blue-600 dark:text-blue-400" />
-                  </button>
-                </div>
-
-                {/* Days of Week Header */}
-                <div className="grid grid-cols-7 mb-2">
-                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                    <div key={day} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-2">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Calendar Days */}
-                <div className="grid grid-cols-7 gap-1">
-                  {renderCalendar()}
-                </div>
-
-                {/* Footer */}
-                <div className="mt-4 pt-3 border-t border-white/30 dark:border-gray-600/30 flex justify-between">
-                  <button
-                    onClick={() => setShowDatePicker(false)}
-                    className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:bg-white/80 dark:hover:bg-gray-700/80 backdrop-blur-sm rounded-lg transition-all duration-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => {
-                      const today = getPhnomPenhDateString();
-                      setSelectedDate(today);
-                      setShowDatePicker(false);
-                    }}
-                    className="px-3 py-1 text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all duration-300 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30"
-                  >
-                    Today
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <DatePicker
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            placeholder="Select date"
+            className="flex items-center gap-2"
+          />
         </div>
       </SectionTitleLineWithButton>
 

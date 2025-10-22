@@ -2,9 +2,12 @@
 
 import { Question, QuestionOption } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
-import { mdiPlus, mdiDelete, mdiDragVertical, mdiAlertCircle, mdiContentCopy, mdiAccount } from "@mdi/js";
+import { mdiPlus, mdiDelete, mdiDragVertical, mdiAlertCircle, mdiContentCopy, mdiAccount, mdiImage, mdiClose } from "@mdi/js";
 import QuestionTypeSelector from "./QuestionTypeSelector";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { storage } from "@/firebase-config";
+import { toast } from "sonner";
 
 interface QuestionEditorProps {
   question: Question;
@@ -34,6 +37,9 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
   isBeingDragged
 }) => {
   const [showClassTypeFilter, setShowClassTypeFilter] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const needsOptions = ['multiple_choice', 'checkboxes', 'dropdown'].includes(question.type);
   const isLinearScale = question.type === 'linear_scale';
   const hasErrors = validationErrors.length > 0;
@@ -42,6 +48,14 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
   
   // For checkboxes, allow 1+ options. For others, require 2+ options
   const minOptionsRequired = question.type === 'checkboxes' ? 1 : 2;
+
+  // Auto-resize textarea on mount and when question text changes
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [question.text]);
 
   const addOption = () => {
     const newOption: QuestionOption = {
@@ -74,6 +88,81 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
     handleDropProp(e);
     setIsDropped(true);
     setTimeout(() => setIsDropped(false), 500); // Animation duration
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be less than 5MB");
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      // Upload to Firebase Storage
+      const timestamp = Date.now();
+      const storageRef = ref(storage, `form_question_images/${question.id}_${timestamp}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Delete old image if exists
+      if (question.imageUrl) {
+        try {
+          const oldImageRef = ref(storage, question.imageUrl);
+          await deleteObject(oldImageRef);
+        } catch (err) {
+          console.log("Old image already deleted or doesn't exist");
+        }
+      }
+
+      // Update question with image URL
+      onUpdate({
+        ...question,
+        imageUrl: downloadURL,
+        imageFileName: file.name
+      });
+
+      toast.success("Image uploaded successfully!");
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    if (!question.imageUrl) return;
+
+    try {
+      // Delete from Firebase Storage
+      const imageRef = ref(storage, question.imageUrl);
+      await deleteObject(imageRef);
+
+      // Update question
+      onUpdate({
+        ...question,
+        imageUrl: undefined,
+        imageFileName: undefined
+      });
+
+      toast.success("Image removed");
+    } catch (error) {
+      console.error("Error removing image:", error);
+      toast.error("Failed to remove image");
+    }
   };
 
   return (
@@ -132,37 +221,79 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
             />
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">Required</span>
           </label>
+          
+          {/* Image Upload Button */}
           <button
-            onClick={onDuplicate}
-            className="p-1.5 text-gray-400 hover:text-blue-500 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-all duration-200"
-            title="Duplicate question"
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingImage}
+            className="flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 px-2 py-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 disabled:opacity-50"
+            title={question.imageUrl ? "Change image" : "Upload image"}
           >
-            <Icon path={mdiContentCopy} size={16} />
-          </button>
-          <button
-            onClick={onDelete}
-            className="p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-all duration-200"
-            title="Delete question"
-          >
-            <Icon path={mdiDelete} size={16} />
+            <Icon path={mdiImage} size={16} />
+            <span className="hidden sm:inline">{uploadingImage ? 'Uploading...' : question.imageUrl ? 'Change' : 'Image'}</span>
           </button>
         </div>
       </div>
 
-      {/* Question Text */}
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+
+      {/* Question Text - Changed to textarea for multiline support */}
       <div className="space-y-1">
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           value={question.text}
-          onChange={(e) => onUpdate({ ...question, text: e.target.value })}
+          onChange={(e) => {
+            onUpdate({ ...question, text: e.target.value });
+            // Auto-resize textarea
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+          }}
+          onFocus={(e) => {
+            // Ensure proper height on focus
+            e.target.style.height = 'auto';
+            e.target.style.height = e.target.scrollHeight + 'px';
+          }}
           placeholder="Enter your question..."
-          className={`w-full bg-transparent border-0 border-b-2 border-gray-200 dark:border-slate-600 rounded-none px-0 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-blue-400 dark:focus:border-blue-500 transition-all duration-200 text-lg font-medium leading-relaxed ${
+          rows={1}
+          className={`w-full bg-transparent border-0 border-b-2 border-gray-200 dark:border-slate-600 rounded-none px-0 py-3 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-blue-400 dark:focus:border-blue-500 transition-all duration-200 text-lg font-medium leading-relaxed resize-none overflow-hidden ${
             !question.text.trim() && hasErrors
               ? 'border-red-300 dark:border-red-500'
               : ''
           }`}
         />
       </div>
+
+      {/* Image Preview (only shown when image exists) */}
+      {question.imageUrl && (
+        <div className="relative bg-gray-50 dark:bg-slate-700/30 rounded-lg p-3 border border-gray-200 dark:border-slate-600">
+          <button
+            type="button"
+            onClick={handleRemoveImage}
+            className="absolute top-2 right-2 p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-all duration-200 z-10"
+            title="Remove image"
+          >
+            <Icon path={mdiClose} size={16} />
+          </button>
+          <img
+            src={question.imageUrl}
+            alt={question.imageFileName || "Question image"}
+            className="w-full h-auto max-h-64 object-contain rounded-lg"
+          />
+          {question.imageFileName && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 truncate">
+              {question.imageFileName}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Options for Multiple Choice/Checkboxes/Dropdown */}
       {needsOptions && (
@@ -317,15 +448,35 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
       {/* Class Type Filter */}
       {availableClassTypes.length > 0 && (
         <div className="space-y-3 border-t border-gray-200 dark:border-slate-700 pt-4">
-          <button
-            type="button"
-            onClick={() => setShowClassTypeFilter(!showClassTypeFilter)}
-            className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-          >
-            <Icon path={mdiAccount} size={16} />
-            <span>Target Class Types {targetClassTypes.length > 0 && `(${targetClassTypes.length})`}</span>
-            <span className="text-xs text-gray-400">{showClassTypeFilter ? '▼' : '▶'}</span>
-          </button>
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setShowClassTypeFilter(!showClassTypeFilter)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <Icon path={mdiAccount} size={16} />
+              <span>Target Class Types {targetClassTypes.length > 0 && `(${targetClassTypes.length})`}</span>
+              <span className="text-xs text-gray-400">{showClassTypeFilter ? '▼' : '▶'}</span>
+            </button>
+            
+            {/* Action Buttons */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onDuplicate}
+                className="p-1.5 text-gray-400 hover:text-blue-500 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-all duration-200"
+                title="Duplicate question"
+              >
+                <Icon path={mdiContentCopy} size={16} />
+              </button>
+              <button
+                onClick={onDelete}
+                className="p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-all duration-200"
+                title="Delete question"
+              >
+                <Icon path={mdiDelete} size={16} />
+              </button>
+            </div>
+          </div>
           
           {showClassTypeFilter && (
             <div className="bg-gray-50 dark:bg-slate-700/30 rounded-lg p-3 space-y-2 animate-in slide-in-from-top-2 duration-200">

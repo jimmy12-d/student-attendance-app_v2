@@ -44,5 +44,8 @@ export default function ClientLayoutWrapper({ children }: ClientLayoutWrapperPro
     }
   }, [darkMode, isClient]);
 
+  // Loading screens are now handled in individual layouts (student, teacher, admin)
+  // This prevents flashing and provides better UX
   return <>{children}</>;
 }
+

@@ -7,6 +7,15 @@ export const store = configureStore({
     darkMode: darkModeReducer,
     main: mainReducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        // Ignore these action types if needed
+        ignoredActions: [],
+        // Ignore these paths in the state
+        ignoredPaths: [],
+      },
+    }),
 });
 
 // Infer the `RootState` and `AppDispatch` types from the store itself
