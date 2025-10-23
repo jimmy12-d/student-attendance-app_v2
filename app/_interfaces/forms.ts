@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 
-export type QuestionType = 'short_answer' | 'paragraph' | 'multiple_choice' | 'checkboxes' | 'dropdown' | 'linear_scale' | 'file_upload';
+export type QuestionType = 'short_answer' | 'paragraph' | 'multiple_choice' | 'checkboxes' | 'dropdown' | 'linear_scale' | 'file_upload' | 'score_input';
 
 export type FormType = 'class_register' | 'mock_register' | 'mock_exam' | 'event' | 'survey' | 'feedback' | 'general';
 
@@ -21,12 +21,20 @@ export interface Question {
   maxScale?: number; // For linear_scale
   minLabel?: string; // For linear_scale
   maxLabel?: string; // For linear_scale
-  targetClassTypes?: string[]; // Class types that should see this question (empty/undefined = all)
   acceptedFileTypes?: string[]; // For file_upload (e.g., ['image/*', 'application/pdf'])
   maxFileSize?: number; // For file_upload (in MB)
   maxFiles?: number; // For file_upload (max number of files, default 1)
+  maxScore?: number; // For score_input (max score value, default 100)
   imageUrl?: string; // Optional image/media attachment for the question
   imageFileName?: string; // Original filename of the uploaded image
+}
+
+export interface FormSection {
+  id: string;
+  title: string;
+  description?: string;
+  questions: Question[];
+  targetClassTypes?: string[]; // Class types that should see this section (empty/undefined = all)
 }
 
 export interface Form {
@@ -38,7 +46,8 @@ export interface Form {
   createdAt: Timestamp | Date;
   updatedAt: Timestamp | Date;
   createdBy: string; // Admin UID
-  questions: Question[];
+  questions: Question[]; // Legacy: For backward compatibility with old forms
+  sections?: FormSection[]; // New: Organized form sections (preferred)
   isActive: boolean;
   isVisible: boolean; // Controls if form appears in student list (default: true)
   maxResponses?: number; // Optional limit on number of responses (null/undefined = unlimited)

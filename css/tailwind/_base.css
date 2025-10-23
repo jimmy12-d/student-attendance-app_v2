@@ -17,4 +17,10 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
+
+  /* Custom company purple color definitions */
+  :root {
+    --color-company-purple: #7c3aed;
+    --color-company-purple-dark: #6d28d9;
+  }
 }

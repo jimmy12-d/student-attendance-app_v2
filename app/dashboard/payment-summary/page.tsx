@@ -237,9 +237,7 @@ const PaymentSummaryPage = () => {
         isCurrentMonth = targetDate.getMonth() === now.getMonth() && 
                         targetDate.getFullYear() === now.getFullYear();
       }
-      
-      console.log("Checking unpaid students for month:", targetPaymentMonth, "with date context:", targetDate, "isCurrentMonth:", isCurrentMonth);
-      
+            
       // Expected revenue calculation
       let trialPeriodCount = 0;
       let existingUnpaidCount = 0;
@@ -275,12 +273,7 @@ const PaymentSummaryPage = () => {
         // Use getPaymentStatus with the target date context
         // This will properly evaluate if the student is unpaid for the selected month
         const paymentStatus = getPaymentStatus(studentData.lastPaymentMonth, targetDate);
-        
-        // Debug log for first few students
-        if (unpaidStudentsCount < 3) {
-          console.log(`Student: ${studentData.fullName}, lastPaymentMonth: ${studentData.lastPaymentMonth}, status: ${paymentStatus}, targetDate: ${targetDate.toISOString().slice(0, 7)}, isCurrentMonth: ${isCurrentMonth}`);
-        }
-        
+                
         // Count as unpaid based on status:
         // - Always count 'unpaid' status
         // - Only count 'no-record' status if viewing the current month

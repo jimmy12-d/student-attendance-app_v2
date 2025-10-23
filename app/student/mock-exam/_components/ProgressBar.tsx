@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../../../firebase-config';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { useAppSelector } from '../../../_stores/hooks';
 
 const statusConfig = {
   "No Registered": {
@@ -25,21 +26,138 @@ const statusConfig = {
     bar: "bg-yellow-500",
     rippleColor: 'rgba(250, 204, 21, 0.4)'
   },
-  "Paid Star" :
-   {
+  "Paid Star": {
     percent: 100,
-    message: "Star has been Paid! You can view your results now.",
+    message: "Star has been Paid! You can view your seat arrangement now.",
     color: "text-green-500",
     bar: "bg-green-500",
     rippleColor: 'rgba(74, 222, 128, 0.4)'
   },
 };
 
-export default function ProgressBar({ status, loading, availableTabs, currentMockId }: { status: string, loading: boolean, availableTabs: string[], currentMockId?: string }) {
+interface ProgressBarProps {
+  loading: boolean;
+  availableTabs: string[];
+  currentMockId?: string;
+}
+
+export default function ProgressBar({ loading, availableTabs, currentMockId }: ProgressBarProps) {
+  const studentDocId = useAppSelector((state) => state.main.studentDocId);
+  const studentUid = useAppSelector((state) => state.main.userUid);
+  
   const [visualPercent, setVisualPercent] = useState(0);
   const [ripples, setRipples] = useState<any[]>([]);
   const [examDate, setExamDate] = useState<string | null>(null);
-  const cfg = statusConfig[status] || statusConfig["No Registered"];
+  const [progressStatus, setProgressStatus] = useState<string>("No Registered");
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  
+  const cfg = statusConfig[progressStatus] || statusConfig["No Registered"];
+
+  // Fetch student registration status from form_responses when currentMockId changes
+  // Using real-time listener for automatic updates
+  useEffect(() => {
+    if (!currentMockId || !studentDocId) {
+      setProgressStatus("No Registered");
+      setIsLoadingStatus(false);
+      return;
+    }
+
+    setIsLoadingStatus(true);
+    let unsubscribeFormResponses: (() => void) | null = null;
+
+    const setupRealtimeListener = async () => {
+      try {
+        // Get the eventId from examControls
+        const controlDocRef = doc(db, 'examControls', currentMockId);
+        const controlDocSnap = await getDoc(controlDocRef);
+
+        if (!controlDocSnap.exists() || !controlDocSnap.data().eventId) {
+          console.log(`No eventId found for ${currentMockId}`);
+          setProgressStatus("No Registered");
+          setIsLoadingStatus(false);
+          return;
+        }
+
+        const eventId = controlDocSnap.data().eventId;
+
+        // Get the formId from events collection
+        const eventDocRef = doc(db, 'events', eventId);
+        const eventDocSnap = await getDoc(eventDocRef);
+
+        if (!eventDocSnap.exists() || !eventDocSnap.data().formId) {
+          console.log(`No formId found for event ${eventId}`);
+          setProgressStatus("No Registered");
+          setIsLoadingStatus(false);
+          return;
+        }
+
+        const formId = eventDocSnap.data().formId;
+
+        // Set up real-time listener for form_responses
+        const formResponsesQuery = query(
+          collection(db, 'form_responses'),
+          where('formId', '==', formId),
+          where('studentUid', '==', studentUid)
+        );
+
+        unsubscribeFormResponses = onSnapshot(
+          formResponsesQuery,
+          (snapshot) => {
+            if (snapshot.empty) {
+              setProgressStatus("No Registered");
+              setIsLoadingStatus(false);
+              return;
+            }
+
+            // Get the first (and should be only) registration
+            const registrationData = snapshot.docs[0].data();
+            
+            // Determine status based on registrationStatus and paymentStatus
+            const registrationStatus = registrationData.registrationStatus || 'pending';
+            const paymentStatus = registrationData.paymentStatus;
+
+            if (registrationStatus === 'rejected') {
+              setProgressStatus("No Registered");
+            } else if (registrationStatus === 'pending') {
+              setProgressStatus("Registered");
+            } else if (registrationStatus === 'approved') {
+              if (paymentStatus === 'paid') {
+                setProgressStatus("Paid Star");
+              } else if (paymentStatus === 'borrowed') {
+                setProgressStatus("Borrow");
+              } else {
+                // Approved but no payment info
+                setProgressStatus("Registered");
+              }
+            } else {
+              setProgressStatus("Registered");
+            }
+
+            setIsLoadingStatus(false);
+          },
+          (error) => {
+            console.error('Error listening to registration status:', error);
+            setProgressStatus("No Registered");
+            setIsLoadingStatus(false);
+          }
+        );
+
+      } catch (error) {
+        console.error('Error setting up registration status listener:', error);
+        setProgressStatus("No Registered");
+        setIsLoadingStatus(false);
+      }
+    };
+
+    setupRealtimeListener();
+
+    // Cleanup function
+    return () => {
+      if (unsubscribeFormResponses) {
+        unsubscribeFormResponses();
+      }
+    };
+  }, [currentMockId, studentDocId]);
 
   // Fetch exam date when currentMockId changes
   useEffect(() => {
@@ -150,14 +268,14 @@ export default function ProgressBar({ status, loading, availableTabs, currentMoc
   };
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !isLoadingStatus) {
       // Use a short timeout to ensure the CSS transition is applied
       const timer = setTimeout(() => {
         setVisualPercent(cfg.percent);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, cfg.percent]);
+  }, [loading, isLoadingStatus, cfg.percent]);
 
   const createRipple = (event: React.MouseEvent<HTMLDivElement>) => {
     const { left, top, width, height } = event.currentTarget.getBoundingClientRect();
@@ -174,7 +292,7 @@ export default function ProgressBar({ status, loading, availableTabs, currentMoc
     }, 700);
   };
 
-  if (loading) {
+  if (loading || isLoadingStatus) {
     return (
       <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 pt-4 pb-6 max-w-2xl mx-auto my-6 animate-pulse shadow-xl">
         <div className="flex justify-between items-center mb-4">
@@ -248,19 +366,19 @@ export default function ProgressBar({ status, loading, availableTabs, currentMoc
     );
   }
   
-  const stepIndex = Object.keys(statusConfig).indexOf(status);
+  const stepIndex = Object.keys(statusConfig).indexOf(progressStatus);
 
   return (
     <motion.div 
-      className="relative overflow-hidden bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 pt-4 pb-6 max-w-2xl mx-auto cursor-pointer shadow-xl"
+      className="relative overflow-hidden bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 pt-2 pb-6 max-w-2xl mx-auto cursor-pointer shadow-xl"
       onClick={createRipple}
       whileTap={{ scale: 0.98 }}
     >
-      <div className="flex justify-between items-center mb-4 pointer-events-none">
+      <div className="mt-2 relative flex justify-between items-start mb-4 pointer-events-none">
         <div className="flex flex-col gap-2">
           <h2 className="text-xl font-bold text-white">{getMockExamTitle()}</h2>
           {examDate && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               {/* Date Badge */}
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-full blur-sm"></div>
@@ -315,7 +433,7 @@ export default function ProgressBar({ status, loading, availableTabs, currentMoc
             </div>
           )}
         </div>
-        <span className="text-sm text-gray-400 font-semibold">Your progress</span>
+        <span className="absolute top-0 right-0 text-sm text-gray-400 font-semibold">Your progress</span>
       </div>
 
       <div className="mb-4 pointer-events-none">

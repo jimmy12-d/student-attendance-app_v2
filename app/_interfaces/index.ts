@@ -157,6 +157,17 @@ export interface Student {
   notificationLastUpdated?: Timestamp | Date; // When FCM token was last updated
 }
 
+// Notification Log Interface - Tracks delivery of Telegram notifications to parents
+export interface NotificationLog {
+  chatId: string; // Telegram chat ID of the parent
+  parentName?: string; // Name of the parent (if available)
+  sentAt: Timestamp; // When the notification was sent
+  success: boolean; // Whether the notification was successfully delivered
+  errorMessage?: string; // Error message if delivery failed
+  errorCode?: number; // Telegram API error code if applicable
+  deactivated?: boolean; // Whether the parent notification was deactivated due to error
+}
+
 export interface PermissionRecord {
   id: string; // Firestore document ID
   studentId: string;
@@ -176,6 +187,8 @@ export interface PermissionRecord {
   requestedBy?: string; // Added from actual data
   reviewedBy?: string;
   reviewedAt?: Timestamp;
+  notificationLogs?: NotificationLog[]; // Array of notification delivery logs
+  authUid?: string; // Firebase Auth UID of the student
 }
 
 // Leave Early Request System Interface
@@ -185,6 +198,9 @@ export interface LeaveEarlyRequest {
   studentName?: string; // Added for display purposes
   studentClass?: string; // Added for display purposes
   studentShift?: string; // Added for display purposes
+  authUid?: string; // Firebase Auth UID of the student
+  date?: string; // Date of the leave early request (YYYY-MM-DD)
+  shift?: string; // Shift of the student
   leaveTime: string; // Time they want to leave early (e.g., "14:30")
   reason: string;
   details?: string; // Additional details
@@ -194,6 +210,7 @@ export interface LeaveEarlyRequest {
   requestedBy?: string; // User who requested it
   reviewedBy?: string; // Admin who reviewed it
   reviewedAt?: Timestamp; // When it was reviewed
+  notificationLogs?: NotificationLog[]; // Array of notification delivery logs
 }
 
 // Absent Follow-up System Interface

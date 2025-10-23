@@ -50,21 +50,114 @@ const MockExamPage = () => {
   const [selectedTab, setSelectedTab] = useState('mock1');
   const [isPermissionModalActive, setIsPermissionModalActive] = useState(false);
   const [mockReadiness, setMockReadiness] = useState<{ [mockId: string]: boolean }>({});
+  const [progressStatus, setProgressStatus] = useState<string>("No Registered");
   
   // Data state
   const [examSettings, setExamSettings] = useState<ExamSettings>({});
   const [allExamSettings, setAllExamSettings] = useState<{ [mockName: string]: ExamSettings }>({});
   const [examScores, setExamScores] = useState<ExamScores>({});
   const [allMockScores, setAllMockScores] = useState<AllMockScores>({});
-  const [progressStatus, setProgressStatus] = useState("No Registered");
   const [seatInfo, setSeatInfo] = useState<string | null>(null);
   const [phoneInfo, setPhoneInfo] = useState<string | null>(null);
 
   // Loading states
   const [isExamLoading, setIsExamLoading] = useState(true);
   const [isAllMocksLoading, setIsAllMocksLoading] = useState(true);
-  const [isProgressLoading, setIsProgressLoading] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Fetch student registration status for the selected tab (for Mock 3 check)
+  // Using real-time listener for automatic updates
+  useEffect(() => {
+    if (!selectedTab || !studentDocId) {
+      setProgressStatus("No Registered");
+      return;
+    }
+
+    let unsubscribeFormResponses: (() => void) | null = null;
+
+    const setupRealtimeListener = async () => {
+      try {
+        // Get the eventId from examControls
+        const controlDocRef = doc(db, 'examControls', selectedTab);
+        const controlDocSnap = await getDoc(controlDocRef);
+
+        if (!controlDocSnap.exists() || !controlDocSnap.data().eventId) {
+          setProgressStatus("No Registered");
+          return;
+        }
+
+        const eventId = controlDocSnap.data().eventId;
+
+        // Get the formId from events collection
+        const eventDocRef = doc(db, 'events', eventId);
+        const eventDocSnap = await getDoc(eventDocRef);
+
+        if (!eventDocSnap.exists() || !eventDocSnap.data().formId) {
+          setProgressStatus("No Registered");
+          return;
+        }
+
+        const formId = eventDocSnap.data().formId;
+
+        // Set up real-time listener for form_responses
+        const formResponsesQuery = query(
+          collection(db, 'form_responses'),
+          where('formId', '==', formId),
+          where('studentUid', '==', studentUid)
+        );
+
+        unsubscribeFormResponses = onSnapshot(
+          formResponsesQuery,
+          (snapshot) => {
+            if (snapshot.empty) {
+              setProgressStatus("No Registered");
+              return;
+            }
+
+            // Get the first (and should be only) registration
+            const registrationData = snapshot.docs[0].data();
+            
+            // Determine status based on registrationStatus and paymentStatus
+            const registrationStatus = registrationData.registrationStatus || 'pending';
+            const paymentStatus = registrationData.paymentStatus;
+
+            if (registrationStatus === 'rejected') {
+              setProgressStatus("No Registered");
+            } else if (registrationStatus === 'pending') {
+              setProgressStatus("Registered");
+            } else if (registrationStatus === 'approved') {
+              if (paymentStatus === 'paid') {
+                setProgressStatus("Paid Star");
+              } else if (paymentStatus === 'borrowed') {
+                setProgressStatus("Borrow");
+              } else {
+                setProgressStatus("Registered");
+              }
+            } else {
+              setProgressStatus("Registered");
+            }
+          },
+          (error) => {
+            console.error('Error listening to registration status:', error);
+            setProgressStatus("No Registered");
+          }
+        );
+
+      } catch (error) {
+        console.error('Error setting up registration status listener:', error);
+        setProgressStatus("No Registered");
+      }
+    };
+
+    setupRealtimeListener();
+
+    // Cleanup function
+    return () => {
+      if (unsubscribeFormResponses) {
+        unsubscribeFormResponses();
+      }
+    };
+  }, [selectedTab, studentDocId]);
 
   // Fetch Student Class Type
   useEffect(() => {
@@ -91,34 +184,6 @@ const MockExamPage = () => {
     if (!studentDocId || !studentClassType) return;
 
     setIsInitialLoad(false);
-
-    // --- PROGRESS DATA ---
-    const cachedProgress = progressCache[studentDocId];
-    if (isCacheFresh(cachedProgress?.lastFetched)) {
-      setProgressStatus(cachedProgress.status);
-      setSeatInfo(cachedProgress.seat);
-      setPhoneInfo(cachedProgress.phone);
-    } else {
-      setIsProgressLoading(true);
-      const secretKey = process.env.NEXT_PUBLIC_SHEET_SECRET;
-      const apiUrl = `/api/sheet-data?student_id=${studentDocId}&secret=${secretKey}`;
-      try {
-        const response = await fetch(apiUrl);
-        if (!response.ok) throw new Error("Failed to fetch progress");
-        const data = await response.json();
-        const progressData = {
-          status: data.status || "No Registered",
-          seat: data.seat ? String(data.seat) : null,
-          phone: data.phone ? String(data.phone) : null,
-          lastFetched: new Date().toISOString(),
-        };
-        setProgressStatus(progressData.status);
-        setSeatInfo(progressData.seat);
-        setPhoneInfo(progressData.phone);
-        dispatch(setProgressData({ studentId: studentDocId, data: progressData }));
-      } catch (error) { console.error("Error fetching progress:", error); }
-      finally { setIsProgressLoading(false); }
-    }
 
     // --- EXAM DATA (ALL MOCKS AND SELECTED) ---
     const cachedRadar = radarChartCache[studentDocId];
@@ -363,9 +428,9 @@ const MockExamPage = () => {
   
   return (
     <>
-        <ProgressBar status={progressStatus} loading={isProgressLoading} availableTabs={availableTabs} currentMockId={selectedTab} />
+        <ProgressBar loading={false} availableTabs={availableTabs} currentMockId={selectedTab} />
             
-        <hr className="my-2 border-slate-800" />
+        <hr className="my-4 border-slate-800" />
         <h2 className="text-xl font-bold -mb-2">Mock Exam Results</h2>
 
         <MockExamResults
@@ -387,7 +452,7 @@ const MockExamPage = () => {
           isReadyToPublishResult={mockReadiness[selectedTab] || false}
         />
 
-        <hr className="my-2 border-slate-800" />
+        <hr className="my-4 border-slate-800" />
         <h2 className="text-xl font-bold mb-2">Your Exam Journey</h2>
 
         {/* Performance Chart Section */}

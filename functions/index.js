@@ -5883,6 +5883,7 @@ exports.notifyParentOnPermissionRequest = onDocumentCreated({
         }
 
         let notificationsSent = 0;
+        const notificationLogs = []; // Array to store notification delivery logs
         const requestDate = requestedAt ? requestedAt.toDate() : new Date();
         // Adjust for Cambodia timezone
         const cambodiaTime = new Date(requestDate.getTime() + (7 * 60 * 60 * 1000));
@@ -5891,6 +5892,16 @@ exports.notifyParentOnPermissionRequest = onDocumentCreated({
         for (const doc of parentQuery.docs) {
             const parentData = doc.data();
             const chatId = parentData.chatId;
+
+            const logEntry = {
+                chatId: chatId,
+                parentName: parentData.parentName || 'Unknown',
+                sentAt: admin.firestore.Timestamp.now(),
+                success: false,
+                errorMessage: null,
+                errorCode: null,
+                deactivated: false
+            };
 
             try {
                 // Use Khmer name if available, otherwise use regular name
@@ -5901,8 +5912,8 @@ exports.notifyParentOnPermissionRequest = onDocumentCreated({
 
 👤 **សិស្ស:** ${khmerName}
 🏫 **ថ្នាក់:** ${formattedClass}
-   **  ថ្ងៃចាប់ផ្តើម:** ${permissionStartDate}
-   **  ថ្ងៃបញ្ចប់:** ${permissionEndDate}
+📅 **ថ្ងៃចាប់ផ្តើម:** ${permissionStartDate}
+📅 **ថ្ងៃបញ្ចប់:** ${permissionEndDate}
 ⏳ **រយៈពេល:** ${duration} ថ្ងៃ
 ⏰ **ពេលវេលាស្នើសុំ:** ${formattedTime}
 📋 **ហេតុផល:** ${reason}
@@ -5910,20 +5921,34 @@ exports.notifyParentOnPermissionRequest = onDocumentCreated({
 
                 await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
                 notificationsSent++;
+                logEntry.success = true;
                 
                 logger.info(`Permission request notification sent to parent chat ${chatId} for student ${studentId}`);
                 
             } catch (error) {
+                logEntry.errorMessage = error.message || 'Unknown error';
+                logEntry.errorCode = error.response?.body?.error_code || null;
+                
                 logger.error(`Failed to send permission notification to chat ${chatId}:`, error);
                 
                 // If it's a blocked bot error, deactivate notifications for this parent
                 if (error.response && error.response.body && 
                     (error.response.body.error_code === 403 || error.response.body.description?.includes('blocked'))) {
                     await doc.ref.update({ isActive: false, deactivatedAt: admin.firestore.Timestamp.now() });
+                    logEntry.deactivated = true;
                     logger.info(`Deactivated notifications for blocked chat ${chatId}`);
                 }
             }
+
+            notificationLogs.push(logEntry);
         }
+
+        // Save notification logs to the permission document
+        await event.data.ref.update({
+            notificationLogs: notificationLogs,
+            notificationsSent: notificationsSent,
+            lastNotificationAt: admin.firestore.Timestamp.now()
+        });
 
         logger.info(`Permission request notifications sent: ${notificationsSent}`);
         
@@ -5982,6 +6007,7 @@ exports.notifyParentOnLeaveEarlyRequest = onDocumentCreated({
         }
 
         let notificationsSent = 0;
+        const notificationLogs = []; // Array to store notification delivery logs
         const requestDate = requestedAt ? requestedAt.toDate() : new Date();
         // Adjust for Cambodia timezone
         const cambodiaTime = new Date(requestDate.getTime() + (7 * 60 * 60 * 1000));
@@ -5991,12 +6017,22 @@ exports.notifyParentOnLeaveEarlyRequest = onDocumentCreated({
             const parentData = doc.data();
             const chatId = parentData.chatId;
 
+            const logEntry = {
+                chatId: chatId,
+                parentName: parentData.parentName || 'Unknown',
+                sentAt: admin.firestore.Timestamp.now(),
+                success: false,
+                errorMessage: null,
+                errorCode: null,
+                deactivated: false
+            };
+
             try {
                 // Use Khmer name if available, otherwise use regular name
                 const khmerName = parentData.studentKhmerName || studentName;
                 const formattedClass = formatClassInKhmer(parentData.studentClass || studentClass);
 
-                const message = `**ការស្នើសុំចេញមុនម៉ោង**
+                const message = `🚪 **ការស្នើសុំចេញមុនម៉ោង**
 
 👤 **សិស្ស:** ${khmerName}
 🏫 **ថ្នាក់:** ${formattedClass}
@@ -6006,20 +6042,34 @@ exports.notifyParentOnLeaveEarlyRequest = onDocumentCreated({
 
                 await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
                 notificationsSent++;
+                logEntry.success = true;
                 
                 logger.info(`Leave early request notification sent to parent chat ${chatId} for student ${studentId}`);
                 
             } catch (error) {
+                logEntry.errorMessage = error.message || 'Unknown error';
+                logEntry.errorCode = error.response?.body?.error_code || null;
+                
                 logger.error(`Failed to send leave early notification to chat ${chatId}:`, error);
                 
                 // If it's a blocked bot error, deactivate notifications for this parent
                 if (error.response && error.response.body && 
                     (error.response.body.error_code === 403 || error.response.body.description?.includes('blocked'))) {
                     await doc.ref.update({ isActive: false, deactivatedAt: admin.firestore.Timestamp.now() });
+                    logEntry.deactivated = true;
                     logger.info(`Deactivated notifications for blocked chat ${chatId}`);
                 }
             }
+
+            notificationLogs.push(logEntry);
         }
+
+        // Save notification logs to the leave early request document
+        await event.data.ref.update({
+            notificationLogs: notificationLogs,
+            notificationsSent: notificationsSent,
+            lastNotificationAt: admin.firestore.Timestamp.now()
+        });
 
         logger.info(`Leave early request notifications sent: ${notificationsSent}`);
         
@@ -6481,30 +6531,44 @@ exports.scheduledAbsentParentNotifications = onSchedule({
         
         logger.info('✅ Absent notifications are ENABLED - proceeding with time check');
         
+        // Convert to Phnom Penh timezone (UTC+7)
         const now = new Date();
-        const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        const currentHour = now.getHours();
+        const phnomPenhTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }));
+        const currentTime = `${phnomPenhTime.getHours().toString().padStart(2, '0')}:${phnomPenhTime.getMinutes().toString().padStart(2, '0')}`;
+        const currentHour = phnomPenhTime.getHours();
+        
+        logger.info(`🕐 UTC time: ${now.toISOString()}, Phnom Penh time: ${phnomPenhTime.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' })} (hour: ${currentHour})`);
         
         // Determine which shift to check based on current time
         let targetShift = null;
         let triggerTime = null;
         
-        // Check if current time matches any trigger time (with 1-hour window)
-        const morningHour = parseInt(settings.morningTriggerTime.split(':')[0]);
-        const afternoonHour = parseInt(settings.afternoonTriggerTime.split(':')[0]);
-        const eveningHour = parseInt(settings.eveningTriggerTime.split(':')[0]);
+        // Helper function to check if current time is within ±5 minutes of trigger time
+        const isWithinTimeWindow = (triggerTimeStr) => {
+            const [triggerHour, triggerMinute] = triggerTimeStr.split(':').map(Number);
+            const currentMinute = phnomPenhTime.getMinutes();
+            
+            // Convert both times to minutes since midnight for easier comparison
+            const currentTotalMinutes = currentHour * 60 + currentMinute;
+            const triggerTotalMinutes = triggerHour * 60 + triggerMinute;
+            
+            // Check if within ±5 minutes
+            const diff = Math.abs(currentTotalMinutes - triggerTotalMinutes);
+            return diff <= 5;
+        };
         
-        if (currentHour === morningHour) {
+        // Check which trigger time we're closest to
+        if (isWithinTimeWindow(settings.morningTriggerTime)) {
             targetShift = 'Morning';
             triggerTime = settings.morningTriggerTime;
-        } else if (currentHour === afternoonHour) {
+        } else if (isWithinTimeWindow(settings.afternoonTriggerTime)) {
             targetShift = 'Afternoon';
             triggerTime = settings.afternoonTriggerTime;
-        } else if (currentHour === eveningHour) {
+        } else if (isWithinTimeWindow(settings.eveningTriggerTime)) {
             targetShift = 'Evening';
             triggerTime = settings.eveningTriggerTime;
         } else {
-            logger.info(`⏭️ Current time ${currentTime} (hour: ${currentHour}) does not match any trigger times. Morning: ${morningHour}:00, Afternoon: ${afternoonHour}:00, Evening: ${eveningHour}:00`);
+            logger.info(`⏭️ Current time ${currentTime} is not within ±5 minutes of any trigger time. Morning: ${settings.morningTriggerTime}, Afternoon: ${settings.afternoonTriggerTime}, Evening: ${settings.eveningTriggerTime}`);
             return null;
         }
         
@@ -6532,18 +6596,60 @@ exports.scheduledAbsentParentNotifications = onSchedule({
             .where('date', '==', today)
             .get();
         
-        const attendedStudentIds = new Set();
+        // Build a map of studentId -> array of shifts they attended
+        const studentAttendanceByShift = new Map();
         attendanceSnapshot.docs.forEach(doc => {
             const record = doc.data();
-            attendedStudentIds.add(record.studentId);
+            const studentId = record.studentId;
+            const shift = record.shift ? record.shift.toLowerCase() : '';
+            
+            if (!studentAttendanceByShift.has(studentId)) {
+                studentAttendanceByShift.set(studentId, []);
+            }
+            if (shift) {
+                studentAttendanceByShift.get(studentId).push(shift);
+            }
         });
         
-        logger.info(`✅ ${attendedStudentIds.size} students have attendance records today`);
+        logger.info(`✅ ${studentAttendanceByShift.size} students have attendance records today`);
         
-        // STEP 3: Find students WITHOUT attendance (these are absent)
-        const absentStudents = allStudents.filter(s => !attendedStudentIds.has(s.id));
+        // STEP 2.5: Get all approved permissions for today
+        const permissionsSnapshot = await db.collection('permissions')
+            .where('status', '==', 'approved')
+            .where('permissionStartDate', '<=', today)
+            .where('permissionEndDate', '>=', today)
+            .get();
         
-        logger.info(`❌ Found ${absentStudents.length} absent students in ${targetShift} shift`);
+        const studentsWithPermission = new Set();
+        permissionsSnapshot.docs.forEach(doc => {
+            const permission = doc.data();
+            studentsWithPermission.add(permission.studentId);
+        });
+        
+        logger.info(`📋 ${studentsWithPermission.size} students have approved permissions today`);
+        
+        // STEP 3: Find students who are absent from THIS SPECIFIC SHIFT
+        // For students with multiple shifts: only send notification if absent from THIS shift
+        const absentStudents = allStudents.filter(s => {
+            // Skip if student has approved permission
+            if (studentsWithPermission.has(s.id)) {
+                return false;
+            }
+            
+            // Check if student attended THIS specific shift
+            const attendedShifts = studentAttendanceByShift.get(s.id) || [];
+            const studentShift = s.shift ? s.shift.toLowerCase() : '';
+            
+            // If student attended this shift, they're not absent from it
+            if (attendedShifts.includes(studentShift)) {
+                return false;
+            }
+            
+            // Student did not attend this shift - they are absent from THIS shift
+            return true;
+        });
+        
+        logger.info(`❌ Found ${absentStudents.length} students absent from ${targetShift} shift (excluding those who attended this shift or have permissions)`);
         
         if (absentStudents.length === 0) {
             logger.info(`✨ No absent students found for ${targetShift} shift on ${today}`);
@@ -6578,7 +6684,7 @@ exports.scheduledAbsentParentNotifications = onSchedule({
         for (const student of absentStudents) {
             // Skip if already notified today
             if (notifiedToday.has(student.id)) {
-                logger.info(`⏭️  Skipping ${student.englishName || student.khmerName} - already notified today`);
+                logger.info(`⏭️  Skipping ${student.fullName || student.englishName || student.khmerName} - already notified today`);
                 skipped++;
                 continue;
             }
@@ -6587,12 +6693,12 @@ exports.scheduledAbsentParentNotifications = onSchedule({
             
             try {
                 // Call the notification function
-                logger.info(`📤 Sending notification for ${student.englishName || student.khmerName} (${student.id})`);
+                logger.info(`📤 Sending notification for ${student.fullName || student.englishName || student.khmerName} (${student.id})`);
                 
                 const result = await exports.notifyParentAbsence.run({
                     data: {
                         studentId: student.id,
-                        studentName: student.englishName || student.khmerName || 'Unknown',
+                        studentName: student.fullName || student.englishName || student.khmerName || 'Unknown',
                         date: today,
                         absentFollowUpId: null // Will be created by notifyParentAbsence if needed
                     }
@@ -6600,10 +6706,10 @@ exports.scheduledAbsentParentNotifications = onSchedule({
                 
                 if (result.success) {
                     sent += result.notificationsSent;
-                    logger.info(`✅ Successfully notified parent(s) for ${student.englishName || student.khmerName}`);
+                    logger.info(`✅ Successfully notified parent(s) for ${student.fullName || student.englishName || student.khmerName}`);
                 } else {
                     failed++;
-                    logger.warn(`⚠️  Failed to notify parent for ${student.englishName || student.khmerName}: ${result.error}`);
+                    logger.warn(`⚠️  Failed to notify parent for ${student.fullName || student.englishName || student.khmerName}: ${result.error}`);
                 }
             } catch (error) {
                 logger.error(`❌ Error notifying parent for student ${student.id}:`, error);

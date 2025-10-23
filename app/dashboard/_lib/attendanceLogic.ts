@@ -80,6 +80,8 @@ export const getStudentDailyStatus = (
     if (!isSchoolDay(checkDate, classStudyDays)) return { status: "No School" };
 
     // Check attendance record first - prioritize actual attendance over permissions
+    // IMPORTANT: Only use the attendance record if it matches the student's current shift
+    // This prevents students with multiple shifts (e.g., 12B afternoon + 12BP evening) from being marked absent
     if (attendanceRecord) {
         // Check if the attendance record has a valid status property
         if (!attendanceRecord.status) {
@@ -88,17 +90,18 @@ export const getStudentDailyStatus = (
         }
         
         // Verify that the attendance record's shift matches the student's current shift
-        // This is important for students who might have multiple shifts or flip-flop schedules
+        // This is critical for students who might have multiple shifts or flip-flop schedules
         if (attendanceRecord.shift && student.shift) {
             const recordShift = attendanceRecord.shift.toLowerCase();
             const studentShift = student.shift.toLowerCase();
             
-            // If shifts don't match, ignore this attendance record and continue to check permissions/absence
+            // If shifts don't match, IGNORE this attendance record completely
+            // This allows students with multiple classes (different shifts) to be checked correctly
             if (recordShift !== studentShift) {
-                console.warn(`Attendance record shift (${recordShift}) does not match student shift (${studentShift}) for student ${student.studentId} on ${checkDateStr}`);
-                // Don't return here - fall through to check permissions or mark as absent
+                console.warn(`Attendance record shift (${recordShift}) does not match student shift (${studentShift}) for student ${student.studentId} on ${checkDateStr}. Treating as no attendance record for this shift.`);
+                // Fall through to check permissions or mark as absent (same as if no attendance record exists)
             } else {
-                // Shifts match, return the attendance status
+                // Shifts match - return the attendance status
                 const status = attendanceRecord.status === 'present' ? "Present" :
                                attendanceRecord.status === 'late'    ? "Late"    :
                                attendanceRecord.status === 'send-home' || attendanceRecord.status === 'send home' ? "Send Home" : "Unknown";
@@ -111,7 +114,7 @@ export const getStudentDailyStatus = (
             }
         } else {
             // If shift information is missing from either record or student, accept the attendance record as valid
-            // This maintains backward compatibility with older records
+            // This maintains backward compatibility with older records that don't have shift data
             const status = attendanceRecord.status === 'present' ? "Present" :
                            attendanceRecord.status === 'late'    ? "Late"    :
                            attendanceRecord.status === 'send-home' || attendanceRecord.status === 'send home' ? "Send Home" : "Unknown";

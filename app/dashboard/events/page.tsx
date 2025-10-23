@@ -48,10 +48,13 @@ export const fetchCache = 'force-no-store';
 
 interface PricingOption {
   id: string;
-  starPrice?: number; // Stars only
+  // Physical paper stars - just quantity and color
+  starQuantity?: number; // How many stars
+  starColor?: 'white' | 'pink' | 'orange' | 'blue' | 'yellow'; // Color of the stars
   moneyPrice?: number; // Money only
   starWithMoney?: {
-    stars: number | undefined;
+    starQuantity: number;
+    starColor: 'white' | 'pink' | 'orange' | 'blue' | 'yellow';
     money: number | undefined;
   }; // Combination option
   stock?: number; // Optional ticket limit
@@ -80,10 +83,19 @@ interface Form {
   title: string;
 }
 
+interface StarReward {
+  id: string;
+  name: string;
+  color: 'white' | 'pink' | 'orange' | 'blue';
+  amount: number;
+  isActive: boolean;
+}
+
 const EventsPage = () => {
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [forms, setForms] = useState<Form[]>([]);
+  const [starRewards, setStarRewards] = useState<StarReward[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -101,6 +113,7 @@ const EventsPage = () => {
   const [pricingOptions, setPricingOptions] = useState<PricingOption[]>([]);
   const [allowBorrow, setAllowBorrow] = useState(false);
   const [isTakeAttendance, setIsTakeAttendance] = useState(true);
+  const [pricingErrors, setPricingErrors] = useState<{[key: string]: {starQuantity?: string, moneyPrice?: string, starWithMoney?: {starQuantity?: string, money?: string}}}>({});
 
   // Load events
   useEffect(() => {
@@ -160,6 +173,24 @@ const EventsPage = () => {
     return () => unsubscribe();
   }, []);
 
+  // Load star rewards
+  useEffect(() => {
+    const starRewardsQuery = query(
+      collection(db, "starRewards"),
+      where("isActive", "==", true)
+    );
+
+    const unsubscribe = onSnapshot(starRewardsQuery, (snapshot) => {
+      const rewards = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as StarReward));
+      setStarRewards(rewards);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const handleImageUpload = async (file: File): Promise<string> => {
     const storageRef = ref(storage, `event-tickets/${Date.now()}_${file.name}`);
     await uploadBytes(storageRef, file);
@@ -171,6 +202,12 @@ const EventsPage = () => {
     
     if (!eventName || !eventDate || !selectedFormId) {
       toast.error("Please fill all required fields");
+      return;
+    }
+
+    // Validate pricing options if not free
+    if (!isFree && !validatePricingOptions()) {
+      toast.error("Please fill all required pricing fields");
       return;
     }
 
@@ -288,7 +325,8 @@ const EventsPage = () => {
         type: option.type
       };
       
-      if (option.starPrice !== undefined) cleaned.starPrice = option.starPrice;
+      if (option.starQuantity !== undefined) cleaned.starQuantity = option.starQuantity;
+      if (option.starColor !== undefined) cleaned.starColor = option.starColor;
       if (option.moneyPrice !== undefined) cleaned.moneyPrice = option.moneyPrice;
       if (option.starWithMoney !== undefined) cleaned.starWithMoney = option.starWithMoney;
       if (option.stock !== undefined) cleaned.stock = option.stock;
@@ -302,7 +340,8 @@ const EventsPage = () => {
   const addPricingOption = () => {
     const newOption: PricingOption = {
       id: `option_${Date.now()}`,
-      starPrice: undefined,
+      starQuantity: undefined,
+      starColor: undefined,
       moneyPrice: undefined,
       starWithMoney: undefined,
       stock: undefined,
@@ -316,20 +355,69 @@ const EventsPage = () => {
     setPricingOptions(pricingOptions.map(opt => 
       opt.id === id ? { ...opt, ...updates } : opt
     ));
+
+    // Clear errors for the updated fields
+    setPricingErrors(prev => {
+      const newErrors = { ...prev };
+      if (newErrors[id]) {
+        if (updates.starQuantity !== undefined && newErrors[id].starQuantity) {
+          delete newErrors[id].starQuantity;
+        }
+        if (updates.moneyPrice !== undefined && newErrors[id].moneyPrice) {
+          delete newErrors[id].moneyPrice;
+        }
+        if (updates.starWithMoney !== undefined) {
+          if (newErrors[id].starWithMoney) {
+            if (updates.starWithMoney.starQuantity !== undefined) {
+              delete newErrors[id].starWithMoney.starQuantity;
+            }
+            if (updates.starWithMoney.money !== undefined) {
+              delete newErrors[id].starWithMoney.money;
+            }
+            if (Object.keys(newErrors[id].starWithMoney).length === 0) {
+              delete newErrors[id].starWithMoney;
+            }
+          }
+        }
+        if (Object.keys(newErrors[id]).length === 0) {
+          delete newErrors[id];
+        }
+      }
+      return newErrors;
+    });
   };
 
   const removePricingOption = (id: string) => {
     setPricingOptions(pricingOptions.filter(opt => opt.id !== id));
   };
 
+  // Get button color class for star color selection
+  const getStarColorButtonClass = (color: 'white' | 'pink' | 'orange' | 'blue' | 'yellow') => {
+    switch (color) {
+      case 'white': return 'bg-gray-600 hover:bg-gray-700 border-gray-600 focus:ring-gray-500 focus:border-gray-500';
+      case 'pink': return 'bg-pink-600 hover:bg-pink-700 border-pink-600 focus:ring-pink-500 focus:border-pink-500';
+      case 'orange': return 'bg-orange-600 hover:bg-orange-700 border-orange-600 focus:ring-orange-500 focus:border-orange-500';
+      case 'blue': return 'bg-blue-600 hover:bg-blue-700 border-blue-600 focus:ring-blue-500 focus:border-blue-500';
+      case 'yellow': return 'bg-yellow-600 hover:bg-yellow-700 border-yellow-600 focus:ring-yellow-500 focus:border-yellow-500';
+    }
+  };
+
   const setPricingType = (id: string, type: 'stars' | 'money' | 'combo') => {
     const updates: Partial<PricingOption> = {
       type: type,
-      starPrice: type === 'stars' ? undefined : undefined,
+      starQuantity: type === 'stars' ? undefined : undefined,
+      starColor: type === 'stars' ? 'blue' : undefined,
       moneyPrice: type === 'money' ? undefined : undefined,
-      starWithMoney: type === 'combo' ? { stars: undefined, money: undefined } : undefined
+      starWithMoney: type === 'combo' ? { starQuantity: 0, starColor: 'blue', money: 0 } : undefined
     };
     updatePricingOption(id, updates);
+
+    // Clear all errors for this option when type changes
+    setPricingErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[id];
+      return newErrors;
+    });
   };
 
   const formatDate = (timestamp: Timestamp | Date) => {
@@ -342,9 +430,59 @@ const EventsPage = () => {
     });
   };
 
+  const starColorOptions = [
+    { value: 'white', label: 'White' },
+    { value: 'pink', label: 'Pink' },
+    { value: 'orange', label: 'Orange' },
+    { value: 'blue', label: 'Blue' },
+    { value: 'yellow', label: 'Yellow' }
+  ];
+
   const isUpcoming = (eventDate: Timestamp | Date) => {
     const date = eventDate instanceof Timestamp ? eventDate.toDate() : eventDate;
     return date >= new Date();
+  };
+
+  // Validate pricing options
+  const validatePricingOptions = () => {
+    const errors: {[key: string]: {starQuantity?: string, moneyPrice?: string, starWithMoney?: {starQuantity?: string, money?: string}}} = {};
+    let hasErrors = false;
+
+    pricingOptions.forEach(option => {
+      const optionErrors: any = {};
+
+      if (option.type === 'stars') {
+        if (!option.starQuantity || option.starQuantity <= 0) {
+          optionErrors.starQuantity = "Star quantity is required";
+          hasErrors = true;
+        }
+      } else if (option.type === 'money') {
+        if (!option.moneyPrice || option.moneyPrice <= 0) {
+          optionErrors.moneyPrice = "Money price is required";
+          hasErrors = true;
+        }
+      } else if (option.type === 'combo') {
+        const comboErrors: any = {};
+        if (!option.starWithMoney?.starQuantity || option.starWithMoney.starQuantity <= 0) {
+          comboErrors.starQuantity = "Star quantity is required";
+          hasErrors = true;
+        }
+        if (!option.starWithMoney?.money || option.starWithMoney.money <= 0) {
+          comboErrors.money = "Money amount is required";
+          hasErrors = true;
+        }
+        if (Object.keys(comboErrors).length > 0) {
+          optionErrors.starWithMoney = comboErrors;
+        }
+      }
+
+      if (Object.keys(optionErrors).length > 0) {
+        errors[option.id] = optionErrors;
+      }
+    });
+
+    setPricingErrors(errors);
+    return !hasErrors;
   };
 
   if (loading) {
@@ -697,19 +835,47 @@ const EventsPage = () => {
                         {/* Price Inputs */}
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           {option.type === 'stars' && (
-                            <div className="col-span-2">
-                              <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                <Icon path={mdiStar} size={12} className="inline mr-1" />
-                                Stars
-                              </label>
-                              <input
-                                type="number"
-                                min="0"
-                                value={option.starPrice ?? ""}
-                                onChange={(e) => updatePricingOption(option.id, { starPrice: e.target.value === "" ? 0 : parseInt(e.target.value) || 0 })}
-                                className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-                              />
-                            </div>
+                            <>
+                              <div>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                  <Icon path={mdiStar} size={12} className="inline mr-1" />
+                                  Star Quantity
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={option.starQuantity === 0 ? "" : (option.starQuantity ?? "")}
+                                  onChange={(e) => updatePricingOption(option.id, { starQuantity: e.target.value === "" ? 0 : parseInt(e.target.value) || 0 })}
+                                  className={`w-full px-4 py-2.5 rounded border text-sm ${
+                                    pricingErrors[option.id]?.starQuantity 
+                                      ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+                                      : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+                                  } text-gray-900 dark:text-white`}
+                                  placeholder="e.g. 10"
+                                />
+                                {pricingErrors[option.id]?.starQuantity && (
+                                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                    {pricingErrors[option.id].starQuantity}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-600 dark:text-gray-400 mb-1 flex items-center">
+                                  <Icon path={mdiStar} size={12} className="inline mr-1" />
+                                  Star Color
+                                </label>
+                                <CustomCombobox
+                                  options={starColorOptions}
+                                  selectedValue={option.starColor || 'blue'}
+                                  onChange={(value) => updatePricingOption(option.id, { starColor: value as 'white' | 'pink' | 'orange' | 'blue' | 'yellow' })}
+                                  placeholder="Select star color"
+                                  editable={false}
+                                  fieldData={{
+                                    className: `w-full ${getStarColorButtonClass(option.starColor || 'blue')} border rounded-lg px-4 py-2.5 text-left cursor-pointer focus:outline-none focus:ring-2 transition-all duration-200 flex items-center justify-between text-white`
+                                  }}
+                                />
+                              </div>
+                            </>
                           )}
 
                           {option.type === 'money' && (
@@ -722,10 +888,19 @@ const EventsPage = () => {
                                 type="number"
                                 min="0"
                                 step="0.01"
-                                value={option.moneyPrice ?? ""}
+                                value={option.moneyPrice === 0 ? "" : (option.moneyPrice ?? "")}
                                 onChange={(e) => updatePricingOption(option.id, { moneyPrice: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0 })}
-                                className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                                className={`w-full px-4 py-2.5 rounded border text-sm ${
+                                  pricingErrors[option.id]?.moneyPrice 
+                                    ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+                                    : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+                                } text-gray-900 dark:text-white`}
                               />
+                              {pricingErrors[option.id]?.moneyPrice && (
+                                <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                  {pricingErrors[option.id].moneyPrice}
+                                </p>
+                              )}
                             </div>
                           )}
 
@@ -734,22 +909,53 @@ const EventsPage = () => {
                               <div>
                                 <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   <Icon path={mdiStar} size={12} className="inline mr-1" />
-                                  Stars
+                                  Star Quantity
                                 </label>
                                 <input
                                   type="number"
                                   min="0"
-                                  value={option.starWithMoney?.stars ?? ""}
+                                  value={option.starWithMoney?.starQuantity === 0 ? "" : (option.starWithMoney?.starQuantity ?? "")}
                                   onChange={(e) => updatePricingOption(option.id, {
                                     starWithMoney: {
                                       ...option.starWithMoney!,
-                                      stars: e.target.value === "" ? 0 : parseInt(e.target.value) || 0
+                                      starQuantity: e.target.value === "" ? 0 : parseInt(e.target.value) || 0
                                     }
                                   })}
-                                  className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                                  className={`w-full px-4 py-2.5 rounded border text-sm ${
+                                    pricingErrors[option.id]?.starWithMoney?.starQuantity 
+                                      ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+                                      : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+                                  } text-gray-900 dark:text-white`}
+                                  placeholder="e.g. 5"
                                 />
+                                {pricingErrors[option.id]?.starWithMoney?.starQuantity && (
+                                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                    {pricingErrors[option.id]?.starWithMoney?.starQuantity}
+                                  </p>
+                                )}
                               </div>
                               <div>
+                                <label className="text-xs text-gray-600 dark:text-gray-400 mb-1 flex items-center">
+                                  <Icon path={mdiStar} size={12} className="inline mr-1" />
+                                  Star Color
+                                </label>
+                                <CustomCombobox
+                                  options={starColorOptions}
+                                  selectedValue={option.starWithMoney?.starColor || 'blue'}
+                                  onChange={(value) => updatePricingOption(option.id, {
+                                    starWithMoney: {
+                                      ...option.starWithMoney!,
+                                      starColor: value as 'white' | 'pink' | 'orange' | 'blue' | 'yellow'
+                                    }
+                                  })}
+                                  placeholder="Select star color"
+                                  editable={false}
+                                  fieldData={{
+                                    className: `w-full ${getStarColorButtonClass(option.starWithMoney?.starColor || 'blue')} border rounded-lg px-4 py-2.5 text-left cursor-pointer focus:outline-none focus:ring-2 transition-all duration-200 flex items-center justify-between text-white`
+                                  }}
+                                />
+                              </div>
+                              <div className="col-span-2">
                                 <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
                                   <Icon path={mdiCurrencyUsd} size={12} className="inline mr-1" />
                                   Money ($)
@@ -758,15 +964,24 @@ const EventsPage = () => {
                                   type="number"
                                   min="0"
                                   step="0.01"
-                                  value={option.starWithMoney?.money ?? ""}
+                                  value={option.starWithMoney?.money === 0 ? "" : (option.starWithMoney?.money ?? "")}
                                   onChange={(e) => updatePricingOption(option.id, {
                                     starWithMoney: {
                                       ...option.starWithMoney!,
                                       money: e.target.value === "" ? 0 : parseFloat(e.target.value) || 0
                                     }
                                   })}
-                                  className="w-full px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                                  className={`w-full px-4 py-2.5 rounded border text-sm ${
+                                    pricingErrors[option.id]?.starWithMoney?.money 
+                                      ? 'border-red-500 bg-red-50 dark:bg-red-900/20' 
+                                      : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+                                  } text-gray-900 dark:text-white`}
                                 />
+                                {pricingErrors[option.id]?.starWithMoney?.money && (
+                                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                    {pricingErrors[option.id]?.starWithMoney?.money}
+                                  </p>
+                                )}
                               </div>
                             </>
                           )}
@@ -894,6 +1109,17 @@ const EventsPage = () => {
   );
 };
 
+// Helper function for star color classes
+const getStarColorClass = (color: 'white' | 'pink' | 'orange' | 'blue' | 'yellow') => {
+  switch (color) {
+    case 'white': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    case 'pink': return 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-200';
+    case 'orange': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200';
+    case 'blue': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
+    case 'yellow': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
+  }
+};
+
 // Event Card Component
 interface EventCardProps {
   event: Event;
@@ -980,9 +1206,9 @@ const EventCard = ({ event, onEdit, onDelete, onViewRegistrations, formatDate, i
                     <div key={idx} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                       <Icon path={mdiTicket} size={14} />
                       <span className="font-medium">Tier {idx + 1}:</span>
-                      {option.type === 'stars' && (
-                        <span className="text-yellow-600 dark:text-yellow-400">
-                          ⭐ {option.starPrice}
+                      {option.type === 'stars' && option.starQuantity && (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStarColorClass(option.starColor || 'white')}`}>
+                          {option.starQuantity}x ⭐ {(option.starColor || 'white').charAt(0).toUpperCase() + (option.starColor || 'white').slice(1)}
                         </span>
                       )}
                       {option.type === 'money' && (
@@ -990,10 +1216,15 @@ const EventCard = ({ event, onEdit, onDelete, onViewRegistrations, formatDate, i
                           ${option.moneyPrice}
                         </span>
                       )}
-                      {option.type === 'combo' && (
-                        <span className="text-purple-600 dark:text-purple-400">
-                          ⭐ {option.starWithMoney?.stars} + ${option.starWithMoney?.money}
-                        </span>
+                      {option.type === 'combo' && option.starWithMoney && (
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStarColorClass(option.starWithMoney.starColor || 'white')}`}>
+                            {option.starWithMoney.starQuantity}x ⭐ {(option.starWithMoney.starColor || 'white').charAt(0).toUpperCase() + (option.starWithMoney.starColor || 'white').slice(1)}
+                          </span>
+                          <span className="text-green-600 dark:text-green-400">
+                            + ${option.starWithMoney.money}
+                          </span>
+                        </div>
                       )}
                     </div>
                   ))}

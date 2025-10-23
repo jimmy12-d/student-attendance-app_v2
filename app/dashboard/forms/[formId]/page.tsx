@@ -8,11 +8,11 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { doc, getDoc, setDoc, Timestamp, updateDoc, collection, getDocs } from "firebase/firestore";
 import { db } from "@/firebase-config";
-import { Form, Question, FormType } from "@/app/_interfaces/forms";
+import { Form, Question, FormType, FormSection } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
-import { mdiPlus, mdiContentSave, mdiArrowLeft, mdiFormSelect } from "@mdi/js";
+import { mdiPlus, mdiContentSave, mdiArrowLeft, mdiFormSelect, mdiViewSequentialOutline, mdiCheckCircle, mdiEye, mdiShieldCheck, mdiAccountGroup, mdiCounter, mdiCalendarClock } from "@mdi/js";
 import { toast } from "sonner";
-import QuestionEditor from "../_components/QuestionEditor";
+import SectionEditor from "../_components/SectionEditor";
 import FormTypeSelector from "../_components/FormTypeSelector";
 import { useAppSelector } from "@/app/_stores/hooks";
 
@@ -34,18 +34,25 @@ const FormBuilderPage = () => {
   const [maxResponses, setMaxResponses] = useState<number | undefined>(undefined);
   const [targetClassTypes, setTargetClassTypes] = useState<string[]>([]);
   const [availableClassTypes, setAvailableClassTypes] = useState<string[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [sections, setSections] = useState<FormSection[]>([]);
   const [loading, setLoading] = useState(!isNewForm);
   const [saving, setSaving] = useState(false);
-  const [questionErrors, setQuestionErrors] = useState<Record<number, string[]>>({});
-  const [draggedQuestionId, setDraggedQuestionId] = useState<string | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null); // Ref for the scrollable container
+  const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadClassTypes();
     if (!isNewForm) {
       loadForm();
+    } else {
+      // New form starts with one empty section
+      setSections([{
+        id: `s_${Date.now()}`,
+        title: 'Untitled Section',
+        description: '',
+        questions: []
+      }]);
     }
   }, [formId]);
 
@@ -111,7 +118,28 @@ const FormBuilderPage = () => {
         setRequiresApproval(formData.requiresApproval || false);
         setMaxResponses(formData.maxResponses);
         setTargetClassTypes(formData.targetClassTypes || []);
-        setQuestions(formData.questions);
+        
+        // Always use sections - convert old forms automatically
+        if (formData.sections && formData.sections.length > 0) {
+          setSections(formData.sections);
+        } else if (formData.questions && formData.questions.length > 0) {
+          // Convert old question-based forms to section format
+          const defaultSection: FormSection = {
+            id: `s_${Date.now()}`,
+            title: 'Main Section',
+            description: '',
+            questions: formData.questions
+          };
+          setSections([defaultSection]);
+        } else {
+          // New form starts with one empty section
+          setSections([{
+            id: `s_${Date.now()}`,
+            title: 'Untitled Section',
+            description: '',
+            questions: []
+          }]);
+        }
       } else {
         toast.error("Form not found");
         router.push("/dashboard/forms");
@@ -133,139 +161,85 @@ const FormBuilderPage = () => {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const addQuestion = () => {
-    const newQuestion: Question = {
-      id: `q_${Date.now()}`,
-      text: '',
-      type: 'short_answer',
-      required: false,
-      options: [],
+  // Section Management
+  const addSection = () => {
+    const newSection: FormSection = {
+      id: `s_${Date.now()}`,
+      title: 'Untitled Section',
+      description: '',
+      questions: []
     };
-    setQuestions([...questions, newQuestion]);
+    setSections([...sections, newSection]);
   };
 
-  const updateQuestion = (index: number, updatedQuestion: Question) => {
-    const newQuestions = [...questions];
-    newQuestions[index] = updatedQuestion;
-    setQuestions(newQuestions);
-    
-    // Clear errors for this question when user makes changes
-    if (questionErrors[index]) {
-      const newErrors = { ...questionErrors };
-      delete newErrors[index];
-      setQuestionErrors(newErrors);
-    }
+  const updateSection = (index: number, updatedSection: FormSection) => {
+    const newSections = [...sections];
+    newSections[index] = updatedSection;
+    setSections(newSections);
   };
 
-  const deleteQuestion = (index: number) => {
-    setQuestions(questions.filter((_, i) => i !== index));
+  const deleteSection = (index: number) => {
+    setSections(sections.filter((_, i) => i !== index));
   };
 
-  const duplicateQuestion = (index: number) => {
-    const questionToDuplicate = questions[index];
-    const duplicatedQuestion: Question = {
-      ...questionToDuplicate,
-      id: `q_${Date.now()}` + Math.random().toString(36).substring(7), // Ensure unique ID
+  const duplicateSection = (index: number) => {
+    const sectionToDuplicate = sections[index];
+    const duplicatedSection: FormSection = {
+      ...sectionToDuplicate,
+      id: `s_${Date.now()}`,
+      title: `${sectionToDuplicate.title} (Copy)`,
+      questions: sectionToDuplicate.questions.map(q => ({
+        ...q,
+        id: `q_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      }))
     };
-    setQuestions([...questions.slice(0, index + 1), duplicatedQuestion, ...questions.slice(index + 1)]);
+    setSections([...sections.slice(0, index + 1), duplicatedSection, ...sections.slice(index + 1)]);
   };
 
-  const handleDragStart = (e: React.DragEvent, questionId: string) => {
-    setDraggedQuestionId(questionId);
+  // Section Drag & Drop Handlers
+  const handleSectionDragStart = (e: React.DragEvent, sectionId: string) => {
+    setDraggedSectionId(sectionId);
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", questionId); // Set data for drag operation
-    // console.log("Drag Start:", questionId); // Removed for production
+    e.dataTransfer.setData("text/plain", sectionId);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Allows us to drop
-    e.dataTransfer.dropEffect = "move";
-    // console.log("Drag Over"); // Too noisy - Removed for production
-
-    // Auto-scrolling logic
-    const container = containerRef.current;
-    if (container) {
-      const boundingBox = container.getBoundingClientRect();
-      const mouseY = e.clientY;
-      const scrollThreshold = 50; // pixels from edge to start scrolling
-      const scrollSpeed = 10; // pixels per frame
-
-      if (mouseY < boundingBox.top + scrollThreshold) {
-        // Scroll up
-        if (scrollIntervalRef.current === null) {
-          scrollIntervalRef.current = window.setInterval(() => {
-            if (container.scrollTop > 0) {
-              container.scrollTop -= scrollSpeed;
-            }
-          }, 30);
-        }
-      } else if (mouseY > boundingBox.bottom - scrollThreshold) {
-        // Scroll down
-        if (scrollIntervalRef.current === null) {
-          scrollIntervalRef.current = window.setInterval(() => {
-            if (container.scrollTop + container.clientHeight < container.scrollHeight) {
-              container.scrollTop += scrollSpeed;
-            }
-          }, 30);
-        }
-      } else {
-        // Stop scrolling if not near edge
-        if (scrollIntervalRef.current !== null) {
-          clearInterval(scrollIntervalRef.current);
-          scrollIntervalRef.current = null;
-        }
-      }
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent, targetQuestionId: string) => {
+  const handleSectionDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    // console.log("Drop on:", targetQuestionId); // Removed for production
-    if (!draggedQuestionId || draggedQuestionId === targetQuestionId) {
-      // console.log("No dragged ID or dropping on self."); // Removed for production
-      setDraggedQuestionId(null);
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleSectionDrop = (e: React.DragEvent, targetSectionId: string) => {
+    e.preventDefault();
+    if (!draggedSectionId || draggedSectionId === targetSectionId) {
+      setDraggedSectionId(null);
       return;
     }
 
-    const draggedIndex = questions.findIndex(q => q.id === draggedQuestionId);
-    const targetIndex = questions.findIndex(q => q.id === targetQuestionId);
-
-    // console.log(`Dragged: ${draggedQuestionId} (index ${draggedIndex}), Target: ${targetQuestionId} (index ${targetIndex})`); // Removed for production
+    const draggedIndex = sections.findIndex(s => s.id === draggedSectionId);
+    const targetIndex = sections.findIndex(s => s.id === targetSectionId);
 
     if (draggedIndex === -1 || targetIndex === -1) {
-      // console.error("Dragged or target question not found.", { draggedQuestionId, targetQuestionId, questions }); // Removed for production
-      setDraggedQuestionId(null);
+      setDraggedSectionId(null);
       return;
     }
 
-    const newQuestions = [...questions];
-    const [removed] = newQuestions.splice(draggedIndex, 1);
-    newQuestions.splice(targetIndex, 0, removed);
+    const newSections = [...sections];
+    const [removed] = newSections.splice(draggedIndex, 1);
+    newSections.splice(targetIndex, 0, removed);
 
-    setQuestions(newQuestions);
-    setDraggedQuestionId(null);
-    // console.log("Questions after drop:", newQuestions.map(q => q.id)); // Removed for production
+    setSections(newSections);
+    setDraggedSectionId(null);
   };
 
-  const handleDragEnd = () => {
-    // console.log("Drag End"); // Removed for production
-    setDraggedQuestionId(null);
-    // Clear any active scrolling interval
+  const handleSectionDragEnd = () => {
+    setDraggedSectionId(null);
     if (scrollIntervalRef.current !== null) {
       clearInterval(scrollIntervalRef.current);
       scrollIntervalRef.current = null;
     }
   };
 
-  const setAllRequired = (required: boolean) => {
-    const updatedQuestions = questions.map(q => ({ ...q, required }));
-    setQuestions(updatedQuestions);
-    toast.success(required ? "All questions marked as required" : "All questions marked as optional");
-  };
-
   const validateForm = (): boolean => {
-    const errors: Record<number, string[]> = {};
-
     if (!title.trim()) {
       toast.error("Please enter a form title");
       return false;
@@ -284,49 +258,56 @@ const FormBuilderPage = () => {
       }
     }
 
-    if (questions.length === 0) {
-      toast.error("Please add at least one question");
+    // Validate sections
+    if (sections.length === 0) {
+      toast.error("Please add at least one section with questions");
       return false;
     }
 
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
-      const questionErrors: string[] = [];
-
-      if (!q.text.trim()) {
-        questionErrors.push("Question text is required");
+    // Validate each section
+    for (const section of sections) {
+      if (!section.title.trim()) {
+        toast.error("All sections must have a title");
+        return false;
+      }
+      if (section.questions.length === 0) {
+        toast.error(`Section "${section.title}" must have at least one question`);
+        return false;
       }
 
-      const needsOptions = ['multiple_choice', 'checkboxes', 'dropdown'].includes(q.type);
-      if (needsOptions) {
-        // Checkboxes can have 1 option, others need at least 2
-        const minOptions = q.type === 'checkboxes' ? 1 : 2;
-        if (!q.options || q.options.length < minOptions) {
-          questionErrors.push(
-            q.type === 'checkboxes'
-              ? `At least ${minOptions} option required`
-              : `At least ${minOptions} options required`
-          );
+      // Validate questions in this section
+      for (const q of section.questions) {
+        if (!validateQuestion(q)) {
+          return false;
         }
-
-        if (q.options) {
-          const emptyOptions = q.options.filter(opt => !opt.text.trim());
-          if (emptyOptions.length > 0) {
-            questionErrors.push(`${emptyOptions.length} option(s) are empty`);
-          }
-        }
-      }
-
-      if (questionErrors.length > 0) {
-        errors[i] = questionErrors;
       }
     }
 
-    setQuestionErrors(errors);
+    return true;
+  };
 
-    if (Object.keys(errors).length > 0) {
-      toast.error(`Please fix ${Object.keys(errors).length} question(s) with errors`);
+  const validateQuestion = (q: Question): boolean => {
+    if (!q.text.trim()) {
+      toast.error("All questions must have text");
       return false;
+    }
+
+    const needsOptions = ['multiple_choice', 'checkboxes', 'dropdown'].includes(q.type);
+    if (needsOptions) {
+      // Checkboxes can have 1 option, others need at least 2
+      const minOptions = q.type === 'checkboxes' ? 1 : 2;
+      if (!q.options || q.options.length < minOptions) {
+        toast.error(`Question "${q.text}" needs at least ${minOptions} option(s)`);
+        return false;
+      }
+
+      if (q.options) {
+        const emptyOptions = q.options.filter(opt => !opt.text.trim());
+        if (emptyOptions.length > 0) {
+          toast.error(`Question "${q.text}" has ${emptyOptions.length} empty option(s)`);
+          return false;
+        }
+      }
     }
 
     return true;
@@ -348,11 +329,14 @@ const FormBuilderPage = () => {
         createdAt: isNewForm ? Timestamp.now() : Timestamp.now(),
         updatedAt: Timestamp.now(),
         createdBy: userUid || 'unknown',
-        questions,
         isActive,
         isVisible,
         requiresApproval
       };
+
+      // Always save as sections
+      formData.sections = sections;
+      formData.questions = []; // Clear old questions for backward compatibility
       
       // Only include maxResponses if it's a valid number
       if (maxResponses && !isNaN(maxResponses) && maxResponses > 0) {
@@ -399,7 +383,7 @@ const FormBuilderPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 pb-20 nokora-font">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 pb-4 nokora-font">
       {/* Fixed Header */}
       <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-lg border-b border-gray-200 dark:border-slate-700">
         <div className="max-w-5xl mx-auto px-6 py-4">
@@ -480,6 +464,7 @@ const FormBuilderPage = () => {
           {/* Target Class Types */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <Icon path={mdiAccountGroup} size={16} className="inline mr-2 text-blue-600 dark:text-blue-400" />
               Target Class Types (optional)
             </label>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -533,6 +518,7 @@ const FormBuilderPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <Icon path={mdiCalendarClock} size={16} className="inline mr-2 text-blue-600 dark:text-blue-400" />
                 Deadline *
               </label>
               <input
@@ -544,6 +530,7 @@ const FormBuilderPage = () => {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                <Icon path={mdiCounter} size={16} className="inline mr-2 text-blue-600 dark:text-blue-400" />
                 Max Responses (optional)
               </label>
               <input
@@ -578,6 +565,7 @@ const FormBuilderPage = () => {
                 onChange={(e) => setIsActive(e.target.checked)}
                 className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
+              <Icon path={mdiCheckCircle} size={20} className="text-blue-600 dark:text-blue-400" />
               <div className="flex-1">
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 block">
                   Active (accepts responses)
@@ -595,6 +583,7 @@ const FormBuilderPage = () => {
                 onChange={(e) => setIsVisible(e.target.checked)}
                 className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
               />
+              <Icon path={mdiEye} size={20} className="text-green-600 dark:text-green-400" />
               <div className="flex-1">
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 block">
                   Visible (show to students)
@@ -612,6 +601,7 @@ const FormBuilderPage = () => {
                 onChange={(e) => setRequiresApproval(e.target.checked)}
                 className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
               />
+              <Icon path={mdiShieldCheck} size={20} className="text-purple-600 dark:text-purple-400" />
               <div className="flex-1">
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 block">
                   Requires Approval
@@ -624,69 +614,86 @@ const FormBuilderPage = () => {
           </div>
         </div>
 
-        {/* Questions Section */}
+        {/* Form Content Section */}
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Questions ({questions.length})
-            </h2>
-            <div className="flex items-center gap-3">
-              {questions.length > 0 && (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setAllRequired(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    Set All Required
-                  </button>
-                  <button
-                    onClick={() => setAllRequired(false)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    Clear All Required
-                  </button>
-                </div>
-              )}
-              <button
-              onClick={addQuestion}
-              className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-            >
-              <Icon path={mdiPlus} size={16} />
-              <span className="font-semibold">Add Question</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <Icon path={mdiViewSequentialOutline} size={20} className="text-blue-600 dark:text-blue-400" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {sections.length > 1 ? `Sections (${sections.length})` : 'Form Questions'}
+                </h2>
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {sections.length > 1 
+                    ? 'Organize your form into logical sections' 
+                    : 'Build your form by adding questions below'
+                  }
+                </p>
+              </div>
             </div>
+            {/* Only show Add Section button if there's more than one section */}
+            {sections.length > 1 && (
+              <button
+                onClick={addSection}
+                className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+              >
+                <Icon path={mdiPlus} size={16} />
+                <span className="font-semibold">Add Section</span>
+              </button>
+            )}
           </div>
 
-          {questions.length === 0 ? (
+          {/* Sections */}
+          {sections.length === 0 ? (
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border-2 border-dashed border-gray-300 dark:border-slate-600 p-12 text-center">
+              <Icon path={mdiViewSequentialOutline} size={3} className="text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500 dark:text-gray-400 mb-4">
-                No questions yet. Click "Add Question" to get started.
+                No sections yet. Click "Add Section" to create your first section.
+              </p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">
+                Sections help organize your form into logical groups, just like Google Forms!
               </p>
             </div>
           ) : (
             <div
               ref={containerRef}
-              onDragOver={handleDragOver}
-              onDragEnd={handleDragEnd}
-              className="space-y-4"
-              style={{ overflowY: 'auto', maxHeight: '70vh' }} // Make it scrollable
+              onDragOver={handleSectionDragOver}
+              onDragEnd={handleSectionDragEnd}
+              className="space-y-6"
+              style={{ overflowY: 'auto', maxHeight: '70vh' }}
             >
-              {questions.map((question, index) => (
-                <QuestionEditor
-                  key={question.id}
-                  question={question}
-                  index={index}
-                  onUpdate={(updated) => updateQuestion(index, updated)}
-                  onDelete={() => deleteQuestion(index)}
-                  onDuplicate={() => duplicateQuestion(index)}
-                  validationErrors={questionErrors[index]}
+              {sections.map((section, index) => (
+                <SectionEditor
+                  key={section.id}
+                  section={section}
+                  sectionIndex={index}
+                  onUpdate={(updated) => updateSection(index, updated)}
+                  onDelete={() => deleteSection(index)}
+                  onDuplicate={() => duplicateSection(index)}
+                  onDragStart={(e) => handleSectionDragStart(e, section.id)}
+                  onDragOver={handleSectionDragOver}
+                  onDrop={(e) => handleSectionDrop(e, section.id)}
+                  onDragEnd={handleSectionDragEnd}
+                  isDragging={draggedSectionId === section.id}
                   availableClassTypes={availableClassTypes}
-                  onDragStart={(e) => handleDragStart(e, question.id)}
-                  onDrop={(e) => handleDrop(e, question.id)}
-                  onDragOver={handleDragOver}
-                  isBeingDragged={draggedQuestionId === question.id}
                 />
               ))}
+              
+              {/* Add Section button at the bottom if there's more than one section */}
+              {sections.length > 1 && (
+                <button
+                  type="button"
+                  onClick={addSection}
+                  className="w-full py-4 border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-xl hover:border-green-400 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/10 transition-all group"
+                >
+                  <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400">
+                    <Icon path={mdiPlus} size={16} />
+                    <span className="font-medium">Add Section</span>
+                  </div>
+                </button>
+              )}
             </div>
           )}
         </div>

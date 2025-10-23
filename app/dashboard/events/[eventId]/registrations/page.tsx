@@ -87,9 +87,15 @@ interface Event {
   pricingOptions?: Array<{
     id: string;
     type?: 'stars' | 'money' | 'combo';
-    starPrice?: number;
+    // Physical paper stars - just quantity and color
+    starQuantity?: number; // How many stars
+    starColor?: 'white' | 'pink' | 'orange' | 'blue' | 'yellow'; // Color of the stars
     moneyPrice?: number;
-    starWithMoney?: { stars: number; money: number };
+    starWithMoney?: {
+      starQuantity: number;
+      starColor: 'white' | 'pink' | 'orange' | 'blue' | 'yellow';
+      money: number | undefined;
+    };
     stock?: number;
     soldCount?: number;
   }>;
@@ -114,6 +120,17 @@ const EventRegistrationsPage = () => {
   const router = useRouter();
   const params = useParams();
   const eventId = params?.eventId as string;
+
+  // Helper function to get star color class
+  const getStarColorClass = (color: 'white' | 'pink' | 'orange' | 'blue' | 'yellow') => {
+    switch (color) {
+      case 'white': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+      case 'pink': return 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-200';
+      case 'orange': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200';
+      case 'blue': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
+      case 'yellow': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200';
+    }
+  };
 
   const [event, setEvent] = useState<Event | null>(null);
   const [registrations, setRegistrations] = useState<FormResponse[]>([]);
@@ -288,7 +305,6 @@ const EventRegistrationsPage = () => {
       ...prev,
       [registrationId]: optionId
     }));
-    toast.success("Pricing option selected! You can now record payment.");
   };
 
   const openPaymentModal = (registrationId: string) => {
@@ -313,18 +329,21 @@ const EventRegistrationsPage = () => {
       return;
     }
 
+    const totalStars = selectedOption.starQuantity || selectedOption.starWithMoney?.starQuantity || 0;
+    const totalMoney = selectedOption.moneyPrice || selectedOption.starWithMoney?.money || 0;
+
     setPaymentModal({
       registrationId,
       pricingOptions: [selectedOption], // Only show the selected option
       selectedOptionId: selectedOption.id,
-      totalStars: selectedOption.starPrice || selectedOption.starWithMoney?.stars || 0,
-      totalMoney: selectedOption.moneyPrice || selectedOption.starWithMoney?.money || 0
+      totalStars,
+      totalMoney
     });
 
     // Reset form with full payment as default
     setPaymentForm({
-      paidStars: selectedOption.starPrice || selectedOption.starWithMoney?.stars || 0,
-      paidMoney: selectedOption.moneyPrice || selectedOption.starWithMoney?.money || 0,
+      paidStars: totalStars,
+      paidMoney: totalMoney,
       borrowedStars: 0,
       borrowedMoney: 0
     });
@@ -405,6 +424,62 @@ const EventRegistrationsPage = () => {
     }
   };
 
+  const handleRevertPayment = async (registrationId: string) => {
+    if (!event?.pricingOptions) return;
+
+    setProcessingPayment(registrationId);
+    try {
+      // Get the current registration data
+      const registrationRef = doc(db, "form_responses", registrationId);
+      const registrationSnap = await getDoc(registrationRef);
+      
+      if (!registrationSnap.exists()) {
+        toast.error("Registration not found");
+        return;
+      }
+
+      const registrationData = registrationSnap.data();
+      const pricingOptionId = registrationData.pricingOptionId;
+
+      if (!pricingOptionId) {
+        toast.error("No payment to revert");
+        return;
+      }
+
+      // Update registration to remove payment info
+      await updateDoc(registrationRef, {
+        pricingOptionId: null,
+        paymentStatus: 'unpaid',
+        amountPaid: null,
+        borrowAmount: null,
+        paidAt: null,
+        registrationStatus: 'pending' // Reset to pending status
+      });
+
+      // Update stock count (decrease sold count)
+      const selectedOption = event.pricingOptions.find(opt => opt.id === pricingOptionId);
+      if (selectedOption && selectedOption.stock !== undefined) {
+        const eventRef = doc(db, "events", event.id);
+        const updatedOptions = event.pricingOptions.map(opt => {
+          if (opt.id === pricingOptionId) {
+            return { ...opt, soldCount: Math.max(0, (opt.soldCount || 0) - 1) };
+          }
+          return opt;
+        });
+        await updateDoc(eventRef, {
+          pricingOptions: updatedOptions
+        });
+      }
+
+      toast.success("Payment reverted successfully");
+    } catch (error) {
+      console.error("Error reverting payment:", error);
+      toast.error("Failed to revert payment");
+    } finally {
+      setProcessingPayment(null);
+    }
+  };
+
   const handleBuyOption = async (registrationId: string, pricingOptionId: string, isBorrow: boolean = false) => {
     if (!event?.pricingOptions) return;
 
@@ -419,31 +494,19 @@ const EventRegistrationsPage = () => {
       // Calculate amounts
       let amountPaid = { stars: 0, money: 0 };
       let borrowAmount = { stars: 0, money: 0 };
+      
+      const totalStars = selectedOption.starQuantity || selectedOption.starWithMoney?.starQuantity || 0;
+      const totalMoney = selectedOption.moneyPrice || selectedOption.starWithMoney?.money || 0;
+      const starColor = selectedOption.starColor || selectedOption.starWithMoney?.starColor || 'white';
 
       if (isBorrow) {
         // If borrowing, set borrow amounts
-        if (selectedOption.starPrice !== undefined) {
-          borrowAmount.stars = selectedOption.starPrice;
-        }
-        if (selectedOption.moneyPrice !== undefined) {
-          borrowAmount.money = selectedOption.moneyPrice;
-        }
-        if (selectedOption.starWithMoney) {
-          borrowAmount.stars = selectedOption.starWithMoney.stars;
-          borrowAmount.money = selectedOption.starWithMoney.money;
-        }
+        borrowAmount.stars = totalStars;
+        borrowAmount.money = totalMoney;
       } else {
         // If paying, set paid amounts
-        if (selectedOption.starPrice !== undefined) {
-          amountPaid.stars = selectedOption.starPrice;
-        }
-        if (selectedOption.moneyPrice !== undefined) {
-          amountPaid.money = selectedOption.moneyPrice;
-        }
-        if (selectedOption.starWithMoney) {
-          amountPaid.stars = selectedOption.starWithMoney.stars;
-          amountPaid.money = selectedOption.starWithMoney.money;
-        }
+        amountPaid.stars = totalStars;
+        amountPaid.money = totalMoney;
       }
 
       // Update registration with payment info
@@ -1174,8 +1237,9 @@ const EventRegistrationsPage = () => {
                           
                           // Calculate total price
                           const totalPrice = {
-                            stars: selectedOption.starPrice || selectedOption.starWithMoney?.stars || 0,
-                            money: selectedOption.moneyPrice || selectedOption.starWithMoney?.money || 0
+                            stars: selectedOption.starQuantity || selectedOption.starWithMoney?.starQuantity || 0,
+                            money: selectedOption.moneyPrice || selectedOption.starWithMoney?.money || 0,
+                            starColor: selectedOption.starColor || selectedOption.starWithMoney?.starColor || 'white'
                           };
                           
                           // Calculate paid amount
@@ -1197,111 +1261,197 @@ const EventRegistrationsPage = () => {
                           };
                           
                           return (
-                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                              <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                <Icon path={mdiCreditCard} size={14} className="inline mr-1" />
-                                Payment Details
-                              </h4>
-                              
-                              {/* Payment Status */}
+                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2 border border-gray-200 dark:border-gray-600">
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs text-gray-600 dark:text-gray-400">Status:</span>
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                  registration.paymentStatus === 'paid' 
-                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                    : registration.paymentStatus === 'borrowed'
-                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                                    : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
-                                }`}>
-                                  {registration.paymentStatus === 'paid' ? '✓ Paid' : 
-                                   registration.paymentStatus === 'borrowed' ? 'Borrowed' : 
-                                   'Unpaid'}
-                                </span>
-                              </div>
-
-                              {/* Total Price */}
-                              <div className="mb-2 pb-2 border-b border-gray-200 dark:border-gray-600">
-                                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 font-semibold">Total Price:</div>
-                                <div className="flex flex-wrap gap-2">
-                                  {totalPrice.stars > 0 && (
-                                    <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded font-semibold">
-                                      <Icon path={mdiStar} size={12} />
-                                      {totalPrice.stars} stars
-                                    </div>
-                                  )}
-                                  {totalPrice.money > 0 && (
-                                    <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-2 py-1 rounded font-semibold">
-                                      <Icon path={mdiCurrencyUsd} size={12} />
-                                      ${totalPrice.money.toFixed(2)}
-                                    </div>
+                                <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 pr-2 m-0 flex items-center">
+                                  <Icon path={mdiCreditCard} size={14} className="mr-1" />
+                                  Payment Details
+                                </h4>
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                    registration.paymentStatus === 'paid' 
+                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                      : registration.paymentStatus === 'borrowed'
+                                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                                      : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                                  }`}>
+                                    {registration.paymentStatus === 'paid' ? '✓ Paid' : 
+                                     registration.paymentStatus === 'borrowed' ? 'Borrowed' : 
+                                     'Unpaid'}
+                                  </span>
+                                  {(registration.paymentStatus === 'paid' || registration.paymentStatus === 'borrowed') && (
+                                    <button
+                                      onClick={() => handleRevertPayment(registration.id)}
+                                      disabled={processingPayment === registration.id}
+                                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="Revert Payment"
+                                    >
+                                      <Icon path={mdiDelete} size={14} />
+                                    </button>
                                   )}
                                 </div>
                               </div>
+                              
+                              {/* Payment breakdown - Horizontal layout when borrowing */}
+                              {(borrowedAmount.stars > 0 || borrowedAmount.money > 0) ? (
+                                // Horizontal layout for borrowed payments
+                                <div className="mt-2 space-y-2">
+                                  {/* Total - Full width row */}
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total:</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {totalPrice.stars > 0 && (
+                                        <div className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-semibold ${getStarColorClass(totalPrice.starColor)}`}>
+                                          <Icon path={mdiStar} size={10} />
+                                          {totalPrice.stars}
+                                        </div>
+                                      )}
+                                      {totalPrice.money > 0 && (
+                                        <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-semibold">
+                                          <Icon path={mdiCurrencyUsd} size={10} />
+                                          ${totalPrice.money.toFixed(2)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
 
-                              {/* Amount Paid */}
-                              {(paidAmount.stars > 0 || paidAmount.money > 0) && (
-                                <div className="mb-2">
-                                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Amount Paid:</div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {paidAmount.stars > 0 && (
-                                      <div className="flex items-center gap-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded">
-                                        <Icon path={mdiStar} size={12} />
-                                        {paidAmount.stars} stars
+                                  {/* Paid and Borrowed - Same row */}
+                                  <div className="grid grid-cols-2 gap-2">
+                                    {/* Paid */}
+                                    {(paidAmount.stars > 0 || paidAmount.money > 0) && (
+                                      <div className="flex items-center justify-between">
+                                        <div className="text-xs text-gray-600 dark:text-gray-400">Paid:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {paidAmount.stars > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-1.5 py-0.5 rounded">
+                                              <Icon path={mdiStar} size={10} />
+                                              {paidAmount.stars}
+                                            </div>
+                                          )}
+                                          {paidAmount.money > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">
+                                              <Icon path={mdiCurrencyUsd} size={10} />
+                                              ${paidAmount.money.toFixed(2)}
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     )}
-                                    {paidAmount.money > 0 && (
-                                      <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                                        <Icon path={mdiCurrencyUsd} size={12} />
-                                        ${paidAmount.money.toFixed(2)}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
 
-                              {/* Borrowed Amount */}
-                              {(borrowedAmount.stars > 0 || borrowedAmount.money > 0) && (
-                                <div className="mb-2">
-                                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                                    <Icon path={mdiHandCoin} size={12} className="inline mr-1" />
-                                    Borrowed:
-                                  </div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {borrowedAmount.stars > 0 && (
-                                      <div className="flex items-center gap-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded">
-                                        <Icon path={mdiStar} size={12} />
-                                        {borrowedAmount.stars} stars
+                                    {/* Borrowed */}
+                                    <div className="flex items-center justify-between">
+                                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                                        <Icon path={mdiHandCoin} size={10} className="inline mr-1" />
+                                        Borrowed:
                                       </div>
-                                    )}
-                                    {borrowedAmount.money > 0 && (
-                                      <div className="flex items-center gap-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-2 py-1 rounded">
-                                        <Icon path={mdiCurrencyUsd} size={12} />
-                                        ${borrowedAmount.money.toFixed(2)}
+                                      <div className="flex flex-wrap gap-1">
+                                        {borrowedAmount.stars > 0 && (
+                                          <div className="flex items-center gap-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">
+                                            <Icon path={mdiStar} size={10} />
+                                            {borrowedAmount.stars}
+                                          </div>
+                                        )}
+                                        {borrowedAmount.money > 0 && (
+                                          <div className="flex items-center gap-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">
+                                            <Icon path={mdiCurrencyUsd} size={10} />
+                                            ${borrowedAmount.money.toFixed(2)}
+                                          </div>
+                                        )}
                                       </div>
-                                    )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
 
-                              {/* Remaining Amount (if any) */}
-                              {(remainingAmount.stars > 0 || remainingAmount.money > 0) && (
-                                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1 font-semibold">Amount Left to Pay:</div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {remainingAmount.stars > 0 && (
-                                      <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-1 rounded font-semibold">
-                                        <Icon path={mdiStar} size={12} />
-                                        {remainingAmount.stars} stars
+                                  {/* Remaining Amount (if any) - Full width */}
+                                  {(remainingAmount.stars > 0 || remainingAmount.money > 0) && (
+                                    <div className="pt-1 border-t border-gray-200 dark:border-gray-600">
+                                      <div className="flex items-center justify-between">
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Left:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {remainingAmount.stars > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-semibold">
+                                              <Icon path={mdiStar} size={10} />
+                                              {remainingAmount.stars}
+                                            </div>
+                                          )}
+                                          {remainingAmount.money > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-semibold">
+                                              <Icon path={mdiCurrencyUsd} size={10} />
+                                              ${remainingAmount.money.toFixed(2)}
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
-                                    )}
-                                    {remainingAmount.money > 0 && (
-                                      <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-1 rounded font-semibold">
-                                        <Icon path={mdiCurrencyUsd} size={12} />
-                                        ${remainingAmount.money.toFixed(2)}
-                                      </div>
-                                    )}
-                                  </div>
+                                    </div>
+                                  )}
                                 </div>
+                              ) : (
+                                // Vertical layout for non-borrowed payments
+                                <>
+                                  {/* Total Price - Compact horizontal layout */}
+                                  <div className="flex items-center justify-between mt-1">
+                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total:</div>
+                                    <div className="flex flex-wrap gap-1">
+                                      {totalPrice.stars > 0 && (
+                                        <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-semibold">
+                                          <Icon path={mdiStar} size={10} />
+                                          {totalPrice.stars}
+                                        </div>
+                                      )}
+                                      {totalPrice.money > 0 && (
+                                        <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-semibold">
+                                          <Icon path={mdiCurrencyUsd} size={10} />
+                                          ${totalPrice.money.toFixed(2)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Amount Paid */}
+                                  {(paidAmount.stars > 0 || paidAmount.money > 0) && (
+                                    <div className="mt-1">
+                                      <div className="flex items-center justify-between">
+                                        <div className="text-xs text-gray-600 dark:text-gray-400">Paid:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {paidAmount.stars > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-1.5 py-0.5 rounded">
+                                              <Icon path={mdiStar} size={10} />
+                                              {paidAmount.stars}
+                                            </div>
+                                          )}
+                                          {paidAmount.money > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">
+                                              <Icon path={mdiCurrencyUsd} size={10} />
+                                              ${paidAmount.money.toFixed(2)}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Remaining Amount (if any) */}
+                                  {(remainingAmount.stars > 0 || remainingAmount.money > 0) && (
+                                    <div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-600">
+                                      <div className="flex items-center justify-between">
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Left:</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {remainingAmount.stars > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-semibold">
+                                              <Icon path={mdiStar} size={10} />
+                                              {remainingAmount.stars}
+                                            </div>
+                                          )}
+                                          {remainingAmount.money > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-semibold">
+                                              <Icon path={mdiCurrencyUsd} size={10} />
+                                              ${remainingAmount.money.toFixed(2)}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           );
@@ -1325,11 +1475,17 @@ const EventRegistrationsPage = () => {
                                   .map((option): ComboboxOption => {
                                     let label = '';
                                     if (option.type === 'stars') {
-                                      label = `${option.starPrice} stars`;
+                                      const colorCapitalized = option.starColor 
+                                        ? option.starColor.charAt(0).toUpperCase() + option.starColor.slice(1)
+                                        : 'White';
+                                      label = `${option.starQuantity}x ⭐ ${colorCapitalized}`;
                                     } else if (option.type === 'money') {
                                       label = `$${option.moneyPrice?.toFixed(2)}`;
                                     } else if (option.type === 'combo') {
-                                      label = `${option.starWithMoney?.stars} stars + $${option.starWithMoney?.money?.toFixed(2)}`;
+                                      const colorCapitalized = option.starWithMoney?.starColor 
+                                        ? option.starWithMoney.starColor.charAt(0).toUpperCase() + option.starWithMoney.starColor.slice(1)
+                                        : 'White';
+                                      label = `${option.starWithMoney?.starQuantity}x ⭐ ${colorCapitalized} + $${option.starWithMoney?.money?.toFixed(2)}`;
                                     }
 
                                     const stockLeft = option.stock !== undefined ? option.stock - (option.soldCount || 0) : null;

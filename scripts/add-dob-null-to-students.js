@@ -1,5 +1,5 @@
 /**
- * Script to remove isReady and isReadyToPublished fields from all examControls
+ * Script to update absentFollowUps collection: replace "Unknown" studentName with actual fullName from students collection
  */
 
 const admin = require('firebase-admin');
@@ -29,37 +29,60 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-async function setExamControlsReadyStatus() {
+async function updateAbsentFollowUpsStudentNames() {
   try {
-    console.log('🚀 Updating examControls: removing isReady and isReadyToPublished fields...\n');
+    console.log('🚀 Updating absentFollowUps: replacing "Unknown" studentName with actual fullName...\n');
 
-    // Query for all examControls
-    const examControlsQuery = db.collection('examControls');
+    // Query for absentFollowUps where studentName is "Unknown"
+    const absentFollowUpsQuery = db.collection('absentFollowUps').where('studentName', '==', 'Unknown');
 
-    const examControlsSnapshot = await examControlsQuery.get();
+    const absentFollowUpsSnapshot = await absentFollowUpsQuery.get();
 
-    if (examControlsSnapshot.empty) {
-      console.log('⚠️  No examControls found.');
+    if (absentFollowUpsSnapshot.empty) {
+      console.log('⚠️  No absentFollowUps with "Unknown" studentName found.');
       return;
     }
 
-    console.log(`📊 Found ${examControlsSnapshot.size} total examControls...\n`);
+    console.log(`📊 Found ${absentFollowUpsSnapshot.size} absentFollowUps with "Unknown" studentName...\n`);
 
     let updatedCount = 0;
     let skippedCount = 0;
 
-    // Process each examControl
-    for (const doc of examControlsSnapshot.docs) {
+    // Process each absentFollowUp
+    for (const doc of absentFollowUpsSnapshot.docs) {
       const data = doc.data();
-      const examName = data.examName || 'Unknown Exam';
+      const studentId = data.studentId;
 
-      // Update the document: remove isReady and isReadyToPublished fields
+      if (!studentId) {
+        console.log(`⚠️  Skipping ${doc.id} - no studentId found`);
+        skippedCount++;
+        continue;
+      }
+
       try {
+        // Get student document from students collection
+        const studentDoc = await db.collection('students').doc(studentId).get();
+
+        if (!studentDoc.exists) {
+          console.log(`⚠️  Skipping ${doc.id} - student ${studentId} not found in students collection`);
+          skippedCount++;
+          continue;
+        }
+
+        const studentData = studentDoc.data();
+        const fullName = studentData.fullName;
+
+        if (!fullName) {
+          console.log(`⚠️  Skipping ${doc.id} - student ${studentId} has no fullName`);
+          skippedCount++;
+          continue;
+        }
+
+        // Update the absentFollowUps document: set studentName to fullName
         await doc.ref.update({ 
-          isReady: admin.firestore.FieldValue.delete(),
-          isReadyToPublished: admin.firestore.FieldValue.delete()
+          studentName: fullName
         });
-        console.log(`✅ Updated ${examName} (ID: ${doc.id}) - isReady and isReadyToPublished fields removed`);
+        console.log(`✅ Updated ${doc.id} - studentName set to "${fullName}"`);
         updatedCount++;
       } catch (error) {
         console.error(`❌ Failed to update ${doc.id}:`, error);
@@ -67,12 +90,12 @@ async function setExamControlsReadyStatus() {
       }
     }
 
-    console.log('\n📋 Exam Controls Update Summary:');
-    console.log(`   📊 Total examControls processed: ${examControlsSnapshot.size}`);
-    console.log(`   ✅ ExamControls updated: ${updatedCount}`);
-    console.log(`   ⚠️  ExamControls skipped: ${skippedCount}`);
+    console.log('\n📋 Absent FollowUps Update Summary:');
+    console.log(`   📊 Total absentFollowUps processed: ${absentFollowUpsSnapshot.size}`);
+    console.log(`   ✅ AbsentFollowUps updated: ${updatedCount}`);
+    console.log(`   ⚠️  AbsentFollowUps skipped: ${skippedCount}`);
 
-    console.log('\n🎉 Exam controls update complete!');
+    console.log('\n🎉 Absent followUps update complete!');
 
   } catch (error) {
     console.error('❌ Error during operation:', error);
@@ -82,7 +105,7 @@ async function setExamControlsReadyStatus() {
 
 // Main execution
 if (require.main === module) {
-  setExamControlsReadyStatus()
+  updateAbsentFollowUpsStudentNames()
     .then(() => {
       console.log('\n✨ Script completed successfully!');
       process.exit(0);
@@ -93,4 +116,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { setExamControlsReadyStatus };
+module.exports = { updateAbsentFollowUpsStudentNames };

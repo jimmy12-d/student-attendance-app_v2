@@ -72,9 +72,9 @@ service cloud.firestore {
     }
     
     match /examControls/{controlsId} {
-      // Allow any authenticated user to read exam settings.
+      // Allow any authenticated user to read exam controls (needed for mock exam progress bar).
       allow write: if isAuthorizedUser();
-      allow read: if true;
+      allow read: if request.auth != null; // Changed from true to require authentication
     }
     
     match /users/{userId}/notifications/{notificationId} {
@@ -184,6 +184,15 @@ service cloud.firestore {
                       request.auth.uid == get(/databases/$(database)/documents/students/$(studentId)).data.authUid);
       
       // WRITE: Only admins can award stars
+      allow write: if isAuthorizedUser();
+    }
+    
+    // Sub-collection for transactions under students
+    match /students/{studentId}/transactions/{transactionId} {
+      // READ: Only admins can read transaction data (financial privacy)
+      allow read: if isAuthorizedUser();
+      
+      // WRITE: Only admins can manage transactions
       allow write: if isAuthorizedUser();
     }
     
@@ -320,8 +329,8 @@ service cloud.firestore {
     }
     
     match /events/{eventId} {
-      // READ: Allow public read for event information
-      allow read: if true;
+      // READ: Allow authenticated users to read event information (needed for registration and mock exam progress)
+      allow read: if request.auth != null;
       
       // WRITE: Only admins can manage events
       allow write: if isAuthorizedUser();

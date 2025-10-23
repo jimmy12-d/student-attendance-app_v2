@@ -20,7 +20,8 @@ import {
   mdiChevronRight,
   mdiCheckCircle,
   mdiClockAlert,
-  mdiAccountMultiple
+  mdiAccountMultiple,
+  mdiClose
 } from "@mdi/js";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
@@ -126,6 +127,11 @@ export default function AttendanceRecordPage() {
   // State for student detail modal
   const [isDetailModalActive, setIsDetailModalActive] = useState(false);
   const [studentForDetailModal, setStudentForDetailModal] = useState<Student | null>(null);
+
+  // State for absent students modal
+  const [showAbsentModal, setShowAbsentModal] = useState(false);
+  const [absentStudents, setAbsentStudents] = useState<Array<{ id: string; fullName: string; nameKhmer: string; class: string; shift: string }>>([]);
+  const [loadingAbsent, setLoadingAbsent] = useState(false);
 
   // Loading states for table
   const [loadingRecords, setLoadingRecords] = useState<LoadingRecord[]>([]);
@@ -338,7 +344,7 @@ export default function AttendanceRecordPage() {
       
       if (!isRegularShift && !isBPForEvening) return;
 
-      // Find this student's attendance record for selected date
+      // Find this student's attendance record for selected date AND shift
       const attendanceRecord = attendanceRecords.find(att => {
         if (att.studentId !== student.id) return false;
         if (!att.date) return false;
@@ -348,7 +354,9 @@ export default function AttendanceRecordPage() {
         
         // Check if it matches ISO format (YYYY-MM-DD)
         if (recordDate === selectedDate) {
-          return true;
+          // Also check shift match
+          const recordShift = att.shift || student.shift;
+          return recordShift === currentShift;
         }
         
         // Check if it matches JS toDateString format (e.g., "Mon Sep 01 2025")
@@ -356,7 +364,9 @@ export default function AttendanceRecordPage() {
           const selectedDateObj = new Date(selectedDate + 'T00:00:00');
           const selectedDateString = selectedDateObj.toDateString();
           if (att.date === selectedDateString) {
-            return true;
+            // Also check shift match
+            const recordShift = att.shift || student.shift;
+            return recordShift === currentShift;
           }
         } catch (error) {
           // Ignore date parsing errors
@@ -436,6 +446,123 @@ export default function AttendanceRecordPage() {
       sendHome: sendHomeCount
     };
   }, [attendanceRecords, students, permissions, allClassConfigs, selectedDate, currentShift]);
+
+  // Function to fetch absent students for the modal
+  const fetchAbsentStudents = async () => {
+    setLoadingAbsent(true);
+    try {
+      const absentList: Array<{ id: string; fullName: string; nameKhmer: string; class: string; shift: string }> = [];
+
+      // Filter students by current shift for expected count, excluding "No School" students
+      const shiftStudents = students.filter(student => {
+        const isRegularShift = student.shift === currentShift;
+        const isBPForEvening = currentShift === 'Evening' && (student as any).inBPClass === true;
+        
+        if (!isRegularShift && !isBPForEvening) return false;
+        
+        // Check if student has "No School" status for this date
+        const result = getStudentDailyStatus(
+          student,
+          selectedDate,
+          undefined,
+          allClassConfigs,
+          []
+        );
+        
+        return result.status !== "No School";
+      });
+
+      students.forEach(student => {
+        // Only process students for the current shift (include BP students for Evening)
+        const isRegularShift = student.shift === currentShift;
+        const isBPForEvening = currentShift === 'Evening' && (student as any).inBPClass === true;
+        
+        if (!isRegularShift && !isBPForEvening) return;
+
+        // Find this student's attendance record for selected date
+        const attendanceRecord = attendanceRecords.find(att => {
+          if (!att.date) return false;
+          
+          // Handle both date formats
+          const recordDate = att.date.split('T')[0];
+          const dateMatches = recordDate === selectedDate;
+          
+          try {
+            const selectedDateObj = new Date(selectedDate + 'T00:00:00');
+            const selectedDateString = selectedDateObj.toDateString();
+            if (att.date === selectedDateString) {
+              // Date matches, now check shift
+              const recordShift = att.shift || student.shift;
+              const shiftMatches = recordShift === currentShift;
+              return att.studentId === student.id && shiftMatches;
+            }
+          } catch (error) {
+            // Ignore date parsing errors
+          }
+          
+          // For ISO format, also check shift
+          if (dateMatches) {
+            const recordShift = att.shift || student.shift;
+            const shiftMatches = recordShift === currentShift;
+            return att.studentId === student.id && shiftMatches;
+          }
+          
+          return false;
+        });
+        
+        // Find this student's approved permissions
+        const approvedPermissionsForStudent = permissions.filter(
+          p => p.studentId === student.id && p.status === 'approved'
+        );
+
+        // Check if student has "No School" status for this date
+        const result = getStudentDailyStatus(
+          student,
+          selectedDate,
+          attendanceRecord ? {
+            studentId: student.id,
+            date: selectedDate,
+            status: attendanceRecord.status as any,
+            timestamp: attendanceRecord.timestamp instanceof Date 
+              ? Timestamp.fromDate(attendanceRecord.timestamp)
+              : attendanceRecord.timestamp,
+            shift: attendanceRecord.shift || student.shift,
+            class: attendanceRecord.class || student.class,
+          } : undefined,
+          allClassConfigs,
+          approvedPermissionsForStudent
+        );
+
+        // If student is absent, add to the list
+        if (result.status === 'Absent') {
+          absentList.push({
+            id: student.id,
+            fullName: student.fullName || 'Unknown',
+            nameKhmer: student.nameKhmer || '',
+            class: student.class || 'N/A',
+            shift: student.shift || currentShift
+          });
+        }
+      });
+
+      // Sort by class (7 to 12) - extract numeric part from class names
+      absentList.sort((a, b) => {
+        const getClassNumber = (classStr: string) => {
+          const match = classStr.match(/(\d+)/);
+          return match ? parseInt(match[1]) : 0;
+        };
+        const classA = getClassNumber(a.class);
+        const classB = getClassNumber(b.class);
+        return classA - classB;
+      });
+
+      setAbsentStudents(absentList);
+    } catch (error) {
+      console.error("Error fetching absent students:", error);
+    } finally {
+      setLoadingAbsent(false);
+    }
+  };
 
   // Prepare chart data
   const pieChartData = {
@@ -723,6 +850,11 @@ export default function AttendanceRecordPage() {
     
     // Show toast message to indicate the user should navigate to students page for deletion
     toast.info(`To delete ${student.fullName}, please go to the Students page.`);
+  };
+
+  const handleAbsentClick = () => {
+    setShowAbsentModal(true);
+    fetchAbsentStudents();
   };
 
   const handleConfirmAction = async () => {
@@ -1148,7 +1280,7 @@ export default function AttendanceRecordPage() {
           </div>
 
           {/* Absent Card */}
-          <div className="group relative overflow-hidden bg-gradient-to-br from-white/70 via-white/50 to-white/30 dark:from-slate-700/70 dark:via-slate-600/50 dark:to-slate-500/30 backdrop-blur-2xl rounded-3xl p-6 border border-white/30 dark:border-slate-400/30 shadow-2xl shadow-black/5 hover:shadow-3xl hover:shadow-black/10 transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1">
+          <div className="group relative overflow-hidden bg-gradient-to-br from-white/70 via-white/50 to-white/30 dark:from-slate-700/70 dark:via-slate-600/50 dark:to-slate-500/30 backdrop-blur-2xl rounded-3xl p-6 border border-white/30 dark:border-slate-400/30 shadow-2xl shadow-black/5 hover:shadow-3xl hover:shadow-black/10 transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1 cursor-pointer" onClick={handleAbsentClick}>
             <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
@@ -1469,6 +1601,97 @@ export default function AttendanceRecordPage() {
           onDelete={handleDeleteStudent}
           hideActions={true}
         />
+      )}
+
+      {/* Absent Students Modal */}
+      {showAbsentModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-150 p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowAbsentModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Absent Students</h2>
+                  <p className="text-white/80 text-xs">{selectedDate} • {currentShift} Shift</p>
+                </div>
+                <span className="bg-white/20 text-white px-2 py-1 rounded-full text-sm font-semibold">
+                  {absentStudents.length}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowAbsentModal(false)}
+                className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+              >
+                <Icon path={mdiClose} size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {loadingAbsent ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
+                </div>
+              ) : absentStudents.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-gray-600 dark:text-gray-400">No absent students found</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {absentStudents.map((student, index) => (
+                    <div
+                      key={student.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-semibold text-red-600 dark:text-red-400">
+                            {index + 1}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                            {student.fullName}
+                          </div>
+                          {student.nameKhmer && (
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              {student.nameKhmer}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium">
+                          {student.class}
+                        </span>
+                        <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm font-medium">
+                          {student.shift}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer with Close Button */}
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 flex justify-end flex-shrink-0">
+              <button
+                onClick={() => setShowAbsentModal(false)}
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
+              >
+                <Icon path={mdiClose} size={16} />
+                <span>Close</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </SectionMain>
   );

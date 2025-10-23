@@ -2,7 +2,7 @@
 
 import { Question, QuestionOption } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
-import { mdiPlus, mdiDelete, mdiDragVertical, mdiAlertCircle, mdiContentCopy, mdiAccount, mdiImage, mdiClose } from "@mdi/js";
+import { mdiPlus, mdiDelete, mdiDragVertical, mdiAlertCircle, mdiContentCopy, mdiAccount, mdiImage, mdiClose, mdiGauge } from "@mdi/js";
 import QuestionTypeSelector from "./QuestionTypeSelector";
 import { useState, useRef, useEffect } from "react";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
@@ -36,14 +36,13 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
   onDragOver,
   isBeingDragged
 }) => {
-  const [showClassTypeFilter, setShowClassTypeFilter] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const needsOptions = ['multiple_choice', 'checkboxes', 'dropdown'].includes(question.type);
   const isLinearScale = question.type === 'linear_scale';
+  const isScoreInput = question.type === 'score_input';
   const hasErrors = validationErrors.length > 0;
-  const targetClassTypes = question.targetClassTypes || [];
   const [isDropped, setIsDropped] = useState(false);
   
   // For checkboxes, allow 1+ options. For others, require 2+ options
@@ -445,96 +444,57 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
         </div>
       )}
 
-      {/* Class Type Filter */}
-      {availableClassTypes.length > 0 && (
-        <div className="space-y-3 border-t border-gray-200 dark:border-slate-700 pt-4">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setShowClassTypeFilter(!showClassTypeFilter)}
-              className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-            >
-              <Icon path={mdiAccount} size={16} />
-              <span>Target Class Types {targetClassTypes.length > 0 && `(${targetClassTypes.length})`}</span>
-              <span className="text-xs text-gray-400">{showClassTypeFilter ? '▼' : '▶'}</span>
-            </button>
-            
-            {/* Action Buttons */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={onDuplicate}
-                className="p-1.5 text-gray-400 hover:text-blue-500 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-all duration-200"
-                title="Duplicate question"
-              >
-                <Icon path={mdiContentCopy} size={16} />
-              </button>
-              <button
-                onClick={onDelete}
-                className="p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-all duration-200"
-                title="Delete question"
-              >
-                <Icon path={mdiDelete} size={16} />
-              </button>
+      {/* Score Input Configuration */}
+      {isScoreInput && (
+        <div className="space-y-4 ml-8">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-5 border border-blue-200 dark:border-blue-700/50">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-2 bg-blue-600 rounded-lg">
+                  <Icon path={mdiGauge} size={16} className="text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 dark:text-gray-200">
+                    Maximum Score
+                  </label>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Set the highest achievable score
+                  </p>
+                </div>
+              </div>
+              
+              <input
+                type="number"
+                min="1"
+                value={question.maxScore || 100}
+                onChange={(e) => onUpdate({ ...question, maxScore: Number(e.target.value) || 100 })}
+                className="w-full bg-white dark:bg-slate-800 border-2 border-blue-300 dark:border-blue-600 rounded-lg px-4 py-3 text-lg font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                placeholder="100"
+              />
             </div>
           </div>
-          
-          {showClassTypeFilter && (
-            <div className="bg-gray-50 dark:bg-slate-700/30 rounded-lg p-3 space-y-2 animate-in slide-in-from-top-2 duration-200">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Select class types that should see this question. Leave empty for all students.
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {availableClassTypes.map((classType) => (
-                  <label
-                    key={classType}
-                    className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-600/50 p-2 rounded transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={targetClassTypes.includes(classType)}
-                      onChange={(e) => {
-                        const newTargetClassTypes = e.target.checked
-                          ? [...targetClassTypes, classType]
-                          : targetClassTypes.filter(ct => ct !== classType);
-                        onUpdate({
-                          ...question,
-                          targetClassTypes: newTargetClassTypes.length > 0 ? newTargetClassTypes : undefined
-                        });
-                      }}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <span className="text-xs text-gray-700 dark:text-gray-300">{classType}</span>
-                  </label>
-                ))}
-              </div>
-              {targetClassTypes.length > 0 && (
-                <div className="flex flex-wrap gap-1 pt-2">
-                  {targetClassTypes.map((ct) => (
-                    <span
-                      key={ct}
-                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full"
-                    >
-                      {ct}
-                      <button
-                        onClick={() => {
-                          const newTargetClassTypes = targetClassTypes.filter(c => c !== ct);
-                          onUpdate({
-                            ...question,
-                            targetClassTypes: newTargetClassTypes.length > 0 ? newTargetClassTypes : undefined
-                          });
-                        }}
-                        className="hover:text-blue-900 dark:hover:text-blue-100"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-slate-700 pt-4">
+        <button
+          type="button"
+          onClick={onDuplicate}
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+          title="Duplicate question"
+        >
+          <Icon path={mdiContentCopy} size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          title="Delete question"
+        >
+          <Icon path={mdiDelete} size={16} />
+        </button>
+      </div>
     </div>
   );
 };

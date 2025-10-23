@@ -220,7 +220,17 @@
   "pendingReview": "កំពុងពិនិត្យ",
   "completed": "បានបញ្ចប់",
   "questions": "សំណួរ",
-  "notOpenYet": "ទម្រង់នេះមិនទាន់បើកនៅឡើយទេ"
+  "notOpenYet": "ទម្រង់នេះមិនទាន់បើកនៅឡើយទេ",
+  "scoreSummary": {
+    "title": "សង្ខេបពិន្ទុ",
+    "sectionTotal": "សរុបផ្នែក",
+    "overallGrade": "ពិន្ទុសរុប",
+    "points": "ពិន្ទុ",
+    "reviewAnswers": "ពិនិត្យចម្លើយ",
+    "confirmSubmit": "បញ្ជាក់ & បញ្ជូន",
+    "submitting": "កំពុងបញ្ជូន...",
+    "scoreMustBeGreaterThanZero": "ពិន្ទុត្រូវតែធំជាង 0"
+  }
 },
 "activities": {
   "title": "កម្មវិធី & បែបបទ",

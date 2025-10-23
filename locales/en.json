@@ -217,7 +217,17 @@
       "pendingReview": "Pending Review",
       "completed": "Completed",
       "questions": "questions",
-      "notOpenYet": "This form is not open yet"
+      "notOpenYet": "This form is not open yet",
+      "scoreSummary": {
+        "title": "Score Summary",
+        "sectionTotal": "Section Total",
+        "overallGrade": "Overall Grade",
+        "points": "points",
+        "reviewAnswers": "Review Answers",
+        "confirmSubmit": "Confirm & Submit",
+        "submitting": "Submitting...",
+        "scoreMustBeGreaterThanZero": "Score must be greater than 0"
+      }
     },
     "activities": {
       "title": "Events & Forms",

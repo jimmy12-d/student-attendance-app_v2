@@ -138,11 +138,11 @@ export const StudentRow: React.FC<StudentRowProps> = ({
       {/* Birthday confetti effect */}
       {isBirthday && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-lg">
-          <div className="absolute top-2 left-1/4 w-1 h-1 bg-yellow-400 rounded-full animate-bounce opacity-60"></div>
-          <div className="absolute top-4 right-1/3 w-1.5 h-1.5 bg-pink-400 rounded-full animate-ping opacity-50"></div>
-          <div className="absolute bottom-3 left-1/2 w-1 h-1 bg-rose-400 rounded-full animate-pulse opacity-70"></div>
-          <div className="absolute top-6 right-1/4 w-0.5 h-0.5 bg-purple-400 rounded-full animate-bounce opacity-80"></div>
-          <div className="absolute bottom-2 right-1/5 w-1 h-1 bg-orange-400 rounded-full animate-ping opacity-60"></div>
+          <div className="absolute top-2 left-1/4 w-1 h-1 bg-yellow-400 rounded-full animate-bounce opacity-60 pointer-events-none"></div>
+          <div className="absolute top-4 right-1/3 w-1.5 h-1.5 bg-pink-400 rounded-full animate-ping opacity-50 pointer-events-none"></div>
+          <div className="absolute bottom-3 left-1/2 w-1 h-1 bg-rose-400 rounded-full animate-pulse opacity-70 pointer-events-none"></div>
+          <div className="absolute top-6 right-1/4 w-0.5 h-0.5 bg-purple-400 rounded-full animate-bounce opacity-80 pointer-events-none"></div>
+          <div className="absolute bottom-2 right-1/5 w-1 h-1 bg-orange-400 rounded-full animate-ping opacity-60 pointer-events-none"></div>
         </div>
       )}
       
@@ -201,7 +201,11 @@ export const StudentRow: React.FC<StudentRowProps> = ({
                         <div className="absolute -top-2 -right-2 z-20">
                           <div className="relative">
                             {/* Main birthday badge */}
-                            <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full shadow-lg animate-bounce border-2 border-white dark:border-gray-800">
+                            <div 
+                              className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full shadow-lg animate-bounce border-2 border-white dark:border-gray-800 cursor-pointer hover:scale-110 transition-transform duration-200"
+                              onClick={() => onViewDetails(student)}
+                              title="View student details"
+                            >
                               <span className="text-lg animate-pulse">🎂</span>
                             </div>
                             {/* Sparkle effects */}

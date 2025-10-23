@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { mdiAccountAlert, mdiEye } from "@mdi/js";
+import { mdiAccountAlert, mdiEye, mdiCheckCircle, mdiCloseCircle, mdiClockOutline, mdiBellRing } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import Button from "../../../_components/Button";
 import CardBox from "../../../_components/CardBox";
 import { Student } from "../../../_interfaces";
-import { PermissionRecord, LeaveEarlyRequest } from "../../../_interfaces";
+import { PermissionRecord, LeaveEarlyRequest, NotificationLog } from "../../../_interfaces";
 import { Timestamp } from "firebase/firestore";
 import { db } from "../../../../firebase-config";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
@@ -28,6 +28,7 @@ interface CombinedRequest {
   studentShift: string;
   status: 'pending' | 'approved' | 'rejected';
   requestedAt: Timestamp;
+  notificationLogs?: NotificationLog[]; // Notification delivery logs
   details: {
     reason?: string;
     leaveTime?: string;
@@ -98,6 +99,107 @@ const formatRequestDate = (date: Timestamp | undefined): string => {
     month: 'short',
     day: 'numeric'
   });
+};
+
+// Helper function to format notification time
+const formatNotificationTime = (timestamp: Timestamp | undefined): string => {
+  if (!timestamp) return "Unknown";
+  const date = timestamp.toDate();
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+// Component to display notification delivery status
+const NotificationStatus: React.FC<{ logs?: NotificationLog[] }> = ({ logs }) => {
+  if (!logs || logs.length === 0) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+        <Icon path={mdiClockOutline} size={16} />
+        <span>No parent registered for notifications</span>
+      </div>
+    );
+  }
+
+  const successCount = logs.filter(log => log.success).length;
+  const failedCount = logs.length - successCount;
+  const allSuccess = successCount === logs.length;
+  const allFailed = failedCount === logs.length;
+
+  return (
+    <div className="space-y-1">
+      {/* Summary */}
+      <div className={`flex items-center gap-1 text-xs font-medium ${
+        allSuccess 
+          ? 'text-green-600 dark:text-green-400' 
+          : allFailed 
+          ? 'text-red-600 dark:text-red-400'
+          : 'text-orange-600 dark:text-orange-400'
+      }`}>
+        <Icon 
+          path={allSuccess ? mdiCheckCircle : allFailed ? mdiCloseCircle : mdiBellRing} 
+          size={16} 
+        />
+        <span>
+          {allSuccess 
+            ? `✓ Sent to ${successCount} parent${successCount > 1 ? 's' : ''}` 
+            : allFailed
+            ? `✗ Failed to send to ${failedCount} parent${failedCount > 1 ? 's' : ''}`
+            : `${successCount} sent, ${failedCount} failed`
+          }
+        </span>
+      </div>
+
+      {/* Detailed logs - expandable */}
+      <details className="text-xs">
+        <summary className="cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+          View details
+        </summary>
+        <div className="mt-2 space-y-1 pl-2 border-l-2 border-gray-200 dark:border-gray-600">
+          {logs.map((log, index) => (
+            <div 
+              key={index} 
+              className={`flex items-start gap-2 ${
+                log.success 
+                  ? 'text-green-600 dark:text-green-400' 
+                  : 'text-red-600 dark:text-red-400'
+              }`}
+            >
+              <Icon 
+                path={log.success ? mdiCheckCircle : mdiCloseCircle} 
+                size={16} 
+                className="mt-0.5 flex-shrink-0"
+              />
+              <div className="flex-1">
+                <div className="font-medium">
+                  {log.success ? '✓ Delivered' : '✗ Failed'}
+                  {log.parentName && log.parentName !== 'Unknown' && (
+                    <span className="font-normal"> to {log.parentName}</span>
+                  )}
+                </div>
+                <div className="text-gray-500 dark:text-gray-400">
+                  {formatNotificationTime(log.sentAt)}
+                </div>
+                {log.errorMessage && (
+                  <div className="text-red-500 dark:text-red-400 text-xs">
+                    Error: {log.errorMessage}
+                  </div>
+                )}
+                {log.deactivated && (
+                  <div className="text-orange-500 dark:text-orange-400 text-xs">
+                    ⚠ Parent notification deactivated (bot blocked)
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </details>
+    </div>
+  );
 };
 
 const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
@@ -179,6 +281,7 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
       studentShift: perm.studentShift || 'Unknown Shift',
       status: perm.status,
       requestedAt: perm.requestedAt,
+      notificationLogs: perm.notificationLogs,
       details: {
         reason: perm.reason,
         permissionStartDate: perm.permissionStartDate,
@@ -195,6 +298,7 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
       studentShift: req.studentShift || 'Unknown Shift',
       status: req.status,
       requestedAt: req.requestedAt,
+      notificationLogs: req.notificationLogs,
       details: {
         reason: req.reason,
         leaveTime: req.leaveTime,
@@ -261,7 +365,7 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
               </div>
             ) : (
               <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
-                {/* Requests Grid - 2 Column Minimal Layout */}
+                {/* Requests Grid - 2 Column Layout with Notification Logs */}
                 <div className="grid grid-cols-2 gap-3">
                   {combinedRequests.map((request) => {
                     const student = studentsMap.get(request.studentId);
@@ -269,53 +373,58 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
                     return (
                       <div
                         key={`${request.type}-${request.id}`}
-                        className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200 flex items-start justify-between"
+                        className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200 flex flex-col"
                       >
-                        {/* Student Name and Request Info */}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
-                              {student?.fullName || request.studentName}
-                            </h3>
-                            <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-0.5 rounded">
-                              {student?.class || request.studentClass}
-                            </span>
+                        {/* Header Row */}
+                        <div className="flex items-start justify-between mb-2">
+                          {/* Student Name and Request Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">
+                                {student?.fullName || request.studentName}
+                              </h3>
+                              <span className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 px-2 py-0.5 rounded flex-shrink-0">
+                                {student?.class || request.studentClass}
+                              </span>
+                            </div>
+                            {student?.nameKhmer && (
+                              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                {student.nameKhmer}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                                request.type === 'permission'
+                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                                  : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                              }`}>
+                                {request.type === 'permission' ? 'Permission' : 'Leave Early'}
+                              </span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                {request.type === 'leaveEarly'
+                                  ? `${request.details.leaveTime || 'Unknown'}`
+                                  : `${request.details.duration ? `${request.details.duration} day${request.details.duration > 1 ? 's' : ''}` : 'N/A'}`
+                                }
+                              </span>
+                            </div>
                           </div>
-                          {student?.nameKhmer && (
-                            <p className="text-xs text-gray-600 dark:text-gray-400">
-                              {student.nameKhmer}
-                            </p>
+
+                          {/* Eye Icon */}
+                          {student && onViewDetails && (
+                            <button
+                              onClick={() => onViewDetails(student, 'requests')}
+                              className="p-1.5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 ml-2 flex-shrink-0"
+                              title="View student details and requests"
+                            >
+                              <Icon path={mdiEye} size={16} />
+                            </button>
                           )}
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                              request.type === 'permission'
-                                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                                : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
-                            }`}>
-                              {request.type === 'permission' ? 'Permission' : 'Leave Early'}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {request.type === 'leaveEarly'
-                                ? `Leave at: ${request.details.leaveTime || 'Unknown'}`
-                                : `Duration: ${request.details.duration ? `${request.details.duration} day${request.details.duration > 1 ? 's' : ''}` : 'Unknown'}`
-                              }
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {formatRequestDate(request.requestedAt)}
-                            </span>
-                          </div>
                         </div>
 
-                        {/* Eye Icon */}
-                        {student && onViewDetails && (
-                          <button
-                            onClick={() => onViewDetails(student, 'requests')}
-                            className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 ml-2 flex-shrink-0"
-                            title="View student details and requests"
-                          >
-                            <Icon path={mdiEye} size={18} />
-                          </button>
-                        )}
+                        {/* Notification Status Row */}
+                        <div className="pt-2 mt-auto border-t border-gray-200 dark:border-gray-600">
+                          <NotificationStatus logs={request.notificationLogs} />
+                        </div>
                       </div>
                     );
                   })}

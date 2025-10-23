@@ -207,9 +207,12 @@ export default function DashboardPage() {
     const todayStr = todayStrForWidgets; // Use string "YYYY-MM-DD"
 
     return students.filter(student => {
-      // Find this student's attendance record for today, if any
+      // Find this student's attendance record for today matching BOTH studentId AND shift
+      // This prevents students with multiple shifts from being counted incorrectly
       const attendanceRecord = attendance.find(
-        att => att.studentId === student.id && att.date === todayStr
+        att => att.studentId === student.id && 
+               att.date === todayStr &&
+               (!att.shift || !student.shift || att.shift.toLowerCase() === student.shift.toLowerCase())
       );
       
       // Find this student's approved permissions
@@ -238,8 +241,11 @@ export default function DashboardPage() {
     const todayStr = todayStrForWidgets; // Use string "YYYY-MM-DD"
 
     return students.filter(student => {
+      // Find attendance record matching BOTH studentId AND shift
       const attendanceRecord = attendance.find(
-        att => att.studentId === student.id && att.date === todayStr
+        att => att.studentId === student.id && 
+               att.date === todayStr &&
+               (!att.shift || !student.shift || att.shift.toLowerCase() === student.shift.toLowerCase())
       );
       
       // Skip if student already has attendance record
@@ -298,8 +304,11 @@ const classStats = useMemo((): ClassStats[] => {
       const stats = classShiftMap.get(classShiftKey)!;
       stats.totalStudents++;
 
+      // Find attendance record matching BOTH studentId AND shift
       const attendanceRecord = attendance.find(
-        att => att.studentId === student.id && att.date === todayStr
+        att => att.studentId === student.id && 
+               att.date === todayStr &&
+               (!att.shift || !student.shift || att.shift.toLowerCase() === student.shift.toLowerCase())
       );
       
       const approvedPermissionsForStudent = permissions.filter(

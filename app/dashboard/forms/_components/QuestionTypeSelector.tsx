@@ -10,7 +10,8 @@ import {
   mdiCheckboxMultipleMarked,
   mdiMenuDown,
   mdiNumeric,
-  mdiFileUpload
+  mdiFileUpload,
+  mdiGauge
 } from "@mdi/js";
 
 interface QuestionTypeSelectorProps {
@@ -26,6 +27,7 @@ const questionTypes: { type: QuestionType; label: string; icon: string }[] = [
   { type: 'dropdown', label: 'Dropdown', icon: mdiMenuDown },
   { type: 'linear_scale', label: 'Linear Scale', icon: mdiNumeric },
   { type: 'file_upload', label: 'File Upload', icon: mdiFileUpload },
+  { type: 'score_input', label: 'Score Input', icon: mdiGauge },
 ];
 
 const options: ComboboxOption[] = questionTypes.map(qt => ({ value: qt.type, label: qt.label, icon: qt.icon }));
@@ -41,6 +43,7 @@ const QuestionTypeSelector: React.FC<QuestionTypeSelectorProps> = ({ selectedTyp
         selectedValue={selectedType}
         onChange={onTypeChange}
         placeholder={placeholder}
+        editable={false}
         fieldData={{ className: "w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-md px-3 py-2 pr-8 text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors cursor-pointer placeholder:text-white" }}
       />
     </div>

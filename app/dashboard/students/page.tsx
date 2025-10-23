@@ -630,8 +630,8 @@ export default function StudentsPage() {
 
     const index = studentList.findIndex(s => s.id === student.id);
     
-    // Determine view context based on BP class status
-    const viewContextValue = student.inBPClass ? '12BP' : 'regular';
+    // Determine view context based on class (same logic as TableStudents)
+    const viewContextValue = student.class === '12BP' ? '12BP' : 'regular';
     
     setSelectedStudent(student);
     setSelectedIndex(index);

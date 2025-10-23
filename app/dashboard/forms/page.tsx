@@ -582,7 +582,14 @@ const FormsListPage = () => {
 
             {/* Modal Content - Questions Preview */}
             <div className="p-6 space-y-6">
-              {previewForm.questions.map((question, index) => (
+              {/* Support both sections (new) and questions (old) format */}
+              {(previewForm.sections && previewForm.sections.length > 0 ? (
+                // New format with sections
+                previewForm.sections.flatMap(section => section.questions)
+              ) : (
+                // Old format with direct questions
+                previewForm.questions || []
+              )).map((question, index) => (
                 <div
                   key={question.id}
                   className="bg-gray-50 dark:bg-gray-700 rounded-lg p-5 border border-gray-200 dark:border-gray-600"
@@ -603,6 +610,8 @@ const FormsListPage = () => {
                         {question.type === 'checkboxes' && 'Checkboxes'}
                         {question.type === 'dropdown' && 'Dropdown'}
                         {question.type === 'linear_scale' && 'Linear scale'}
+                        {question.type === 'file_upload' && 'File upload'}
+                        {question.type === 'score_input' && 'Score input'}
                       </p>
                     </div>
                   </div>
@@ -673,6 +682,33 @@ const FormsListPage = () => {
                               </span>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {question.type === 'file_upload' && (
+                      <div className="border-2 border-dashed border-gray-300 dark:border-slate-500 rounded-lg p-6 text-center bg-white dark:bg-slate-800">
+                        <div className="text-gray-400">
+                          <svg className="mx-auto h-12 w-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <p className="text-sm">Click to upload file</p>
+                          <p className="text-xs mt-1">Max {question.maxFiles || 1} file(s), {question.maxFileSize || 5}MB each</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {question.type === 'score_input' && (
+                      <div className="space-y-3">
+                        <div className="h-10 bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-500 rounded-lg px-3 flex items-center justify-between">
+                          <span className="text-gray-400">Enter score...</span>
+                          <span className="text-gray-500">/ {question.maxScore || 100}</span>
+                        </div>
+                        <div className="h-12 bg-gray-200 dark:bg-slate-700 rounded-lg overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-blue-400 to-blue-600 w-0"></div>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                          Draggable score input (0 - {question.maxScore || 100})
                         </div>
                       </div>
                     )}

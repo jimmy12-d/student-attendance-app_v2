@@ -47,6 +47,7 @@ interface AbsentFollowUpWithDetails extends AbsentFollowUp {
   isUrgent: boolean;
   student?: any; // Add student data for priority calculation
   monthlyAbsentCount?: number; // Add monthly absent count
+  nameKhmer?: string; // Add Khmer name field
 }
 
 const getPriorityLevel = (student: any, daysSinceAbsent: number, status: AbsentStatus, updatedAt?: Date | Timestamp): 'low' | 'high' => {
@@ -170,10 +171,18 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
       const followUpData: AbsentFollowUp[] = [];
       followUpsSnapshot.forEach((doc) => {
         const data = doc.data();
+        
+        // Fix "Unknown" student name by looking up from students collection
+        let studentName = data.studentName;
+        if (!studentName || studentName === 'Unknown' || studentName === 'Unknown Student') {
+          const studentData = allStudents.find(s => s.id === data.studentId);
+          studentName = studentData?.fullName || data.studentName || 'Unknown Student';
+        }
+        
         followUpData.push({
           id: doc.id,
           studentId: data.studentId,
-          studentName: data.studentName,
+          studentName: studentName, // Use the fixed student name
           date: data.date,
           status: data.status,
           notes: data.notes,
@@ -220,8 +229,13 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
 
       const absentStudents: AbsentFollowUpWithDetails[] = allStudents.map(student => {
         try {
-          // Find attendance record for this student on selected date
-          const attendanceRecord = attendanceRecords.find((rec: any) => rec.studentId === student.id) as RawAttendanceRecord | undefined;
+          // Find attendance record for this student on selected date AND matching shift
+          // This is critical for students with multiple classes/shifts (e.g., 12B afternoon + 12BP evening)
+          // We need to find the record that matches BOTH studentId AND shift
+          const attendanceRecord = attendanceRecords.find((rec: any) => 
+            rec.studentId === student.id && 
+            (!rec.shift || !student.shift || rec.shift.toLowerCase() === student.shift.toLowerCase())
+          ) as RawAttendanceRecord | undefined;
           
           // Find permissions for this student on selected date
           const studentPermissions = allPermissions.filter(permission => 
@@ -242,7 +256,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
 
           const status = result.status?.toLowerCase() || '';
           
-          // Only include students who are actually absent
+          // Only include students who are actually absent (not present, not on permission, etc.)
           if (status === 'absent') {
             // Check if there's already a follow-up
             const followUp = followUpData.find(f => f.studentId === student.id);
@@ -284,9 +298,10 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
           console.error('Error checking attendance for student', student.fullName, ':', error);
         }
         return null;
-      }).filter(Boolean) as (AbsentFollowUpWithDetails & { nameKhmer?: string })[];
+      }).filter(Boolean) as AbsentFollowUpWithDetails[];
 
       // 7. Add any follow-ups for the date that are not in the absentStudents list (e.g. status changed to Contacted, etc.)
+      // BUT only if the student is still actually absent (not present)
       followUpData.forEach(fu => {
         if (!absentStudents.find(s => s.studentId === fu.studentId)) {
           const absentDate = new Date(selectedDate || today);
@@ -296,8 +311,47 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
           // Find the student data for this follow-up
           const studentData = allStudents.find(s => s.id === fu.studentId);
           
+          // Check if student is actually present now
+          if (studentData) {
+            // Find attendance record matching both studentId AND shift
+            const attendanceRecord = attendanceRecords.find((rec: any) => 
+              rec.studentId === studentData.id && 
+              (!rec.shift || !studentData.shift || rec.shift.toLowerCase() === studentData.shift.toLowerCase())
+            ) as RawAttendanceRecord | undefined;
+            
+            const studentPermissions = allPermissions.filter(permission => 
+              permission.studentId === studentData.id && 
+              permission.status === 'approved' &&
+              selectedDate >= permission.permissionStartDate && 
+              selectedDate <= permission.permissionEndDate
+            );
+            
+            const result = getStudentDailyStatus(
+              studentData,
+              selectedDate,
+              attendanceRecord,
+              allClassConfigs,
+              studentPermissions
+            );
+            
+            const status = result.status?.toLowerCase() || '';
+            
+            // Skip if student is now present or on permission (marked attendance/permission after follow-up was created)
+            if (status === 'present' || status === 'permission') {
+              return; // Don't add this follow-up to the list
+            }
+          }
+          
+          // Fix "Unknown" student name by looking up from students collection
+          let studentName = fu.studentName;
+          if (!studentName || studentName === 'Unknown' || studentName === 'Unknown Student') {
+            studentName = studentData?.fullName || fu.studentName || 'Unknown Student';
+          }
+          
           absentStudents.push({ 
-            ...fu, 
+            ...fu,
+            studentName, // Use the fixed student name
+            nameKhmer: studentData?.nameKhmer, // Add Khmer name from student data
             daysSinceAbsent, 
             isUrgent,
             student: studentData || {}, // Add student data for priority calculation
@@ -457,7 +511,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                 {followUp.studentName || 'Unknown Student'}
               </div>
               <div className="text-sm khmer-font text-gray-500 dark:text-gray-400">
-                {(followUp as any).nameKhmer || 'N/A'}
+                {followUp.nameKhmer || followUp.student?.nameKhmer || 'N/A'}
               </div>
             </div>
           </div>
@@ -497,25 +551,6 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
               N/A
             </span>
           )}
-        </td>
-        
-        <td className="p-4">
-          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-            {new Date(followUp.date).toLocaleDateString('en-US', {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric'
-            })}
-          </div>
-          <div className={`text-xs font-medium ${
-            followUp.daysSinceAbsent >= 3 ? 'text-red-600 dark:text-red-400' :
-            followUp.daysSinceAbsent >= 2 ? 'text-orange-600 dark:text-orange-400' :
-            'text-gray-500 dark:text-gray-400'
-          }`}>
-            {followUp.daysSinceAbsent === 0 ? 'Today' : 
-             followUp.daysSinceAbsent === 1 ? 'Yesterday' :
-             `${followUp.daysSinceAbsent} days ago`}
-          </div>
         </td>
         
         <td className="p-4">
@@ -728,9 +763,6 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                     Phone/Telegram
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Absent Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Monthly Absent Count
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
@@ -814,9 +846,6 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Phone/Telegram
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                    Absent Date
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                     Monthly Absent Count

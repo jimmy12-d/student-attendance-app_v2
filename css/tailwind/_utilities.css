@@ -1,1 +1,93 @@
 @import 'tailwindcss/utilities' layer(utilities);
+
+/* Custom company purple utilities */
+@layer utilities {
+  .bg-company-purple {
+    background-color: var(--color-company-purple);
+  }
+  
+  .bg-company-purple-dark {
+    background-color: var(--color-company-purple-dark);
+  }
+  
+  .text-company-purple {
+    color: var(--color-company-purple);
+  }
+  
+  .border-company-purple {
+    border-color: var(--color-company-purple);
+  }
+  
+  .border-company-purple-dark {
+    border-color: var(--color-company-purple-dark);
+  }
+  
+  .hover\:bg-company-purple:hover {
+    background-color: var(--color-company-purple);
+  }
+  
+  .hover\:bg-company-purple-dark:hover {
+    background-color: var(--color-company-purple-dark);
+  }
+  
+  .hover\:border-company-purple:hover {
+    border-color: var(--color-company-purple);
+  }
+  
+  .hover\:border-company-purple-dark:hover {
+    border-color: var(--color-company-purple-dark);
+  }
+  
+  .dark\:bg-company-purple:is(.dark *) {
+    background-color: var(--color-company-purple);
+  }
+  
+  .dark\:bg-company-purple-dark:is(.dark *) {
+    background-color: var(--color-company-purple-dark);
+  }
+  
+  .dark\:border-company-purple:is(.dark *) {
+    border-color: var(--color-company-purple);
+  }
+  
+  .dark\:border-company-purple-dark:is(.dark *) {
+    border-color: var(--color-company-purple-dark);
+  }
+  
+  .dark\:text-company-purple:is(.dark *) {
+    color: var(--color-company-purple);
+  }
+  
+  .dark\:hover\:bg-company-purple:is(.dark *):hover {
+    background-color: var(--color-company-purple);
+  }
+  
+  .dark\:hover\:bg-company-purple-dark:is(.dark *):hover {
+    background-color: var(--color-company-purple-dark);
+  }
+  
+  .dark\:hover\:border-company-purple:is(.dark *):hover {
+    border-color: var(--color-company-purple);
+  }
+  
+  .dark\:hover\:border-company-purple-dark:is(.dark *):hover {
+    border-color: var(--color-company-purple-dark);
+  }
+  
+  .border-t-company-purple {
+    border-top-color: var(--color-company-purple);
+  }
+  
+  .shadow-company-purple\/50 {
+    --tw-shadow-color: rgb(124 58 237 / 0.5);
+    --tw-shadow: var(--tw-shadow-colored);
+  }
+  
+  .ring-purple-300 {
+    --tw-ring-color: rgb(216 180 254);
+  }
+  
+  .dark\:ring-purple-700:is(.dark *) {
+    --tw-ring-color: rgb(126 34 206);
+  }
+}

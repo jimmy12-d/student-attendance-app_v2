@@ -16,7 +16,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/firebase-config";
-import { Form, Question, FormAnswer, FormResponse } from "@/app/_interfaces/forms";
+import { Form, Question, FormAnswer, FormResponse, FormSection } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
 import { 
   mdiArrowLeft, 
@@ -28,11 +28,15 @@ import {
   mdiFileUpload,
   mdiFileDocument,
   mdiClose,
-  mdiLoading
+  mdiLoading,
+  mdiTrophy,
+  mdiGauge
 } from "@mdi/js";
 import { toast } from "sonner";
 import { useAppSelector } from "@/app/_stores/hooks";
 import { Nokora } from 'next/font/google';
+import ScoreInputQuestion from "../_components/ScoreInputQuestion";
+import { useTranslations } from 'next-intl';
 
 const nokora = Nokora({ weight: '400', subsets: ['khmer'] });
 
@@ -40,6 +44,7 @@ const StudentFormFillerPage = () => {
   const router = useRouter();
   const params = useParams();
   const formId = params?.formId as string;
+  const t = useTranslations('student.forms');
 
   const { studentUid, studentName, studentDocId } = useAppSelector((state) => ({
     studentUid: state.main.userUid,
@@ -60,6 +65,7 @@ const StudentFormFillerPage = () => {
   const [uploadedFiles, setUploadedFiles] = useState<{ [questionId: string]: File[] }>({});
   const [uploadingFiles, setUploadingFiles] = useState<{ [questionId: string]: boolean }>({});
   const [fileUrls, setFileUrls] = useState<{ [questionId: string]: string[] }>({});
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
     if (!studentUid) {
@@ -118,22 +124,44 @@ const StudentFormFillerPage = () => {
     }
   };
 
-  // Filter questions based on student's class type
-  const getVisibleQuestions = (): Question[] => {
+  // Get all questions (flattened from sections or direct questions)
+  const getAllQuestions = (): Question[] => {
     if (!form) return [];
+    
+    // If form uses sections, flatten all questions from all sections
+    if (form.sections && form.sections.length > 0) {
+      return form.sections.flatMap(section => section.questions);
+    }
+    
+    // Otherwise, use direct questions array (backward compatibility)
+    return form.questions || [];
+  };
+
+  // Filter questions based on student's class type (for backward compatibility with old question-based forms)
+  const getVisibleQuestions = (): Question[] => {
+    const allQuestions = getAllQuestions();
+    // In section mode, section-level filtering applies, so return all questions
+    // In simple mode, show all questions (form-level targetClassTypes handles access control)
+    return allQuestions;
+  };
+
+  // Get visible sections filtered by student's class type
+  const getVisibleSections = (): FormSection[] => {
+    if (!form || !form.sections) return [];
     
     const studentClassType = studentData?.classType;
     
-    return form.questions.filter(question => {
-      // If question has no targetClassTypes, it's visible to all
-      if (!question.targetClassTypes || question.targetClassTypes.length === 0) {
+    // Filter sections based on targetClassTypes at section level
+    return form.sections.filter(section => {
+      // If section has no targetClassTypes, it's visible to all
+      if (!section.targetClassTypes || section.targetClassTypes.length === 0) {
         return true;
       }
-      // If student has a classType, check if it's in the question's targetClassTypes
-      if (studentClassType && question.targetClassTypes.includes(studentClassType)) {
+      // If student has a classType, check if it's in the section's targetClassTypes
+      if (studentClassType && section.targetClassTypes.includes(studentClassType)) {
         return true;
       }
-      // Otherwise, hide this question
+      // Otherwise, hide this section
       return false;
     });
   };
@@ -162,6 +190,46 @@ const StudentFormFillerPage = () => {
     } catch (error) {
       console.error("Error loading student data:", error);
     }
+  };
+
+  // Helper function to calculate grade based on percentage (same as ScoreInputQuestion)
+  const getGrade = (percentage: number): { grade: string; color: string; bgColor: string; borderColor: string } => {
+    if (percentage >= 0.9) return { 
+      grade: 'A', 
+      color: 'text-green-700 dark:text-green-300', 
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
+      borderColor: 'border-green-500 dark:border-green-400'
+    };
+    if (percentage >= 0.8) return { 
+      grade: 'B', 
+      color: 'text-blue-700 dark:text-blue-300', 
+      bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+      borderColor: 'border-blue-500 dark:border-blue-400'
+    };
+    if (percentage >= 0.7) return { 
+      grade: 'C', 
+      color: 'text-yellow-700 dark:text-yellow-300', 
+      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+      borderColor: 'border-yellow-500 dark:border-yellow-400'
+    };
+    if (percentage >= 0.6) return { 
+      grade: 'D', 
+      color: 'text-orange-700 dark:text-orange-300', 
+      bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+      borderColor: 'border-orange-500 dark:border-orange-400'
+    };
+    if (percentage >= 0.5) return { 
+      grade: 'E', 
+      color: 'text-gray-700 dark:text-gray-300', 
+      bgColor: 'bg-gray-100 dark:bg-gray-900/30',
+      borderColor: 'border-gray-500 dark:border-gray-400'
+    };
+    return { 
+      grade: 'F', 
+      color: 'text-red-700 dark:text-red-300', 
+      bgColor: 'bg-red-100 dark:bg-red-900/30',
+      borderColor: 'border-red-500 dark:border-red-400'
+    };
   };
 
   const handleAnswerChange = (questionId: string, value: string | string[]) => {
@@ -351,6 +419,14 @@ const StudentFormFillerPage = () => {
             newErrors[question.id] = 'This field is required';
             hasErrors = true;
           }
+        } else if (question.type === 'score_input') {
+          // Validate score input questions - must be greater than 0
+          const answer = answers[question.id];
+          const score = Number(answer);
+          if (!answer || score <= 0) {
+            newErrors[question.id] = t('scoreSummary.scoreMustBeGreaterThanZero');
+            hasErrors = true;
+          }
         } else {
           // Validate other question types
           const answer = answers[question.id];
@@ -367,6 +443,24 @@ const StudentFormFillerPage = () => {
 
     setValidationErrors(newErrors);
     return !hasErrors;
+  };
+
+  // Check if form has score input questions
+  const hasScoreInputs = () => {
+    const visibleQuestions = getVisibleQuestions();
+    return visibleQuestions.some(q => q.type === 'score_input');
+  };
+
+  // Handle pre-submit confirmation
+  const handleSubmitClick = () => {
+    if (!validateAnswers()) return;
+    
+    // Show confirmation modal if there are score inputs
+    if (hasScoreInputs()) {
+      setShowConfirmation(true);
+    } else {
+      submitForm();
+    }
   };
 
   const submitForm = async () => {
@@ -766,6 +860,16 @@ const StudentFormFillerPage = () => {
           </div>
         );
 
+      case 'score_input':
+        return (
+          <ScoreInputQuestion
+            maxScore={question.maxScore || 100}
+            value={(answer as string) || '0'}
+            onChange={(value) => handleAnswerChange(question.id, value)}
+            required={question.required}
+          />
+        );
+
       default:
         return null;
     }
@@ -824,7 +928,8 @@ const StudentFormFillerPage = () => {
     : new Date(form.deadline);
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 pb-20 ${nokora.className}`}>
+    <>
+      <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-900 dark:to-slate-800 pb-12 ${nokora.className}`}>
       {/* Fixed Header */}
       <div className="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl shadow-lg border-b border-gray-200/50 dark:border-slate-700/50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4">
@@ -884,8 +989,91 @@ const StudentFormFillerPage = () => {
           </div>
         </div>
 
-        {/* Questions */}
-        {getVisibleQuestions().map((question, index) => {
+        {/* Questions / Sections */}
+        {form?.sections && form.sections.length > 0 ? (
+          /* Render Sections */
+          getVisibleSections().map((section, sectionIndex) => (
+            <div key={section.id} className="space-y-6">
+              {/* Section Header */}
+              {(section.title || section.description) && (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6 border-l-4 border-indigo-500 dark:border-indigo-400">
+                  {section.title && (
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                      {section.title}
+                    </h2>
+                  )}
+                  {section.description && (
+                    <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                      {section.description}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Section Questions */}
+              {section.questions.map((question, qIndex) => {
+                const hasError = validationErrors[question.id];
+                const isCompleted = completedQuestions.has(question.id);
+                const hasAnswer = answers[question.id] && (!Array.isArray(answers[question.id]) || (answers[question.id] as string[]).length > 0);
+                
+                return (
+                  <div 
+                    key={question.id}
+                    className={`relative bg-white dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-xl border-2 p-6 sm:p-8 transition-all duration-300 ${
+                      hasError 
+                        ? 'border-red-300 dark:border-red-600 shadow-red-100 dark:shadow-red-900/20' 
+                        : isCompleted 
+                        ? 'border-green-300 dark:border-green-600 shadow-green-100 dark:shadow-green-900/20'
+                        : 'border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-2xl'
+                    }`}
+                  >
+                    {/* Question Content (same as before) */}
+                    <div className="flex items-start gap-4 mb-6">
+                      <div className={`flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 shadow-lg ${
+                        hasError 
+                          ? 'bg-gradient-to-br from-red-400 to-red-600 text-white' 
+                          : isCompleted
+                          ? 'bg-gradient-to-br from-green-400 to-green-600 text-white'
+                          : 'bg-gradient-to-br from-blue-400 to-indigo-600 text-white'
+                      }`}>
+                        {hasError ? (
+                          <Icon path={mdiAlertCircle} size={16} />
+                        ) : isCompleted ? (
+                          <Icon path={mdiCheckCircle} size={16} />
+                        ) : (
+                          <span className="font-bold text-lg">{sectionIndex + 1}.{qIndex + 1}</span>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-start gap-2 mb-1">
+                          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white leading-tight flex-1">
+                            {question.text}
+                          </h3>
+                          {question.required && (
+                            <span className="text-red-500 dark:text-red-400 text-xl font-bold flex-shrink-0">*</span>
+                          )}
+                        </div>
+                        {hasError && (
+                          <p className="text-sm text-red-600 dark:text-red-400 font-medium mt-2 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                            <Icon path={mdiAlertCircle} size={0.7} />
+                            {hasError}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Question Input */}
+                    <div className={question.type === 'score_input' ? '' : 'ml-14'}>
+                      {renderQuestion(question)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))
+        ) : (
+          /* Render Direct Questions (Backward Compatibility) */
+          getVisibleQuestions().map((question, index) => {
           const hasError = validationErrors[question.id];
           const isCompleted = completedQuestions.has(question.id);
           const hasAnswer = answers[question.id] && (!Array.isArray(answers[question.id]) || (answers[question.id] as string[]).length > 0);
@@ -960,7 +1148,8 @@ const StudentFormFillerPage = () => {
               </div>
             </div>
           );
-        })}
+        })
+        )}
 
         {/* Submit Button */}
         <div className="sticky bottom-6 sm:bottom-8">
@@ -973,19 +1162,19 @@ const StudentFormFillerPage = () => {
             }`}></div>
             
             <button
-              onClick={submitForm}
+              onClick={handleSubmitClick}
               disabled={submitting || Object.keys(validationErrors).some(key => validationErrors[key])}
-              className={`group relative w-full flex items-center justify-center space-x-3 text-white px-8 py-5 sm:py-6 rounded-3xl shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden touch-manipulation ${
+              className={`group relative w-full flex items-center justify-center space-x-3 text-white px-8 py-5 sm:py-6 rounded-3xl shadow-2xl hover:shadow-3xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden touch-manipulation backdrop-blur-sm border border-white/20 ${
                 Object.keys(validationErrors).some(key => validationErrors[key]) 
-                  ? 'bg-gradient-to-r from-red-600 via-red-600 to-red-600' 
-                  : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600'
+                  ? 'bg-red-500/80 hover:bg-red-400/90' 
+                  : 'bg-gradient-to-r from-blue-500/80 via-indigo-500/80 to-purple-500/80 hover:from-blue-400/90 hover:via-indigo-400/90 hover:to-purple-400/90'
               }`}
             >
               {/* Hover Overlay */}
               <div className={`absolute inset-0 rounded-3xl transition-opacity duration-300 ${
                 Object.keys(validationErrors).some(key => validationErrors[key]) 
-                  ? 'bg-gradient-to-r from-red-700 via-red-700 to-red-700 opacity-0 group-hover:opacity-100' 
-                  : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 opacity-0 group-hover:opacity-100'
+                  ? 'bg-red-300/20 opacity-0 group-hover:opacity-100' 
+                  : 'bg-white/20 opacity-0 group-hover:opacity-100'
               }`}></div>
               
               {Object.keys(validationErrors).some(key => validationErrors[key]) ? (
@@ -1012,6 +1201,224 @@ const StudentFormFillerPage = () => {
         </div>
       </div>
     </div>
+
+    {/* Score Summary Confirmation Modal */}
+    {showConfirmation && hasScoreInputs() && (
+      <div 
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        onClick={() => setShowConfirmation(false)}
+        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+      >
+          <div 
+            className="relative w-full max-w-2xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col border border-white/20 dark:border-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-white/20 dark:border-white/10 bg-white/10 dark:bg-white/5 backdrop-blur-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Icon path={mdiTrophy} size={24} className="text-white drop-shadow-lg" />
+                  <h2 className="text-xl font-bold text-white">{t('scoreSummary.title')}</h2>
+                </div>
+                <button
+                  onClick={() => setShowConfirmation(false)}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <Icon path={mdiClose} size={20} className="text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto py-4 px-6 space-y-6">
+              {/* Render scores by section or all questions */}
+              {form?.sections && form.sections.length > 0 ? (
+                // Form has sections
+                form.sections
+                  .filter(section => {
+                    // Filter by classType if needed
+                    if (!section.targetClassTypes || section.targetClassTypes.length === 0) return true;
+                    return studentData?.classType && section.targetClassTypes.includes(studentData.classType);
+                  })
+                  .map((section) => {
+                    const scoreQuestions = section.questions.filter(q => q.type === 'score_input');
+                    if (scoreQuestions.length === 0) return null;
+
+                    // Calculate section totals
+                    let sectionTotalScore = 0;
+                    let sectionMaxScore = 0;
+                    
+                    scoreQuestions.forEach(question => {
+                      const score = Number(answers[question.id]) || 0;
+                      const maxScore = question.maxScore || 100;
+                      sectionTotalScore += score;
+                      sectionMaxScore += maxScore;
+                    });
+
+                    const sectionPercentage = sectionMaxScore > 0 ? sectionTotalScore / sectionMaxScore : 0;
+                    const sectionGrade = getGrade(sectionPercentage);
+
+                    return (
+                      <div key={section.id} className="space-y-4">
+                        {/* Section Title */}
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                          {section.title}
+                        </h3>
+                        
+                        {/* Individual Scores in Section */}
+                        <div className="space-y-2">
+                          {scoreQuestions.map((question) => {
+                            const score = Number(answers[question.id]) || 0;
+                            const maxScore = question.maxScore || 100;
+                            const percentage = maxScore > 0 ? score / maxScore : 0;
+                            const grade = getGrade(percentage);
+
+                            return (
+                              <div key={question.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <div className="flex-1 min-w-0 mr-4">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    {question.text}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {score.toFixed(1)} / {maxScore} {t('scoreSummary.points')}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                                    {Math.round(percentage * 100)}%
+                                  </span>
+                                  <span className={`px-3 py-1 rounded-lg font-bold ${grade.bgColor} ${grade.color}`}>
+                                    {grade.grade}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })
+              ) : (
+                // Form has no sections - show all score inputs
+                <div className="space-y-2">
+                  {getVisibleQuestions()
+                    .filter(q => q.type === 'score_input')
+                    .map((question, index) => {
+                      const score = Number(answers[question.id]) || 0;
+                      const maxScore = question.maxScore || 100;
+                      const percentage = maxScore > 0 ? score / maxScore : 0;
+                      const grade = getGrade(percentage);
+
+                      return (
+                        <div key={question.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <div className="flex-1 min-w-0 mr-4">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {question.text}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {score.toFixed(1)} / {maxScore} {t('scoreSummary.points')}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                              {Math.round(percentage * 100)}%
+                            </span>
+                            <span className={`px-3 py-1 rounded-lg font-bold ${grade.bgColor} ${grade.color}`}>
+                              {grade.grade}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+
+              {/* Overall Total */}
+              {(() => {
+                const allScoreQuestions = getVisibleQuestions().filter(q => q.type === 'score_input');
+                let totalScore = 0;
+                let totalMaxScore = 0;
+                
+                allScoreQuestions.forEach(question => {
+                  const score = Number(answers[question.id]) || 0;
+                  const maxScore = question.maxScore || 100;
+                  totalScore += score;
+                  totalMaxScore += maxScore;
+                });
+
+                const totalPercentage = totalMaxScore > 0 ? totalScore / totalMaxScore : 0;
+                const totalGrade = getGrade(totalPercentage);
+
+                return (
+                  <div className={`${totalGrade.bgColor} ${totalGrade.borderColor} border-3 rounded-2xl p-6 space-y-3`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex items-center justify-center w-16 h-16 ${totalGrade.bgColor} rounded-full border-2 ${totalGrade.borderColor} shadow-lg`}>
+                          <div className="text-center">
+                            <div className={`text-lg font-black ${totalGrade.color}`}>
+                              {Math.round(totalPercentage * 100)}%
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                            {t('scoreSummary.overallGrade')}
+                          </p>
+                          <p className={`text-5xl font-black ${totalGrade.color} drop-shadow-sm`}>
+                            {totalGrade.grade}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {totalScore.toFixed(1)}
+                        </p>
+                        <div className="w-full h-px bg-gray-600 dark:bg-gray-400 my-1"></div>
+                        <p className="text-lg font-normal text-gray-600 dark:text-gray-400">
+                          {totalMaxScore}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Footer with Actions */}
+            <div className="px-6 py-4 border-t border-white/20 dark:border-white/10 bg-white/10 dark:bg-white/5 backdrop-blur-xl">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmation(false)}
+                  className="flex-1 px-6 py-3 bg-white/20 dark:bg-white/10 backdrop-blur-sm text-white rounded-xl hover:bg-white/30 dark:hover:bg-white/20 transition-all font-semibold border border-white/30 dark:border-white/20 shadow-lg"
+                >
+                  {t('scoreSummary.reviewAnswers')}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmation(false);
+                    submitForm();
+                  }}
+                  disabled={submitting}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500/80 via-indigo-500/80 to-purple-500/80 backdrop-blur-sm text-white rounded-xl hover:from-blue-400/90 hover:via-indigo-400/90 hover:to-purple-400/90 transition-all font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 border border-white/20"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-3 border-white border-t-transparent"></div>
+                      <span>{t('scoreSummary.submitting')}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icon path={mdiSend} size={18} />
+                      <span>{t('scoreSummary.confirmSubmit')}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

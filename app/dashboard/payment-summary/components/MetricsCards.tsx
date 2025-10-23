@@ -1,10 +1,10 @@
 "use client";
 import React, { useState } from "react";
-import { mdiCurrencyUsd, mdiAccount, mdiTrendingUp, mdiCalendar, mdiClose } from "@mdi/js";
+import { mdiCurrencyUsd, mdiAccount, mdiTrendingUp, mdiTrendingDown, mdiClose, mdiAlertCircle } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import CardBox from "../../../_components/CardBox";
 import NumberDynamic from "../../../_components/NumberDynamic";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import { db } from "../../../../firebase-config";
 import { getPaymentStatus, getInactiveStudentStatus } from "../../_lib/paymentLogic";
 
@@ -38,19 +38,23 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
     onBreak: number;
     droppedTotal: number;
     onBreakTotal: number;
+    new: number;
+    newTotal: number;
   }>({
     total: 0,
     dropped: 0,
     onBreak: 0,
     droppedTotal: 0,
-    onBreakTotal: 0
+    onBreakTotal: 0,
+    new: 0,
+    newTotal: 0
   });
   const [loadingInactive, setLoadingInactive] = useState(false);
 
-  // Fetch inactive students data on component mount
+  // Fetch inactive students data on component mount and when startDate changes
   React.useEffect(() => {
-    fetchInactiveStudents();
-  }, []);
+    fetchInactiveStudents(startDate);
+  }, [startDate]);
 
   const fetchUnpaidStudents = async () => {
     setLoadingUnpaid(true);
@@ -158,9 +162,13 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
     fetchUnpaidStudents();
   };
 
-  const fetchInactiveStudents = async () => {
+  const fetchInactiveStudents = async (startDate?: string) => {
     setLoadingInactive(true);
     try {
+      // Use the selected date from the date picker, or fallback to current date
+      const targetDate = startDate ? new Date(startDate + 'T12:00:00') : new Date();
+      const searchMonth = targetDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      
       // Fetch all students from current academic year
       const studentsRef = collection(db, "students");
       const studentsQuery = query(studentsRef, where("ay", "==", "2026"));
@@ -188,8 +196,11 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
       let onBreakCount = 0;
       let droppedTotal = 0;
       let onBreakTotal = 0;
+      let newCount = 0;
+      let newTotal = 0;
 
-      studentsSnapshot.forEach((doc) => {
+      const studentDocs = studentsSnapshot.docs;
+      await Promise.all(studentDocs.map(async (doc) => {
         const studentData = doc.data() as any;
 
         // Use central inactive student logic
@@ -227,17 +238,49 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
           
           onBreakTotal += studentPrice;
         }
-      });
 
-      const totalInactive = droppedCount + onBreakCount;
-      const totalInactiveValue = droppedTotal + onBreakTotal;
+        // Check for new students if not inactive
+        if (inactiveStatus !== 'dropped' && inactiveStatus !== 'onBreak') {
+          try {
+            // Check if student was created in the search month
+            if (studentData.createdAt) {
+              const createdAt = studentData.createdAt.toDate ? studentData.createdAt.toDate() : new Date(studentData.createdAt);
+              const createdMonth = createdAt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+              
+              if (createdMonth === searchMonth) {
+                newCount++;
+                // Calculate price using same logic as expected revenue
+                const studentClass = studentData.class; // e.g., "Class A"
+                const classId = studentClass?.replace('Class ', '').trim() || '';
+                const classType = classToTypeMap.get(classId) || '';
+                let studentPrice = classTypePrices.get(classType) || 25;
+                
+                // Apply discount if student has a discount field
+                if (studentData.discount && typeof studentData.discount === 'number') {
+                  // Discount is stored as actual amount to subtract (e.g., 5 for $5 off)
+                  studentPrice = studentPrice - studentData.discount;
+                }
+                
+                newTotal += studentPrice;
+              }
+            }
+          } catch (error) {
+            console.error(`Error checking creation date for student ${doc.id}:`, error);
+          }
+        }
+      }));
+
+      const totalInactive = droppedCount + onBreakCount + newCount;
+      const totalInactiveValue = droppedTotal + onBreakTotal + newTotal;
 
       setInactiveStudents({
         total: totalInactive,
         dropped: droppedCount,
         onBreak: onBreakCount,
         droppedTotal,
-        onBreakTotal
+        onBreakTotal,
+        new: newCount,
+        newTotal
       });
     } catch (error) {
       console.error("Error fetching inactive students:", error);
@@ -281,7 +324,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
     {
       title: "Unpaid Revenue",
       value: summaryData?.expectedRevenue?.totalExpected || 0,
-      icon: mdiTrendingUp,
+      icon: mdiAlertCircle,
       color: "from-orange-500 to-red-600",
       bgColor: "from-orange-50 to-red-50",
       darkBgColor: "from-orange-900/20 to-red-900/20",
@@ -289,13 +332,13 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
       // trend: "+15.2%"
     },
     {
-      title: "Inactive Students",
-      value: inactiveStudents.total,
-      icon: mdiAccount,
-      color: "from-gray-500 to-slate-600",
-      bgColor: "from-gray-50 to-slate-50",
-      darkBgColor: "from-gray-900/20 to-slate-900/20",
-      isCurrency: false,
+      title: "Student Balance",
+      value: inactiveStudents.newTotal - inactiveStudents.droppedTotal - inactiveStudents.onBreakTotal,
+      icon: mdiTrendingUp,
+      color: "from-indigo-500 to-purple-600",
+      bgColor: "from-indigo-50 to-purple-50",
+      darkBgColor: "from-indigo-900/20 to-purple-900/20",
+      isCurrency: true,
       // trend: "+5.7%"
     }
   ];
@@ -325,7 +368,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
                 {metric.title}
               </p>
               <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                {(isLoading && metric.title !== "Inactive Students") || (metric.title === "Inactive Students" && loadingInactive) ? (
+                {(isLoading && metric.title !== "Student Balance") || (metric.title === "Student Balance" && loadingInactive) ? (
                   <div className="animate-pulse">
                     <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
                   </div>
@@ -338,6 +381,13 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
                         <NumberDynamic value={metric.value} />
                       }
                     </span>
+                    {metric.title === "Student Balance" && metric.value !== 0 && (
+                      <Icon 
+                        path={metric.value > 0 ? mdiTrendingUp : mdiTrendingDown} 
+                        size={20} 
+                        className={`mt-1 ${metric.value > 0 ? 'text-green-500' : 'text-red-500'}`} 
+                      />
+                    )}
                     {metric.title === "Total Transactions" && summaryData?.unpaidStudentsCount > 0 && (
                       <button
                         onClick={handleUnpaidClick}
@@ -401,16 +451,25 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
                 </div>
               )}
               
-              {/* Inactive Students Breakdown */}
-              {metric.title === "Inactive Students" && !loadingInactive && (
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800/30 space-y-2">
+              {/* Student Balance Breakdown */}
+              {metric.title === "Student Balance" && !loadingInactive && (
+                <div className="mt-3 pt-3 border-t border-indigo-200 dark:border-indigo-800/30 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-600 dark:text-gray-400 flex items-center">
+                      <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                      New Students ({inactiveStudents.new})
+                    </span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">
+                      +${inactiveStudents.newTotal.toFixed(2)}
+                    </span>
+                  </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-gray-600 dark:text-gray-400 flex items-center">
                       <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
                       Dropped ({inactiveStudents.dropped})
                     </span>
                     <span className="font-semibold text-red-600 dark:text-red-400">
-                      ${inactiveStudents.droppedTotal.toFixed(2)}
+                      -${inactiveStudents.droppedTotal.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
@@ -419,8 +478,16 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
                       On Break ({inactiveStudents.onBreak})
                     </span>
                     <span className="font-semibold text-yellow-600 dark:text-yellow-400">
-                      ${inactiveStudents.onBreakTotal.toFixed(2)}
+                      -${inactiveStudents.onBreakTotal.toFixed(2)}
                     </span>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-indigo-300 dark:border-indigo-700/50">
+                    <div className="flex items-center justify-between text-xs font-medium">
+                      <span className="text-gray-700 dark:text-gray-300">Net Balance</span>
+                      <span className={`font-bold ${(inactiveStudents.newTotal - inactiveStudents.droppedTotal - inactiveStudents.onBreakTotal) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        ${(inactiveStudents.newTotal - inactiveStudents.droppedTotal - inactiveStudents.onBreakTotal).toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}

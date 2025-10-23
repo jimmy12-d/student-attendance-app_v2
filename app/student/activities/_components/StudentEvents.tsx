@@ -56,7 +56,7 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
 
       const snapshot = await getDocs(eventsQuery);
       console.log('Events fetched:', snapshot.docs.length);
-      const fetchedEvents = snapshot.docs.map(doc => ({
+      const allEvents = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       } as Event));
@@ -65,22 +65,32 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
       const statuses: Record<string, string> = {};
       const formStatusMap: Record<string, FormStatus> = {};
       const attendanceDataMap: Record<string, any> = {};
+      const visibleEvents: Event[] = [];
       
-      for (const event of fetchedEvents) {
-        // Check form status
+      for (const event of allEvents) {
+        // Check form status and visibility
+        let isFormVisible = false;
         try {
           const formDoc = await getDoc(doc(db, "forms", event.formId));
           if (formDoc.exists()) {
             const formData = formDoc.data();
+            isFormVisible = formData.isVisible !== false; // undefined or true = visible
+            
             formStatusMap[event.id] = {
               isActive: formData.isActive || false,
               exists: true
             };
+            
+            // Only include event if its form is visible
+            if (isFormVisible) {
+              visibleEvents.push(event);
+            }
           } else {
             formStatusMap[event.id] = {
               isActive: false,
               exists: false
             };
+            // Don't include events with non-existent forms
           }
         } catch (error) {
           console.error("Error checking form status:", error);
@@ -88,6 +98,11 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
             isActive: false,
             exists: false
           };
+        }
+
+        // Only check registration and attendance for visible events
+        if (!isFormVisible) {
+          continue; // Skip this event
         }
 
         // Check registration status
@@ -157,7 +172,7 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
       console.log('Final form statuses:', formStatusMap);
       
       // Add attendance data to events
-      const eventsWithAttendance = fetchedEvents.map(event => ({
+      const eventsWithAttendance = visibleEvents.map(event => ({
         ...event,
         attendanceData: attendanceDataMap[event.id]
       }));
