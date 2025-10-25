@@ -288,7 +288,7 @@ export interface PrintRequest {
 export interface StarReward {
   id: string; // Firestore document ID
   name: string; // e.g., "Early Bird Star"
-  color: 'white' | 'pink' | 'orange' | 'blue'; // Color options
+  color: 'white' | 'pink' | 'yellow' | 'orange' | 'blue'; // Color options
   amount: number; // Number of stars awarded
   setLimit: number; // Maximum times this reward can be claimed
   isActive: boolean; // Whether the reward is currently active
@@ -303,11 +303,31 @@ export interface ClaimedStar {
   id: string; // Firestore document ID
   starRewardId: string; // Reference to starRewards collection
   starRewardName: string; // For easy display
-  starRewardColor: 'white' | 'pink' | 'orange' | 'blue';
+  starRewardColor: 'white' | 'pink' | 'yellow' | 'orange' | 'blue';
   amount: number; // Stars earned
   claimedAt: Timestamp;
   claimedBy: string; // Admin who granted it
   reason?: string; // Optional reason for granting
+}
+
+// Star Request Interface (for student requests)
+export interface StarRequest {
+  id: string; // Firestore document ID
+  studentId: string; // Student document ID
+  studentName: string; // Student name for display
+  studentClass?: string; // Student class
+  studentShift?: string; // Student shift
+  authUid: string; // Student auth UID
+  starRewardId: string; // Reference to starRewards collection
+  starRewardName: string; // Reward name
+  starRewardColor: 'white' | 'pink' | 'yellow' | 'orange' | 'blue';
+  starRewardAmount: number; // Stars to be earned
+  reason?: string; // Optional reason for requesting
+  status: 'pending' | 'approved' | 'rejected'; // Request status
+  requestedAt: Timestamp;
+  processedAt?: Timestamp;
+  processedBy?: string; // Admin who approved/rejected
+  rejectionReason?: string; // Reason for rejection
 }
 
 // Student with star totals (for UI display)

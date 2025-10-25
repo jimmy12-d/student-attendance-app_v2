@@ -5,6 +5,7 @@ import ExamTabs from '../_components/ExamTabs';
 import CircularProgress from '../../_components/CircularProgress';
 import ScoreCard from '../_components/ScoreCard';
 import { motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 
 // Define types for our data
 type ExamSettings = { [subject: string]: { maxScore: number } };
@@ -56,9 +57,12 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
   calculateGrade,
   SUBJECT_ORDER,
   SOCIAL_STUDIES_LABELS,
+  seatInfo,
+  phoneInfo,
   studentName,
   isReadyToPublishResult,
 }) => {
+  const t = useTranslations('student.mockExam');
 
   // Real-time readiness is now managed by parent component
   const getGradeDependentStyles = (grade: string) => {
@@ -121,12 +125,12 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
     <div>
       <ExamTabs tabs={availableTabs} selectedTab={selectedTab} setSelectedTab={handleTabChange} disabled={isExamLoading} />
       {isExamLoading ? (
-        <div className="text-center text-gray-400 p-8">Loading scores...</div>
+        <div className="text-center text-gray-400 p-8">{t('loadingScores')}</div>
       ) : !isReadyToPublishResult ? (
         <div className="text-center text-yellow-400 bg-yellow-500/10 py-8 px-6 border border-yellow-500/30 rounded-2xl">
-          <p className="font-bold text-lg">Results Not Available</p>
+          <p className="font-bold text-lg">{t('resultsNotAvailable')}</p>
           <p className="mt-2 text-sm">
-            The results for this mock exam are not yet ready to be published.
+            {t('resultsNotReadyMessage')}
           </p>
         </div>
       ) : (

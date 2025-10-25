@@ -416,7 +416,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
                 name="fullName"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
                 required
               />
             </div>
@@ -430,7 +430,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
                 name="nameKhmer"
                 value={nameKhmer}
                 onChange={(e) => setNameKhmer(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
               />
             </div>
           </div>
@@ -447,7 +447,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
                 name="phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
               />
             </div>
           </div>
@@ -580,7 +580,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
                             value={telegramUsername}
                             onChange={(e) => setTelegramUsername(e.target.value)}
                             placeholder="username"
-                            className="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black transition-all duration-200 ease-in-out"
+                            className="block w-full pl-7 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700 transition-all duration-200 ease-in-out"
                           />
                         </div>
                         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -779,7 +779,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
                 name="motherName"
                 value={motherName}
                 onChange={(e) => setMotherName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
               />
             </div>
             <div>
@@ -792,7 +792,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
                 name="motherPhone"
                 value={motherPhone}
                 onChange={(e) => setMotherPhone(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
               />
             </div>
           </div>
@@ -807,7 +807,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
                 name="fatherName"
                 value={fatherName}
                 onChange={(e) => setFatherName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
               />
             </div>
             <div>
@@ -820,7 +820,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
                 name="fatherPhone"
                 value={fatherPhone}
                 onChange={(e) => setFatherPhone(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
               />
             </div>
           </div>
@@ -838,7 +838,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
           name="photoUrl"
           value={photoUrl}
           onChange={(e) => setPhotoUrl(e.target.value)}
-          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
           placeholder="https://example.com/image.jpg"
         />
         <PhotoPreview photoUrl={photoUrl} />

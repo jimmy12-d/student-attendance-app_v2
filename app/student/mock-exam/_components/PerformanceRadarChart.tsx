@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Radar } from 'react-chartjs-2';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import {
   Chart as ChartJS,
   RadialLinearScale,
@@ -134,6 +135,7 @@ const CustomLegend = ({ datasets, totals, toggleDataset, hiddenDatasets }: any) 
 };
 
 const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, studentClassType, allExamSettings, mockReadiness }) => {
+  const t = useTranslations('student.mockExam');
   const [hiddenDatasets, setHiddenDatasets] = useState<string[]>([]);
 
   const toggleDataset = (label: string) => {
@@ -253,7 +255,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
   if (chartData.datasets.length === 0) {
     return (
       <div className="relative bg-slate-900 border border-slate-800 rounded-2xl p-4 h-96 flex justify-center items-center">
-        <p className="text-slate-500">Not enough data to display the performance chart.</p>
+        <p className="text-slate-500">{t('notEnoughData')}</p>
       </div>
     );
   }

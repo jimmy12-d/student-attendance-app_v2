@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/firebase-config';
 import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, getDoc, getDocs } from 'firebase/firestore';
 import Icon from '@/app/_components/Icon';
-import { mdiCalendarStar, mdiTicket, mdiClose, mdiCalendar, mdiFormSelect, mdiCheckCircle, mdiCloseCircle, mdiClockOutline, mdiChevronRight, mdiLock, mdiAlertCircle, mdiImage } from '@mdi/js';
+import { mdiCalendarStar, mdiTicket, mdiClose, mdiCalendar, mdiFormSelect, mdiCheckCircle, mdiCloseCircle, mdiClockOutline, mdiChevronRight, mdiLock, mdiAlertCircle, mdiImage, mdiEye } from '@mdi/js';
 import { useTranslations } from 'next-intl';
 
 interface Event {
@@ -42,12 +42,17 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<Event | null>(null);
   const [registrationStatuses, setRegistrationStatuses] = useState<Record<string, string>>({});
+  const [responseIds, setResponseIds] = useState<Record<string, string>>({});
   const [formStatuses, setFormStatuses] = useState<Record<string, FormStatus>>({});
 
+  // Helper function to check if an event is upcoming
+  const isUpcoming = (eventDate: Timestamp | Date) => {
+    const date = eventDate instanceof Timestamp ? eventDate.toDate() : eventDate;
+    return date >= new Date();
+  };
+
   useEffect(() => {
-    console.log('StudentEvents useEffect running, studentUid:', studentUid);
     const fetchEvents = async () => {
-      console.log('Fetching events...');
       // Load all upcoming events
       const eventsQuery = query(
         collection(db, "events"),
@@ -55,7 +60,6 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
       );
 
       const snapshot = await getDocs(eventsQuery);
-      console.log('Events fetched:', snapshot.docs.length);
       const allEvents = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -63,6 +67,7 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
 
       // Check registration status and form status for each event
       const statuses: Record<string, string> = {};
+      const responseIds: Record<string, string> = {};
       const formStatusMap: Record<string, FormStatus> = {};
       const attendanceDataMap: Record<string, any> = {};
       const visibleEvents: Event[] = [];
@@ -70,27 +75,26 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
       for (const event of allEvents) {
         // Check form status and visibility
         let isFormVisible = false;
+        let formExists = false;
+        let isFormActive = false;
+        
         try {
           const formDoc = await getDoc(doc(db, "forms", event.formId));
           if (formDoc.exists()) {
             const formData = formDoc.data();
             isFormVisible = formData.isVisible !== false; // undefined or true = visible
+            isFormActive = formData.isActive || false;
+            formExists = true;
             
             formStatusMap[event.id] = {
-              isActive: formData.isActive || false,
+              isActive: isFormActive,
               exists: true
             };
-            
-            // Only include event if its form is visible
-            if (isFormVisible) {
-              visibleEvents.push(event);
-            }
           } else {
             formStatusMap[event.id] = {
               isActive: false,
               exists: false
             };
-            // Don't include events with non-existent forms
           }
         } catch (error) {
           console.error("Error checking form status:", error);
@@ -100,12 +104,7 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
           };
         }
 
-        // Only check registration and attendance for visible events
-        if (!isFormVisible) {
-          continue; // Skip this event
-        }
-
-        // Check registration status
+        // Check registration status first
         // Try to find response by authUid first (preferred for newer records)
         let responsesQuery = query(
           collection(db, "form_responses"),
@@ -125,20 +124,22 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
           responsesSnapshot = await getDocs(responsesQuery);
         }
         
-        console.log(`Event ${event.name} (ID: ${event.id}, FormID: ${event.formId}):`, {
-          hasResponse: !responsesSnapshot.empty,
-          responseCount: responsesSnapshot.docs.length,
-          responses: responsesSnapshot.docs.map(d => ({
-            id: d.id,
-            formId: d.data().formId,
-            authUid: d.data().authUid,
-            studentUid: d.data().studentUid,
-            registrationStatus: d.data().registrationStatus
-          }))
-        });
-        if (!responsesSnapshot.empty) {
+        const hasRegistered = !responsesSnapshot.empty;
+        
+        if (hasRegistered) {
           const responseData = responsesSnapshot.docs[0].data();
+          const responseId = responsesSnapshot.docs[0].id;
           statuses[event.id] = responseData.registrationStatus || 'pending';
+          responseIds[event.id] = responseId;
+        }
+
+        // Include event if:
+        // 1. Form is visible, OR
+        // 2. Student has registered AND event is upcoming (even if form is not visible)
+        const shouldIncludeEvent = formExists && (isFormVisible || (hasRegistered && isUpcoming(event.date)));
+        
+        if (shouldIncludeEvent) {
+          visibleEvents.push(event);
         }
 
         // Check attendance data for past events
@@ -168,8 +169,7 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
 
       setFormStatuses(formStatusMap);
       setRegistrationStatuses(statuses);
-      console.log('Final registration statuses:', statuses);
-      console.log('Final form statuses:', formStatusMap);
+      setResponseIds(responseIds);
       
       // Add attendance data to events
       const eventsWithAttendance = visibleEvents.map(event => ({
@@ -202,11 +202,6 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
       hour12: true,
       timeZone: 'Asia/Phnom_Penh'
     });
-  };
-
-  const isUpcoming = (eventDate: Timestamp | Date) => {
-    const date = eventDate instanceof Timestamp ? eventDate.toDate() : eventDate;
-    return date >= new Date();
   };
 
   const getRegistrationBadge = (eventId: string) => {
@@ -261,9 +256,10 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
   const getActionButton = (event: Event) => {
     const eventId = event.id;
     const registrationStatus = registrationStatuses[eventId];
+    const responseId = responseIds[eventId];
     const formStatus = formStatuses[eventId];
 
-    // Already approved - show ticket
+    // Already approved - show ticket only
     if (registrationStatus === 'approved') {
       return (
         <button
@@ -280,7 +276,7 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
     if (registrationStatus === 'pending') {
       const isPaidEvent = event.isFree === false && event.pricingOptions && event.pricingOptions.length > 0;
       return (
-        <div className="flex-1 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-lg">
+        <div className="px-4 py-2.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-lg">
           <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm">
             <Icon path={mdiClockOutline} size={16} />
             <span className="font-medium">
@@ -294,7 +290,7 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
     // Registration rejected
     if (registrationStatus === 'rejected') {
       return (
-        <div className="flex-1 px-4 py-2.5 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-lg">
+        <div className="px-4 py-2.5 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-lg">
           <div className="flex items-center gap-2 text-red-700 dark:text-red-300 text-sm">
             <Icon path={mdiCloseCircle} size={16} />
             <span className="font-medium">{t('registrationRejected')}</span>
@@ -392,12 +388,24 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white leading-tight">
                         {event.name}
                       </h3>
-                      {registrationStatuses[event.id] === 'approved' && (
-                        <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-md text-xs font-medium flex items-center gap-1 ml-3 flex-shrink-0">
-                          <Icon path={mdiCheckCircle} size={14} />
-                          {t('registered')}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {responseIds[event.id] && (
+                          <a
+                            href={`/student/forms/${event.formId}/response/${responseIds[event.id]}`}
+                            className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xs font-medium text-gray-700 dark:text-gray-300"
+                            title={t('viewResponse')}
+                          >
+                            <Icon path={mdiEye} size={14} />
+                            {t('view')}
+                          </a>
+                        )}
+                        {registrationStatuses[event.id] === 'approved' && (
+                          <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-md text-xs font-medium flex items-center gap-1">
+                            <Icon path={mdiCheckCircle} size={14} />
+                            {t('registered')}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="space-y-2 mb-4">
@@ -481,22 +489,34 @@ const StudentEvents = ({ studentUid }: StudentEventsProps) => {
                           <span>{formatDate(event.date)}</span>
                         </div>
                       </div>
-                      {event.attendanceData && (
-                        <div className="flex flex-col gap-1 ml-4">
-                          {event.attendanceData.clockInTime && (
-                            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                              <Icon path={mdiCheckCircle} size={16} />
-                              <span>{t('checkIn')} {formatTime(event.attendanceData.clockInTime)}</span>
-                            </div>
-                          )}
-                          {event.attendanceData.clockOutTime && (
-                            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-                              <Icon path={mdiCheckCircle} size={16} />
-                              <span>{t('checkOut')} {formatTime(event.attendanceData.clockOutTime)}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {responseIds[event.id] && (
+                          <a
+                            href={`/student/forms/${event.formId}/response/${responseIds[event.id]}`}
+                            className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-xs font-medium text-gray-700 dark:text-gray-300"
+                            title={t('viewResponse')}
+                          >
+                            <Icon path={mdiEye} size={14} />
+                            {t('view')}
+                          </a>
+                        )}
+                        {event.attendanceData && (
+                          <div className="flex flex-col gap-1">
+                            {event.attendanceData.clockInTime && (
+                              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                                <Icon path={mdiCheckCircle} size={16} />
+                                <span>{t('checkIn')} {formatTime(event.attendanceData.clockInTime)}</span>
+                              </div>
+                            )}
+                            {event.attendanceData.clockOutTime && (
+                              <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+                                <Icon path={mdiCheckCircle} size={16} />
+                                <span>{t('checkOut')} {formatTime(event.attendanceData.clockOutTime)}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     {registrationStatuses[event.id] === 'approved' && (
                       <button

@@ -10,7 +10,7 @@ import { doc, getDoc, setDoc, Timestamp, updateDoc, collection, getDocs } from "
 import { db } from "@/firebase-config";
 import { Form, Question, FormType, FormSection } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
-import { mdiPlus, mdiContentSave, mdiArrowLeft, mdiFormSelect, mdiViewSequentialOutline, mdiCheckCircle, mdiEye, mdiShieldCheck, mdiAccountGroup, mdiCounter, mdiCalendarClock } from "@mdi/js";
+import { mdiPlus, mdiContentSave, mdiArrowLeft, mdiFormSelect, mdiViewSequentialOutline, mdiCheckCircle, mdiEye, mdiShieldCheck, mdiAccountGroup, mdiCounter, mdiCalendarClock, mdiChevronDown, mdiChevronUp } from "@mdi/js";
 import { toast } from "sonner";
 import SectionEditor from "../_components/SectionEditor";
 import FormTypeSelector from "../_components/FormTypeSelector";
@@ -37,6 +37,7 @@ const FormBuilderPage = () => {
   const [sections, setSections] = useState<FormSection[]>([]);
   const [loading, setLoading] = useState(!isNewForm);
   const [saving, setSaving] = useState(false);
+  const [isFormSettingsExpanded, setIsFormSettingsExpanded] = useState(true);
   const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollIntervalRef = useRef<number | null>(null);
@@ -417,10 +418,27 @@ const FormBuilderPage = () => {
       {/* Form Content */}
       <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
         {/* Form Settings Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border-2 border-gray-200 dark:border-slate-700 p-6 space-y-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-            Form Settings
-          </h2>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border-2 border-gray-200 dark:border-slate-700 overflow-hidden">
+          <button
+            onClick={() => setIsFormSettingsExpanded(!isFormSettingsExpanded)}
+            className="w-full p-6 text-left hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors duration-200 flex items-center justify-between group"
+          >
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              Form Settings
+            </h2>
+            <Icon
+              path={isFormSettingsExpanded ? mdiChevronUp : mdiChevronDown}
+              size={24}
+              className="text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors duration-200"
+            />
+          </button>
+
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              isFormSettingsExpanded ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <div className="p-6 pt-0 space-y-6">
 
           {/* Title */}
           <div>
@@ -612,6 +630,8 @@ const FormBuilderPage = () => {
               </div>
             </label>
           </div>
+            </div>
+          </div>
         </div>
 
         {/* Form Content Section */}
@@ -662,7 +682,7 @@ const FormBuilderPage = () => {
               onDragOver={handleSectionDragOver}
               onDragEnd={handleSectionDragEnd}
               className="space-y-6"
-              style={{ overflowY: 'auto', maxHeight: '70vh' }}
+              style={{ overflowY: 'auto', maxHeight: '90vh' }}
             >
               {sections.map((section, index) => (
                 <SectionEditor

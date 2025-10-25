@@ -71,6 +71,18 @@ service cloud.firestore {
   		allow read: if true; // Changed to allow read by everyone
     }
     
+  	match /mockExam1/{examId} {
+      // Allow any authenticated user to read exam settings.
+      allow write: if isAuthorizedUser();
+  		allow read: if true; // Changed to allow read by everyone
+    }
+    
+  	match /mockExam2/{examId} {
+      // Allow any authenticated user to read exam settings.
+      allow write: if isAuthorizedUser();
+  		allow read: if true; // Changed to allow read by everyone
+    }
+    
     match /examControls/{controlsId} {
       // Allow any authenticated user to read exam controls (needed for mock exam progress bar).
       allow write: if isAuthorizedUser();
@@ -176,15 +188,36 @@ service cloud.firestore {
       allow write: if isAuthorizedUser();
     }
     
+    // Star request collection
+    match /starRequests/{requestId} {
+      // READ: Admins can read all requests, students can read their own
+      allow read: if isAuthorizedUser() || 
+                     (request.auth != null && request.auth.uid == resource.data.authUid);
+      
+      // CREATE: Authenticated students can create star requests for themselves
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.authUid;
+      
+      // UPDATE: Only admins can update star requests (approve/reject)
+      allow update: if isAuthorizedUser();
+      
+      // DELETE: Only admins can delete star requests
+      allow delete: if isAuthorizedUser();
+    }
+    
     // Sub-collection for claimed stars under students
     match /students/{studentId}/claimedStars/{claimedStarId} {
       // READ: Admins can read all, students can read their own
       allow read: if isAuthorizedUser() || 
-                     (request.auth != null && 
-                      request.auth.uid == get(/databases/$(database)/documents/students/$(studentId)).data.authUid);
+                     (request.auth != null && request.auth.uid == resource.data.authUid);
       
       // WRITE: Only admins can award stars
       allow write: if isAuthorizedUser();
+    }
+    
+    // Collection group rule for claimedStars (allows collection group queries)
+    match /{path=**}/claimedStars/{claimedStarId} {
+      allow read: if isAuthorizedUser();
     }
     
     // Sub-collection for transactions under students

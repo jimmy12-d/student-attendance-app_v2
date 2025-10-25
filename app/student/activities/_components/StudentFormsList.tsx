@@ -137,10 +137,6 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
           if (hasSubmitted) {
             const responseData = studentResponseSnap.docs[0].data();
             approvalStatus = responseData.approvalStatus || 'pending';
-            
-            // Debug logging
-            console.log('Form:', form.id, 'Response data:', responseData);
-            console.log('Approval status from DB:', responseData.approvalStatus, 'Final approvalStatus:', approvalStatus);
           }
           
           // Hide forms past deadline if student hasn't submitted
@@ -159,11 +155,6 @@ const StudentFormsList: React.FC<StudentFormsListProps> = ({
             approvalStatus: approvalStatus,
             isFull: false // Remove client-side maxResponses check due to permission restrictions
           };
-          
-          // Debug logging for final form state
-          if (form.id === 'SPECIFIC_FORM_ID_HERE') { // Replace with actual form ID if known
-            console.log('Final form state:', formWithStatus);
-          }
           
           return formWithStatus;
         })

@@ -15,7 +15,11 @@ import { setMockExamData, setMockExamSettings, setProgressData, setRadarChartDat
 import useCountUp from '../../_hooks/useCountUp';
 import MockExamResults from './_components/MockExamResults';
 import ProgressBar from './_components/ProgressBar';
+import SeatArrangement from './_components/SeatArrangement';
 import PerformanceRadarChartSkeleton from './_components/PerformanceRadarChartSkeleton';
+
+// Internationalization
+import { useTranslations } from 'next-intl';
 
 const PerformanceRadarChart = dynamic(() => import('./_components/PerformanceRadarChart'), {
   ssr: false,
@@ -38,6 +42,9 @@ const MockExamPage = () => {
   const studentName = useAppSelector((state) => state.main.userName);
   const studentUid = useAppSelector((state) => state.main.userUid);
   const studentClassType = useAppSelector((state) => state.main.studentClassType);
+
+  // Translations
+  const t = useTranslations('student.mockExam');
 
   // Caches from Redux
   const mockExamCache = useAppSelector((state) => state.main.mockExamCache);
@@ -429,9 +436,15 @@ const MockExamPage = () => {
   return (
     <>
         <ProgressBar loading={false} availableTabs={availableTabs} currentMockId={selectedTab} />
+        
+        <SeatArrangement 
+          studentDocId={studentDocId || ''} 
+          selectedTab={selectedTab} 
+          progressStatus={progressStatus}
+        />
             
         <hr className="my-4 border-slate-800" />
-        <h2 className="text-xl font-bold -mb-2">Mock Exam Results</h2>
+        <h2 className="text-xl font-bold -mb-2">{t('resultsTitle')}</h2>
 
         <MockExamResults
           availableTabs={availableTabs}
@@ -453,7 +466,7 @@ const MockExamPage = () => {
         />
 
         <hr className="my-4 border-slate-800" />
-        <h2 className="text-xl font-bold mb-2">Your Exam Journey</h2>
+        <h2 className="text-xl font-bold mb-2">{t('journeyTitle')}</h2>
 
         {/* Performance Chart Section */}
         {isAllMocksLoading ? (

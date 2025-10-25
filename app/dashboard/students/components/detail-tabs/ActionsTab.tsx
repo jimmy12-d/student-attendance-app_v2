@@ -5,6 +5,7 @@ import { PermissionRecord } from '../../../../_interfaces';
 import { AllClassConfigs } from '../../../_lib/configForAttendanceLogic';
 import StarManagementSection from '../StarManagementSection';
 import ClaimedStarsHistory from '../ClaimedStarsHistory';
+import StarRequestManagement from '../StarRequestManagement';
 import { toast } from 'sonner';
 import { deleteDoc, doc, query, where, getDocs, collection } from 'firebase/firestore';
 import { db } from '../../../../../firebase-config';
@@ -213,6 +214,13 @@ export const ActionsTab: React.FC<ActionsTabProps> = ({
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Star Requests Section */}
+      <div className="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden shadow-sm">
+        <div className="px-6 py-4">
+          <StarRequestManagement studentId={student.id} />
         </div>
       </div>
     </div>

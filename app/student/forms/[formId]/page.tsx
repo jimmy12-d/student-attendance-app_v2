@@ -139,10 +139,14 @@ const StudentFormFillerPage = () => {
 
   // Filter questions based on student's class type (for backward compatibility with old question-based forms)
   const getVisibleQuestions = (): Question[] => {
-    const allQuestions = getAllQuestions();
-    // In section mode, section-level filtering applies, so return all questions
-    // In simple mode, show all questions (form-level targetClassTypes handles access control)
-    return allQuestions;
+    // If form uses sections, only return questions from visible sections
+    if (form?.sections && form.sections.length > 0) {
+      const visibleSections = getVisibleSections();
+      return visibleSections.flatMap(section => section.questions);
+    }
+    
+    // Otherwise, use direct questions array (backward compatibility)
+    return form?.questions || [];
   };
 
   // Get visible sections filtered by student's class type
@@ -236,7 +240,8 @@ const StudentFormFillerPage = () => {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
     
     // Real-time validation
-    const question = form?.questions.find(q => q.id === questionId);
+    const allQuestions = getAllQuestions();
+    const question = allQuestions.find(q => q.id === questionId);
     if (question) {
       let error = '';
       
@@ -261,15 +266,17 @@ const StudentFormFillerPage = () => {
     }
   };
 
-  const handleCheckboxChange = (questionId: string, optionValue: string, checked: boolean) => {
+  const handleCheckboxChange = (questionId: string, optionValue: string) => {
     setAnswers(prev => {
       const currentAnswers = (prev[questionId] as string[]) || [];
-      const newAnswers = checked
-        ? [...currentAnswers, optionValue]
-        : currentAnswers.filter(v => v !== optionValue);
+      const isCurrentlyChecked = currentAnswers.includes(optionValue);
+      const newAnswers = isCurrentlyChecked
+        ? currentAnswers.filter(v => v !== optionValue)
+        : [...currentAnswers, optionValue];
 
       // Real-time validation
-      const question = form?.questions.find(q => q.id === questionId);
+      const allQuestions = getAllQuestions();
+      const question = allQuestions.find(q => q.id === questionId);
       if (question) {
         let error = '';
 
@@ -298,7 +305,8 @@ const StudentFormFillerPage = () => {
   const handleFileChange = async (questionId: string, files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const question = form?.questions.find(q => q.id === questionId);
+    const allQuestions = getAllQuestions();
+    const question = allQuestions.find(q => q.id === questionId);
     if (!question) return;
 
     const maxFiles = question.maxFiles || 1;
@@ -371,7 +379,8 @@ const StudentFormFillerPage = () => {
       const newFiles = currentFiles.filter((_, index) => index !== fileIndex);
       
       // Update validation
-      const question = form?.questions.find(q => q.id === questionId);
+      const allQuestions = getAllQuestions();
+      const question = allQuestions.find(q => q.id === questionId);
       if (question?.required && newFiles.length === 0) {
         setValidationErrors(prevErrors => ({ 
           ...prevErrors, 
@@ -650,15 +659,27 @@ const StudentFormFillerPage = () => {
                   animationDelay: `${optionIndex * 50}ms`,
                   animationFillMode: 'both'
                 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleCheckboxChange(question.id, option.text);
+                }}
               >
                 <div className="relative">
+                  <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-all ${
+                    (answer as string[])?.includes(option.text)
+                      ? 'bg-blue-600 border-blue-600'
+                      : 'border-gray-300 bg-white dark:bg-gray-800'
+                  }`}>
+                    {(answer as string[])?.includes(option.text) && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
                   <input
                     type="checkbox"
-                    checked={(answer as string[])?.includes(option.text) || false}
-                    onChange={(e) => handleCheckboxChange(question.id, option.text, e.target.checked)}
-                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 touch-manipulation peer"
+                    className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
                   />
-                  <div className="absolute inset-0 rounded-full bg-blue-500/20 scale-0 peer-checked:scale-100 transition-transform duration-200"></div>
                 </div>
                 <span className="text-gray-900 dark:text-white text-base flex-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{option.text}</span>
                 <div className="w-2 h-2 rounded-full bg-blue-500 scale-0 group-hover:scale-100 transition-transform duration-200"></div>
@@ -682,17 +703,27 @@ const StudentFormFillerPage = () => {
                   animationDelay: `${optionIndex * 50}ms`,
                   animationFillMode: 'both'
                 }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleCheckboxChange(question.id, option.text);
+                }}
               >
                 <div className="relative">
+                  <div className={`w-5 h-5 border-2 rounded flex items-center justify-center transition-all ${
+                    (answer as string[])?.includes(option.text)
+                      ? 'bg-blue-600 border-blue-600'
+                      : 'border-gray-300 bg-white dark:bg-gray-800'
+                  }`}>
+                    {(answer as string[])?.includes(option.text) && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
                   <input
-                    type="radio"
-                    name={question.id}
-                    value={option.text}
-                    checked={answer === option.text}
-                    onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                    className="w-5 h-5 text-blue-600 border-gray-300 focus:ring-blue-500 touch-manipulation peer"
+                    type="checkbox"
+                    className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
                   />
-                  <div className="absolute inset-0 rounded-full bg-blue-500/20 scale-0 peer-checked:scale-100 transition-transform duration-200"></div>
                 </div>
                 <span className="text-gray-900 dark:text-white text-base flex-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{option.text}</span>
                 <div className="w-2 h-2 rounded-full bg-blue-500 scale-0 group-hover:scale-100 transition-transform duration-200"></div>
@@ -953,7 +984,7 @@ const StudentFormFillerPage = () => {
                 Progress
               </span>
               <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                {Object.keys(answers).length} / {form?.questions.length || 0}
+                {Object.keys(answers).length} / {getVisibleQuestions().length}
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
@@ -1027,32 +1058,30 @@ const StudentFormFillerPage = () => {
                         : 'border-gray-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-2xl'
                     }`}
                   >
-                    {/* Question Content (same as before) */}
-                    <div className="flex items-start gap-4 mb-6">
-                      <div className={`flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 shadow-lg ${
-                        hasError 
-                          ? 'bg-gradient-to-br from-red-400 to-red-600 text-white' 
-                          : isCompleted
-                          ? 'bg-gradient-to-br from-green-400 to-green-600 text-white'
-                          : 'bg-gradient-to-br from-blue-400 to-indigo-600 text-white'
-                      }`}>
-                        {hasError ? (
-                          <Icon path={mdiAlertCircle} size={16} />
-                        ) : isCompleted ? (
-                          <Icon path={mdiCheckCircle} size={16} />
-                        ) : (
-                          <span className="font-bold text-lg">{sectionIndex + 1}.{qIndex + 1}</span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-start gap-2 mb-1">
-                          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white leading-tight flex-1">
+                    {/* Question Content */}
+                    <div className="space-y-4">
+                      {/* Question Content Row - Full Width */}
+                      <div className="w-full">
+                        <div className="flex items-start gap-2 mb-3">
+                          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white leading-relaxed break-words whitespace-pre-wrap flex-1">
                             {question.text}
                           </h3>
                           {question.required && (
                             <span className="text-red-500 dark:text-red-400 text-xl font-bold flex-shrink-0">*</span>
                           )}
                         </div>
+                        
+                        {/* Display question image if available */}
+                        {question.imageUrl && (
+                          <div className="mt-4 rounded-2xl overflow-hidden border-2 border-gray-200 dark:border-slate-600 shadow-md">
+                            <img
+                              src={question.imageUrl}
+                              alt={question.imageFileName || "Question image"}
+                              className="w-full h-auto max-h-96 object-contain bg-gray-50 dark:bg-slate-700/30"
+                            />
+                          </div>
+                        )}
+                        
                         {hasError && (
                           <p className="text-sm text-red-600 dark:text-red-400 font-medium mt-2 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
                             <Icon path={mdiAlertCircle} size={0.7} />
@@ -1063,7 +1092,7 @@ const StudentFormFillerPage = () => {
                     </div>
                     
                     {/* Question Input */}
-                    <div className={question.type === 'score_input' ? '' : 'ml-14'}>
+                    <div className="">
                       {renderQuestion(question)}
                     </div>
                   </div>
@@ -1093,24 +1122,10 @@ const StudentFormFillerPage = () => {
                 animationFillMode: 'both'
               }}
             >
-              <div className="flex flex-col sm:flex-row sm:items-start space-y-3 sm:space-y-0 sm:space-x-4">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-2xl flex-shrink-0 shadow-md transition-all duration-300 ${
-                  hasError 
-                    ? 'bg-gradient-to-br from-red-500 to-red-600' 
-                    : isCompleted 
-                      ? 'bg-gradient-to-br from-green-500 to-green-600' 
-                      : 'bg-gray-100 dark:bg-slate-700 border-2 border-gray-300 dark:border-slate-600'
-                }`}>
-                  {hasError ? (
-                    <Icon path={mdiAlertCircle} size={16} className="text-white" />
-                  ) : (
-                    <span className="text-base font-bold text-gray-700 dark:text-gray-300">
-                      {index + 1}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0 w-full sm:w-auto">
-                  <h3 className="text-lg sm:text-xl font-medium text-gray-900 dark:text-white leading-relaxed break-words whitespace-pre-wrap">
+              <div className="space-y-4">
+                {/* Question Content Row - Full Width */}
+                <div className="w-full">
+                  <h3 className="text-lg sm:text-xl font-medium text-gray-900 dark:text-white leading-relaxed break-words whitespace-pre-wrap mb-3">
                     {question.text}
                     {question.required && <span className="text-red-500 ml-2 text-lg">*</span>}
                   </h3>

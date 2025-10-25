@@ -4,16 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAppSelector } from '../../_stores/hooks';
 import { db } from '../../../firebase-config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { Student } from '../../_interfaces';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { Student, StarReward } from '../../_interfaces';
 import StudentFormsList from './_components/StudentFormsList';
 import StudentEvents from './_components/StudentEvents';
+import StudentStarRequestForm from './_components/StudentStarRequestForm';
+import Icon from '../../_components/Icon';
+import { mdiStar } from '@mdi/js';
 
 export default function ActivitiesPage() {
   const t = useTranslations('student.activities');
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const [studentData, setStudentData] = useState<Student | null>(null);
+  const [activeRewards, setActiveRewards] = useState<StarReward[]>([]);
 
   const { studentUid, studentDocId } = useAppSelector((state) => ({
     studentUid: state.main.userUid,
@@ -43,6 +47,29 @@ export default function ActivitiesPage() {
 
     fetchStudentData();
   }, [studentDocId]);
+
+  // Fetch active star rewards
+  useEffect(() => {
+    const fetchActiveRewards = async () => {
+      try {
+        const rewardsQuery = query(
+          collection(db, 'starRewards'),
+          where('isActive', '==', true),
+          orderBy('createdAt', 'desc')
+        );
+        const rewardsSnap = await getDocs(rewardsQuery);
+        const rewards = rewardsSnap.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as StarReward));
+        setActiveRewards(rewards);
+      } catch (error) {
+        console.error("Error fetching star rewards:", error);
+      }
+    };
+
+    fetchActiveRewards();
+  }, []);
 
   // Centralized khmer font utility
   const khmerFont = (additionalClasses: string = '') => {
@@ -107,6 +134,27 @@ export default function ActivitiesPage() {
       `}</style>
 
       <div className="space-y-5">
+        {/* Star Rewards Section */}
+        {studentUid && activeRewards.length > 0 && (
+          <div className="pt-4">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-yellow-400 dark:bg-yellow-500 p-2 rounded-lg">
+                  <Icon path={mdiStar} className="w-6 h-6 text-white" />
+                </div>
+                <h2 className={khmerFont('font-bold text-xl text-gray-900 dark:text-white')}>
+                  {t('starRewards.title')}
+                </h2>
+              </div>
+            </div>
+            <StudentStarRequestForm
+              availableRewards={activeRewards}
+              studentClass={studentData?.class}
+              studentShift={studentData?.shift}
+            />
+          </div>
+        )}
+
         {/* Active Forms Section */}
         {studentUid && (
           <div className="pt-4">

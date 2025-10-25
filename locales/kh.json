@@ -28,7 +28,7 @@
     "home": "ទំព័រដើម",
     "attendance": "វត្តមាន",
     "payments": "វិក្កយបត្រ",
-    "mockExam": "តេស្តសាកល្បង",
+    "mockExam": "តេស្ត",
     "activities": "សកម្មភាព",
     "event": "ព្រឹត្តិការណ៍",
     "account": "គណនី",
@@ -191,6 +191,7 @@
   "rejected": "បានបដិសេធ",
   "pending": "កំពុងរង់ចាំ",
   "viewTicket": "មើលសំបុត្រ",
+  "viewResponse": "មើលចម្លើយ",
   "registerNow": "ចុះឈ្មោះឥឡូវ",
   "awaitingApproval": "កំពុងរង់ចាំការយល់ស្រប",
   "awaitingPayment": "កំពុងរង់ចាំការបង់ប្រាក់",
@@ -203,7 +204,8 @@
   "registrationApproved": "ការចុះឈ្មោះត្រូវបានយល់ស្រប",
   "showTicketMessage": "បង្ហាញសំបុត្រនេះនៅច្រកចូលកម្មវិធី",
   "checkIn": "ម៉ោងចូល:",
-  "checkOut": "ម៉ោងចេញ:"
+  "checkOut": "ម៉ោងចេញ:",
+  "view": "មើល"
 },
 
 "forms": {
@@ -239,11 +241,67 @@
   "eventsTitle": "កម្មវិធីសាលា",
   "eventsDescription": "ស្វែងរក និងចុះឈ្មោះសម្រាប់កម្មវិធី និងសកម្មភាពសាលានាពេលខាងមុខ",
   "formsTitle": "បែបបទសកម្ម",
-  "formsDescription": "បំពេញបែបបទដែលត្រូវការ និងមើលការដាក់ស្នើរបស់អ្នក"
+  "formsDescription": "បំពេញបែបបទដែលត្រូវការ និងមើលការដាក់ស្នើរបស់អ្នក",
+  "starRewards": {
+    "title": "រង្វាន់ផ្កាយ",
+    "description": "ស្នើសុំរង្វាន់ផ្កាយសម្រាប់សមិទ្ធផលរបស់អ្នក",
+    "availableRewards": "រង្វាន់ដែលមាន",
+    "noActiveRewards": "គ្មានរង្វាន់សកម្ម",
+    "noActiveRewardsMessage": "បច្ចុប្បន្នមិនមានរង្វាន់ផ្កាយសកម្មទេ។ សូមពិនិត្យមើលម្តងទៀតនៅពេលក្រោយ!",
+    "requestReward": "ស្នើសុំរង្វាន់",
+    "requestForm": {
+      "title": "ស្នើសុំរង្វាន់ផ្កាយ",
+      "selectReward": "ជ្រើសរើសរង្វាន់",
+      "selectRewardPlaceholder": "ជ្រើសរើសរង្វាន់...",
+      "selected": "បានជ្រើសរើស",
+      "reason": "មូលហេតុ",
+      "reasonPlaceholder": "ហេតុអ្វីបានជាអ្នកសមនឹងទទួលរង្វាន់នេះ? (យ៉ាងហោចណាស់ 10 ពាក្យ)",
+      "submit": "ដាក់ស្នើ",
+      "submitting": "កំពុងដាក់ស្នើ...",
+      "cancel": "បោះបង់",
+      "confirmRequest": "បញ្ជាក់ការស្នើសុំ",
+      "confirmMessage": "តើអ្នកប្រាកដថាចង់ស្នើសុំរង្វាន់នេះទេ?",
+      "rewardDetails": "ព័ត៌មានលម្អិតរង្វាន់",
+      "starsToEarn": "ផ្កាយដែលនឹងទទួលបាន",
+      "claimLimit": "ដែនកំណត់ការទាមទារ",
+      "timesYouClaimed": "ចំនួនដងដែលអ្នកបានទាមទារ",
+      "noLimit": "គ្មានដែនកំណត់",
+      "alreadyClaimed": "បានយកហើយ",
+      "claimed": "បានយកហើយ",
+      "notClaimed": "មិនទាន់យក"
+    },
+    "validation": {
+      "rewardRequired": "សូមជ្រើសរើសរង្វាន់",
+      "reasonRequired": "សូមផ្តល់មូលហេតុ",
+      "reasonMinWords": "មូលហេតុត្រូវតែមានយ៉ាងហោចណាស់ 10 ពាក្យ"
+    },
+    "messages": {
+      "requestSuccess": "ការស្នើសុំរង្វាន់ផ្កាយត្រូវបានដាក់ស្នើដោយជោគជ័យ!",
+      "requestError": "បរាជ័យក្នុងការដាក់ស្នើរង្វាន់ផ្កាយ",
+      "notAuthenticated": "អ្នកត្រូវតែចូលគណនីដើម្បីស្នើសុំរង្វាន់",
+      "rewardLimitReached": "អ្នកបានទាមទាររង្វាន់នេះដល់ចំនួនដងអតិបរមាហើយ"
+    }
+  }
 },
 "mockExam": {
-      "title": "តេស្តសាកល្បង",
+      "title": "តេស្ត",
       "results": "លទ្ធផល",
+      "resultsTitle": "លទ្ធផលតេស្តសាកល្បង",
+      "journeyTitle": "ដំណើរការប្រឡងរបស់អ្នក",
+      "loadingScores": "កំពុងផ្ទុកពិន្ទុ...",
+      "resultsNotAvailable": "លទ្ធផលមិនទាន់មាន",
+      "resultsNotReadyMessage": "លទ្ធផលសម្រាប់ការប្រឡងសាកល្បងនេះមិនទាន់រួចរាល់ដើម្បីផ្សាយនៅឡើយ។",
+      "notEnoughData": "មិនមានទិន្នន័យគ្រប់គ្រាន់ដើម្បីបង្ហាញគំនូសតាងដំណើរការទេ។",
+      "notRegisteredYet": "មិនទាន់បានចុះឈ្មោះនៅឡើយ!",
+      "registeredForMockExam": "បានចុះឈ្មោះសម្រាប់តេស្តសាកល្បង",
+      "oweStarPayment": "អ្នកជំពាក់ការបង់ផ្កាយ។ អ្នកត្រូវបញ្ចប់ការបង់ប្រាក់របស់អ្នកដើម្បីមើលលទ្ធផល Mock 3 របស់អ្នក។",
+      "starPaid": "ផ្កាយត្រូវបានបង់! ប្អូនអាចមើលការរៀបចំកៅអីរបស់ប្អូនឥឡូវនេះ។",
+      "status": {
+        "noRegistered": "មិនបានចុះឈ្មោះ",
+        "registered": "បានចុះឈ្មោះ",
+        "paidStar": "បានបង់ផ្កាយ",
+        "borrow": "ខ្ចី"
+      },
       "upcomingExams": "ការប្រឡងនាពេលខាងមុខ",
       "pastResults": "លទ្ធផលពីមុន",
       "score": "ពិន្ទុ",
@@ -252,7 +310,22 @@
       "date": "កាលបរិច្ឆេទ",
       "duration": "រយៈពេល",
       "startExam": "ចាប់ផ្តើមប្រឡង",
-      "viewResults": "មើលលទ្ធផល"
+      "viewResults": "មើលលទ្ធផល",
+      "seatArrangement": {
+        "title": "តុអង្គុយពេលប្រឡង",
+        "room": "លេខបន្ទប់",
+        "seat": "លេខកៅអី",
+        "phonePocket": "ហោប៉ៅដាក់ទូរស័ព្ទ",
+        "registerFirst": "ចុះឈ្មោះមុន",
+        "notAssignedYet": "មិនទាន់បានកំណត់",
+        "completePaymentToView": "បញ្ចប់ការបង់ Star ដើម្បីមើល",
+        "registrationRequired": "ទាមទារការចុះឈ្មោះ",
+        "registrationRequiredMessage": "សូមចុះឈ្មោះសម្រាប់ការប្រឡងសាកល្បងដើម្បីមើលព័ត៌មានការរៀបចំកន្លែងអង្គុយរបស់អ្នក។",
+        "seatAssignmentPending": "កំពុងរង់ចាំការកំណត់កៅអី",
+        "seatAssignmentPendingMessage": "ការរៀបចំកន្លែងអង្គុយរបស់អ្នកនឹងត្រូវបានកំណត់ឆាប់ៗនេះ។ សូមពិនិត្យមើលម្តងទៀតនៅពេលក្រោយ។",
+        "paymentRequired": "ទាមទារការបង់ Star",
+        "paymentRequiredMessage": "បញ្ចប់ការបង់ Star របស់អ្នកដើម្បីមើលលេខកៅអី និងលេខហោប៉ៅទូរស័ព្ទរបស់អ្នក។"
+      }
     },
     "account": {
       "title": "គណនី",

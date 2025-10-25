@@ -468,7 +468,8 @@ const QuestionEditor: React.FC<QuestionEditorProps> = ({
                 min="1"
                 value={question.maxScore || 100}
                 onChange={(e) => onUpdate({ ...question, maxScore: Number(e.target.value) || 100 })}
-                className="w-full bg-white dark:bg-slate-800 border-2 border-blue-300 dark:border-blue-600 rounded-lg px-4 py-3 text-lg font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                onWheel={(e) => e.currentTarget.blur()}
+                className="w-full bg-white dark:bg-slate-800 border-2 border-blue-300 dark:border-blue-600 rounded-lg px-4 py-3 text-lg font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="100"
               />
             </div>

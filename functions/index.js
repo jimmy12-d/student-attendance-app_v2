@@ -5912,14 +5912,17 @@ exports.notifyParentOnPermissionRequest = onDocumentCreated({
 
 👤 **សិស្ស:** ${khmerName}
 🏫 **ថ្នាក់:** ${formattedClass}
-📅 **ថ្ងៃចាប់ផ្តើម:** ${permissionStartDate}
-📅 **ថ្ងៃបញ្ចប់:** ${permissionEndDate}
+📅 **ថ្ងៃចាប់ផ្តើម:** ${formatDateInKhmer(new Date(permissionStartDate))}
+📅 **ថ្ងៃចូលវិញ:** ${formatDateInKhmer(new Date(permissionEndDate))}
 ⏳ **រយៈពេល:** ${duration} ថ្ងៃ
 ⏰ **ពេលវេលាស្នើសុំ:** ${formattedTime}
 📋 **ហេតុផល:** ${reason}
 📝 **លម្អិត:** ${details}`;
 
-                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                await bot.sendMessage(chatId, message, { 
+                    parse_mode: 'Markdown',
+                    ...getParentBotMenuKeyboard()
+                });
                 notificationsSent++;
                 logEntry.success = true;
                 
@@ -6040,7 +6043,10 @@ exports.notifyParentOnLeaveEarlyRequest = onDocumentCreated({
 ⏰ **ពេលវេលាស្នើសុំ:** ${formattedTime}
 📝 **ហេតុផល:** ${reason}`;
 
-                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                await bot.sendMessage(chatId, message, { 
+                    parse_mode: 'Markdown',
+                    ...getParentBotMenuKeyboard()
+                });
                 notificationsSent++;
                 logEntry.success = true;
                 
@@ -6381,6 +6387,10 @@ exports.notifyParentAbsence = onCall({
         // Adjust for Cambodia timezone
         const cambodiaTime = new Date(absentDate.getTime() + (7 * 60 * 60 * 1000));
         const formattedDate = formatDateInKhmer(cambodiaTime);
+        
+        // Get current time in Cambodia timezone for "send time"
+        const nowCambodia = new Date(new Date().getTime() + (7 * 60 * 60 * 1000));
+        const formattedSendTime = formatTimeInKhmer(nowCambodia);
 
         for (const doc of parentQuery.docs) {
             const parentData = doc.data();
@@ -6396,18 +6406,22 @@ exports.notifyParentAbsence = onCall({
                 const classDisplay = containsEnglish(displayClass) ? formatClassInKhmer(displayClass) : (displayClass || 'មិនបានបញ្ជាក់');
                 const shiftDisplay = formatShiftInKhmer(displayShift) || 'មិនបានបញ្ជាក់';
                 
-                const message = `⚠️ **ការជូនដំណឹងអវត្តមាន**
+                const message = `⚠️ **ជូនដំណឹងអវត្តមាន**
 
 👤 **សិស្ស:** ${khmerName}
 🏫 **ថ្នាក់:** ${classDisplay}
 ⏰ **វេន:** ${shiftDisplay}
 📅 **កាលបរិច្ឆេទ:** ${formattedDate}
+🕐 **ពេលផ្ញើរ:** ${formattedSendTime}
 
 ❌ កូនរបស់បងមិនបានមកសាលារៀននៅថ្ងៃនេះទេ។
 
 សូមទាក់ទងសាលារៀនប្រសិនបើមានបញ្ហាឬហេតុផលអ្វីមួយ។`;
 
-                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+                await bot.sendMessage(chatId, message, { 
+                    parse_mode: 'Markdown',
+                    ...getParentBotMenuKeyboard()
+                });
                 notificationsSent++;
                 
                 logger.info(`Absence notification sent to parent chat ${chatId} for student ${studentId}`);
@@ -6500,36 +6514,17 @@ exports.notifyParentAbsence = onCall({
 
 /**
  * Scheduled function to automatically send parent notifications for absent students
- * Runs every hour and checks if it's time to send notifications based on trigger settings
+ * Runs every 30 minutes and checks if it's time to send notifications based on FIXED trigger times
+ * Morning: 7:30 AM, Afternoon: 1:30 PM, Evening: 6:00 PM
  */
 exports.scheduledAbsentParentNotifications = onSchedule({
-    schedule: 'every 1 hours',
+    schedule: 'every 30 minutes',
     region: 'asia-southeast1',
     timeZone: 'Asia/Phnom_Penh',
     secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
 }, async (event) => {
     try {
         logger.info('⏰ Scheduled absent parent notifications started');
-        
-        // Get notification settings
-        const settingsDoc = await db.collection('absentNotificationSettings').doc('default').get();
-        
-        if (!settingsDoc.exists) {
-            logger.info('❌ No notification settings configured');
-            return null;
-        }
-        
-        const settings = settingsDoc.data();
-        
-        // Log the current state for debugging
-        logger.info(`📊 Settings check - enabled: ${settings.enabled}, morningTriggerTime: ${settings.morningTriggerTime}, afternoonTriggerTime: ${settings.afternoonTriggerTime}, eveningTriggerTime: ${settings.eveningTriggerTime}`);
-        
-        if (!settings.enabled) {
-            logger.info('❌ Absent notifications are disabled in settings');
-            return null;
-        }
-        
-        logger.info('✅ Absent notifications are ENABLED - proceeding with time check');
         
         // Convert to Phnom Penh timezone (UTC+7)
         const now = new Date();
@@ -6538,6 +6533,11 @@ exports.scheduledAbsentParentNotifications = onSchedule({
         const currentHour = phnomPenhTime.getHours();
         
         logger.info(`🕐 UTC time: ${now.toISOString()}, Phnom Penh time: ${phnomPenhTime.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' })} (hour: ${currentHour})`);
+        
+        // FIXED trigger times - no admin configuration needed
+        const MORNING_TRIGGER = '07:30';
+        const AFTERNOON_TRIGGER = '13:30';
+        const EVENING_TRIGGER = '18:00';
         
         // Determine which shift to check based on current time
         let targetShift = null;
@@ -6558,17 +6558,17 @@ exports.scheduledAbsentParentNotifications = onSchedule({
         };
         
         // Check which trigger time we're closest to
-        if (isWithinTimeWindow(settings.morningTriggerTime)) {
+        if (isWithinTimeWindow(MORNING_TRIGGER)) {
             targetShift = 'Morning';
-            triggerTime = settings.morningTriggerTime;
-        } else if (isWithinTimeWindow(settings.afternoonTriggerTime)) {
+            triggerTime = MORNING_TRIGGER;
+        } else if (isWithinTimeWindow(AFTERNOON_TRIGGER)) {
             targetShift = 'Afternoon';
-            triggerTime = settings.afternoonTriggerTime;
-        } else if (isWithinTimeWindow(settings.eveningTriggerTime)) {
+            triggerTime = AFTERNOON_TRIGGER;
+        } else if (isWithinTimeWindow(EVENING_TRIGGER)) {
             targetShift = 'Evening';
-            triggerTime = settings.eveningTriggerTime;
+            triggerTime = EVENING_TRIGGER;
         } else {
-            logger.info(`⏭️ Current time ${currentTime} is not within ±5 minutes of any trigger time. Morning: ${settings.morningTriggerTime}, Afternoon: ${settings.afternoonTriggerTime}, Evening: ${settings.eveningTriggerTime}`);
+            logger.info(`⏭️ Current time ${currentTime} is not within ±5 minutes of any trigger time. Morning: ${MORNING_TRIGGER}, Afternoon: ${AFTERNOON_TRIGGER}, Evening: ${EVENING_TRIGGER}`);
             return null;
         }
         

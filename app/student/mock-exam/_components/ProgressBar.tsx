@@ -3,37 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../../../firebase-config';
 import { doc, getDoc, collection, query, where, onSnapshot } from 'firebase/firestore';
 import { useAppSelector } from '../../../_stores/hooks';
-
-const statusConfig = {
-  "No Registered": {
-    percent: 0,
-    message: "Not registered yet!",
-    color: "text-red-500",
-    bar: "bg-red-500",
-    rippleColor: 'rgba(239, 68, 68, 0.4)'
-  },
-  "Registered": {
-    percent: 33,
-    message: "Registered for Mock Exam",
-    color: "text-orange-400",
-    bar: "bg-orange-400",
-    rippleColor: 'rgba(251, 146, 60, 0.4)'
-  },
-  "Borrow": {
-    percent: 66,
-    message: "You owe Star payment. You need to finish your payment to view your Mock 3 results.",
-    color: "text-yellow-400",
-    bar: "bg-yellow-500",
-    rippleColor: 'rgba(250, 204, 21, 0.4)'
-  },
-  "Paid Star": {
-    percent: 100,
-    message: "Star has been Paid! You can view your seat arrangement now.",
-    color: "text-green-500",
-    bar: "bg-green-500",
-    rippleColor: 'rgba(74, 222, 128, 0.4)'
-  },
-};
+import { useTranslations } from 'next-intl';
 
 interface ProgressBarProps {
   loading: boolean;
@@ -42,8 +12,40 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ loading, availableTabs, currentMockId }: ProgressBarProps) {
+  const t = useTranslations('student.mockExam');
   const studentDocId = useAppSelector((state) => state.main.studentDocId);
   const studentUid = useAppSelector((state) => state.main.userUid);
+  
+  const statusConfig = {
+    "No Registered": {
+      percent: 0,
+      message: t('notRegisteredYet'),
+      color: "text-red-500",
+      bar: "bg-red-500",
+      rippleColor: 'rgba(239, 68, 68, 0.4)'
+    },
+    "Registered": {
+      percent: 33,
+      message: t('registeredForMockExam'),
+      color: "text-orange-400",
+      bar: "bg-orange-400",
+      rippleColor: 'rgba(251, 146, 60, 0.4)'
+    },
+    "Borrow": {
+      percent: 66,
+      message: t('oweStarPayment'),
+      color: "text-yellow-400",
+      bar: "bg-yellow-500",
+      rippleColor: 'rgba(250, 204, 21, 0.4)'
+    },
+    "Paid Star": {
+      percent: 100,
+      message: t('starPaid'),
+      color: "text-green-500",
+      bar: "bg-green-500",
+      rippleColor: 'rgba(74, 222, 128, 0.4)'
+    },
+  };
   
   const [visualPercent, setVisualPercent] = useState(0);
   const [ripples, setRipples] = useState<any[]>([]);
@@ -297,7 +299,7 @@ export default function ProgressBar({ loading, availableTabs, currentMockId }: P
       <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 pt-4 pb-6 max-w-2xl mx-auto my-6 animate-pulse shadow-xl">
         <div className="flex justify-between items-center mb-4">
           <div className="flex flex-col gap-2">
-            <h2 className="text-xl font-bold text-white">{getMockExamTitle()}</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{getMockExamTitle()}</h2>
             {examDate && (
               <div className="flex items-center gap-3">
                 {/* Date Badge */}
@@ -354,7 +356,7 @@ export default function ProgressBar({ loading, availableTabs, currentMockId }: P
               </div>
             )}
           </div>
-          <span className="text-sm text-gray-400 font-semibold">Your progress</span>
+          <span className="text-sm text-gray-600 dark:text-gray-400 font-semibold">Your progress</span>
         </div>
         <div className="mb-4">
           <div className="h-8 w-3/4 bg-slate-700 rounded"></div>
@@ -376,7 +378,7 @@ export default function ProgressBar({ loading, availableTabs, currentMockId }: P
     >
       <div className="mt-2 relative flex justify-between items-start mb-4 pointer-events-none">
         <div className="flex flex-col gap-2">
-          <h2 className="text-xl font-bold text-white">{getMockExamTitle()}</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{getMockExamTitle()}</h2>
           {examDate && (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               {/* Date Badge */}
@@ -433,7 +435,7 @@ export default function ProgressBar({ loading, availableTabs, currentMockId }: P
             </div>
           )}
         </div>
-        <span className="absolute top-0 right-0 text-sm text-gray-400 font-semibold">Your progress</span>
+        <span className="absolute top-0 right-0 text-sm text-gray-600 dark:text-gray-400 font-semibold">Your progress</span>
       </div>
 
       <div className="mb-4 pointer-events-none">
@@ -453,7 +455,7 @@ export default function ProgressBar({ loading, availableTabs, currentMockId }: P
               <div className={`w-4 h-4 rounded-full transition-colors duration-500 ${
                 idx <= stepIndex ? cfg.bar : 'bg-slate-600'
               }`} />
-              <div className="absolute bottom-full mb-2 w-max px-3 py-1.5 bg-gray-800 text-white text-xs font-semibold rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 pointer-events-none">
+              <div className="absolute bottom-full mb-2 w-max px-3 py-1.5 bg-gray-800 dark:bg-gray-800 text-white text-xs font-semibold rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 pointer-events-none">
                 {`${idx + 1}. ${key}`}
                 <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-800"></div>
               </div>

@@ -170,7 +170,7 @@ const SectionEditor: React.FC<SectionEditorProps> = ({
             />
             
             {/* Class Type Filter for Section */}
-            <div className="pt-2">
+            <div className="">
               <button
                 type="button"
                 onClick={() => setShowClassTypeFilter(!showClassTypeFilter)}
@@ -182,9 +182,11 @@ const SectionEditor: React.FC<SectionEditorProps> = ({
               >
                 <Icon path={mdiEye} size={16} />
                 <span>
-                  {targetClassTypes.length > 0 
-                    ? `Visible to ${targetClassTypes.length} class type${targetClassTypes.length > 1 ? 's' : ''}` 
-                    : 'Visible to all class types'}
+                  {targetClassTypes.length === 0 
+                    ? 'Visible to all class types' 
+                    : targetClassTypes.length <= 3 
+                      ? `Visible to ${targetClassTypes.join(', ')}` 
+                      : `Visible to ${targetClassTypes.length} class type${targetClassTypes.length > 1 ? 's' : ''}`}
                 </span>
               </button>
 
@@ -259,7 +261,13 @@ const SectionEditor: React.FC<SectionEditorProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setIsCollapsed(!isCollapsed)}
+              onClick={() => {
+                setIsCollapsed(!isCollapsed);
+                if (!isCollapsed) {
+                  // Close the class type filter when collapsing
+                  setShowClassTypeFilter(false);
+                }
+              }}
               className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               title={isCollapsed ? "Expand section" : "Collapse section"}
             >

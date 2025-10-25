@@ -42,8 +42,8 @@ export const metadata: Metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: "#0f172a",
 };
 
@@ -53,7 +53,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <DarkModeInit />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -113,7 +113,7 @@ export default function RootLayout({
           });
         `}} />
       </head>
-      <body id="student-attendance-app" className={`h-full bg-white dark:bg-slate-800 text-gray-900 dark:text-white overflow-y-auto ${inter.variable} ${nokora.variable}`} suppressHydrationWarning>
+      <body id="student-attendance-app" className={`min-h-screen bg-white dark:bg-slate-800 text-gray-900 dark:text-white ${inter.variable} ${nokora.variable}`} suppressHydrationWarning>
         {/* Pure HTML/CSS splash screen - no React hydration issues */}
         <div id="app-splash">
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem' }}>

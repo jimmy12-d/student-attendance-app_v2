@@ -1,5 +1,5 @@
 /**
- * Script to upload mockExam1.json data to mockExam1 collection and link to students
+ * Script to upload mockExam1.json data to mockExam1 collection with studentId lookup by fullName
  */
 
 const admin = require('firebase-admin');
@@ -32,40 +32,63 @@ const db = admin.firestore();
 
 async function uploadMockExam1Data() {
   try {
-    console.log('🚀 Starting upload of mockExam1.json data to mockExam1 collection...\n');
+    console.log('🚀 Uploading mockExam1.json data to mockExam1 collection...\n');
 
     // Read the mockExam1.json file
     const mockExamDataPath = path.join(__dirname, '../mockExam1.json');
     const mockExamData = JSON.parse(fs.readFileSync(mockExamDataPath, 'utf8'));
 
-    console.log(`📊 Found ${mockExamData.length} mock exam entries to process...\n`);
+    console.log(`📊 Found ${mockExamData.length} mock exam entries to upload...\n`);
 
     let uploadedCount = 0;
     let skippedCount = 0;
 
     // Process each mock exam entry
     for (const examEntry of mockExamData) {
-      const { Phone: phone, ...examData } = examEntry;
+      const fullName = examEntry['Full Name'];
+      const room = examEntry.Room;
+      const seat = examEntry.Seat;
+      const phone = examEntry.Phone;
 
-      if (!phone) {
-        console.log(`⚠️  Skipping entry - no phone number found:`, examEntry);
+      if (!fullName) {
+        console.log(`⚠️  Skipping entry - no full name found:`, examEntry);
         skippedCount++;
         continue;
       }
 
       try {
-        // Find student by phone number
-        const studentsQuery = db.collection('students').where('phone', '==', phone.toString());
-        const studentsSnapshot = await studentsQuery.get();
+        // Find student by fullName - try exact match first, then try without spaces
+        let studentsQuery = db.collection('students').where('fullName', '==', fullName);
+        let studentsSnapshot = await studentsQuery.get();
+
+        // If no exact match, try removing spaces from the name
+        if (studentsSnapshot.empty) {
+          const nameWithoutSpaces = fullName.replace(/\s+/g, '');
+          studentsQuery = db.collection('students').where('fullName', '==', nameWithoutSpaces);
+          studentsSnapshot = await studentsQuery.get();
+        }
+
+        // If still no match, try a broader search (case insensitive partial match)
+        if (studentsSnapshot.empty) {
+          const studentsRef = db.collection('students');
+          const allStudents = await studentsRef.get();
+          const matchingStudents = allStudents.docs.filter(doc => {
+            const studentName = doc.data().fullName || '';
+            return studentName.toLowerCase().replace(/\s+/g, '') === fullName.toLowerCase().replace(/\s+/g, '');
+          });
+          if (matchingStudents.length === 1) {
+            studentsSnapshot = { docs: matchingStudents, empty: false, size: 1 };
+          }
+        }
 
         if (studentsSnapshot.empty) {
-          console.log(`⚠️  Skipping ${examEntry['Full Name']} - no student found with phone ${phone}`);
+          console.log(`⚠️  Skipping ${fullName} - no student found with this full name`);
           skippedCount++;
           continue;
         }
 
         if (studentsSnapshot.size > 1) {
-          console.log(`⚠️  Skipping ${examEntry['Full Name']} - multiple students found with phone ${phone}`);
+          console.log(`⚠️  Skipping ${fullName} - multiple students found with this full name`);
           skippedCount++;
           continue;
         }
@@ -75,8 +98,10 @@ async function uploadMockExam1Data() {
 
         // Prepare data for mockExam1 collection
         const mockExamDocData = {
-          ...examData,
-          phone: phone.toString(),
+          fullName: fullName,
+          room: room,
+          seat: seat,
+          phonePocket: phone,
           studentId: studentId,
           uploadedAt: admin.firestore.FieldValue.serverTimestamp()
         };
@@ -84,16 +109,16 @@ async function uploadMockExam1Data() {
         // Add to mockExam1 collection
         await db.collection('mockExam1').add(mockExamDocData);
 
-        console.log(`✅ Uploaded ${examEntry['Full Name']} (Phone: ${phone}) - linked to student ${studentId}`);
+        console.log(`✅ Uploaded ${fullName} (Room: ${room}, Seat: ${seat}) - linked to student ${studentId}`);
         uploadedCount++;
 
       } catch (error) {
-        console.error(`❌ Failed to process ${examEntry['Full Name']} (Phone: ${phone}):`, error);
+        console.error(`❌ Failed to upload ${fullName}:`, error);
         skippedCount++;
       }
     }
 
-    console.log('\n📋 Mock Exam 1 Upload Summary:');
+    console.log('\n� Mock Exam 1 Upload Summary:');
     console.log(`   📊 Total entries processed: ${mockExamData.length}`);
     console.log(`   ✅ Entries uploaded: ${uploadedCount}`);
     console.log(`   ⚠️  Entries skipped: ${skippedCount}`);

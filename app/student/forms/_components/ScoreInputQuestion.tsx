@@ -125,8 +125,8 @@ const ScoreInputQuestion: React.FC<ScoreInputQuestionProps> = ({
     if (percentage >= 0.8) return 'from-blue-400 via-blue-500 to-blue-600';
     if (percentage >= 0.7) return 'from-yellow-400 via-yellow-500 to-yellow-600';
     if (percentage >= 0.6) return 'from-orange-400 via-orange-500 to-orange-600';
-    if (percentage >= 0.5) return 'from-red-400 via-red-500 to-red-600';
-    return 'from-gray-400 via-gray-500 to-gray-600';
+    if (percentage >= 0.5) return 'from-gray-400 via-gray-500 to-gray-600';
+    return 'from-red-400 via-red-500 to-red-600';
   };
 
   // Get text color to match bar gradient
@@ -135,8 +135,8 @@ const ScoreInputQuestion: React.FC<ScoreInputQuestionProps> = ({
     if (percentage >= 0.8) return 'text-blue-500 dark:text-blue-400';
     if (percentage >= 0.7) return 'text-yellow-500 dark:text-yellow-400';
     if (percentage >= 0.6) return 'text-orange-500 dark:text-orange-400';
-    if (percentage >= 0.5) return 'text-red-500 dark:text-red-400';
-    return 'text-gray-500 dark:text-gray-400';
+    if (percentage >= 0.5) return 'text-gray-500 dark:text-gray-400';
+    return 'text-red-500 dark:text-red-400';
   };
 
   return (
@@ -164,8 +164,9 @@ const ScoreInputQuestion: React.FC<ScoreInputQuestionProps> = ({
             step="0.1"
             value={score || ''}
             onChange={handleInputChange}
+            onWheel={(e) => e.currentTarget.blur()}
             placeholder="0"
-            className="flex-1 bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-600 rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-2xl sm:text-3xl font-bold text-center text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="flex-1 bg-white dark:bg-slate-800 border-2 border-gray-300 dark:border-slate-600 rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-2xl sm:text-3xl font-bold text-center text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
           
           <button

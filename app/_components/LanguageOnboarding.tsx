@@ -125,7 +125,7 @@ export default function LanguageOnboarding() {
             <button
               onClick={handleContinue}
               disabled={!selectedLocale || isLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-blue-500/80 to-indigo-600/80 backdrop-blur-sm hover:from-blue-600/90 hover:to-indigo-700/90 disabled:from-gray-400/50 disabled:to-gray-500/50 disabled:backdrop-blur-none disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl border border-white/20 hover:border-white/30"
             >
               {isLoading ? (
                 <>

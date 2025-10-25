@@ -22,6 +22,7 @@ import CardBox from '../../_components/CardBox';
 import FormField from '../../_components/FormField';
 import CardBoxModal from '../../_components/CardBox/Modal';
 import { toast } from 'sonner';
+import PendingStarRequests from './PendingStarRequests';
 
 // Firebase
 import { db } from '../../../firebase-config';
@@ -58,6 +59,14 @@ const STAR_COLORS = [
     ringClass: 'ring-pink-200 dark:ring-pink-400'
   },
   {
+    value: 'yellow',
+    label: 'Yellow',
+    bgClass: 'bg-yellow-100',
+    textClass: 'text-yellow-800 dark:text-yellow-300',
+    borderClass: 'border-yellow-300 dark:border-yellow-500',
+    ringClass: 'ring-yellow-200 dark:ring-yellow-400'
+  },
+  {
     value: 'orange',
     label: 'Orange',
     bgClass: 'bg-orange-100',
@@ -84,9 +93,10 @@ const StarManagementPage = () => {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
-    color: 'white' as 'white' | 'pink' | 'orange' | 'blue',
+    color: 'white' as 'white' | 'pink' | 'yellow' | 'orange' | 'blue',
     amount: 1,
-    setLimit: 1
+    setLimit: 1,
+    isActive: true
   });
 
   // Fetch star rewards with real-time updates
@@ -118,7 +128,8 @@ const StarManagementPage = () => {
       name: '',
       color: 'white',
       amount: 5,
-      setLimit: -1
+      setLimit: -1,
+      isActive: true
     });
     setEditingReward(null);
   };
@@ -130,7 +141,8 @@ const StarManagementPage = () => {
         name: reward.name,
         color: reward.color,
         amount: reward.amount,
-        setLimit: reward.setLimit
+        setLimit: reward.setLimit,
+        isActive: reward.isActive
       });
     } else {
       resetForm();
@@ -172,6 +184,7 @@ const StarManagementPage = () => {
           color: formData.color,
           amount: formData.amount,
           setLimit: formData.setLimit,
+          isActive: formData.isActive,
           updatedAt: serverTimestamp(),
           updatedBy: 'admin' // You can replace this with actual admin info
         });
@@ -183,7 +196,7 @@ const StarManagementPage = () => {
           color: formData.color,
           amount: formData.amount,
           setLimit: formData.setLimit,
-          isActive: true,
+          isActive: formData.isActive,
           createdAt: serverTimestamp(),
           createdBy: 'admin' // You can replace this with actual admin info
         });
@@ -255,6 +268,9 @@ const StarManagementPage = () => {
           onClick={() => handleOpenModal()}
         />
       </SectionTitleLineWithButton>
+
+      {/* Pending Star Requests Section */}
+      <PendingStarRequests />
 
       {/* Star Rewards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -420,9 +436,36 @@ const StarManagementPage = () => {
             )}
           </FormField>
 
+          <FormField label="Status" help="Enable or disable this reward for students">
+            {() => (
+              <div className="flex items-center space-x-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
+                  className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    formData.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform shadow-lg ${
+                      formData.isActive ? 'translate-x-9' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className={`text-sm font-semibold ${
+                  formData.isActive 
+                    ? 'text-green-600 dark:text-green-400' 
+                    : 'text-gray-600 dark:text-gray-400'
+                }`}>
+                  {formData.isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            )}
+          </FormField>
+
           <FormField label="Color" help="Choose a color to visually identify this reward">
             {() => (
-              <div className="grid grid-cols-4 gap-4 py-3">
+              <div className="grid grid-cols-5 gap-4 py-3">
                 {STAR_COLORS.map((color) => (
                   <label
                     key={color.value}
@@ -439,7 +482,7 @@ const StarManagementPage = () => {
                       checked={formData.color === color.value}
                       onChange={(e) => setFormData(prev => ({ 
                         ...prev, 
-                        color: e.target.value as 'white' | 'pink' | 'orange' | 'blue'
+                        color: e.target.value as 'white' | 'pink' | 'yellow' | 'orange' | 'blue'
                       }))}
                       className="sr-only"
                     />

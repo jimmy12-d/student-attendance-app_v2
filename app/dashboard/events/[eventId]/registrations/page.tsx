@@ -1323,7 +1323,7 @@ const EventRegistrationsPage = () => {
                                         <div className="text-xs text-gray-600 dark:text-gray-400">Paid:</div>
                                         <div className="flex flex-wrap gap-1">
                                           {paidAmount.stars > 0 && (
-                                            <div className="flex items-center gap-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-1.5 py-0.5 rounded">
+                                            <div className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${getStarColorClass(totalPrice.starColor)}`}>
                                               <Icon path={mdiStar} size={10} />
                                               {paidAmount.stars}
                                             </div>
@@ -1387,69 +1387,92 @@ const EventRegistrationsPage = () => {
                               ) : (
                                 // Vertical layout for non-borrowed payments
                                 <>
-                                  {/* Total Price - Compact horizontal layout */}
-                                  <div className="flex items-center justify-between mt-1">
-                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total:</div>
-                                    <div className="flex flex-wrap gap-1">
-                                      {totalPrice.stars > 0 && (
-                                        <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-semibold">
-                                          <Icon path={mdiStar} size={10} />
-                                          {totalPrice.stars}
-                                        </div>
-                                      )}
-                                      {totalPrice.money > 0 && (
-                                        <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-semibold">
-                                          <Icon path={mdiCurrencyUsd} size={10} />
-                                          ${totalPrice.money.toFixed(2)}
-                                        </div>
-                                      )}
+                                  {/* If fully paid, show single Paid row with total amount */}
+                                  {(remainingAmount.stars === 0 && remainingAmount.money === 0) ? (
+                                    <div className="flex items-center justify-between mt-1">
+                                      <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Paid:</div>
+                                      <div className="flex flex-wrap gap-1">
+                                        {totalPrice.stars > 0 && (
+                                          <div className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-semibold ${getStarColorClass(totalPrice.starColor)}`}>
+                                            <Icon path={mdiStar} size={10} />
+                                            {totalPrice.stars}
+                                          </div>
+                                        )}
+                                        {totalPrice.money > 0 && (
+                                          <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded font-semibold">
+                                            <Icon path={mdiCurrencyUsd} size={10} />
+                                            ${totalPrice.money.toFixed(2)}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-
-                                  {/* Amount Paid */}
-                                  {(paidAmount.stars > 0 || paidAmount.money > 0) && (
-                                    <div className="mt-1">
-                                      <div className="flex items-center justify-between">
-                                        <div className="text-xs text-gray-600 dark:text-gray-400">Paid:</div>
+                                  ) : (
+                                    <>
+                                      {/* Total Price - Compact horizontal layout */}
+                                      <div className="flex items-center justify-between mt-1">
+                                        <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total:</div>
                                         <div className="flex flex-wrap gap-1">
-                                          {paidAmount.stars > 0 && (
-                                            <div className="flex items-center gap-1 text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 px-1.5 py-0.5 rounded">
+                                          {totalPrice.stars > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-semibold">
                                               <Icon path={mdiStar} size={10} />
-                                              {paidAmount.stars}
+                                              {totalPrice.stars}
                                             </div>
                                           )}
-                                          {paidAmount.money > 0 && (
-                                            <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">
+                                          {totalPrice.money > 0 && (
+                                            <div className="flex items-center gap-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded font-semibold">
                                               <Icon path={mdiCurrencyUsd} size={10} />
-                                              ${paidAmount.money.toFixed(2)}
+                                              ${totalPrice.money.toFixed(2)}
                                             </div>
                                           )}
                                         </div>
                                       </div>
-                                    </div>
-                                  )}
 
-                                  {/* Remaining Amount (if any) */}
-                                  {(remainingAmount.stars > 0 || remainingAmount.money > 0) && (
-                                    <div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-600">
-                                      <div className="flex items-center justify-between">
-                                        <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Left:</div>
-                                        <div className="flex flex-wrap gap-1">
-                                          {remainingAmount.stars > 0 && (
-                                            <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-semibold">
-                                              <Icon path={mdiStar} size={10} />
-                                              {remainingAmount.stars}
+                                      {/* Amount Paid */}
+                                      {(paidAmount.stars > 0 || paidAmount.money > 0) && (
+                                        <div className="mt-1">
+                                          <div className="flex items-center justify-between">
+                                            <div className="text-xs text-gray-600 dark:text-gray-400">Paid:</div>
+                                            <div className="flex flex-wrap gap-1">
+                                              {paidAmount.stars > 0 && (
+                                                <div className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${getStarColorClass(totalPrice.starColor)}`}>
+                                                  <Icon path={mdiStar} size={10} />
+                                                  {paidAmount.stars}
+                                                </div>
+                                              )}
+                                              {paidAmount.money > 0 && (
+                                                <div className="flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">
+                                                  <Icon path={mdiCurrencyUsd} size={10} />
+                                                  ${paidAmount.money.toFixed(2)}
+                                                </div>
+                                              )}
                                             </div>
-                                          )}
-                                          {remainingAmount.money > 0 && (
-                                            <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-semibold">
-                                              <Icon path={mdiCurrencyUsd} size={10} />
-                                              ${remainingAmount.money.toFixed(2)}
-                                            </div>
-                                          )}
+                                          </div>
                                         </div>
-                                      </div>
-                                    </div>
+                                      )}
+
+                                      {/* Remaining Amount (if any) */}
+                                      {(remainingAmount.stars > 0 || remainingAmount.money > 0) && (
+                                        <div className="mt-1 pt-1 border-t border-gray-200 dark:border-gray-600">
+                                          <div className="flex items-center justify-between">
+                                            <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Left:</div>
+                                            <div className="flex flex-wrap gap-1">
+                                              {remainingAmount.stars > 0 && (
+                                                <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-semibold">
+                                                  <Icon path={mdiStar} size={24} />
+                                                  {remainingAmount.stars}
+                                                </div>
+                                              )}
+                                              {remainingAmount.money > 0 && (
+                                                <div className="flex items-center gap-1 text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-1.5 py-0.5 rounded font-semibold">
+                                                  <Icon path={mdiCurrencyUsd} size={10} />
+                                                  ${remainingAmount.money.toFixed(2)}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
                                   )}
                                 </>
                               )}

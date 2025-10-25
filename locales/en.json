@@ -28,7 +28,7 @@
     "home": "Home",
     "attendance": "Attendance",
     "payments": "Payments",
-    "mockExam": "Mock Exam",
+    "mockExam": "Exam",
     "activities": "Activities",
     "event": "Events",
     "account": "Account",
@@ -189,6 +189,7 @@
       "rejected": "Rejected",
       "pending": "Pending",
       "viewTicket": "View Ticket",
+      "viewResponse": "View Response",
       "registerNow": "Register Now",
       "awaitingApproval": "Awaiting Approval",
       "awaitingPayment": "Awaiting Payment",
@@ -201,7 +202,8 @@
       "registrationApproved": "Registration Approved",
       "showTicketMessage": "Show this ticket at the event entrance",
       "checkIn": "Check-in:",
-      "checkOut": "Check-out:"
+      "checkOut": "Check-out:",
+      "view": "View"
     },
     "forms": {
       "activeForms": "Active Forms",
@@ -236,11 +238,67 @@
       "eventsTitle": "School Events",
       "eventsDescription": "Discover and register for upcoming school events and activities",
       "formsTitle": "Active Forms",
-      "formsDescription": "Complete required forms and view your submissions"
+      "formsDescription": "Complete required forms and view your submissions",
+      "starRewards": {
+        "title": "Star Rewards",
+        "description": "Request star rewards for your achievements",
+        "availableRewards": "Available Rewards",
+        "noActiveRewards": "No Active Rewards",
+        "noActiveRewardsMessage": "There are currently no active star rewards available. Check back later!",
+        "requestReward": "Request Reward",
+        "requestForm": {
+          "title": "Request Star Reward",
+          "selectReward": "Select Reward",
+          "selectRewardPlaceholder": "Choose a reward...",
+          "selected": "Selected",
+          "reason": "Reason",
+          "reasonPlaceholder": "Why do you deserve this reward? (minimum 10 words)",
+          "submit": "Submit Request",
+          "submitting": "Submitting...",
+          "cancel": "Cancel",
+          "confirmRequest": "Confirm Request",
+          "confirmMessage": "Are you sure you want to request this reward?",
+          "rewardDetails": "Reward Details",
+          "starsToEarn": "Stars to Earn",
+          "claimLimit": "Claim Limit",
+          "timesYouClaimed": "Times You've Claimed",
+          "noLimit": "No Limit",
+          "alreadyClaimed": "Already claimed maximum times",
+          "claimed": "Claimed",
+          "notClaimed": "Once per student"
+        },
+        "validation": {
+          "rewardRequired": "Please select a reward",
+          "reasonRequired": "Please provide a reason",
+          "reasonMinWords": "Reason must be at least 10 words"
+        },
+        "messages": {
+          "requestSuccess": "Star reward request submitted successfully!",
+          "requestError": "Failed to submit star reward request",
+          "notAuthenticated": "You must be logged in to request rewards",
+          "rewardLimitReached": "You have already claimed this reward the maximum number of times"
+        }
+      }
     },
     "mockExam": {
-      "title": "Mock Exam",
+      "title": "Exam",
       "results": "Results",
+      "resultsTitle": "Mock Exam Results",
+      "journeyTitle": "Your Exam Journey",
+      "loadingScores": "Loading scores...",
+      "resultsNotAvailable": "Results Not Available",
+      "resultsNotReadyMessage": "The results for this mock exam are not yet ready to be published.",
+      "notEnoughData": "Not enough data to display the performance chart.",
+      "notRegisteredYet": "Not registered yet!",
+      "registeredForMockExam": "Registered for Mock Exam",
+      "oweStarPayment": "You owe Star payment. You need to finish your payment to view your Mock 3 results.",
+      "starPaid": "Star has been Paid! You can view your seat arrangement now.",
+      "status": {
+        "noRegistered": "No Registered",
+        "registered": "Registered", 
+        "paidStar": "Paid Star",
+        "borrow": "Borrow"
+      },
       "upcomingExams": "Upcoming Exams",
       "pastResults": "Past Results",
       "score": "Score",
@@ -249,7 +307,22 @@
       "date": "Date",
       "duration": "Duration",
       "startExam": "Start Exam",
-      "viewResults": "View Results"
+      "viewResults": "View Results",
+      "seatArrangement": {
+        "title": "Seat Arrangement",
+        "room": "Room",
+        "seat": "Seat",
+        "phonePocket": "Phone Pocket",
+        "registerFirst": "Register first",
+        "notAssignedYet": "Not assigned yet",
+        "completePaymentToView": "Complete payment to view",
+        "registrationRequired": "Registration Required",
+        "registrationRequiredMessage": "Please register for the mock exam to view your seat arrangement details.",
+        "seatAssignmentPending": "Seat Assignment Pending",
+        "seatAssignmentPendingMessage": "Your seat arrangement will be assigned soon. Please check back later.",
+        "paymentRequired": "Payment Required",
+        "paymentRequiredMessage": "Complete your payment to view your seat number and phone pocket assignment."
+      }
     },
     "account": {
       "title": "Account",

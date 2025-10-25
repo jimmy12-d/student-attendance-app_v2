@@ -229,13 +229,24 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
 
       const absentStudents: AbsentFollowUpWithDetails[] = allStudents.map(student => {
         try {
+          // CRITICAL: Determine the student's effective shift for attendance matching
+          // BP students (inBPClass=true) have their stored shift as their original class shift (e.g., "Afternoon")
+          // but they actually attend Evening shift for 12BP class. We need to use "Evening" for matching.
+          const isBPStudent = (student as any).inBPClass === true;
+          const effectiveShift = isBPStudent ? 'Evening' : student.shift;
+
           // Find attendance record for this student on selected date AND matching shift
           // This is critical for students with multiple classes/shifts (e.g., 12B afternoon + 12BP evening)
           // We need to find the record that matches BOTH studentId AND shift
-          const attendanceRecord = attendanceRecords.find((rec: any) => 
-            rec.studentId === student.id && 
-            (!rec.shift || !student.shift || rec.shift.toLowerCase() === student.shift.toLowerCase())
-          ) as RawAttendanceRecord | undefined;
+          const attendanceRecord = attendanceRecords.find((rec: any) => {
+            if (rec.studentId !== student.id) return false;
+            
+            // Use effectiveShift for BP students when matching
+            const recordShift = rec.shift || effectiveShift;
+            
+            // Match using effectiveShift instead of student.shift
+            return !rec.shift || !effectiveShift || recordShift.toLowerCase() === effectiveShift.toLowerCase();
+          }) as RawAttendanceRecord | undefined;
           
           // Find permissions for this student on selected date
           const studentPermissions = allPermissions.filter(permission => 
@@ -313,11 +324,22 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
           
           // Check if student is actually present now
           if (studentData) {
+            // CRITICAL: Determine the student's effective shift for attendance matching
+            // BP students (inBPClass=true) have their stored shift as their original class shift (e.g., "Afternoon")
+            // but they actually attend Evening shift for 12BP class. We need to use "Evening" for matching.
+            const isBPStudent = (studentData as any).inBPClass === true;
+            const effectiveShift = isBPStudent ? 'Evening' : studentData.shift;
+
             // Find attendance record matching both studentId AND shift
-            const attendanceRecord = attendanceRecords.find((rec: any) => 
-              rec.studentId === studentData.id && 
-              (!rec.shift || !studentData.shift || rec.shift.toLowerCase() === studentData.shift.toLowerCase())
-            ) as RawAttendanceRecord | undefined;
+            const attendanceRecord = attendanceRecords.find((rec: any) => {
+              if (rec.studentId !== studentData.id) return false;
+              
+              // Use effectiveShift for BP students when matching
+              const recordShift = rec.shift || effectiveShift;
+              
+              // Match using effectiveShift instead of student.shift
+              return !rec.shift || !effectiveShift || recordShift.toLowerCase() === effectiveShift.toLowerCase();
+            }) as RawAttendanceRecord | undefined;
             
             const studentPermissions = allPermissions.filter(permission => 
               permission.studentId === studentData.id && 

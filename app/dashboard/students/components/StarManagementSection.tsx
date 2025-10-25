@@ -24,7 +24,8 @@ import {
   orderBy, 
   onSnapshot,
   serverTimestamp,
-  where
+  where,
+  collectionGroup
 } from 'firebase/firestore';
 
 // Interfaces
@@ -44,6 +45,7 @@ export const StarManagementSection: React.FC<StarManagementSectionProps> = ({
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [selectedRewards, setSelectedRewards] = useState<string[]>([]); // Changed to array for multiple selections
+  const [globalClaimCounts, setGlobalClaimCounts] = useState<Record<string, number>>({});
 
   // Calculate total stars
   const totalStars = claimedStars.reduce((sum, claimed) => sum + claimed.amount, 0);
@@ -60,6 +62,8 @@ export const StarManagementSection: React.FC<StarManagementSectionProps> = ({
     const claimedStarsQuery = query(
       collection(db, 'students', student.id, 'claimedStars')
     );
+
+    const globalClaimedQuery = query(collectionGroup(db, 'claimedStars'));
 
     // Set up real-time listeners
     const unsubscribeRewards = onSnapshot(starRewardsQuery, (snapshot) => {
@@ -102,15 +106,29 @@ export const StarManagementSection: React.FC<StarManagementSectionProps> = ({
       setLoading(false);
     });
 
+    const unsubscribeGlobal = onSnapshot(globalClaimedQuery, (snapshot) => {
+      const counts: Record<string, number> = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data() as ClaimedStar;
+        const rewardId = data.starRewardId;
+        counts[rewardId] = (counts[rewardId] || 0) + 1;
+      });
+      setGlobalClaimCounts(counts);
+    }, (error) => {
+      console.error('Error fetching global claimed stars:', error);
+      setGlobalClaimCounts({});
+    });
+
     return () => {
       unsubscribeRewards();
       unsubscribeClaimed();
+      unsubscribeGlobal();
     };
   }, [student?.id]);
 
-  // Get claim count for a specific reward
+  // Get claim count for a specific reward (global across all students)
   const getClaimCount = (rewardId: string) => {
-    return claimedStars.filter(claim => claim.starRewardId === rewardId).length;
+    return globalClaimCounts[rewardId] || 0;
   };
 
   // Check if reward can be claimed
@@ -153,7 +171,8 @@ export const StarManagementSection: React.FC<StarManagementSectionProps> = ({
           starRewardColor: reward.color,
           amount: reward.amount,
           claimedAt: serverTimestamp(),
-          claimedBy: 'admin' // You can replace this with actual admin info
+          claimedBy: 'admin', // You can replace this with actual admin info
+          authUid: student.authUid // Add authUid for security rules
         });
       }
 

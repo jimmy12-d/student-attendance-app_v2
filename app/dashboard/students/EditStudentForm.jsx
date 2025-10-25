@@ -432,7 +432,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                 name="fullName"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
                 required
               />
             </div>
@@ -446,7 +446,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                 name="nameKhmer"
                 value={nameKhmer}
                 onChange={(e) => setNameKhmer(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
               />
             </div>
           </div>
@@ -463,7 +463,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                 name="phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
               />
             </div>
             <div>
@@ -479,7 +479,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                     onChange={(e) => setBirthDay(e.target.value)}
                     min="1"
                     max="31"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black text-center"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700 text-center"
                   />
                   <p className="text-xs text-gray-500 mt-1 text-center">Day</p>
                 </div>
@@ -491,7 +491,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                     onChange={(e) => setBirthMonth(e.target.value)}
                     min="1"
                     max="12"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black text-center"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700 text-center"
                   />
                   <p className="text-xs text-gray-500 mt-1 text-center">Month</p>
                 </div>
@@ -503,7 +503,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                     onChange={(e) => setBirthYear(e.target.value)}
                     min="1900"
                     max="2030"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black text-center"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700 text-center"
                   />
                   <p className="text-xs text-gray-500 mt-1 text-center">Year</p>
                 </div>
@@ -640,7 +640,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                             value={telegramUsername}
                             onChange={(e) => setTelegramUsername(e.target.value.replace(/@/g, ''))}
                             placeholder="username"
-                            className="block w-full pl-7 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-black transition-all duration-200 ease-in-out"
+                            className="block w-full pl-7 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700 transition-all duration-200 ease-in-out"
                           />
                         </div>
                         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -839,7 +839,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
               name="motherName"
               value={motherName}
               onChange={(e) => setMotherName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
             />
           </div>
           <div>
@@ -852,7 +852,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
               name="motherPhone"
               value={motherPhone}
               onChange={(e) => setMotherPhone(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
             />
           </div>
         </div>
@@ -867,7 +867,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
               name="fatherName"
               value={fatherName}
               onChange={(e) => setFatherName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
             />
           </div>
           <div>
@@ -880,7 +880,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
               name="fatherPhone"
               value={fatherPhone}
               onChange={(e) => setFatherPhone(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-black"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-900 dark:text-white dark:bg-gray-700"
             />
           </div>
         </div>

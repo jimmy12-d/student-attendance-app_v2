@@ -130,7 +130,7 @@ export default function AttendanceRecordPage() {
 
   // State for absent students modal
   const [showAbsentModal, setShowAbsentModal] = useState(false);
-  const [absentStudents, setAbsentStudents] = useState<Array<{ id: string; fullName: string; nameKhmer: string; class: string; shift: string }>>([]);
+  const [absentStudents, setAbsentStudents] = useState<Array<{ id: string; fullName: string; nameKhmer: string; class: string; shift: string; isBPStudent?: boolean }>>([]);
   const [loadingAbsent, setLoadingAbsent] = useState(false);
 
   // Loading states for table
@@ -344,6 +344,11 @@ export default function AttendanceRecordPage() {
       
       if (!isRegularShift && !isBPForEvening) return;
 
+      // CRITICAL: Determine the student's effective shift for attendance matching
+      // BP students (inBPClass=true) have their stored shift as their original class shift (e.g., "Afternoon")
+      // but they actually attend Evening shift for 12BP class. We need to use "Evening" for matching.
+      const effectiveShift = isBPForEvening ? 'Evening' : student.shift;
+
       // Find this student's attendance record for selected date AND shift
       const attendanceRecord = attendanceRecords.find(att => {
         if (att.studentId !== student.id) return false;
@@ -354,9 +359,11 @@ export default function AttendanceRecordPage() {
         
         // Check if it matches ISO format (YYYY-MM-DD)
         if (recordDate === selectedDate) {
-          // Also check shift match
-          const recordShift = att.shift || student.shift;
-          return recordShift === currentShift;
+          // Also check shift match - use effectiveShift for BP students
+          const recordShift = att.shift || effectiveShift;
+          const matches = recordShift === currentShift;
+          
+          return matches;
         }
         
         // Check if it matches JS toDateString format (e.g., "Mon Sep 01 2025")
@@ -364,9 +371,11 @@ export default function AttendanceRecordPage() {
           const selectedDateObj = new Date(selectedDate + 'T00:00:00');
           const selectedDateString = selectedDateObj.toDateString();
           if (att.date === selectedDateString) {
-            // Also check shift match
-            const recordShift = att.shift || student.shift;
-            return recordShift === currentShift;
+            // Also check shift match - use effectiveShift for BP students
+            const recordShift = att.shift || effectiveShift;
+            const matches = recordShift === currentShift;
+            
+            return matches;
           }
         } catch (error) {
           // Ignore date parsing errors
@@ -397,7 +406,7 @@ export default function AttendanceRecordPage() {
           timestamp: attendanceRecord.timestamp instanceof Date 
             ? Timestamp.fromDate(attendanceRecord.timestamp)
             : attendanceRecord.timestamp,
-          shift: attendanceRecord.shift || student.shift, // Include shift from record or fallback to student shift
+          shift: attendanceRecord.shift || effectiveShift, // CRITICAL: Use effectiveShift for BP students
           class: attendanceRecord.class || student.class, // Include class info
         } : undefined,
         allClassConfigs,
@@ -479,6 +488,11 @@ export default function AttendanceRecordPage() {
         
         if (!isRegularShift && !isBPForEvening) return;
 
+        // CRITICAL: Determine the student's effective shift for attendance matching
+        // BP students (inBPClass=true) have their stored shift as their original class shift (e.g., "Afternoon")
+        // but they actually attend Evening shift for 12BP class. We need to use "Evening" for matching.
+        const effectiveShift = isBPForEvening ? 'Evening' : student.shift;
+
         // Find this student's attendance record for selected date
         const attendanceRecord = attendanceRecords.find(att => {
           if (!att.date) return false;
@@ -491,23 +505,23 @@ export default function AttendanceRecordPage() {
             const selectedDateObj = new Date(selectedDate + 'T00:00:00');
             const selectedDateString = selectedDateObj.toDateString();
             if (att.date === selectedDateString) {
-              // Date matches, now check shift
-              const recordShift = att.shift || student.shift;
+              // Date matches, now check shift - use effectiveShift for BP students
+              const recordShift = att.shift || effectiveShift;
               const shiftMatches = recordShift === currentShift;
+              
               return att.studentId === student.id && shiftMatches;
             }
           } catch (error) {
             // Ignore date parsing errors
           }
           
-          // For ISO format, also check shift
-          if (dateMatches) {
-            const recordShift = att.shift || student.shift;
-            const shiftMatches = recordShift === currentShift;
-            return att.studentId === student.id && shiftMatches;
-          }
-          
-          return false;
+            // For ISO format, also check shift - use effectiveShift for BP students
+            if (dateMatches) {
+              const recordShift = att.shift || effectiveShift;
+              const shiftMatches = recordShift === currentShift;
+              
+              return att.studentId === student.id && shiftMatches;
+            }          return false;
         });
         
         // Find this student's approved permissions
@@ -526,7 +540,7 @@ export default function AttendanceRecordPage() {
             timestamp: attendanceRecord.timestamp instanceof Date 
               ? Timestamp.fromDate(attendanceRecord.timestamp)
               : attendanceRecord.timestamp,
-            shift: attendanceRecord.shift || student.shift,
+            shift: attendanceRecord.shift || effectiveShift, // CRITICAL: Use effectiveShift for BP students
             class: attendanceRecord.class || student.class,
           } : undefined,
           allClassConfigs,
@@ -540,8 +554,9 @@ export default function AttendanceRecordPage() {
             fullName: student.fullName || 'Unknown',
             nameKhmer: student.nameKhmer || '',
             class: student.class || 'N/A',
-            shift: student.shift || currentShift
-          });
+            shift: student.shift || currentShift,
+            isBPStudent: isBPForEvening // Add BP indicator
+          } as any);
         }
       });
 
@@ -772,28 +787,11 @@ export default function AttendanceRecordPage() {
           const requestedRecords = fetchedRecords.filter(r => r.status === 'requested');
           const otherRecords = fetchedRecords.filter(r => r.status !== 'requested');
           
-          // Debug: Log parent notification status
-          const recordsWithNotification = fetchedRecords.filter(r => r.parentNotificationStatus);
-          const recordsWithoutNotification = fetchedRecords.filter(r => !r.parentNotificationStatus);
-          console.log(`📊 Attendance Records Summary:`);
-          console.log(`   Total: ${fetchedRecords.length}`);
-          console.log(`   With notification status: ${recordsWithNotification.length}`);
-          console.log(`   Without notification status: ${recordsWithoutNotification.length}`);
-          if (recordsWithNotification.length > 0) {
-            console.log(`   Sample with status:`, recordsWithNotification[0]);
-          }
-          
           setRawAttendanceRecords(rawRecords);
           setAttendanceRecords([...requestedRecords, ...otherRecords]);
           setLastUpdated(new Date());
           setLoading(false);
           setIsUpdating(false);
-          
-          // Debug logging
-          console.log('🔍 Record Page - Raw records:', rawRecords.length);
-          console.log('🔍 Record Page - Students:', students.length);
-          console.log('🔍 Record Page - Sample raw record:', rawRecords[0]);
-          console.log('🔍 Record Page - Sample student:', students[0]);
         }, (error) => {
           console.error("Error with real-time listener: ", error);
           setError("Failed to listen for attendance updates.");
@@ -1023,7 +1021,6 @@ export default function AttendanceRecordPage() {
   useEffect(() => {
     const handleFaceScanDetection = (event: CustomEvent) => {
       const { studentName } = event.detail;
-      console.log('📋 Adding loading record for:', studentName);
       setIsScanning(true);
       const scanId = `face-scan-${Date.now()}`;
       
@@ -1033,12 +1030,7 @@ export default function AttendanceRecordPage() {
         studentName
       };
       
-      console.log('📋 Loading record created:', loadingRecord);
-      setLoadingRecords(prev => {
-        const newRecords = [...prev, loadingRecord];
-        console.log('📋 Updated loading records:', newRecords);
-        return newRecords;
-      });
+      setLoadingRecords(prev => [...prev, loadingRecord]);
       
       // Store the scan ID for cleanup
       const timeoutId = setTimeout(() => {
@@ -1061,7 +1053,6 @@ export default function AttendanceRecordPage() {
     };
 
     const handleFaceDetected = (event: CustomEvent) => {
-      console.log('🎯 Attendance table received faceDetected event:', event.detail);
       const { studentName } = event.detail;
       handleFaceScanDetection(event as CustomEvent);
     };
@@ -1673,6 +1664,11 @@ export default function AttendanceRecordPage() {
                         <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm font-medium">
                           {student.shift}
                         </span>
+                        {student.isBPStudent && (
+                          <span className="px-3 py-1 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40 text-orange-800 dark:text-orange-300 rounded-full text-sm font-bold border-2 border-orange-300 dark:border-orange-700 shadow-sm">
+                            12BP
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}
