@@ -167,7 +167,19 @@ const MockExamManagementPage = () => {
         return acc;
       }, {} as { [key: string]: GroupedSetting });
       
-      finalGrouped[mockKey] = Object.values(groupedByCriteria);
+      finalGrouped[mockKey] = Object.values(groupedByCriteria).sort((a, b) => {
+        // Extract grade number from type (e.g., 'Grade 12S' -> 12)
+        const gradeA = parseInt(a.type.replace('Grade ', '').replace('S', ''));
+        const gradeB = parseInt(b.type.replace('Grade ', '').replace('S', ''));
+        
+        // Sort by grade number ascending
+        if (gradeA !== gradeB) {
+          return gradeA - gradeB;
+        }
+        
+        // Then by maxScore ascending
+        return a.maxScore - b.maxScore;
+      });
     });
 
     return finalGrouped;

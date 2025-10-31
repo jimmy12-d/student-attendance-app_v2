@@ -1,19 +1,12 @@
 // app/dashboard/_lib/attendanceUtils.ts
+import { cambodianHolidaysSet as jsHolidaysSet } from '../../../functions/attendanceConfig';
+
 export const STANDARD_ON_TIME_GRACE_MINUTES = 15;
 export const LATE_WINDOW_DURATION_MINUTES = 15; // 30 minutes after the start time
 
-export const cambodianHolidaysSet = new Set([
-  "2025-01-01", "2025-01-07", "2025-03-08", "2025-05-01",
-  "2025-05-14", "2025-05-15", "2025-05-16",
-  "2025-06-18",
-  "2025-08-01", "2025-08-02",
-  "2025-09-22","2025-09-23","2025-09-24",
-  "2025-11-07", "2025-11-08", "2025-11-09",
-  "2025-10-15",
-  "2025-10-29",
-  "2025-11-09",
-  "2025-11-20", "2025-11-21", "2025-11-22",
-]);
+// Re-export the centralized holiday set from Firebase Functions config
+// This ensures both the dashboard and scheduled notifications use the same data
+export const cambodianHolidaysSet = jsHolidaysSet;
 
 export const getMonthDetails = (year: number, month: number) => { // month is 0-indexed
   

@@ -80,8 +80,9 @@ export const getStudentDailyStatus = (
     if (!isSchoolDay(checkDate, classStudyDays)) return { status: "No School" };
 
     // Check attendance record first - prioritize actual attendance over permissions
-    // IMPORTANT: When an attendance record is provided with a shift, we trust that shift
-    // The caller (e.g., page.tsx) is responsible for passing the correct effective shift for BP students
+    // IMPORTANT: When an attendance record is provided, trust its status unless it's an Evening shift mismatch
+    // For Morning/Afternoon shifts, allow historical records even if shifts don't match (student may have changed shifts)
+    // Only enforce shift matching for Evening shifts to prevent incorrect attendance
     if (attendanceRecord) {
         // Check if the attendance record has a valid status property
         if (!attendanceRecord.status) {
@@ -89,38 +90,21 @@ export const getStudentDailyStatus = (
             return { status: "Unknown" };
         }
         
-        // CRITICAL FIX: If the caller provides a shift in the attendance record, TRUST IT
-        // This is essential for BP students where the caller passes effectiveShift="Evening"
-        // even though student.shift="Afternoon"
-        // 
-        // Only validate shift matching if BOTH shifts exist AND the record shift was NOT explicitly provided
-        // In other words: if someone went to the trouble of setting attendanceRecord.shift, respect it!
+        // Check shift matching logic
         const shouldValidateShift = attendanceRecord.shift && student.shift;
         
         if (shouldValidateShift && attendanceRecord.shift && student.shift) {
             const recordShift = attendanceRecord.shift.toLowerCase();
             const studentShift = student.shift.toLowerCase();
             
-            // NEW LOGIC: Accept the attendance record if shifts match OR if the record was explicitly provided
-            // We assume the caller did the right thing when setting the shift
-            const shiftsMatch = recordShift === studentShift;
+            // For Evening shifts, require exact match; for Morning/Afternoon, allow mismatches
+            const isEveningMismatch = recordShift === "evening" && recordShift !== studentShift;
             
-            if (shiftsMatch) {
-                // Shifts match naturally - return the attendance status
-                const status = attendanceRecord.status === 'present' ? "Present" :
-                               attendanceRecord.status === 'late'    ? "Late"    :
-                               attendanceRecord.status === 'send-home' || attendanceRecord.status === 'send home' ? "Send Home" : "Unknown";
-                let time;
-                if (attendanceRecord.timestamp) {
-                    const recordTime = attendanceRecord.timestamp instanceof Timestamp ? attendanceRecord.timestamp.toDate() : attendanceRecord.timestamp as Date;
-                    time = recordTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                }
-                return { status, time };
-            }
-            // CHANGED: If shifts don't match, we now TRUST the attendance record anyway
-            // Because the caller explicitly set the shift (e.g., effectiveShift for BP students)
-            // This fixes the BP student issue where we pass Evening but student.shift is Afternoon
-            else {
+            if (isEveningMismatch) {
+                // Don't trust Evening shift records that don't match - treat as no record
+                // This prevents incorrect attendance for Evening shifts
+            } else {
+                // Trust the record for Morning/Afternoon shifts or matching Evening shifts
                 const status = attendanceRecord.status === 'present' ? "Present" :
                                attendanceRecord.status === 'late'    ? "Late"    :
                                attendanceRecord.status === 'send-home' || attendanceRecord.status === 'send home' ? "Send Home" : "Unknown";
@@ -132,7 +116,7 @@ export const getStudentDailyStatus = (
                 return { status, time };
             }
         } else {
-            // If shift information is missing from either record or student, accept the attendance record as valid
+            // If shift information is missing, trust the attendance record as valid
             // This maintains backward compatibility with older records that don't have shift data
             const status = attendanceRecord.status === 'present' ? "Present" :
                            attendanceRecord.status === 'late'    ? "Late"    :

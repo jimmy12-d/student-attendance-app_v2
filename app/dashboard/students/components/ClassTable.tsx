@@ -4,6 +4,15 @@ import { ColumnConfig } from './ColumnToggle';
 import { StudentRow } from './StudentRow';
 import Icon from '../../../_components/Icon';
 import { mdiChevronDown, mdiChevronUp,mdiAccountSchool } from '@mdi/js';
+import { Timestamp } from 'firebase/firestore';
+
+// Event interface for upcoming events
+interface Event {
+  id: string;
+  name: string;
+  date: Timestamp | Date;
+  formId: string;
+}
 
 interface ClassTableProps {
   studentList: Student[];
@@ -34,6 +43,9 @@ interface ClassTableProps {
   searchQuery?: string;
   highlightText?: (text: string, query: string) => React.ReactNode;
   waitlistCount?: number;
+  // Events props
+  upcomingEvents?: Event[];
+  getStudentEventStatus?: (studentId: string, eventId: string) => 'not-registered' | 'pending' | 'borrow' | 'paid';
 }
 
 export const ClassTable: React.FC<ClassTableProps> = ({ 
@@ -64,7 +76,9 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   onZoomToggle,
   searchQuery = '',
   highlightText,
-  waitlistCount = 0
+  waitlistCount = 0,
+  upcomingEvents = [],
+  getStudentEventStatus
 }) => {
   const [isClassCollapsed, setIsClassCollapsed] = useState(forceCollapsed);
   
@@ -146,6 +160,48 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   // Check if all students in this class are selected
   const allSelected = studentList.length > 0 && studentList.every(student => selectedStudents.has(student.id));
   const someSelected = studentList.some(student => selectedStudents.has(student.id));
+
+  // Function to get highest performing students stats
+  const getHighestStats = () => {
+    const stats: Array<{ label: string; count: number; color: string; icon?: string }> = [];
+    
+    // Count paid students for upcoming events
+    if (upcomingEvents && getStudentEventStatus && upcomingEvents.length > 0) {
+      upcomingEvents.slice(0, 2).forEach(event => {
+        const paidCount = studentList.filter(student => 
+          getStudentEventStatus(student.id, event.id) === 'paid'
+        ).length;
+        
+        if (paidCount > 0) {
+          stats.push({
+            label: `Paid`,
+            count: paidCount,
+            color: 'bg-gradient-to-r from-green-100 to-emerald-200 dark:from-green-900/40 dark:to-emerald-800/40 text-green-800 dark:text-green-300 border border-green-400 dark:border-green-600',
+            icon: 'paid'
+          });
+        }
+      });
+    }
+    
+    // Count present students for today's attendance
+    if (getTodayAttendanceStatus && studentList.length > 0) {
+      const presentCount = studentList.filter(student => {
+        const status = getTodayAttendanceStatus(student, className, shift);
+        return status.status === 'Present';
+      }).length;
+      
+      if (presentCount > 0) {
+        stats.push({
+          label: `Present`,
+          count: presentCount,
+          color: 'bg-gradient-to-r from-blue-100 to-cyan-200 dark:from-blue-900/40 dark:to-cyan-800/40 text-blue-800 dark:text-blue-300 border border-blue-400 dark:border-blue-600',
+          icon: 'present'
+        });
+      }
+    }
+
+    return stats.slice(0, 2); // Limit to 2 highest stats to avoid clutter
+  };
 
   // Calculate statistics based on enabled columns
   const getColumnStatistics = () => {
@@ -277,6 +333,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   };
 
   const columnStats = getColumnStatistics();
+  const highestStats = getHighestStats();
 
   // Wrapper function to pass the studentList context
   const handleViewDetails = (student: Student) => {
@@ -473,6 +530,18 @@ export const ClassTable: React.FC<ClassTableProps> = ({
               {stat.label}: {stat.count}
             </span>
           ))}   
+          
+          {/* Highest performing students stats */}
+          {highestStats.map((stat, index) => (
+            <span 
+              key={`highest-${stat.icon}-${index}`}
+              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${stat.color}`}
+              title={`${stat.label}: ${stat.count} students`}
+            >
+              {stat.label}: {stat.count}
+            </span>
+          ))}
+          
           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getBadgeColors()}`}>
             {/* Add the Icon component here */}
             <Icon path={mdiAccountSchool} size={18} className="mr-1" />
@@ -545,6 +614,8 @@ export const ClassTable: React.FC<ClassTableProps> = ({
                   shiftRankings={shiftRankings}
                   searchQuery={searchQuery}
                   highlightText={highlightText}
+                  upcomingEvents={upcomingEvents}
+                  getStudentEventStatus={getStudentEventStatus}
                 />
               ))}
             </tbody>

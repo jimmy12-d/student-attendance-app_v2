@@ -22,7 +22,6 @@ export default function HomePage() {
     if (PWACache.isPWA()) {
       const cachedState = PWACache.getUserState();
       if (cachedState && cachedState.hasValidSession && cachedState.lastRole) {
-        console.log('PWA Immediate: Using cached route', cachedState.lastRoute);
         setHasNavigated(true);
         // Use setTimeout to avoid hydration issues
         setTimeout(() => {

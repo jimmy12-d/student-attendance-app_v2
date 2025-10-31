@@ -10,7 +10,8 @@ import {
   mdiBell,
   mdiHelpCircle,
   mdiPencil,
-  mdiClockOutline
+  mdiClockOutline,
+  mdiQrcode
 } from "@mdi/js";
 import TimestampEditModal from "./components/TimestampEditModal";
 import { Student } from "../../_interfaces";
@@ -661,22 +662,29 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-center align-middle">
                   <div className="flex items-center justify-center">
-                    {record.method?.toLowerCase() === 'face-api' ? (
-                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                    {record.method?.toLowerCase() === 'qr-code' || record.method?.toLowerCase() === 'qr code' ? (
+                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-700">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d={mdiQrcode} />
+                        </svg>
+                        <span className="text-xs font-medium">QR Code</span>
+                      </div>
+                    ) : record.method?.toLowerCase() === 'face-api' ? (
+                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border border-purple-300 dark:border-purple-700">
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                           <path d={mdiFaceRecognition} />
                         </svg>
                         <span className="text-xs font-medium">Face</span>
                       </div>
                     ) : record.method?.toLowerCase() === 'manual' ? (
-                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 border border-green-300 dark:border-green-700">
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                           <path d={mdiGestureTap} />
                         </svg>
                         <span className="text-xs font-medium">Manual</span>
                       </div>
                     ) : record.method?.toLowerCase() === 'request' ? (
-                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                      <div className="flex items-center space-x-1 px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                           <path d={mdiBell} />
                         </svg>

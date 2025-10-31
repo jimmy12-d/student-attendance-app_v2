@@ -15,6 +15,7 @@ const cosineSimilarity = require("cosine-similarity");
 const axios = require("axios");
 const bcrypt = require("bcrypt");
 const TelegramBot = require("node-telegram-bot-api");
+const { cambodianHolidaysSet, isSchoolDay } = require("./attendanceConfig");
 
 // --- START: Configuration for Telegram Gateway ---
 const TELEGRAM_GATEWAY_API_URL = "https://gatewayapi.telegram.org";
@@ -4842,6 +4843,42 @@ exports.cleanupOldDocuments = onSchedule('0 0 * * *', async (event) => {
 
 
 /**
+ * [Scheduled Function]
+ * Cleans up expired QR attendance tokens.
+ * Runs every hour to remove tokens older than 5 minutes.
+ */
+exports.cleanupExpiredQRTokens = onSchedule({
+  schedule: '0 * * * *',
+  region: 'asia-southeast1'
+}, async (event) => {
+  try {
+    const fiveMinutesAgo = new Date();
+    fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+    
+    const expiredTokensQuery = await db.collection('tempAttendanceTokens')
+      .where('createdAt', '<=', admin.firestore.Timestamp.fromDate(fiveMinutesAgo))
+      .get();
+    
+    if (expiredTokensQuery.empty) {
+      return null;
+    }
+    
+    const batch = db.batch();
+    expiredTokensQuery.docs.forEach((docSnapshot) => {
+      batch.delete(docSnapshot.ref);
+    });
+    
+    await batch.commit();
+    
+    return { success: true, deletedCount: expiredTokensQuery.docs.length };
+    
+  } catch (error) {
+    throw new Error('QR token cleanup failed: ' + error.message);
+  }
+});
+
+
+/**
  * [Callable Function]
  * Gets the next available receipt number.
  * This function uses a Firestore transaction to ensure that each number is unique.
@@ -6279,16 +6316,12 @@ exports.cleanupOldAttendanceBackups = onSchedule({
 });
 
 /**
- * Cloud Function to notify parents when their child is absent
- * Manually callable from the admin dashboard
+ * Helper function to send absence notifications to parents
+ * Used by both the manual callable function and the scheduled function
  */
-exports.notifyParentAbsence = onCall({
-    region: "asia-southeast1",
-    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
-}, async (request) => {
+async function sendAbsenceNotificationToParents(studentId, studentName, date, absentFollowUpId) {
     try {
-        logger.info('📱 notifyParentAbsence called with data:', request.data);
-        const { studentId, studentName, date, absentFollowUpId } = request.data;
+        logger.info('📱 sendAbsenceNotificationToParents called for student:', studentId);
         
         if (!studentId || !studentName || !date) {
             logger.error('Missing required fields:', { studentId, studentName, date });
@@ -6492,12 +6525,12 @@ exports.notifyParentAbsence = onCall({
         };
         
     } catch (error) {
-        logger.error('Error in notifyParentAbsence:', error);
+        logger.error('Error in sendAbsenceNotificationToParents:', error);
         
         // Try to update the follow-up record with error
-        if (request.data.absentFollowUpId) {
+        if (absentFollowUpId) {
             try {
-                await db.collection('absentFollowUps').doc(request.data.absentFollowUpId).update({
+                await db.collection('absentFollowUps').doc(absentFollowUpId).update({
                     parentNotificationStatus: 'failed',
                     parentNotificationTimestamp: admin.firestore.Timestamp.now(),
                     parentNotificationsSent: 0,
@@ -6508,6 +6541,23 @@ exports.notifyParentAbsence = onCall({
             }
         }
         
+        throw error;
+    }
+}
+
+/**
+ * Cloud Function to notify parents when their child is absent
+ * Manually callable from the admin dashboard
+ */
+exports.notifyParentAbsence = onCall({
+    region: "asia-southeast1",
+    secrets: ["TELEGRAM_PARENT_BOT_TOKEN"]
+}, async (request) => {
+    try {
+        const { studentId, studentName, date, absentFollowUpId } = request.data;
+        return await sendAbsenceNotificationToParents(studentId, studentName, date, absentFollowUpId);
+    } catch (error) {
+        logger.error('Error in notifyParentAbsence:', error);
         throw new HttpsError('internal', error.message || 'Failed to send parent absence notification');
     }
 });
@@ -6533,6 +6583,20 @@ exports.scheduledAbsentParentNotifications = onSchedule({
         const currentHour = phnomPenhTime.getHours();
         
         logger.info(`🕐 UTC time: ${now.toISOString()}, Phnom Penh time: ${phnomPenhTime.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' })} (hour: ${currentHour})`);
+        
+        // Get today's date in YYYY-MM-DD format for holiday check
+        const today = now.toISOString().split('T')[0];
+        
+        // Check if today is a school day using centralized config
+        if (!isSchoolDay(today)) {
+            const isHoliday = cambodianHolidaysSet.has(today);
+            const dayOfWeek = phnomPenhTime.getDay();
+            const reason = isHoliday ? 'Holiday' : (dayOfWeek === 0 ? 'Sunday' : 'Not a school day');
+            logger.info(`🎉 Today (${today}) is a ${reason} - skipping absent parent notifications`);
+            return { success: true, message: `${reason} - no notifications sent`, date: today };
+        }
+        
+        logger.info(`✅ Today (${today}) is a school day - proceeding with absent notifications`);
         
         // FIXED trigger times - no admin configuration needed
         const MORNING_TRIGGER = '07:30';
@@ -6573,9 +6637,6 @@ exports.scheduledAbsentParentNotifications = onSchedule({
         }
         
         logger.info(`🎯 Processing ${targetShift} shift absent notifications at ${currentTime}`);
-        
-        // Get today's date in YYYY-MM-DD format
-        const today = now.toISOString().split('T')[0];
         logger.info(`📅 Checking for absent students on ${today} for ${targetShift} shift`);
         
         // STEP 1: Get all active students in the target shift
@@ -6692,17 +6753,15 @@ exports.scheduledAbsentParentNotifications = onSchedule({
             processed++;
             
             try {
-                // Call the notification function
+                // Call the helper function directly (not through .run())
                 logger.info(`📤 Sending notification for ${student.fullName || student.englishName || student.khmerName} (${student.id})`);
                 
-                const result = await exports.notifyParentAbsence.run({
-                    data: {
-                        studentId: student.id,
-                        studentName: student.fullName || student.englishName || student.khmerName || 'Unknown',
-                        date: today,
-                        absentFollowUpId: null // Will be created by notifyParentAbsence if needed
-                    }
-                });
+                const result = await sendAbsenceNotificationToParents(
+                    student.id,
+                    student.fullName || student.englishName || student.khmerName || 'Unknown',
+                    today,
+                    null // absentFollowUpId - will be created if needed
+                );
                 
                 if (result.success) {
                     sent += result.notificationsSent;

@@ -63,7 +63,7 @@ export interface MainState {
   userUid?: string | null; // Optional: For Firebase UID
   studentDocId?: string | null; // Firestore document ID
   userRole?: 'admin' | 'student' | 'teacher' | null; // Add teacher role to state
-  userSubject?: string | null; // For teachers
+  userSubject?: string | string[] | null; // For teachers - can be string or array
   userPhone?: string | null; // For teachers
   isFieldFocusRegistered: boolean;
   mockExamCache: {

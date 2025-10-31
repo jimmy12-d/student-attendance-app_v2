@@ -17,18 +17,34 @@ const LoginClient = () => {
   const { currentUser, isAuthenticated, userRole, isLoading } = useAuthContext();
   const [checkingProfile, setCheckingProfile] = useState(true); // Start as true to prevent flash
 
+  // Safety timeout to prevent infinite loading
   useEffect(() => {
+    const safetyTimeout = setTimeout(() => {
+      console.warn('Safety timeout reached - forcing login screen display');
+      setCheckingProfile(false);
+    }, 5000); // 5 second max wait time
+
+    return () => clearTimeout(safetyTimeout);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    
     const checkUserProfile = async () => {
       // If still loading auth, keep showing loading
       if (isLoading) {
-        setCheckingProfile(true);
+        if (isMounted) setCheckingProfile(true);
         return;
       }
       
       // IMMEDIATELY redirect if authenticated with role
       if (isAuthenticated && userRole) {
-        setCheckingProfile(true); // Keep loading screen visible
-        // Don't stop checking - keep loading screen until navigation completes
+        if (isMounted) {
+          console.log('User authenticated with role:', userRole);
+          setCheckingProfile(true);
+        }
+        
+        // Navigate based on role
         if (userRole === 'admin') {
           navigateWithinPWA('/dashboard', { replace: true });
         } else if (userRole === 'teacher') {
@@ -36,42 +52,54 @@ const LoginClient = () => {
         } else if (userRole === 'student') {
           navigateWithinPWA('/student/attendance', { replace: true });
         }
-        return; // Don't set checkingProfile to false
+        return;
       }
       
-      // Check if authenticated but no role (might be student)
+      // Check if authenticated but no role (might be student without profile set)
       if (isAuthenticated && currentUser && !userRole) {
-        setCheckingProfile(true);
+        if (isMounted) setCheckingProfile(true);
         
         try {
           const studentsRef = collection(db, "students");
           const q = query(studentsRef, where("authUid", "==", currentUser.uid), limit(1));
           const querySnapshot = await getDocs(q);
 
-          if (!querySnapshot.empty) {
+          if (!querySnapshot.empty && isMounted) {
             const studentDoc = querySnapshot.docs[0];
             const studentData = studentDoc.data();
 
             if (studentData && studentData.class && studentData.class !== 'Unassigned') {
-              // User has a complete profile, redirect and keep loading
+              console.log('Student profile found, redirecting...');
               navigateWithinPWA('/student/attendance', { replace: true });
-              return; // Don't set checkingProfile to false
+              return;
             }
           }
         } catch (error) {
           console.error('Error checking user profile:', error);
         }
+        
         // If we get here, user is authenticated but doesn't have valid profile
-        // Fall through to show login form
+        // Show login form
+        if (isMounted) {
+          console.log('User authenticated but no valid profile, showing login');
+          setCheckingProfile(false);
+        }
+        return;
       }
       
       // Only show login form if definitely not authenticated
-      if (!isAuthenticated && !isLoading) {
+      if (!isAuthenticated && !isLoading && isMounted) {
+        console.log('User not authenticated, showing login');
         setCheckingProfile(false);
       }
     };
 
     checkUserProfile();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
   }, [isAuthenticated, currentUser, userRole, isLoading, navigateWithinPWA]);
 
   // Show loading screen while checking auth or profile

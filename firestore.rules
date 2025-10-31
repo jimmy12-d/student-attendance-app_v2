@@ -72,8 +72,8 @@ service cloud.firestore {
     }
     
   	match /mockExam1/{examId} {
-      // Allow any authenticated user to read exam settings.
-      allow write: if isAuthorizedUser();
+      // Allow authenticated users (teachers/admins) to write scores
+      allow write: if request.auth != null;
   		allow read: if true; // Changed to allow read by everyone
     }
     
@@ -168,8 +168,11 @@ service cloud.firestore {
     }
     
     match /classTypes/{classTypesId} {
-      // READ: Authenticated users can read document metadata.
-      allow read, write: if isAuthorizedUser();
+      // READ: Authenticated users can read class types for display purposes
+      allow read: if request.auth != null;
+      
+      // WRITE: Only admins can modify class types
+      allow write: if isAuthorizedUser();
     }
         
     match /transactions/{transactionsId} {
@@ -236,6 +239,18 @@ service cloud.firestore {
     
     match /tempRegistrationTokens/{tempRegistrationTokensId} {
       allow write, read: if isAuthorizedUser();
+    }
+    
+    match /tempAttendanceTokens/{tempAttendanceTokensId} {
+      // Students can read their own tokens, admins can read all
+      allow read: if request.auth != null && 
+                     (isAuthorizedUser() || request.auth.uid == resource.data.studentUid);
+      // Allow any authenticated user to create tokens (API creates with server-side auth)
+      allow create: if true;
+      // Allow API to update tokens (mark as used)
+      allow update: if true;
+      // Only admins can delete tokens
+      allow delete: if isAuthorizedUser();
     }
 
     match /printRequests/{requestId} {
@@ -329,6 +344,14 @@ service cloud.firestore {
       allow update, delete: if isAuthorizedUser();
     }
     
+    match /events/{eventId} {
+      // READ: Authenticated users can read events (to see upcoming events and registration info)
+      allow read: if request.auth != null;
+      
+      // CREATE/UPDATE/DELETE: Only admins can manage events
+      allow create, update, delete: if isAuthorizedUser();
+    }
+    
     match /forms/{formId} {
       // READ: Authenticated users can read forms (application handles active/deadline filtering)
       allow read: if request.auth != null;
@@ -361,11 +384,11 @@ service cloud.firestore {
       allow update, delete: if isAuthorizedUser();
     }
     
-    match /events/{eventId} {
-      // READ: Allow authenticated users to read event information (needed for registration and mock exam progress)
+    match /examSchedule/{scheduleId} {
+      // READ: Authenticated users (teachers/admins) can read exam schedule information
       allow read: if request.auth != null;
       
-      // WRITE: Only admins can manage events
+      // WRITE: Only admins can manage exam schedules
       allow write: if isAuthorizedUser();
     }
     

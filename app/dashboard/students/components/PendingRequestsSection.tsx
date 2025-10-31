@@ -32,6 +32,7 @@ interface CombinedRequest {
   details: {
     reason?: string;
     leaveTime?: string;
+    date?: string; // For leave early requests
     permissionStartDate?: string;
     permissionEndDate?: string;
     duration?: number;
@@ -302,6 +303,7 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
       details: {
         reason: req.reason,
         leaveTime: req.leaveTime,
+        date: req.date,
       }
     }))
   ].filter(request => studentsMap.has(request.studentId)); // Only show requests from active students
@@ -373,10 +375,21 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
                     return (
                       <div
                         key={`${request.type}-${request.id}`}
-                        className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200 flex flex-col"
+                        className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow duration-200 flex flex-col relative"
                       >
+                        {/* Request Type Badge - Top Right */}
+                        <div className="absolute top-2 right-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                            request.type === 'permission'
+                              ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                              : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                          }`}>
+                            {request.type === 'permission' ? 'Permission' : 'Leave Early'}
+                          </span>
+                        </div>
+
                         {/* Header Row */}
-                        <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-start justify-between">
                           {/* Student Name and Request Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -393,17 +406,33 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
                               </p>
                             )}
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                                request.type === 'permission'
-                                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                                  : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
-                              }`}>
-                                {request.type === 'permission' ? 'Permission' : 'Leave Early'}
-                              </span>
                               <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                 {request.type === 'leaveEarly'
-                                  ? `${request.details.leaveTime || 'Unknown'}`
-                                  : `${request.details.duration ? `${request.details.duration} day${request.details.duration > 1 ? 's' : ''}` : 'N/A'}`
+                                  ? (() => {
+                                      const leaveDate = request.details.date ? new Date(request.details.date) : null;
+                                      const timeStr = request.details.leaveTime || 'Unknown';
+                                      if (leaveDate) {
+                                        return `${leaveDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at ${timeStr}`;
+                                      }
+                                      return timeStr;
+                                    })()
+                                  : (() => {
+                                      // Check if permission dates are the same day
+                                      if (request.details.permissionStartDate && request.details.permissionEndDate) {
+                                        const start = new Date(request.details.permissionStartDate);
+                                        const end = new Date(request.details.permissionEndDate);
+                                        const isSameDay = start.toDateString() === end.toDateString();
+                                        
+                                        if (isSameDay) {
+                                          return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} (1 day)`;
+                                        } else {
+                                          // Multi-day permission: show date range with duration
+                                          const duration = request.details.duration || 1;
+                                          return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} (${duration} day${duration > 1 ? 's' : ''})`;
+                                        }
+                                      }
+                                      return request.details.duration ? `${request.details.duration} day${request.details.duration > 1 ? 's' : ''}` : 'N/A';
+                                    })()
                                 }
                               </span>
                             </div>
@@ -413,7 +442,7 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
                           {student && onViewDetails && (
                             <button
                               onClick={() => onViewDetails(student, 'requests')}
-                              className="p-1.5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 ml-2 flex-shrink-0"
+                              className="p-1.5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-600 ml-2 flex-shrink-0 mt-8"
                               title="View student details and requests"
                             >
                               <Icon path={mdiEye} size={16} />

@@ -89,7 +89,7 @@ export default function OnboardingLanguageSelector({
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 15 }}
-              className="w-16 h-16 bg-gradient-to-r from-company-purple-dark to-company-purple rounded-full flex items-center justify-center mx-auto mb-4"
+              className="w-16 h-16 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center mx-auto mb-4"
             >
               <span className="text-2xl">🌐</span>
             </motion.div>
@@ -138,8 +138,8 @@ export default function OnboardingLanguageSelector({
                   whileTap={{ scale: 0.98 }}
                   className={`w-full p-4 rounded-2xl border-2 transition-all duration-300 ${
                     isSelected
-                      ? 'border-company-purple bg-company-purple/10 dark:bg-company-purple/20 dark:border-company-purple shadow-lg'
-                      : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 hover:border-company-purple/50 dark:hover:border-company-purple/50 hover:shadow-md'
+                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-400 shadow-lg'
+                      : 'border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700/50 hover:border-purple-300 dark:hover:border-purple-400 hover:shadow-md'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   <div className="flex items-center justify-between">
@@ -155,7 +155,7 @@ export default function OnboardingLanguageSelector({
                         <motion.div 
                           className={`font-semibold transition-colors duration-200 ${
                             isSelected 
-                              ? 'text-company-purple-dark dark:text-company-purple' 
+                              ? 'text-purple-700 dark:text-purple-300' 
                               : 'text-gray-900 dark:text-white'
                           }`}
                           layout
@@ -165,7 +165,7 @@ export default function OnboardingLanguageSelector({
                         <motion.div 
                           className={`text-sm transition-colors duration-200 ${
                             isSelected 
-                              ? 'text-company-purple dark:text-company-purple/80' 
+                              ? 'text-purple-600 dark:text-purple-400' 
                               : 'text-gray-500 dark:text-gray-400'
                           } ${localeOption === 'kh' ? 'khmer-font' : ''}`}
                           layout
@@ -182,7 +182,7 @@ export default function OnboardingLanguageSelector({
                           animate={{ scale: 1, rotate: 0 }}
                           exit={{ scale: 0, rotate: 90 }}
                           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                          className="w-8 h-8 bg-company-purple rounded-full flex items-center justify-center shadow-lg"
+                          className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-lg"
                         >
                           <Icon path={mdiCheck} size={16} className="text-white" />
                         </motion.div>
@@ -203,7 +203,7 @@ export default function OnboardingLanguageSelector({
             disabled={isPending || !selectedLocale}
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
-            className="w-full bg-gradient-to-r from-company-purple-dark to-company-purple hover:from-company-purple-dark hover:to-company-purple-dark text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+            className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
           >
             {isPending ? (
               <div className="flex items-center justify-center space-x-2">
@@ -222,7 +222,7 @@ export default function OnboardingLanguageSelector({
             transition={{ delay: 1.7, duration: 0.5 }}
             onClick={onComplete}
             disabled={isPending}
-            className="w-full mt-4 text-gray-500 dark:text-gray-400 hover:text-company-purple dark:hover:text-company-purple font-medium text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full mt-4 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 font-medium text-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {selectedLocale === 'kh' ? 'រំលងឥឡូវនេះ' : 'Skip for now'}
           </motion.button>

@@ -7,6 +7,15 @@ import { getStatusStyles } from '../../_lib/statusStyles';
 import { getPaymentStatus } from '../../_lib/paymentLogic';
 import { mdiTrophy, mdiMedal } from '@mdi/js';
 import Icon from "../../../_components/Icon";
+import { Timestamp } from 'firebase/firestore';
+
+// Event interface for upcoming events
+interface Event {
+  id: string;
+  name: string;
+  date: Timestamp | Date;
+  formId: string;
+}
 // Phone formatting utility
 const formatPhoneNumber = (phone: string | undefined | null): string => {
   if (!phone) return 'N/A';
@@ -52,6 +61,9 @@ interface StudentRowProps {
   shiftRankings?: { earliest: { [studentId: string]: number }, latest: { [studentId: string]: number } };
   searchQuery?: string;
   highlightText?: (text: string, query: string) => React.ReactNode;
+  // Upcoming events
+  upcomingEvents?: Event[];
+  getStudentEventStatus?: (studentId: string, eventId: string) => 'not-registered' | 'pending' | 'borrow' | 'paid';
 }
 
 export const StudentRow: React.FC<StudentRowProps> = ({ 
@@ -69,7 +81,9 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   calculateAverageArrivalTime, 
   shiftRankings,
   searchQuery = '',
-  highlightText
+  highlightText,
+  upcomingEvents = [],
+  getStudentEventStatus
 }) => {
   // DEBUG: Log the full student object for Test Testing on October 11th
   if (student.fullName === "Test Testing" && new Date().toISOString().split('T')[0] === "2025-10-11") {
@@ -789,7 +803,85 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               </td>
             );
 
+          case 'upcomingEvents':
+            // This case is no longer used - individual event columns are handled in the default case
+            return null;
+
           default:
+            // Handle individual event columns (event-{eventId})
+            if (column.id.startsWith('event-')) {
+              const eventId = column.id.replace('event-', '');
+              const event = upcomingEvents.find(e => e.id === eventId);
+              
+              if (!event) return null;
+              
+              const eventStatus = getStudentEventStatus ? getStudentEventStatus(student.id, event.id) : 'not-registered';
+              const eventDate = event.date instanceof Date ? event.date : event.date.toDate();
+              const isToday = eventDate.toDateString() === new Date().toDateString();
+              
+              // Status styling
+              let statusColor = '';
+              let statusText = '';
+              let statusIcon = '';
+              
+              switch (eventStatus) {
+                case 'paid':
+                  statusColor = 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-700';
+                  statusText = 'Paid';
+                  statusIcon = 'M5.5 12.5L10.167 17L19.5 8';
+                  break;
+                case 'borrow':
+                  statusColor = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700';
+                  statusText = 'Borrowed';
+                  statusIcon = 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
+                  break;
+                case 'pending':
+                  statusColor = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-700';
+                  statusText = 'Pending';
+                  statusIcon = 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z';
+                  break;
+                case 'not-registered':
+                default:
+                  statusColor = 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-600';
+                  statusText = 'Not Registered';
+                  statusIcon = 'M213.333 960c0-167.36 56-321.707 149.44-446.4L1406.4 1557.227c-124.693 93.44-279.04 149.44-446.4 149.44-411.627 0-746.667-335.04-746.667-746.667m1493.334 0c0 167.36-56 321.707-149.44 446.4L513.6 362.773c124.693-93.44 279.04-149.44 446.4-149.44 411.627 0 746.667 335.04 746.667 746.667M960 0C429.76 0 0 429.76 0 960s429.76 960 960 960 960-429.76 960-960S1490.24 0 960 0';
+                  break;
+              }
+              
+              return (
+                <td key={column.id} className="p-3 whitespace-nowrap">
+                  <div className="flex flex-col space-y-1">
+                    {isToday && (
+                      <div className="text-xs font-bold text-red-600 dark:text-red-400">
+                        🔴 Today
+                      </div>
+                    )}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${statusColor}`}>
+                      <svg 
+                        className="w-3 h-3 mr-1" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox={
+                          statusIcon.includes('M960 0') ? "0 0 1920 1920" : 
+                          statusIcon.includes('M5.5 12.5') ? "0 -0.5 25 25" : 
+                          "0 0 24 24"
+                        }
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={statusIcon.includes('M960 0') ? 0 : 1.5} 
+                          fill={statusIcon.includes('M960 0') ? "currentColor" : "none"}
+                          d={statusIcon} 
+                        />
+                      </svg>
+                      {statusText}
+                    </span>
+                  </div>
+                </td>
+              );
+            }
+            
             return null;
         }
       })}

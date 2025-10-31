@@ -107,11 +107,24 @@ const MockExamPage = () => {
         const formId = eventDocSnap.data().formId;
 
         // Set up real-time listener for form_responses
-        const formResponsesQuery = query(
+        // Try to find response by authUid first (preferred for newer records)
+        let formResponsesQuery = query(
           collection(db, 'form_responses'),
           where('formId', '==', formId),
-          where('studentUid', '==', studentUid)
+          where('authUid', '==', studentUid)
         );
+
+        let responsesSnapshot = await getDocs(formResponsesQuery);
+        
+        // If not found by authUid, try studentUid (for older records or admin-created records)
+        if (responsesSnapshot.empty) {
+          formResponsesQuery = query(
+            collection(db, 'form_responses'),
+            where('formId', '==', formId),
+            where('studentUid', '==', studentUid)
+          );
+          responsesSnapshot = await getDocs(formResponsesQuery);
+        }
 
         unsubscribeFormResponses = onSnapshot(
           formResponsesQuery,

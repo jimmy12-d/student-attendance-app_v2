@@ -12,12 +12,28 @@ import { toast } from 'sonner';
 
 // Firebase
 import { db } from "../../../firebase-config";
-import { doc, writeBatch, collection, getDocs, setDoc } from "firebase/firestore";
+import { doc, writeBatch, collection, getDocs, setDoc, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 
 // Attendance logic imports
 import { getStudentDailyStatus, markAttendance, calculateShiftRankings, calculateAverageArrivalTime } from '../_lib/attendanceLogic';
 import { AllClassConfigs } from '../_lib/configForAttendanceLogic';
 import { PermissionRecord } from '../../_interfaces';
+
+// Event interface for upcoming events
+interface Event {
+  id: string;
+  name: string;
+  date: Timestamp | Date;
+  formId: string;
+}
+
+// Event interface for upcoming events  
+interface Event {
+  id: string;
+  name: string;
+  date: Timestamp | Date;
+  formId: string;
+}
 
 // Helper function to get current date in Phnom Penh timezone (UTC+7)
 const getPhnomPenhDateString = (): string => {
@@ -45,7 +61,7 @@ type Props = {
 };
 
 const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, isTakeAttendanceMode = false, isFlipFlopPreviewMode = false, onBatchUpdate, onExitBatchEdit, onExitTakeAttendance, searchQuery = '', onSearchChange, waitlistStudents = [] }: Props) => {
-  // Default column configuration
+  // Default column configuration (without dynamic event columns)
   const defaultColumns: ColumnConfig[] = [
     { id: 'number', label: '#N', enabled: true },
     { id: 'name', label: 'Name', enabled: true },
@@ -97,6 +113,10 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   
   // Zoom state management
   const [expandedClasses, setExpandedClasses] = useState<Set<string>>(new Set());
+
+  // Events state for dynamic columns
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [eventRegistrations, setEventRegistrations] = useState<Map<string, any>>(new Map()); // Map of formId -> array of registrations
 
   // Shift filter state
   const [selectedShift, setSelectedShift] = useState<'All' | 'Morning' | 'Afternoon' | 'Evening' | '12BP'>('All');
@@ -195,6 +215,41 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
     );
   };
 
+  // Function to get student event registration status
+  const getStudentEventStatus = (studentId: string, eventId: string): 'not-registered' | 'pending' | 'borrow' | 'paid' => {
+    const event = upcomingEvents.find(e => e.id === eventId);
+    if (!event) return 'not-registered';
+    
+    const registrations = eventRegistrations.get(event.formId) || [];
+    const studentRegistration = registrations.find((reg: any) => reg.studentId === studentId);
+    
+    // If no registration found, student is not registered
+    if (!studentRegistration) return 'not-registered';
+    
+    // Check payment status first - if they have a specific payment status
+    if (studentRegistration.paymentStatus === 'paid') return 'paid';
+    if (studentRegistration.paymentStatus === 'borrowed' || studentRegistration.paymentStatus === 'borrow') return 'borrow';
+    
+    // If student has registered (registration exists) but no payment or payment is pending/unpaid
+    // This covers cases where paymentStatus is undefined, null, 'unpaid', 'pending', etc.
+    return 'pending';
+  };
+
+  // Function to create dynamic columns based on upcoming events
+  const createDynamicColumns = (events: Event[]): ColumnConfig[] => {
+    const staticColumns = [...defaultColumns];
+    
+    // Add columns for up to 2 upcoming events
+    const relevantEvents = events.slice(0, 2);
+    const eventColumns: ColumnConfig[] = relevantEvents.map(event => ({
+      id: `event-${event.id}`,
+      label: event.name.length > 15 ? `${event.name.substring(0, 15)}...` : event.name,
+      enabled: false // Default to disabled, user can enable
+    }));
+    
+    return [...staticColumns, ...eventColumns];
+  };
+
   // Load column configuration from localStorage on component mount
   useEffect(() => {
     const loadColumnConfiguration = () => {
@@ -250,6 +305,87 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       saveColumnConfiguration();
     }
   }, [columns]);
+
+  // Fetch upcoming events and their registrations
+  useEffect(() => {
+    const fetchUpcomingEvents = async () => {
+      try {
+        // Fetch events from now onwards, ordered by date
+        const now = new Date();
+        const eventsQuery = query(
+          collection(db, 'events'),
+          where('date', '>=', Timestamp.fromDate(now)),
+          orderBy('date', 'asc')
+        );
+
+        const unsubscribe = onSnapshot(eventsQuery, async (eventsSnapshot) => {
+          const events: Event[] = eventsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as Event));
+
+          // Take only the first 2 upcoming events
+          const upcomingEventsData = events.slice(0, 2);
+          setUpcomingEvents(upcomingEventsData);
+
+          // Fetch registrations for these events
+          const registrationsMap = new Map();
+          for (const event of upcomingEventsData) {
+            if (event.formId) {
+              try {
+                const formResponsesQuery = query(
+                  collection(db, 'form_responses'),
+                  where('formId', '==', event.formId)
+                );
+                const registrationsSnapshot = await getDocs(formResponsesQuery);
+                const registrations = registrationsSnapshot.docs.map(doc => ({
+                  id: doc.id,
+                  ...doc.data()
+                }));
+                registrationsMap.set(event.formId, registrations);
+              } catch (error) {
+                console.error(`Error fetching registrations for event ${event.name}:`, error);
+              }
+            }
+          }
+          setEventRegistrations(registrationsMap);
+
+          // Update columns with dynamic event columns
+          const newColumns = createDynamicColumns(upcomingEventsData);
+          
+          // Merge with existing column settings from localStorage
+          const savedColumns = localStorage.getItem('studentTableColumns');
+          if (savedColumns) {
+            try {
+              const parsedColumns = JSON.parse(savedColumns) as ColumnConfig[];
+              const mergedColumns = newColumns.map(newCol => {
+                const savedCol = parsedColumns.find(col => col.id === newCol.id);
+                // Always ensure name column is enabled
+                if (newCol.id === 'name') {
+                  return { ...newCol, enabled: true };
+                }
+                return savedCol ? { ...newCol, enabled: savedCol.enabled } : newCol;
+              });
+              setColumns(mergedColumns);
+            } catch (error) {
+              console.warn('Failed to merge with saved columns:', error);
+              setColumns(newColumns);
+            }
+          } else {
+            setColumns(newColumns);
+          }
+        }, (error) => {
+          console.error('Error fetching upcoming events:', error);
+        });
+
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error setting up events listener:', error);
+      }
+    };
+
+    fetchUpcomingEvents();
+  }, []); // Only run once on mount
 
   // Fetch attendance data for today's status
   useEffect(() => {
@@ -1693,6 +1829,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   searchQuery={searchQuery}
                   highlightText={highlightText}
                   waitlistCount={(groupedWaitlistStudents[className]?.Morning?.length || 0)}
+                  upcomingEvents={upcomingEvents}
+                  getStudentEventStatus={getStudentEventStatus}
                 />
                 )}
                 {(selectedShift === 'All' || selectedShift === 'Afternoon') && (
@@ -1725,6 +1863,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                   searchQuery={searchQuery}
                   highlightText={highlightText}
                   waitlistCount={(groupedWaitlistStudents[className]?.Afternoon?.length || 0)}
+                  upcomingEvents={upcomingEvents}
+                  getStudentEventStatus={getStudentEventStatus}
                 />
                 )}
               </div>
@@ -1791,6 +1931,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 searchQuery={searchQuery}
                 highlightText={highlightText}
                 waitlistCount={(groupedWaitlistStudents[className]?.Evening?.length || 0)}
+                upcomingEvents={upcomingEvents}
+                getStudentEventStatus={getStudentEventStatus}
               />
             ))}
           </div>
@@ -1844,6 +1986,8 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
               searchQuery={searchQuery}
               highlightText={highlightText}
               waitlistCount={0}
+              upcomingEvents={upcomingEvents}
+              getStudentEventStatus={getStudentEventStatus}
             />
           </div>
         </div>

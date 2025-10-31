@@ -12,7 +12,8 @@ import {
   mdiAccountPlus,
   mdiStar,
   mdiBellOutline,
-  mdiFormSelect
+  mdiFormSelect,
+  mdiAccountTie
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -34,6 +35,7 @@ const menuAside: MenuAsideItem[] = [
   },
   {
     isDivider: true,
+    label: "",
   },
   // {
   //   label: 'ABA Approvals',
@@ -89,6 +91,11 @@ const menuAside: MenuAsideItem[] = [
         href: "/dashboard/class-management",
         label: "Class Management",
         icon: mdiAccountCircle,
+      },
+      {
+        href: "/dashboard/teacher-management",
+        label: "Teacher Management",
+        icon: mdiAccountTie,
       },
       {
         href: "/dashboard/mock-exams",

@@ -9,7 +9,7 @@ import { AttendanceRecord } from '../../dashboard/record/TableAttendance';
 import { isSchoolDay, getStudentDailyStatus, RawAttendanceRecord, calculateAverageArrivalTime } from '../../dashboard/_lib/attendanceLogic';
 import { AllClassConfigs } from '../../dashboard/_lib/configForAttendanceLogic';
 import { getStatusStyles } from '../../dashboard/_lib/statusStyles';
-import { mdiChevronRight, mdiClockAlertOutline, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight, mdiCheckCircle, mdiCalendar, mdiInformationOutline, mdiTextBoxOutline } from '@mdi/js';
+import { mdiChevronRight, mdiClockAlertOutline, mdiFileDocumentEditOutline, mdiWeatherSunny, mdiWeatherSunset, mdiWeatherNight, mdiCheckCircle, mdiCalendar, mdiInformationOutline, mdiTextBoxOutline, mdiQrcode } from '@mdi/js';
 import Icon from '../../_components/Icon';
 import { PermissionRequestForm } from './_components/PermissionRequestForm';
 import { LeaveEarlyRequestForm } from './_components/LeaveEarlyRequestForm';
@@ -17,6 +17,7 @@ import SlideInPanel from '../../_components/SlideInPanel';
 import { usePrevious } from '../../_hooks/usePrevious';
 import OngoingPermissions from './_components/OngoingPermissions';
 import HealthArrivalChart from './_components/HealthArrivalChart';
+import QRAttendanceModal from './_components/QRAttendanceModal';
 
 const AttendancePage = () => {
   const t = useTranslations('student.attendance');
@@ -49,6 +50,7 @@ const AttendancePage = () => {
   const [___, setChartScrollPosition] = useState(0);
   const [isLeaveEarlyPanelOpen, setIsLeaveEarlyPanelOpen] = useState(false);
   const [existingLeaveEarlyRequest, setExistingLeaveEarlyRequest] = useState<any>(null);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   // Ripple effect hook
   const useRipple = () => {
@@ -618,7 +620,12 @@ const AttendancePage = () => {
           ) : (
             <div className="relative overflow-hidden mx-1">
               {todayRecord && (
-                <div className={`${getStatusStyles(todayRecord.status).cardBg} rounded-2xl px-4 py-4 shadow-xl relative`}>
+                <div className={`${getStatusStyles(todayRecord.status).cardBg} rounded-2xl px-4 py-4 shadow-xl relative ${todayRecord.status === 'pending' ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
+                     onClick={() => {
+                       if (todayRecord.status === 'pending') {
+                         setIsQRModalOpen(true);
+                       }
+                     }}>
                   {/* Date at bottom right */}
                   <div className="absolute bottom-3 right-4">
                     <p className={khmerFont('text-white-900 text-sm font-medium')}>
@@ -648,13 +655,20 @@ const AttendancePage = () => {
                   <div className="flex items-center justify-between pr-25">
                     <div className="flex items-center space-x-4 flex-1 min-w-0">
                       <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Icon path={getStatusStyles(todayRecord.status).icon} size={28} className="text-white" />
+                        <Icon 
+                          path={todayRecord.status === 'pending' ? mdiQrcode : getStatusStyles(todayRecord.status).icon} 
+                          size={28} 
+                          className={`text-white ${todayRecord.status === 'pending' ? 'animate-pulse' : ''}`} 
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className={khmerFont('text-white text-lg sm:text-xl font-semibold leading-tight')}>{t('status')}</h3>
                         <p className={khmerFont('text-white/80 text-base leading-tight')}>
                           { t(todayRecord.status)}
-                          {todayRecord.timestamp && (
+                          {todayRecord.status === 'pending' && (
+                            <span className="ml-2 block sm:inline text-sm">Tap for QR code</span>
+                          )}
+                          {todayRecord.timestamp && todayRecord.status !== 'pending' && (
                             <span className="ml-2 block sm:inline text-sm">at {formatTime(todayRecord.timestamp)}</span>
                           )}
                         </p>
@@ -793,6 +807,18 @@ const AttendancePage = () => {
              </div>
            </div>
        </div>
+
+       {/* QR Attendance Modal */}
+       <QRAttendanceModal
+         isOpen={isQRModalOpen}
+         onClose={() => setIsQRModalOpen(false)}
+         studentUid={studentUid || ''}
+         studentName={studentName || ''}
+         onSuccess={() => {
+           setIsQRModalOpen(false);
+           // Optionally reload data
+         }}
+       />
      </>
    );
 };

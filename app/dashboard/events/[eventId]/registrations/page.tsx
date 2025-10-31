@@ -480,6 +480,48 @@ const EventRegistrationsPage = () => {
     }
   };
 
+  const handleFinishPayment = async (registrationId: string) => {
+    setProcessingPayment(registrationId);
+    try {
+      // Get the current registration data
+      const registrationRef = doc(db, "form_responses", registrationId);
+      const registrationSnap = await getDoc(registrationRef);
+      
+      if (!registrationSnap.exists()) {
+        toast.error("Registration not found");
+        return;
+      }
+
+      const registrationData = registrationSnap.data();
+      
+      if (registrationData.paymentStatus !== 'borrowed') {
+        toast.error("Payment is not in borrowed status");
+        return;
+      }
+
+      // Combine paid and borrowed amounts
+      const totalPaid = {
+        stars: (registrationData.amountPaid?.stars || 0) + (registrationData.borrowAmount?.stars || 0),
+        money: (registrationData.amountPaid?.money || 0) + (registrationData.borrowAmount?.money || 0)
+      };
+
+      // Update registration to mark as fully paid
+      await updateDoc(registrationRef, {
+        paymentStatus: 'paid',
+        amountPaid: totalPaid,
+        borrowAmount: null, // Clear borrowed amount
+        paidAt: serverTimestamp()
+      });
+
+      toast.success("Payment completed successfully");
+    } catch (error) {
+      console.error("Error finishing payment:", error);
+      toast.error("Failed to complete payment");
+    } finally {
+      setProcessingPayment(null);
+    }
+  };
+
   const handleBuyOption = async (registrationId: string, pricingOptionId: string, isBorrow: boolean = false) => {
     if (!event?.pricingOptions) return;
 
@@ -1265,7 +1307,7 @@ const EventRegistrationsPage = () => {
                               <div className="flex items-center justify-between mb-2">
                                 <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 pr-2 m-0 flex items-center">
                                   <Icon path={mdiCreditCard} size={14} className="mr-1" />
-                                  Payment Details
+                                  Payment Details{registration.paymentStatus === 'borrowed' ? ' Borrowed' : ''}
                                 </h4>
                                 <div className="flex items-center gap-2">
                                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -1280,14 +1322,27 @@ const EventRegistrationsPage = () => {
                                      'Unpaid'}
                                   </span>
                                   {(registration.paymentStatus === 'paid' || registration.paymentStatus === 'borrowed') && (
-                                    <button
-                                      onClick={() => handleRevertPayment(registration.id)}
-                                      disabled={processingPayment === registration.id}
-                                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title="Revert Payment"
-                                    >
-                                      <Icon path={mdiDelete} size={14} />
-                                    </button>
+                                    <>
+                                      {registration.paymentStatus === 'borrowed' && (
+                                        <button
+                                          onClick={() => handleFinishPayment(registration.id)}
+                                          disabled={processingPayment === registration.id}
+                                          className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 px-2 py-1 rounded text-xs font-medium hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                          title="Complete Payment - Convert borrowed amount to paid"
+                                        >
+                                          <Icon path={mdiCurrencyUsd} size={12} />
+                                          Complete
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => handleRevertPayment(registration.id)}
+                                        disabled={processingPayment === registration.id}
+                                        className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Revert Payment"
+                                      >
+                                        <Icon path={mdiDelete} size={14} />
+                                      </button>
+                                    </>
                                   )}
                                 </div>
                               </div>

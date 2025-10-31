@@ -358,8 +358,8 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
             
             const status = result.status?.toLowerCase() || '';
             
-            // Skip if student is now present or on permission (marked attendance/permission after follow-up was created)
-            if (status === 'present' || status === 'permission') {
+            // Skip if student is now present, on permission, or if it's not a school day
+            if (status === 'present' || status === 'permission' || status === 'no school') {
               return; // Don't add this follow-up to the list
             }
           }

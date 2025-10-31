@@ -10,6 +10,7 @@ import Webcam from 'react-webcam';
 import { toast } from 'sonner';
 import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
+import jsQR from 'jsqr';
 
 import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiCog, mdiInformation } from '@mdi/js';
 import CardBox from "../../_components/CardBox";
@@ -27,10 +28,9 @@ import CameraShutdownHandler from './components/CameraShutdownHandler';
 import ShutdownTransition from './components/ShutdownTransition';
 import FailedAttendanceManager from './components/FailedAttendanceManager';
 import { OverlayTemplate, OverlayConfig } from './components/OverlayTemplate';
-import { OVERLAY_CONFIGS, getOverlayConfig } from './components/overlayConfigs';
+import { getOverlayConfig } from './components/overlayConfigs';
 import { OverlaySettings } from './components/OverlaySettings';
 import { offlineAttendanceManager, OfflineAttendanceRecord } from './utils/offlineAttendanceManager';
-import EventSelector from './components/EventSelector';
 import { clockInStudent, clockOutStudent, checkClockInStatus } from '@/utils/eventAttendanceManager';
 
 const FaceApiAttendanceScanner = () => {
@@ -575,6 +575,169 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       };
     }
   }, [isZoomMode, isCameraActive, cameraShutdownCountdown]);
+
+  // Face detection and recognition
+  const detectQRCode = useCallback(async () => {
+    if (!webcamRef.current?.video || !isCameraActive || isCameraShutdown) return;
+    
+    const video = webcamRef.current.video;
+    if (video.readyState !== 4) return;
+
+    try {
+      // Create a canvas to capture video frame
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) return;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Detect QR code
+      const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert',
+      });
+
+      if (qrCode && qrCode.data) {
+        // Parse QR code data - Expected format: "ATTENDANCE:{token}:{studentUid}"
+        const qrData = qrCode.data;
+        console.log('QR Code detected:', qrData);
+
+        if (qrData.startsWith('ATTENDANCE:')) {
+          const parts = qrData.split(':');
+          if (parts.length === 3) {
+            const [_, token, studentUid] = parts;
+            
+            // Validate and process the attendance token
+            await processAttendanceQRCode(token, studentUid);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('QR code detection error:', error);
+    }
+  }, [isCameraActive, isCameraShutdown]);
+
+  // Function to process attendance QR code
+  const processAttendanceQRCode = useCallback(async (token: string, studentUid: string) => {
+    try {
+      // Verify the token hasn't been processed recently (prevent duplicates)
+      const recentKey = `qr_${token}`;
+      const lastProcessed = recentlyMarkedStudents.current.get(recentKey);
+      if (lastProcessed && Date.now() - lastProcessed < 5000) {
+        console.log('QR token already processed recently, skipping');
+        return;
+      }
+
+      // Set cooldown immediately to prevent duplicate processing
+      recentlyMarkedStudents.current.set(recentKey, Date.now());
+
+      toast.loading('Verifying QR code...', { id: 'qr-verify' });
+
+      // Call API to validate token
+      const response = await fetch('/api/validate-attendance-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, studentUid }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error(result.error || 'Invalid or expired QR code', { id: 'qr-verify' });
+        return;
+      }
+
+      // Find the student
+      const student = students.find(s => s.authUid === studentUid);
+      if (!student) {
+        toast.error('Student not found', { id: 'qr-verify' });
+        return;
+      }
+
+      // Check if in event mode
+      if (attendanceMode === 'event' && selectedEventId) {
+        // Handle event attendance
+        const status = await checkClockInStatus(selectedEventId, student.id);
+        
+        if (eventScanMode === 'clock-in' && status === 'not-started') {
+          await clockInStudent(selectedEventId, selectedEventName, student, new Float32Array(), 100);
+          toast.success(`✅ ${student.fullName} clocked in via QR!`, { id: 'qr-verify' });
+          playSuccessSound();
+          
+          // Show overlay for event clock-in
+          const overlayConfig = getOverlayConfig('present');
+          if (overlayConfig) {
+            setCurrentOverlay({
+              config: overlayConfig,
+              studentName: student.fullName
+            });
+            setTimeout(() => setCurrentOverlay(null), 3000);
+          }
+        } else if (eventScanMode === 'clock-out' && status === 'clocked-in') {
+          await clockOutStudent(selectedEventId, student, new Float32Array(), 100);
+          toast.success(`👋 ${student.fullName} clocked out via QR!`, { id: 'qr-verify' });
+          playSuccessSound();
+          
+          // Show overlay for event clock-out
+          const overlayConfig = getOverlayConfig('present');
+          if (overlayConfig) {
+            setCurrentOverlay({
+              config: overlayConfig,
+              studentName: student.fullName
+            });
+            setTimeout(() => setCurrentOverlay(null), 3000);
+          }
+        } else {
+          toast.error('Invalid event scan mode or status', { id: 'qr-verify' });
+        }
+      } else {
+        // Regular attendance mode - mark attendance using the correct function signature
+        const attendanceStatus = await markAttendance(
+          student,
+          selectedShift || student.shift || 'Morning',
+          classConfigs,
+          playSuccessSound,
+          3, // maxRetries
+          undefined, // selectedDate (use today)
+          'qr-code', // method
+          student.class // selectedClass
+        );
+
+        if (attendanceStatus) {
+          toast.success(`✅ ${student.fullName} - ${attendanceStatus} (via QR)`, { id: 'qr-verify' });
+
+          // Show overlay
+          const overlayConfig = getOverlayConfig(attendanceStatus.toLowerCase());
+          if (overlayConfig) {
+            setCurrentOverlay({
+              config: overlayConfig,
+              studentName: student.fullName
+            });
+            setTimeout(() => setCurrentOverlay(null), 3000);
+          }
+
+          // Dispatch event for UI updates
+          window.dispatchEvent(new CustomEvent('attendanceMarked', {
+            detail: {
+              studentId: student.id,
+              studentName: student.fullName,
+              status: attendanceStatus,
+              method: 'qr-code',
+              timestamp: new Date()
+            }
+          }));
+        } else {
+          toast.error('Failed to mark attendance', { id: 'qr-verify' });
+        }
+      }
+    } catch (error) {
+      console.error('Error processing QR code:', error);
+      toast.error('Failed to process QR code', { id: 'qr-verify' });
+    }
+  }, [students, attendanceMode, selectedEventId, selectedEventName, eventScanMode, selectedShift, classConfigs, playSuccessSound]);
 
   // Face detection and recognition
   const detectFaces = useCallback(async () => {
@@ -1319,6 +1482,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
     
     detectionIntervalRef.current = setInterval(() => {
       detectFaces();
+      detectQRCode(); // Also detect QR codes in parallel
       
       // Clean up old entries from recently marked students (every 10 detection cycles)
       if (Math.random() < 0.1) { // 10% chance each cycle
@@ -1346,7 +1510,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         }
       }
     }, detectionInterval);
-  }, [detectFaces, isZoomMode, isCameraActive, isCameraShutdown, handleCameraShutdown, getStudentStartTime, students, detectionInterval]);
+  }, [detectFaces, detectQRCode, isZoomMode, isCameraActive, isCameraShutdown, handleCameraShutdown, getStudentStartTime, students, detectionInterval]);
 
   // Stop detection
   const stopDetection = useCallback(() => {

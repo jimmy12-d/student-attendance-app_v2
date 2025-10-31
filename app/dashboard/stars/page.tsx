@@ -422,119 +422,132 @@ const StarManagementPage = () => {
         onConfirm={() => handleSubmit()}
         onCancel={handleCloseModal}
       >
-        <div className="space-y-8">
-          <FormField label="Reward Name" help="Enter a descriptive name for this star reward">
-            {(fieldData) => (
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="e.g., Early Bird Star, Perfect Attendance Star"
-                className={`${fieldData.className} py-3 px-4`}
-                required
-              />
-            )}
-          </FormField>
+        <div className="space-y-8 p-2">
+          {/* Reward Name - Clean and minimal */}
+          <div className="space-y-3">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Reward Name
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="e.g., Perfect Attendance Star"
+              className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              required
+            />
+          </div>
 
-          <FormField label="Status" help="Enable or disable this reward for students">
-            {() => (
-              <div className="flex items-center space-x-4 py-3">
+          {/* Status Toggle - Modern switch */}
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
+            <div className="flex items-center space-x-3">
+              <div className={`w-3 h-3 rounded-full ${formData.isActive ? 'bg-green-500' : 'bg-gray-400'} shadow-sm`}></div>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Active Reward</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                formData.isActive ? 'bg-green-500 shadow-lg shadow-green-500/30' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+                  formData.isActive ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Color Selection - Visual and creative */}
+          <div className="space-y-4">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Theme Color
+            </label>
+            <div className="grid grid-cols-5 gap-3">
+              {STAR_COLORS.map((color) => (
                 <button
+                  key={color.value}
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
-                  className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    formData.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                  onClick={() => setFormData(prev => ({ ...prev, color: color.value as any }))}
+                  className={`group relative p-4 rounded-2xl border-2 transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    formData.color === color.value
+                      ? `${color.borderClass} ${color.ringClass} shadow-lg scale-105`
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                   }`}
                 >
-                  <span
-                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform shadow-lg ${
-                      formData.isActive ? 'translate-x-9' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-                <span className={`text-sm font-semibold ${
-                  formData.isActive 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}>
-                  {formData.isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-            )}
-          </FormField>
-
-          <FormField label="Color" help="Choose a color to visually identify this reward">
-            {() => (
-              <div className="grid grid-cols-5 gap-4 py-3">
-                {STAR_COLORS.map((color) => (
-                  <label
-                    key={color.value}
-                    className={`flex items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      formData.color === color.value
-                        ? `${color.borderClass} ring-2 ${color.ringClass}`
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="color"
-                      value={color.value}
-                      checked={formData.color === color.value}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        color: e.target.value as 'white' | 'pink' | 'yellow' | 'orange' | 'blue'
-                      }))}
-                      className="sr-only"
-                    />
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className={`w-8 h-8 rounded-full border ${color.borderClass} flex items-center justify-center`}>
-                        <Icon path={mdiStar} size={20} className={color.textClass} />
-                      </div>
-                      <span className={`text-sm font-medium ${color.textClass} dark:text-gray-200`}>
-                        {color.label}
-                      </span>
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className={`relative p-3 rounded-xl ${color.bgClass} shadow-md group-hover:shadow-lg transition-all duration-200`}>
+                      <Icon path={mdiStar} size={24} className={color.textClass} />
+                      {formData.color === color.value && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                          <Icon path={mdiCheck} size={10} className="text-white" />
+                        </div>
+                      )}
                     </div>
-                  </label>
-                ))}
-              </div>
-            )}
-          </FormField>
+                    <span className={`text-xs font-medium ${color.textClass} capitalize`}>
+                      {color.label}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
 
-          <FormField label="Number of Stars" help="Select the number of stars students will earn from this reward">
-            {() => (
-              <div className="flex justify-center space-x-6 py-3">
+          {/* Star Amount - Minimal circular selection */}
+          <div className="space-y-4">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Star Value
+            </label>
+            <div className="flex justify-center">
+              <div className="flex space-x-2 bg-gray-100 dark:bg-gray-800 p-2 rounded-2xl">
                 {[5, 10, 15, 20].map((value) => (
                   <button
                     key={value}
                     type="button"
                     onClick={() => setFormData((prev) => ({ ...prev, amount: value }))}
-                    className={`w-16 h-16 rounded-full flex items-center justify-center border-3 transition-all cursor-pointer text-lg font-bold shadow-lg ${
+                    className={`relative w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                       formData.amount === value
-                        ? `${getColorClasses(formData.color).borderClass} ring-4 ${getColorClasses(formData.color).ringClass} bg-gradient-to-br from-white to-gray-50 dark:from-gray-700 dark:to-gray-800 text-gray-900 dark:text-white scale-110`
-                        : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:scale-105'
+                        ? `${getColorClasses(formData.color).bgClass} ${getColorClasses(formData.color).borderClass} shadow-lg scale-110 ring-2 ${getColorClasses(formData.color).ringClass}`
+                        : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md'
                     }`}
                   >
-                    {value}
+                    <span className={`font-bold text-lg ${
+                      formData.amount === value 
+                        ? getColorClasses(formData.color).textClass 
+                        : 'text-gray-600 dark:text-gray-300'
+                    }`}>
+                      {value}
+                    </span>
+                    {formData.amount === value && (
+                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
+                        <div className={`w-2 h-2 rounded-full ${getColorClasses(formData.color).bgClass} shadow-sm`}></div>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
-            )}
-          </FormField>
+            </div>
+          </div>
 
-          <FormField label="Claim Limit" help="Maximum number of times a student can claim this reward">
-            {() => (
-              <div className="flex items-center space-x-4">
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, setLimit: -1 }))}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    formData.setLimit === -1
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  No Limit
-                </button>
+          {/* Claim Limit - Clean input design */}
+          <div className="space-y-3">
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Claim Limit
+            </label>
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, setLimit: -1 }))}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  formData.setLimit === -1
+                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                ∞ Unlimited
+              </button>
+              <div className="flex-1 relative">
                 <input
                   type="number"
                   min="1"
@@ -544,12 +557,12 @@ const StarManagementPage = () => {
                     ...prev,
                     setLimit: e.target.value === '' ? -1 : parseInt(e.target.value) || 1
                   }))}
-                  placeholder="Enter limit or leave blank for No Limit"
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  placeholder="Set limit"
+                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                 />
               </div>
-            )}
-          </FormField>
+            </div>
+          </div>
         </div>
       </CardBoxModal>
     </SectionMain>
