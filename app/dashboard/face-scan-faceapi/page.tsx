@@ -167,7 +167,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
     }
 
     try {
-      console.log(`Loading registrations for form ID: ${formId}`);
       const responsesRef = collection(db, 'form_responses');
       // Use 'registrationStatus' field instead of 'approvalStatus'
       const q = query(responsesRef, where('formId', '==', formId), where('registrationStatus', '==', 'approved'));
@@ -182,7 +181,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         }
       });
       
-      console.log(`Found ${approvedStudentIds.size} approved students for event`);
       setRegisteredStudentIds(approvedStudentIds);
       
       if (approvedStudentIds.size === 0) {
@@ -257,7 +255,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         setSelectedCamera(cameraOptions[0].value);
       }
 
-      console.log(`Loaded ${cameraOptions.length} cameras:`, cameraOptions);
     } catch (error) {
       console.error('Failed to load cameras:', error);
       toast.error('Failed to load available cameras');
@@ -309,7 +306,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       loadEventRegistrations(formId);
       
       toast.success(`Event mode: ${eventName}`);
-      console.log('Event mode activated from URL params:', { eventId, eventName, formId });
     }
   }, [searchParams]);
 
@@ -344,7 +340,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         }
       });
       
-      console.log('🔄 Updated offline attendance retry manager callback with current data');
     }
   }, [students, classConfigs]);
 
@@ -603,7 +598,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       if (qrCode && qrCode.data) {
         // Parse QR code data - Expected format: "ATTENDANCE:{token}:{studentUid}"
         const qrData = qrCode.data;
-        console.log('QR Code detected:', qrData);
 
         if (qrData.startsWith('ATTENDANCE:')) {
           const parts = qrData.split(':');
@@ -627,12 +621,33 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       const recentKey = `qr_${token}`;
       const lastProcessed = recentlyMarkedStudents.current.get(recentKey);
       if (lastProcessed && Date.now() - lastProcessed < 5000) {
-        console.log('QR token already processed recently, skipping');
         return;
       }
 
       // Set cooldown immediately to prevent duplicate processing
       recentlyMarkedStudents.current.set(recentKey, Date.now());
+
+      // Find the student first
+      const student = students.find(s => s.authUid === studentUid);
+      if (!student) {
+        toast.error('Student not found', { id: 'qr-verify' });
+        return;
+      }
+
+      // Show "recognizing" state with student name (in both regular and zoom mode)
+      const qrTrackedFace: TrackedFace = {
+        id: `qr_${student.id}`,
+        box: { x: 0, y: 0, width: 0, height: 0 }, // No actual face box for QR
+        name: student.fullName,
+        status: 'recognizing',
+        confidence: 100,
+        message: 'Verifying QR code...',
+        firstSeen: Date.now(),
+        lastSeen: Date.now(),
+        isScanning: true,
+        scanMessage: 'Processing QR code'
+      };
+      setTrackedFaces([qrTrackedFace]);
 
       toast.loading('Verifying QR code...', { id: 'qr-verify' });
 
@@ -646,14 +661,20 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       const result = await response.json();
 
       if (!response.ok) {
-        toast.error(result.error || 'Invalid or expired QR code', { id: 'qr-verify' });
-        return;
-      }
+        // Show error state (2 seconds)
+        const errorTrackedFace: TrackedFace = {
+          id: `qr_${student.id}`,
+          box: { x: 0, y: 0, width: 0, height: 0 },
+          name: student.fullName,
+          status: 'unknown',
+          message: result.error || 'Invalid or expired QR code',
+          firstSeen: Date.now(),
+          lastSeen: Date.now(),
+        };
+        setTrackedFaces([errorTrackedFace]);
+        setTimeout(() => setTrackedFaces([]), 2000);
 
-      // Find the student
-      const student = students.find(s => s.authUid === studentUid);
-      if (!student) {
-        toast.error('Student not found', { id: 'qr-verify' });
+        toast.error(result.error || 'Invalid or expired QR code', { id: 'qr-verify' });
         return;
       }
 
@@ -664,6 +685,23 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         
         if (eventScanMode === 'clock-in' && status === 'not-started') {
           await clockInStudent(selectedEventId, selectedEventName, student, new Float32Array(), 100);
+          
+          // Show recognized state (3 seconds)
+          const successTrackedFace: TrackedFace = {
+            id: `qr_${student.id}`,
+            box: { x: 0, y: 0, width: 0, height: 0 },
+            name: student.fullName,
+            status: 'recognized',
+            confidence: 100,
+            attendanceStatus: 'present',
+            message: 'Clocked in successfully!',
+            firstSeen: Date.now(),
+            lastSeen: Date.now(),
+            lastRecognized: Date.now(),
+          };
+          setTrackedFaces([successTrackedFace]);
+          setTimeout(() => setTrackedFaces([]), 3000);
+
           toast.success(`✅ ${student.fullName} clocked in via QR!`, { id: 'qr-verify' });
           playSuccessSound();
           
@@ -678,6 +716,23 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
           }
         } else if (eventScanMode === 'clock-out' && status === 'clocked-in') {
           await clockOutStudent(selectedEventId, student, new Float32Array(), 100);
+          
+          // Show recognized state (3 seconds)
+          const successTrackedFace: TrackedFace = {
+            id: `qr_${student.id}`,
+            box: { x: 0, y: 0, width: 0, height: 0 },
+            name: student.fullName,
+            status: 'recognized',
+            confidence: 100,
+            attendanceStatus: 'present',
+            message: 'Clocked out successfully!',
+            firstSeen: Date.now(),
+            lastSeen: Date.now(),
+            lastRecognized: Date.now(),
+          };
+          setTrackedFaces([successTrackedFace]);
+          setTimeout(() => setTrackedFaces([]), 3000);
+
           toast.success(`👋 ${student.fullName} clocked out via QR!`, { id: 'qr-verify' });
           playSuccessSound();
           
@@ -691,13 +746,27 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
             setTimeout(() => setCurrentOverlay(null), 3000);
           }
         } else {
+          // Show error state (2 seconds)
+          const errorTrackedFace: TrackedFace = {
+            id: `qr_${student.id}`,
+            box: { x: 0, y: 0, width: 0, height: 0 },
+            name: student.fullName,
+            status: 'unknown',
+            message: 'Invalid event scan mode or status',
+            firstSeen: Date.now(),
+            lastSeen: Date.now(),
+          };
+          setTrackedFaces([errorTrackedFace]);
+          setTimeout(() => setTrackedFaces([]), 2000);
+
           toast.error('Invalid event scan mode or status', { id: 'qr-verify' });
         }
       } else {
-        // Regular attendance mode - mark attendance using the correct function signature
+        // Regular attendance mode - mark attendance using the student's own shift (for QR code)
+        // This allows students to mark attendance even when coming to a different shift
         const attendanceStatus = await markAttendance(
           student,
-          selectedShift || student.shift || 'Morning',
+          student.shift || 'Morning', // Use student's own shift for QR code
           classConfigs,
           playSuccessSound,
           3, // maxRetries
@@ -707,6 +776,22 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         );
 
         if (attendanceStatus) {
+          // Show recognized state (3 seconds)
+          const successTrackedFace: TrackedFace = {
+            id: `qr_${student.id}`,
+            box: { x: 0, y: 0, width: 0, height: 0 },
+            name: student.fullName,
+            status: 'recognized',
+            confidence: 100,
+            attendanceStatus: attendanceStatus,
+            message: `${attendanceStatus} - via QR code`,
+            firstSeen: Date.now(),
+            lastSeen: Date.now(),
+            lastRecognized: Date.now(),
+          };
+          setTrackedFaces([successTrackedFace]);
+          setTimeout(() => setTrackedFaces([]), 3000);
+
           toast.success(`✅ ${student.fullName} - ${attendanceStatus} (via QR)`, { id: 'qr-verify' });
 
           // Show overlay
@@ -730,12 +815,28 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
             }
           }));
         } else {
+          // Show error state (2 seconds)
+          const errorTrackedFace: TrackedFace = {
+            id: `qr_${student.id}`,
+            box: { x: 0, y: 0, width: 0, height: 0 },
+            name: student.fullName,
+            status: 'unknown',
+            message: 'Failed to mark attendance',
+            firstSeen: Date.now(),
+            lastSeen: Date.now(),
+          };
+          setTrackedFaces([errorTrackedFace]);
+          setTimeout(() => setTrackedFaces([]), 2000);
+
           toast.error('Failed to mark attendance', { id: 'qr-verify' });
         }
       }
     } catch (error) {
       console.error('Error processing QR code:', error);
       toast.error('Failed to process QR code', { id: 'qr-verify' });
+      
+      // Clear any tracked faces on error
+      setTrackedFaces([]);
     }
   }, [students, attendanceMode, selectedEventId, selectedEventName, eventScanMode, selectedShift, classConfigs, playSuccessSound]);
 
@@ -750,7 +851,8 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       const detections = await detectAllFaces(video);
 
       if (detections.length === 0) {
-        setTrackedFaces([]);
+        // Don't clear QR tracked faces (they have id starting with 'qr_')
+        setTrackedFaces(prevFaces => prevFaces.filter(face => face.id.startsWith('qr_')));
         // No faces detected - don't update last face detection time
         return;
       }
@@ -778,8 +880,8 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         }
         setCameraShutdownCountdown(null);
       } else {
-        // No valid faces within size criteria - clear tracked faces but don't update timestamp
-        setTrackedFaces([]);
+        // No valid faces within size criteria - preserve QR tracked faces
+        setTrackedFaces(prevFaces => prevFaces.filter(face => face.id.startsWith('qr_')));
         return;
       }
 
@@ -789,8 +891,12 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
         const nextFaces: TrackedFace[] = [];
         const unmatchedDetections = [...filteredDetections];
 
-        // Try to match existing faces with new detections
-        for (const prevFace of prevFaces) {
+        // Preserve QR tracked faces (they have id starting with 'qr_')
+        const qrFaces = prevFaces.filter(face => face.id.startsWith('qr_'));
+        const realFaces = prevFaces.filter(face => !face.id.startsWith('qr_'));
+
+        // Try to match existing real faces with new detections
+        for (const prevFace of realFaces) {
           let bestMatch: { detection: any, distance: number, index: number } | null = null;
 
           for (let i = 0; i < unmatchedDetections.length; i++) {
@@ -852,8 +958,8 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
           });
         }
 
-        // Process faces for recognition
-        return nextFaces.map(face => {
+        // Process faces for recognition and add back QR tracked faces
+        const processedFaces = nextFaces.map(face => {
           // Skip processing if this face is currently being scanned
           if (face.isScanning) {
             return face;
@@ -861,7 +967,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
           // Check if face has been stable long enough
           if (now - face.firstSeen < DWELL_TIME_BEFORE_RECOGNIZE) {
-            return { ...face, status: 'detecting', message: 'Hold position...' };
+            return { ...face, status: 'detecting' as const, message: 'Hold position...' };
           }
 
           // Skip if already recognized recently
@@ -884,7 +990,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
               if (targetStudents.length === 0) {
                 return {
                   ...face,
-                  status: 'unknown',
+                  status: 'unknown' as const,
                   message: 'No approved students for this event'
                 };
               }
@@ -926,7 +1032,7 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                 if (lastMarked && now - lastMarked < RECOGNITION_COOLDOWN) {
                   return {
                     ...face,
-                    status: 'recognized',
+                    status: 'recognized' as const,
                     name: bestMatch.student.fullName,
                     confidence: finalConfidence,
                     lastRecognized: lastMarked, // Use the original mark time
@@ -939,7 +1045,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                 // 🔒 CRITICAL: Set temporary cooldown IMMEDIATELY to prevent duplicate calls
                 // This prevents race condition where second scan happens before first save completes
                 recentlyMarkedStudents.current.set(studentKey, now);
-                console.log(`🔒 Temporary cooldown set for ${bestMatch.student.fullName} (preventing duplicates during save)`);
                 
                 // Start per-face scan lock process - show recognizing state immediately
                 const updatedFace = {
@@ -1136,11 +1241,9 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                     attendanceClass // CRITICAL: Pass context-aware class
                   )
                     .then((attendanceStatus) => {
-                      console.log(`⛔ Send-home recorded for ${bestMatch.student.fullName}: ${attendanceStatus}`);
                       
                       // Set cooldown to prevent duplicate scans
                       recentlyMarkedStudents.current.set(studentKey, Date.now());
-                      console.log(`🔒 Cooldown set for ${bestMatch.student.fullName} - send-home recorded`);
                       
                       // Notify other components
                       window.dispatchEvent(new CustomEvent('attendanceMarked', {
@@ -1236,7 +1339,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                   
                   // If no school days to check, don't show overlay
                   if (schoolDaysToCheck.length === 0) {
-                    console.log(`📝 ${bestMatch.student.fullName} - No school days between ${missedQuizDate} and yesterday to check`);
                   } else {
                     // Query all attendance records for these school days
                     const attendanceRef = collection(db, 'attendance');
@@ -1266,7 +1368,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                               const record = doc.data();
                               if (record.status === 'present' || record.status === 'late') {
                                 wasPresentOnAnyDay = true;
-                                console.log(`✅ ${bestMatch.student.fullName} was present on ${record.date} - quiz made up, no overlay needed`);
                                 break;
                               }
                             }
@@ -1276,7 +1377,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                         
                         if (!wasPresentOnAnyDay) {
                           // Student was absent on all makeup days = still hasn't made up the quiz
-                          console.log(`📝 ${bestMatch.student.fullName} was absent on all ${schoolDaysToCheck.length} school days from ${schoolDaysToCheck[0]} to ${schoolDaysToCheck[schoolDaysToCheck.length - 1]} - showing overlay`);
                           setCurrentOverlay({
                             config: missedQuizConfig,
                             studentName: bestMatch.student.fullName
@@ -1309,16 +1409,13 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                   attendanceClass // CRITICAL: Pass context-aware class
                 )
                   .then((attendanceStatus) => {
-                    console.log(`✅ Attendance marking completed for ${bestMatch.student.fullName}: ${attendanceStatus}`);
                     
                     // ✅ SUCCESS: Refresh the cooldown timestamp to full duration
                     // (it was already set temporarily, now confirm it for full 10 seconds)
                     recentlyMarkedStudents.current.set(studentKey, Date.now());
-                    console.log(`🔒 Cooldown confirmed for ${bestMatch.student.fullName} - locked for ${RECOGNITION_COOLDOWN/1000}s`);
                     
                     // Check if this was a duplicate detection (status returned from existing record)
                     if (attendanceStatus === 'present' || attendanceStatus === 'late') {
-                      console.log(`✅ Record confirmed (may have been duplicate detection working correctly)`);
                     }
                     
                     // Notify other components that new attendance was marked
@@ -1360,7 +1457,6 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                     
                     // ❌ FAILURE: Remove from cooldown to allow immediate retry
                     recentlyMarkedStudents.current.delete(studentKey);
-                    console.log(`🔓 Cooldown removed for ${bestMatch.student.fullName} due to failure - can retry immediately`);
                     
                     // Show detailed error information to user
                     const errorMessage = error.message || 'Unknown error occurred';
@@ -1412,14 +1508,14 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
               } else {
                 return {
                   ...face,
-                  status: 'unknown',
+                  status: 'unknown' as const,
                   message: `Low confidence (${finalConfidence.toFixed(1)}% < ${requiredConfidence.toFixed(0)}%)`
                 };
               }
             } else {
               return {
                 ...face,
-                status: 'unknown',
+                status: 'unknown' as const,
                 message: 'No matches above confidence threshold'
               };
             }
@@ -1427,6 +1523,9 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
           return face;
         });
+        
+        // Combine processed real faces with QR tracked faces
+        return [...processedFaces, ...qrFaces];
       });
     } catch (error) {
       console.error('Face detection error:', error);

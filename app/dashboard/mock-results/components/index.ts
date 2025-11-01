@@ -21,6 +21,10 @@ export * from './firebaseUtils';
 // Filtering and sorting utilities
 export * from './filterUtils';
 
+// Components
+export { default as MockExamScoresTable } from './MockExamScoresTable';
+export { default as SubjectCompletionView } from './SubjectCompletionView';
+
 // Type definitions
 export interface StudentResult {
   id: string;

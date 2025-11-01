@@ -73,7 +73,7 @@ const CustomCombobox: React.FC<Props> = ({
     : "w-full border border-gray-300 rounded-md shadow-sm px-3 py-2 text-left cursor-default focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm dark:bg-slate-800 dark:border-gray-600 dark:text-white bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors";
   
   const buttonLikeClasses = !editable 
-    ? "w-full bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg px-4 py-2.5 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 flex items-center justify-between text-white"
+    ? "w-full bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg pl-3 py-2.5 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 flex items-center justify-between text-white"
     : "";
   
   const finalInputClasses = fieldData?.className
@@ -88,7 +88,7 @@ const CustomCombobox: React.FC<Props> = ({
             <>
               <Combobox.Input
                 id={id}
-                className={`${finalInputClasses} ${getSelectedIcon() ? 'pl-8' : ''}`}
+                className={`${finalInputClasses} ${getSelectedIcon() ? 'pl-6' : ''}`}
                 onChange={handleInputChange}
                 placeholder={placeholder}
                 displayValue={displayValue}
@@ -104,12 +104,12 @@ const CustomCombobox: React.FC<Props> = ({
               </Combobox.Button>
             </>
           ) : (
-            <Combobox.Button className={finalInputClasses}>
-              <div className="flex items-center justify-between w-full">
-                <span className="block truncate text-white">
-                  {selectedValue ? displayValue(selectedValue) : placeholder}
-                </span>
-                <Icon path={mdiChevronDown} w="w-5 h-5" className="text-gray-400 ml-2 flex-shrink-0" />
+            <Combobox.Button className={`${finalInputClasses} relative pr-10`}>
+              <span className="block truncate text-white">
+                {selectedValue ? displayValue(selectedValue) : placeholder}
+              </span>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <Icon path={mdiChevronDown} w="w-5 h-5" className="text-white" />
               </div>
             </Combobox.Button>
           )}

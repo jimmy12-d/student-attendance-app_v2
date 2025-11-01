@@ -60,65 +60,120 @@ function analyzeDocumentStructure(doc) {
   return structure;
 }
 
-async function inspectCollection(collectionName, limit = null) {
+async function inspectFormDocument(formId) {
   try {
-    console.log(`\n🔍 Inspecting ${collectionName} collection...\n`);
+    console.log(`\n🔍 Inspecting form document: ${formId}...\n`);
+
+    const docRef = db.collection('forms').doc(formId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      console.log(`📭 Form document ${formId} not found`);
+      return;
+    }
+
+    const data = doc.data();
+    console.log(`📊 Form Document: ${formId}\n`);
+    console.log('Full data:', JSON.stringify(data, null, 2));
+
+    // If there are questions, display them in detail
+    if (data.questions && Array.isArray(data.questions)) {
+      console.log(`\n📝 Questions (${data.questions.length} total):\n`);
+      data.questions.forEach((question, index) => {
+        console.log(`Question ${index + 1}:`);
+        console.log(`  ID: ${question.id}`);
+        console.log(`  Text: ${question.text || question.question || 'N/A'}`);
+        console.log(`  Type: ${question.type || 'N/A'}`);
+        if (question.classType) {
+          console.log(`  ClassType: ${question.classType}`);
+        }
+        if (question.subject) {
+          console.log(`  Subject: ${question.subject}`);
+        }
+        console.log('---');
+      });
+    }
+
+  } catch (error) {
+    console.error(`❌ Error inspecting form document:`, error.message);
+  }
+}
+
+async function inspectCollection(collectionName) {
+  try {
+    console.log(`\n🔍 Inspecting all documents in ${collectionName} collection...\n`);
 
     const collectionRef = db.collection(collectionName);
-    const query = limit ? collectionRef.limit(limit) : collectionRef;
-    const snapshot = await query.get();
+    const snapshot = await collectionRef.get();
 
     if (snapshot.empty) {
       console.log(`📭 No documents found in ${collectionName} collection`);
       return;
     }
 
-    console.log(`📊 Analyzing first ${snapshot.size} documents:\n`);
+    console.log(`📊 Found ${snapshot.size} documents in ${collectionName} collection:\n`);
 
-    const allStructures = [];
-    const fieldCounts = {};
-
-    snapshot.forEach((doc, index) => {
-      console.log(`📄 Document ${index + 1} (${doc.id}):`);
+    snapshot.forEach((doc) => {
+      console.log(`Document ID: ${doc.id}`);
       const structure = analyzeDocumentStructure(doc);
-
-      // Count field occurrences
-      Object.keys(structure).forEach(field => {
-        fieldCounts[field] = (fieldCounts[field] || 0) + 1;
-      });
-
-      allStructures.push(structure);
 
       // Display structure
       Object.entries(structure).forEach(([field, type]) => {
         console.log(`   ${field}: ${type}`);
       });
-      console.log('');
+      console.log('---');
     });
 
-    // Summary
-    console.log(`📊 ${collectionName} Collection Summary:`);
-    console.log(`   Total documents sampled: ${snapshot.size}`);
-
-    const totalFields = Object.keys(fieldCounts).length;
-    console.log(`   Unique fields found: ${totalFields}`);
-
-    console.log(`\n   Field frequencies (across ${snapshot.size} documents):`);
-    Object.entries(fieldCounts)
-      .sort(([,a], [,b]) => b - a)
-      .forEach(([field, count]) => {
-        const percentage = ((count / snapshot.size) * 100).toFixed(1);
-        console.log(`   ${field}: ${count}/${snapshot.size} (${percentage}%)`);
-      });
-
   } catch (error) {
-    console.error(`❌ Error inspecting ${collectionName}:`, error.message);
+    console.error(`❌ Error inspecting collection ${collectionName}:`, error.message);
+  }
+}
+
+async function listAllCollections() {
+  try {
+    console.log('\n🔍 Listing all collections in the database...\n');
+    const collections = await db.listCollections();
+    console.log('📚 Available collections:');
+    collections.forEach(collection => { 
+      console.log(`  - ${collection.id}`);
+    });
+    return collections.map(c => c.id);
+  } catch (error) {
+    console.error('❌ Error listing collections:', error.message);
+    return [];
   }
 }
 
 async function main() {
   try {
-    await inspectCollection('mockExam1');
+    const collections = await listAllCollections();
+    
+    // Check for mockResults or mockExam collections
+    const mockCollections = collections.filter(c => 
+      c.toLowerCase().includes('mock') || c.toLowerCase().includes('exam')
+    );
+    
+    console.log('\n📊 Mock/Exam related collections:', mockCollections);
+    
+    // Inspect mockExam1 collection
+    if (collections.includes('mockExam1')) {
+      console.log('\n\n📊 Inspecting mockExam1 collection...');
+      await inspectCollection('mockExam1');
+    }
+    
+    // Inspect mockResults if it exists
+    if (collections.includes('mockResults')) {
+      console.log('\n\n📊 Inspecting first 3 documents from mockResults collection in detail...');
+      const mockResultsRef = db.collection('mockResults');
+      const snapshot = await mockResultsRef.limit(3).get();
+      
+      snapshot.forEach((doc) => {
+        console.log(`\n📄 Document ID: ${doc.id}`);
+        console.log(JSON.stringify(doc.data(), null, 2));
+        console.log('---');
+      });
+    }
+    
     console.log('\n✨ Inspection completed successfully!');
   } catch (error) {
     console.error('\n💥 Inspection failed:', error);
@@ -131,4 +186,4 @@ if (require.main === module) {
   main().then(() => process.exit(0));
 }
 
-module.exports = { inspectCollection, analyzeDocumentStructure };
+module.exports = { inspectCollection, analyzeDocumentStructure, inspectFormDocument, listAllCollections };

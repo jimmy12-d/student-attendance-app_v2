@@ -97,6 +97,7 @@
       "to": "to",
       "approved": "Approved",
       "pending": "Pending",
+      "tapForQR": "Tap for QR Code",
       "rejected": "Rejected",
       "qrModal": {
         "title": "QR Attendance",

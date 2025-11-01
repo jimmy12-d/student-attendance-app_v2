@@ -825,7 +825,6 @@ export const markAttendance = async (
         parentNotificationError = data.error || data.errors || null;
         parentNotificationsSent = data.notificationsSent || 0;
         
-        console.log('✅ Parent notification result:', data);
       } catch (notificationError: any) {
         parentNotificationStatus = 'failed';
         parentNotificationError = notificationError.message || 'Unknown error occurred';
@@ -841,7 +840,6 @@ export const markAttendance = async (
           parentNotificationTimestamp: new Date(),
           parentNotificationsSent
         });
-        console.log('✅ Updated attendance record with notification status');
       } catch (updateError) {
         console.error('Failed to update attendance record with notification status:', updateError);
         // Don't throw - this is not critical

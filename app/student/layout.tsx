@@ -180,7 +180,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
           <Toaster richColors position="top-center" />
           <div className="relative min-h-screen bg-transparent">
             {showTopNav && <StudentTopNav />}
-            <main className={`relative pb-24 bg-transparent ${showTopNav ? '' : 'pt-0'}`}>
+            <main className={`relative pb-24 bg-transparent ${showTopNav ? 'pt-16' : 'pt-0'}`} style={showTopNav ? { paddingTop: 'calc(4rem + env(safe-area-inset-top))' } : undefined}>
                 <div className={`w-full max-w-2xl mx-auto px-4 sm:px-6 ${showTopNav ? 'py-6' : 'py-0'}`}>
                     {children}
                 </div>

@@ -67,6 +67,9 @@ const TeacherDashboard = () => {
 
   // Selected subject state for teachers with multiple subjects
   const [selectedSubject, setSelectedSubject] = useState<string>('');
+  
+  // Selected classType state for teachers with multiple classTypes
+  const [selectedClassType, setSelectedClassType] = useState<string>('');
 
   // Search method state
   const [searchMethod, setSearchMethod] = useState<'room' | 'name'>('room');
@@ -103,6 +106,14 @@ const TeacherDashboard = () => {
       return selectedSubject || userSubject[0];
     }
     return userSubject || '';
+  };
+  
+  // Helper to get the current active classType (either selected or single classType)
+  const getActiveClassType = () => {
+    if (teacherClassTypes.length > 1) {
+      return selectedClassType || teacherClassTypes[0];
+    }
+    return teacherClassTypes[0] || '';
   };
 
   // Helper to get translated subject name
@@ -156,6 +167,13 @@ const TeacherDashboard = () => {
       setSelectedSubject(userSubject[0]);
     }
   }, [userSubject, selectedSubject]);
+  
+  // Initialize selected classType when teacherClassTypes changes
+  useEffect(() => {
+    if (teacherClassTypes.length > 0 && !selectedClassType) {
+      setSelectedClassType(teacherClassTypes[0]);
+    }
+  }, [teacherClassTypes, selectedClassType]);
 
   // Set default shift based on teacher's class types
   useEffect(() => {
@@ -462,6 +480,14 @@ const TeacherDashboard = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSubject]);
+  
+  // Reset search when selected classType changes
+  useEffect(() => {
+    if (teacherClassTypes.length > 1 && selectedClassType) {
+      clearSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClassType]);
 
   // Function to search students by name
   const handleNameSearch = async (searchTerm: string) => {
@@ -478,12 +504,15 @@ const TeacherDashboard = () => {
       
       const matches: Student[] = [];
       const searchLower = searchTerm.toLowerCase();
+      
+      // Get the active classType to filter by
+      const activeClassType = getActiveClassType();
 
       for (const docSnapshot of querySnapshot.docs) {
         const studentData = docSnapshot.data();
 
-        // Check if student's classType matches teacher's classTypes
-        if (!studentData.classType || !teacherClassTypes.includes(studentData.classType)) {
+        // Check if student's classType matches the selected classType
+        if (!studentData.classType || studentData.classType !== activeClassType) {
           continue;
         }
 
@@ -606,7 +635,7 @@ const TeacherDashboard = () => {
       setNameSuggestions([]);
       setShowSuggestions(false);
     }
-  }, [searchName, searchMethod]);
+  }, [searchName, searchMethod, selectedClassType]);
 
   const handleSearchStudent = async () => {
     if (!searchRoom || !searchSeat) {
@@ -630,6 +659,9 @@ const TeacherDashboard = () => {
       let foundShift = '';
       let foundRoom = '';
       let foundSeat = '';
+      
+      // Get the active classType to filter by
+      const activeClassType = getActiveClassType();
 
       // Get all documents from mockExam1 collection
       const querySnapshot = await getDocs(mockExam1Ref);
@@ -638,9 +670,9 @@ const TeacherDashboard = () => {
       for (const doc of querySnapshot.docs) {
         const studentData = doc.data();
 
-        // Check if student's classType matches teacher's classTypes
-        if (!studentData.classType || !teacherClassTypes.includes(studentData.classType)) {
-          continue; // Skip students not in teacher's class types
+        // Check if student's classType matches the selected classType
+        if (!studentData.classType || studentData.classType !== activeClassType) {
+          continue; // Skip students not in the selected class type
         }
 
         // Get the exam day for the active subject for this class type
@@ -729,7 +761,7 @@ const TeacherDashboard = () => {
     }
   };
 
-  // Auto-search effect when room, seat, or shift changes
+  // Auto-search effect when room, seat, shift, or selectedClassType changes
   useEffect(() => {
     if (searchRoom && searchSeat && searchRoom.length > 0 && searchSeat.length > 0 && hasScheduledExamDays()) {
       // Clear previous results
@@ -744,7 +776,7 @@ const TeacherDashboard = () => {
       
       return () => clearTimeout(timeoutId);
     }
-  }, [searchRoom, searchSeat, searchShift]);
+  }, [searchRoom, searchSeat, searchShift, selectedClassType]);
 
   const handleSaveScore = async () => {
     const activeSubject = getActiveSubject();
@@ -853,7 +885,7 @@ const TeacherDashboard = () => {
         <div className="relative mb-8">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-indigo-600/10 rounded-3xl blur-xl"></div>
           <div className="relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 p-8">
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center space-x-6">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl blur-lg opacity-75"></div>
@@ -862,7 +894,7 @@ const TeacherDashboard = () => {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <h1 className="pb-2 text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 dark:from-white dark:via-blue-200 dark:to-purple-200 bg-clip-text text-transparent">
+                  <h1 className="pb-2 text-3xl md:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 dark:from-white dark:via-blue-200 dark:to-purple-200 bg-clip-text text-transparent">
                     សូមស្វាគមន៍ត្រឡប់មកវិញ, {userName}!
                   </h1>
                   <div className="flex items-center space-x-3">
@@ -968,33 +1000,35 @@ const TeacherDashboard = () => {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="pb-4 text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  <h2 className="pb-4 text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                     ការបញ្ចូលពិន្ទុ Mock 1
                     {!hasScheduledExamDays() && (
                       <span className="ml-3 text-lg text-red-500 dark:text-red-400 font-normal">
                         - មុខងារត្រូវបានបិទ
                       </span>
                     )}
-                    {hasScheduledExamDays() && (
-                      <span className="ml-3 text-lg text-gray-500 dark:text-gray-400 font-normal">
-                        - {(() => {
-                          const activeSubject = getActiveSubject();
-                          const allExamDays = teacherClassTypes.flatMap(classType => 
-                            getExamDaysForSubject(activeSubject, classType)
-                          );
-                          const uniqueDays = [...new Set(allExamDays)].sort();
-                          return uniqueDays.length > 0 ? uniqueDays.join(', ') : 'គ្មានថ្ងៃកំណត់';
-                        })()}
-                      </span>
-                    )}
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-300 mt-1">
-                    {Array.isArray(userSubject) ? (
-                      <>បច្ចុប្បន្នកំពុងដាក់ពិន្ទុសម្រាប់: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{getTranslatedSubject(getActiveSubject())}</span></>
-                    ) : (
-                      <>មុខវិជ្ជា: <span className="font-semibold text-emerald-600 dark:text-emerald-400">{getTranslatedSubject(userSubject || '')}</span></>
+                  <div className="space-y-2">
+                    <p className="text-gray-600 dark:text-gray-300">
+                      <span className="font-semibold">ថ្នាក់:</span>{' '}
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                        {teacherClassTypes.length > 0 ? (classTypesData[getActiveClassType()]?.khmerName || getActiveClassType()) : 'មិនទាន់កំណត់'}
+                      </span>
+                    </p>
+                    {hasScheduledExamDays() && (
+                      <p className="text-gray-600 dark:text-gray-300">
+                        <span className="font-semibold">កាលវិភាគ:</span>{' '}
+                        <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                          {(() => {
+                            const activeSubject = getActiveSubject();
+                            const activeClassType = getActiveClassType();
+                            const examDays = getExamDaysForSubject(activeSubject, activeClassType);
+                            return examDays.length > 0 ? examDays.join(', ') : 'គ្មានថ្ងៃកំណត់';
+                          })()}
+                        </span>
+                      </p>
                     )}
-                  </p>
+                  </div>
                 </div>
               </div>
               <div className="hidden md:flex items-center space-x-3 text-emerald-600 dark:text-emerald-400">
@@ -1038,12 +1072,54 @@ const TeacherDashboard = () => {
                     placeholder="ជ្រើសរើសមុខវិជ្ជា"
                     editable={false}
                     fieldData={{
-                      className: `w-full min-w-[200px] h-[42px] border-2 border-indigo-300 dark:border-indigo-700 rounded-lg text-center font-semibold shadow-lg hover:shadow-xl transition-all duration-200 ${
+                      className: `w-full min-w-[160px] md:min-w-[180px] h-[42px] border-2 border-indigo-300 dark:border-indigo-700 rounded-lg text-center font-semibold shadow-lg hover:shadow-xl transition-all duration-200 ${
                         'bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent [&>div]:justify-center [&>div>span]:text-center [&>div>span]:flex-1 [&>div>span]:text-gray-900 [&>div>span]:dark:text-white'
                       }`
                     }}
                   />
-                  <div className="text-sm text-gray-500 dark:text-gray-400">វឌ្ឍនភាពសម័យ</div>
+                </div>            
+              </div>
+            </div>
+          )}
+          
+          {/* ClassType Selector for Multiple ClassTypes */}
+          {teacherClassTypes.length > 1 && (
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl p-6 mb-6 border border-emerald-200 dark:border-emerald-800">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 bg-emerald-500 rounded-lg">
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
+                      ជ្រើសរើសថ្នាក់
+                    </h3>
+                    <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                      អ្នកបង្រៀន {teacherClassTypes.length} ថ្នាក់។ ជ្រើសរើសមួយដើម្បីស្វែងរកសិស្ស។
+                    </p>
+                  </div>
+                </div>
+                <div className="flex-shrink-0">
+                  <label className="text-sm font-medium text-emerald-800 dark:text-emerald-200 mb-2 block">
+                    ជ្រើសរើសថ្នាក់
+                  </label>
+                  <CustomCombobox
+                    options={teacherClassTypes.map((classType) => ({
+                      value: classType,
+                      label: classTypesData[classType]?.khmerName || classType
+                    }))}
+                    selectedValue={selectedClassType}
+                    onChange={(value) => setSelectedClassType(value)}
+                    placeholder="ជ្រើសរើសថ្នាក់"
+                    editable={false}
+                    fieldData={{
+                      className: `w-full min-w-[180px] md:min-w-[220px] h-[42px] border-2 border-emerald-300 dark:border-emerald-700 rounded-lg text-center font-semibold shadow-lg hover:shadow-xl transition-all duration-200 ${
+                        'bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent [&>div]:justify-center [&>div>span]:text-center [&>div>span]:flex-1 [&>div>span]:text-gray-900 [&>div>span]:dark:text-white'
+                      }`
+                    }}
+                  />
                 </div>            
               </div>
             </div>
@@ -1051,7 +1127,7 @@ const TeacherDashboard = () => {
 
           {/* Search Form - Improved Layout */}
           <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center justify-between">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-2 flex items-center justify-between">
               <div className="flex items-center">
                 <svg className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -1088,9 +1164,9 @@ const TeacherDashboard = () => {
             )}
 
             {/* Search Method Tabs and Shift Selector */}
-            <div className="mb-4 flex flex-col md:flex-row gap-3 items-end">
+            <div className="mb-4 space-y-4">
               {/* Search Method Tabs */}
-              <div className="flex-1 flex space-x-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-gray-600 h-[42px]">
+              <div className="w-full flex space-x-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-gray-600 h-[42px]">
                 <button
                   onClick={() => {
                     setSearchMethod('room');
@@ -1106,7 +1182,7 @@ const TeacherDashboard = () => {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
-                  ស្វែងរកតាមបន្ទប់/កៅអី
+                  តាមកៅអី
                 </button>
                 <button
                   onClick={() => {
@@ -1123,13 +1199,13 @@ const TeacherDashboard = () => {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
-                  ស្វែងរកតាមឈ្មោះ
+                  តាមឈ្មោះ
                 </button>
               </div>
 
               {/* Shift Selector */}
               {searchMethod === 'room' && (
-                <div className="flex flex-col md:w-40">
+                <div className="flex flex-col w-full">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" htmlFor="shift">
                     វេនប្រលង
                   </label>
@@ -1384,7 +1460,7 @@ const TeacherDashboard = () => {
           {/* Score Input - Enhanced Design */}
           {foundStudent && (
             <div className="bg-gray-50 dark:bg-slate-700 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+              <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                 <svg className="w-5 h-5 mr-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
@@ -1392,14 +1468,14 @@ const TeacherDashboard = () => {
               </h3>
               
               <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-sm">
                   <div className="flex items-center space-x-2">
                     <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    <span className="text-gray-600 dark:text-gray-300">ថ្នាក់:</span>
+                    <span className="text-gray-600 dark:text-gray-300">ថ្នាក់:</span> 
                     <span className="font-semibold text-blue-600 dark:text-blue-400">
-                      {classTypesData[foundStudent.class]?.khmerName || foundStudent.class}
+                      {(classTypesData[foundStudent.class]?.khmerName || foundStudent.class).replace('ថ្នាក់ទី', '')}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -1419,7 +1495,7 @@ const TeacherDashboard = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                 <div className="flex flex-col">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" htmlFor="score">
                     ពិន្ទុ Mock 1 {getTranslatedSubject(getActiveSubject())} (អតិបរមា: {currentMaxScore})
@@ -1431,7 +1507,7 @@ const TeacherDashboard = () => {
                       value={mock4Score}
                       onChange={(e) => setMock4Score(e.target.value)}
                       onWheel={(e) => e.currentTarget.blur()}
-                      placeholder={`បញ្ចូលពិន្ទុ (0-${currentMaxScore})`}
+                      placeholder={`(0-${currentMaxScore})`}
                       min="0"
                       max={currentMaxScore}
                       step="0.01"
@@ -1445,25 +1521,23 @@ const TeacherDashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ពិន្ទុបច្ចុប្បន្ន</label>
-                  <div className="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg p-3 text-center w-full h-[42px] flex items-center justify-center">
-                    <span className={`text-xl font-bold ${
-                      (foundStudent as any)[getSubjectKey(getActiveSubject())] 
-                        ? 'text-green-600 dark:text-green-400' 
-                        : 'text-red-600 dark:text-red-400'
-                    }`}>
-                      {(foundStudent as any)[getSubjectKey(getActiveSubject())] || 'មិនទាន់បានបញ្ចូល'}
-                    </span>
+                {(foundStudent as any)[getSubjectKey(getActiveSubject())] && (
+                  <div className="flex flex-col">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">ពិន្ទុបច្ចុប្បន្ន</label>
+                    <div className="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg p-3 text-center w-full h-[42px] flex items-center justify-center">
+                      <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                        {(foundStudent as any)[getSubjectKey(getActiveSubject())]}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="flex flex-col">
+                <div className={`flex flex-col ${(foundStudent as any)[getSubjectKey(getActiveSubject())] ? 'md:col-span-2' : ''}`}>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">រក្សាទុកពិន្ទុ</label>
                   <Button
                     onClick={handleSaveScore}
                     icon={mdiContentSave}
-                    label={isSaving ? "កំពុងរក្សាទុក..." : ((foundStudent as any)[getSubjectKey(getActiveSubject())] ? "ធ្វើបច្ចុប្បន្នភាពពិន្ទុ" : "រក្សាទុកពិន្ទុ")}
+                    label={isSaving ? "កំពុងរក្សាទុក..." : ((foundStudent as any)[getSubjectKey(getActiveSubject())] ? "កែរពិន្ទុ" : "រក្សាទុកពិន្ទុ")}
                     color="success"
                     disabled={isSaving || !mock4Score || isNaN(parseFloat(mock4Score)) || parseFloat(mock4Score) < 0 || parseFloat(mock4Score) > currentMaxScore}
                     className="h-[42px] w-full font-medium"
@@ -1515,7 +1589,7 @@ const TeacherDashboard = () => {
 
         {/* Enhanced Instructions */}
         <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
-          <div className="flex items-start space-x-4">
+          <div className="flex items-start space-x-4 md:space-x-6">
             <div className="flex-shrink-0">
               <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1524,7 +1598,7 @@ const TeacherDashboard = () => {
               </div>
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-3">
+              <h3 className="text-lg md:text-xl font-bold text-blue-900 dark:text-blue-100 mb-3">
                 របៀបបញ្ចូលពិន្ទុ Mock 1
               </h3>
               <div className="space-y-3">

@@ -29,8 +29,37 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
   const [isExpired, setIsExpired] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [errorType, setErrorType] = useState<string>('');
   const [isScanned, setIsScanned] = useState<boolean>(false);
   const [scanSuccess, setScanSuccess] = useState<boolean>(false);
+  const [retryCount, setRetryCount] = useState<number>(0);
+  const [autoRetrying, setAutoRetrying] = useState<boolean>(false);
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      // If we were offline and now back online, and there's an error, suggest retry
+      if (error && errorType === 'NETWORK_ERROR') {
+        console.log('✅ Network connection restored');
+      }
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      console.log('⚠️ Network connection lost');
+    };
+
+    setIsOnline(navigator.onLine);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [error, errorType]);
 
   // Generate QR code when modal opens
   useEffect(() => {
@@ -43,8 +72,11 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
       setTimeRemaining(30);
       setIsExpired(false);
       setError('');
+      setErrorType('');
       setIsScanned(false);
       setScanSuccess(false);
+      setRetryCount(0);
+      setAutoRetrying(false);
     }
   }, [isOpen]);
 
@@ -96,11 +128,24 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
     return () => unsubscribe();
   }, [isOpen, token, onSuccess, onClose]);
 
-  const generateQRCode = async () => {
+  const generateQRCode = async (isRetry: boolean = false) => {
+    // Check if offline before attempting
+    if (!navigator.onLine) {
+      setError('No internet connection. Please check your network and try again.');
+      setErrorType('NETWORK_ERROR');
+      setIsGenerating(false);
+      return;
+    }
+
     setIsGenerating(true);
     setError('');
+    setErrorType('');
     setIsExpired(false);
     setTimeRemaining(30);
+
+    if (!isRetry) {
+      setRetryCount(0);
+    }
 
     try {
       console.log('🎯 Generating QR code for student:', { studentUid, studentName });
@@ -122,6 +167,29 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
       if (!response.ok) {
         const errorData = await response.json();
         console.error('❌ API error:', errorData);
+        
+        // Store error details for better messaging
+        setErrorType(errorData.errorType || 'UNKNOWN_ERROR');
+        
+        // Determine if we should auto-retry
+        const isNetworkError = errorData.errorType === 'NETWORK_ERROR' || 
+                               errorData.errorType === 'CONNECTION_ERROR';
+        
+        if (isNetworkError && retryCount < 2) {
+          // Auto-retry for network errors (up to 2 retries)
+          setAutoRetrying(true);
+          const retryDelay = 2000 * (retryCount + 1); // 2s, 4s
+          console.log(`⏳ Auto-retrying in ${retryDelay}ms...`);
+          
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            setAutoRetrying(false);
+            generateQRCode(true);
+          }, retryDelay);
+          
+          return;
+        }
+        
         throw new Error(errorData.error || 'Failed to generate QR code');
       }
 
@@ -144,12 +212,29 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
       });
 
       setQrCodeDataUrl(qrDataUrl);
+      setRetryCount(0); // Reset retry count on success
       console.log('✅ QR code image generated');
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Error generating QR code:', err);
-      setError('Failed to generate QR code. Please try again.');
+      
+      // Provide user-friendly error messages
+      let userMessage = 'Failed to generate QR code. Please try again.';
+      
+      if (errorType === 'NETWORK_ERROR') {
+        userMessage = 'Network connection failed. Please check your internet connection and try again.';
+      } else if (errorType === 'CONNECTION_ERROR') {
+        userMessage = 'Unable to connect to the server. Please check your internet connection.';
+      } else if (errorType === 'AUTH_ERROR') {
+        userMessage = 'Authentication failed. Please try logging out and back in.';
+      } else if (err.message?.includes('fetch')) {
+        userMessage = 'Network request failed. Please check your connection and try again.';
+        setErrorType('NETWORK_ERROR');
+      }
+      
+      setError(userMessage);
     } finally {
       setIsGenerating(false);
+      setAutoRetrying(false);
     }
   };
 
@@ -201,6 +286,19 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
             </button>
           </div>
 
+          {/* Offline Warning Banner */}
+          {!isOnline && (
+            <div className="bg-orange-500 text-white px-4 py-3 flex items-center gap-3">
+              <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
+              </svg>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">No Internet Connection</p>
+                <p className="text-xs text-white/90">QR code generation requires an active internet connection</p>
+              </div>
+            </div>
+          )}
+
           {/* Content */}
           <div className="p-6">
             {isScanned && scanSuccess ? (
@@ -232,18 +330,44 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
                     <path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
                   </svg>
                 </div>
-                <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-                <button
-                  onClick={handleRegenerate}
-                  className="px-6 py-2 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors"
-                >
-                  {t('tryAgain')}
-                </button>
+                <h3 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">
+                  {errorType === 'NETWORK_ERROR' || errorType === 'CONNECTION_ERROR' ? 'Connection Error' : 'Generation Failed'}
+                </h3>
+                <p className="text-gray-700 dark:text-gray-300 mb-2 px-4">{error}</p>
+                {retryCount > 0 && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Attempted {retryCount} {retryCount === 1 ? 'retry' : 'retries'}
+                  </p>
+                )}
+                <div className="flex gap-3 justify-center mt-4 px-4">
+                  <button
+                    onClick={handleRegenerate}
+                    className="px-6 py-2.5 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors font-semibold flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z" />
+                    </svg>
+                    {t('tryAgain')}
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="px-6 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             ) : isGenerating ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-500 mx-auto mb-4"></div>
-                <p className="text-gray-600 dark:text-gray-400">{t('generating')}</p>
+                <p className="text-gray-600 dark:text-gray-400 font-medium">
+                  {autoRetrying ? `Retrying... (Attempt ${retryCount + 1})` : t('generating')}
+                </p>
+                {autoRetrying && (
+                  <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                    Please wait, connection issue detected
+                  </p>
+                )}
               </div>
             ) : (
               <>
@@ -287,7 +411,7 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
                   )}
                 </div>
 
-                {/* Timer Display */}
+                {/* Timer Display - Progress Bar Only */}
                 <div className="mb-6">
                   {!isScanned && (
                     <>

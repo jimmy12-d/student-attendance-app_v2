@@ -68,6 +68,9 @@ const TeacherManagementPage = () => {
   const [classTypeOptions, setClassTypeOptions] = useState<ComboboxOption[]>([]);
   const [classTypesData, setClassTypesData] = useState<{ [key: string]: { khmerName: string } }>({});
 
+  // View state
+  const [currentView, setCurrentView] = useState<'grade' | 'teacher'>('grade');
+
   // Fetch class types for dropdown
   const fetchClassTypes = async () => {
     try {
@@ -102,7 +105,6 @@ const TeacherManagementPage = () => {
         } as TeacherInfo));
 
         setTeachers(teachersData);
-        console.log('Teachers loaded:', teachersData);
       } catch (err) {
         console.error("Error fetching data:", err);
         setError("Failed to load data. Please check console for details.");
@@ -314,8 +316,7 @@ const TeacherManagementPage = () => {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit',
-        timeZoneName: 'short'
+        minute: '2-digit'
       });
     } catch (error) {
       return 'Invalid date';
@@ -406,7 +407,33 @@ const TeacherManagementPage = () => {
     <SectionMain>
       <SectionTitleLineWithButton icon={mdiAccountTie} title="Teacher Management" main />
       
-      <div className="mb-6 flex justify-end">
+      <div className="mb-6 flex justify-between items-center">
+        {/* View Toggle Buttons */}
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setCurrentView('grade')}
+            className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+              currentView === 'grade'
+                ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-400'
+                : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:bg-slate-800 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Icon path={mdiSchool} size={16} className="mr-2" />
+            Grade View
+          </button>
+          <button
+            onClick={() => setCurrentView('teacher')}
+            className={`inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+              currentView === 'teacher'
+                ? 'border-blue-600 text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-400'
+                : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:bg-slate-800 dark:hover:bg-slate-700'
+            }`}
+          >
+            <Icon path={mdiAccountTie} size={16} className="mr-2" />
+            Teacher View
+          </button>
+        </div>
+
         <button
           onClick={() => {
             resetForm();
@@ -478,8 +505,8 @@ const TeacherManagementPage = () => {
         </CardBox>
       </div>
 
-      {/* Teachers Tables by Class Type */}
-      {classTypeOrder.map(classType => {
+      {/* Grade View - Teachers Tables by Class Type */}
+      {currentView === 'grade' && classTypeOrder.map(classType => {
         const teachersInClass = teachersByClassType[classType];
         return (
           <CardBox key={classType} className="mb-6" hasTable>
@@ -621,6 +648,143 @@ const TeacherManagementPage = () => {
           </CardBox>
         );
       })}
+
+      {/* Teacher View - All Teachers in Single Table */}
+      {currentView === 'teacher' && (
+        <CardBox className="mb-6" hasTable>
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-white flex items-center">
+              <Icon path={mdiAccountTie} size={20} className="mr-2 text-blue-600 dark:text-blue-400" />
+              All Teachers
+              <span className="ml-2 text-sm font-normal text-gray-600 dark:text-gray-300">
+                ({sortedTeachers.length} teacher{sortedTeachers.length !== 1 ? 's' : ''})
+              </span>
+            </h2>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
+              <thead className="bg-gray-50 dark:bg-slate-800">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style={{width: '25%'}}>
+                    Teacher
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style={{width: '16.67%'}}>
+                    Subjects
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style={{width: '16.67%'}}>
+                    Class Types
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style={{width: '16.67%'}}>
+                    Contact
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style={{width: '16.67%'}}>
+                    Last Login
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style={{width: '8.33%'}}>
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-800">
+                {sortedTeachers.map(teacher => (
+                  <tr key={teacher.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 whitespace-nowrap" style={{width: '25%'}}>
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mr-3">
+                          <Icon path={mdiAccountTie} size={20} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {teacher.fullName}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            ID: {teacher.id}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap" style={{width: '16.67%'}}>
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const subjects = Array.isArray(teacher.subject)
+                            ? teacher.subject
+                            : (teacher.subject ? [teacher.subject] : []);
+                          return subjects.length > 0 ? (
+                            subjects.map((subj, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                              >
+                                {subj}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-500 dark:text-gray-400">No subjects assigned</span>
+                          );
+                        })()}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap" style={{width: '16.67%'}}>
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const classTypes = Array.isArray(teacher.classTypes)
+                            ? teacher.classTypes
+                            : (teacher.classTypes ? [teacher.classTypes] : []);
+                          return classTypes.length > 0 ? (
+                            classTypes.map((type, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                              >
+                                <Icon path={mdiSchool} size={12} className="mr-1" />
+                                {classTypesData[type]?.khmerName || type}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-gray-500 dark:text-gray-400">No classes assigned</span>
+                          );
+                        })()}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap" style={{width: '16.67%'}}>
+                      <div className="flex items-center">
+                        <Icon path={mdiPhone} size={16} className="text-gray-400 dark:text-gray-500 mr-2" />
+                        <span className="text-sm text-gray-900 dark:text-white">
+                          {teacher.phone || 'Not provided'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap" style={{width: '16.67%'}}>
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        {formatTimestamp(teacher.lastLoginAt)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm" style={{width: '8.33%'}}>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => openEditModal(teacher)}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          title="Edit teacher"
+                        >
+                          <Icon path={mdiPencil} size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTeacher(teacher.id)}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="Delete teacher"
+                        >
+                          <Icon path={mdiDelete} size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardBox>
+      )}
 
       {teachers.length === 0 && !loading && (
         <CardBox>

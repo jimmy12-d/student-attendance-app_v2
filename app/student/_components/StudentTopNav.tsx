@@ -65,8 +65,8 @@ const StudentTopNav = () => {
     }, []);
 
     return (
-        <nav className="bg-white/95 dark:bg-slate-800/90 backdrop-blur-lg shadow-lg border-b border-gray-200/70 dark:border-slate-700/50 relative z-30">
-            <div className="max-w-3xl mx-auto px-4">
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-sm" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+            <div className="w-full max-w-2xl mx-auto px-4 sm:px-6">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center space-x-2">
                         <Image src="/rodwell_logo.png" alt="Logo" width={46} height={46} />

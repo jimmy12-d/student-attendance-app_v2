@@ -123,7 +123,7 @@ const AttendancePage = () => {
     if (!studentUid) return;
     
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Phnom_Penh' }).format(new Date());
       const leaveEarlyQuery = query(
         collection(db, "leaveEarlyRequests"),
         where("authUid", "==", studentUid),
@@ -180,7 +180,7 @@ const AttendancePage = () => {
 
             while (currentDate.getMonth() === currentMonth && currentDate.getFullYear() === currentYear) {
               if (isSchoolDay(currentDate, studyDays)) {
-                schoolDays.push(currentDate.toISOString().split('T')[0]);
+                schoolDays.push(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Phnom_Penh' }).format(currentDate));
               }
               currentDate.setDate(currentDate.getDate() - 1);
             }
@@ -254,7 +254,7 @@ const AttendancePage = () => {
                 setRecentRecords(displayRecords);
                 
                 // Set today's record using the same logic
-                const today = new Date().toISOString().split('T')[0];
+                const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Phnom_Penh' }).format(new Date());
                 const todaysAttendanceRecord = fetchedRecords[today];
                 const rawTodayRecord: RawAttendanceRecord | undefined = todaysAttendanceRecord ? {
                   studentId: studentDataFromDb.studentId,
@@ -348,7 +348,9 @@ const AttendancePage = () => {
 
       try {
         // Get current month attendance records for the student
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+        const now = new Date();
+        const phnomPenhTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' }));
+        const currentMonth = phnomPenhTime.toISOString().slice(0, 7); // YYYY-MM format
         const attendanceQuery = query(
           collection(db, "attendance"),
           where("authUid", "==", studentUid),
@@ -417,13 +419,13 @@ const AttendancePage = () => {
   const formatDate = (timestamp: Timestamp | Date | undefined | null) => {
     if (!timestamp) return '';
     const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'Asia/Phnom_Penh' });
   };
 
   const formatTime = (timestamp: Timestamp | Date | undefined | null) => {
     if (!timestamp) return '';
     const date = timestamp instanceof Timestamp ? timestamp.toDate() : timestamp;
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Phnom_Penh' });
   };
      return (
      <>
@@ -520,7 +522,8 @@ const AttendancePage = () => {
                            weekday: 'long', 
                            year: 'numeric', 
                            month: 'long', 
-                           day: 'numeric' 
+                           day: 'numeric',
+                           timeZone: 'Asia/Phnom_Penh'
                          })}
                        </p>
                      </div>
@@ -631,7 +634,8 @@ const AttendancePage = () => {
                     <p className={khmerFont('text-white-900 text-sm font-medium')}>
                       {new Date(todayRecord.date).toLocaleDateString('en-US', { 
                         month: 'long', 
-                        day: 'numeric' 
+                        day: 'numeric',
+                        timeZone: 'Asia/Phnom_Penh'
                       })}
                     </p>
                   </div>
@@ -666,7 +670,7 @@ const AttendancePage = () => {
                         <p className={khmerFont('text-white/80 text-base leading-tight')}>
                           { t(todayRecord.status)}
                           {todayRecord.status === 'pending' && (
-                            <span className="ml-2 block sm:inline text-sm">Tap for QR code</span>
+                            <span className="ml-2 block sm:inline text-sm">{t('tapForQR')}</span>
                           )}
                           {todayRecord.timestamp && todayRecord.status !== 'pending' && (
                             <span className="ml-2 block sm:inline text-sm">at {formatTime(todayRecord.timestamp)}</span>
@@ -691,7 +695,7 @@ const AttendancePage = () => {
               <HealthArrivalChart
                  recentRecords={recentRecords}
                  studentData={studentData}
-                 selectedDate={new Date().toISOString().split('T')[0]}
+                 selectedDate={new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Phnom_Penh' }).format(new Date())}
                  classConfigs={allClassConfigs}
                  calculateMinutesFromStartTime={calculateMinutesFromStartTime}
                  getShiftInfo={getShiftInfo} />

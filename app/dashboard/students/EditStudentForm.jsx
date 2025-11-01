@@ -789,7 +789,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
           {capacityWarning && !onWaitlist && (
             <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <div className="flex items-start">
-                <Icon path={mdiAlertCircle} size={1} className="text-red-600 dark:text-red-400 mr-3 mt-1 flex-shrink-0" />
+                <Icon path={mdiAlertCircle} size={16} className="text-red-600 dark:text-red-400 mr-3 mt-1 flex-shrink-0" />
                 <div>
                   <p className="text-red-800 dark:text-red-300 font-medium">Class Full</p>
                   <p className="text-red-700 dark:text-red-400 text-sm mt-1">{capacityWarning}</p>
