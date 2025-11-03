@@ -23,7 +23,7 @@ export * from './filterUtils';
 
 // Components
 export { default as MockExamScoresTable } from './MockExamScoresTable';
-export { default as SubjectCompletionView } from './SubjectCompletionView';
+export { default as SimpleSubjectCompletionView } from './SimpleSubjectCompletionView';
 
 // Type definitions
 export interface StudentResult {

@@ -156,7 +156,7 @@ const TeacherDashboard = () => {
   };
 
   // Helper to check if teacher should only see morning/afternoon options
-  const shouldShowOnlyMorningAfternoon = (classTypes: string[]): boolean => {
+  const shouldShowOnlyMorningAfternoonEvening = (classTypes: string[]): boolean => {
     const eveningClassTypes = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11E', 'Grade 12E'];
     return !classTypes.some(classType => eveningClassTypes.includes(classType));
   };
@@ -531,10 +531,12 @@ const TeacherDashboard = () => {
             for (const shift of ['Morning', 'Afternoon', 'Evening']) {
               const shiftData = studentData[examDay][shift];
               if (shiftData?.room && shiftData?.seat) {
+                // Handle both string and number seat values
+                const normalizedSeat = typeof shiftData.seat === 'number' ? shiftData.seat.toString().padStart(2, '0') : shiftData.seat;
                 studentInfo = {
                   shift: shift,
                   room: parseInt(shiftData.room.replace('Room ', '')),
-                  seat: shiftData.seat
+                  seat: normalizedSeat
                 };
                 break;
               }
@@ -682,13 +684,17 @@ const TeacherDashboard = () => {
         if (studentData[examDay]) {
           // Check only the selected shift for matching room and seat
           const shiftData = studentData[examDay][searchShift];
-          if (shiftData && shiftData.room === roomNumber && shiftData.seat === searchSeat) {
-            studentDoc = doc;
-            foundShift = searchShift;
-            foundRoom = shiftData.room;
-            foundSeat = shiftData.seat;
-            studentFound = true;
-            break;
+          if (shiftData && shiftData.room === roomNumber) {
+            // Handle both string and number seat values
+            const dbSeat = typeof shiftData.seat === 'number' ? shiftData.seat.toString().padStart(2, '0') : shiftData.seat;
+            if (dbSeat === searchSeat) {
+              studentDoc = doc;
+              foundShift = searchShift;
+              foundRoom = shiftData.room;
+              foundSeat = dbSeat; // Use the normalized seat value
+              studentFound = true;
+              break;
+            }
           }
         }
       }
@@ -1210,9 +1216,10 @@ const TeacherDashboard = () => {
                     វេនប្រលង
                   </label>
                   <CustomCombobox
-                    options={shouldShowOnlyMorningAfternoon(teacherClassTypes) ? [
+                    options={shouldShowOnlyMorningAfternoonEvening(teacherClassTypes) ? [
                       { value: 'Morning', label: 'ព្រឹក' },
-                      { value: 'Afternoon', label: 'រសៀល' }
+                      { value: 'Afternoon', label: 'រសៀល' },
+                      { value: 'Evening', label: 'ល្ងាច' }
                     ] : [
                       { value: 'Evening', label: 'ល្ងាច' }
                     ]}

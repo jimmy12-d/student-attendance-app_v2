@@ -144,6 +144,143 @@ async function listAllCollections() {
   }
 }
 
+async function createGrade12ESettings() {
+  try {
+    console.log('\n� Creating examSettings documents for Grade 12E...\n');
+
+    const examSettingsRef = db.collection('examSettings');
+    const subjects = ['math', 'chemistry', 'physics', 'biology'];
+    
+    for (const subject of subjects) {
+      const docId = `mock1_Grade 12E_${subject}`;
+      
+      // Check if document already exists
+      const existingDoc = await examSettingsRef.doc(docId).get();
+      if (existingDoc.exists) {
+        console.log(`⚠️  Document ${docId} already exists, skipping...`);
+        continue;
+      }
+      
+      const docData = {
+        type: 'Grade 12E',
+        subject: subject,
+        maxScore: 75,
+        mock: 'mock1'
+      };
+      
+      console.log(`Creating document: ${docId}`);
+      console.log(`Data:`, JSON.stringify(docData, null, 2));
+      
+      await examSettingsRef.doc(docId).set(docData);
+      console.log(`✅ Created ${docId}\n`);
+    }
+    
+    console.log('✨ All Grade 12E examSettings documents created successfully!');
+  } catch (error) {
+    console.error('❌ Error creating Grade 12E settings:', error.message);
+  }
+}
+
+async function addSubjectFieldToMockExam1() {
+  try {
+    console.log('\n🔧 Adding subject field to mockExam1 documents...\n');
+
+    const mockExam1Ref = db.collection('mockExam1');
+    const snapshot = await mockExam1Ref.get();
+    
+    let updatedCount = 0;
+    let skippedCount = 0;
+    
+    // Define subject mapping based on classType
+    const subjectMapping = {
+      'Grade 7': 'math',
+      'Grade 8': 'math', 
+      'Grade 9': 'math',
+      'Grade 10': 'math',
+      'Grade 11A': 'math',
+      'Grade 11E': 'math',
+      'Grade 12': 'math',
+      'Grade 12E': 'math',
+      'Grade 12S': 'math'
+    };
+    
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const docId = doc.id;
+      
+      // Check if document already has any subject scores
+      const hasSubjectScores = [
+        'math', 'chemistry', 'physics', 'biology', 'history', 'khmer', 
+        'geometry', 'earth', 'geography', 'moral'
+      ].some(subject => data[subject] !== undefined);
+      
+      if (hasSubjectScores) {
+        console.log(`⏭️  Skipping ${docId} - already has subject scores`);
+        skippedCount++;
+        continue;
+      }
+      
+      // Get the subject based on classType
+      const classType = data.classType;
+      const subject = subjectMapping[classType] || 'math'; // default to math if classType not found
+      
+      // Add subject field with actual subject name
+      await mockExam1Ref.doc(docId).update({
+        subject: subject
+      });
+      
+      console.log(`✅ Added subject: "${subject}" to ${docId} (${classType})`);
+      updatedCount++;
+    }
+    
+    console.log(`\n📊 Summary:`);
+    console.log(`   Updated: ${updatedCount} documents`);
+    console.log(`   Skipped: ${skippedCount} documents`);
+    console.log(`   Total: ${snapshot.size} documents`);
+    
+    console.log('\n✨ Subject field addition completed successfully!');
+  } catch (error) {
+    console.error('❌ Error adding subject field:', error.message);
+  }
+}
+
+async function removeSubjectFieldFromMockExam1() {
+  try {
+    console.log('\n🗑️  Removing subject field from mockExam1 documents...\n');
+
+    const mockExam1Ref = db.collection('mockExam1');
+    const snapshot = await mockExam1Ref.get();
+
+    let updatedCount = 0;
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const docId = doc.id;
+
+      // Check if document has subject field
+      if (data.subject !== undefined) {
+        // Remove the subject field
+        await mockExam1Ref.doc(docId).update({
+          subject: admin.firestore.FieldValue.delete()
+        });
+
+        console.log(`✅ Removed subject field from ${docId}`);
+        updatedCount++;
+      } else {
+        console.log(`⏭️  No subject field found in ${docId}`);
+      }
+    }
+
+    console.log(`\n📊 Summary:`);
+    console.log(`   Updated: ${updatedCount} documents`);
+    console.log(`   Total: ${snapshot.size} documents`);
+
+    console.log('\n✨ Subject field removal completed successfully!');
+  } catch (error) {
+    console.error('❌ Error removing subject field:', error.message);
+  }
+}
+
 async function main() {
   try {
     const collections = await listAllCollections();
@@ -161,6 +298,39 @@ async function main() {
       await inspectCollection('mockExam1');
     }
     
+    // Inspect examSettings collection
+    if (collections.includes('examSettings')) {
+      console.log('\n\n📊 Inspecting examSettings collection...');
+      await inspectCollection('examSettings');
+      
+      // Also inspect a few examSettings documents in detail to see maxScore values
+      console.log('\n\n📊 Inspecting sample examSettings documents in detail...');
+      const examSettingsRef = db.collection('examSettings');
+      const sampleDocs = ['mock1_Grade 12_math', 'mock1_Grade 12_chemistry', 'mock1_Grade 12_physics', 'mock1_Grade 12_biology'];
+      
+      for (const docId of sampleDocs) {
+        const doc = await examSettingsRef.doc(docId).get();
+        if (doc.exists) {
+          console.log(`\n📄 Document ID: ${docId}`);
+          console.log(JSON.stringify(doc.data(), null, 2));
+        }
+      }
+    }
+    
+    // Inspect a few mockExam1 documents to see classType values
+    if (collections.includes('mockExam1')) {
+      console.log('\n\n📊 Inspecting sample mockExam1 documents to see classType values...');
+      const mockExam1Ref = db.collection('mockExam1');
+      const sampleSnapshot = await mockExam1Ref.limit(5).get();
+      
+      sampleSnapshot.forEach((doc) => {
+        console.log(`\n📄 Document ID: ${doc.id}`);
+        const data = doc.data();
+        console.log(`classType: ${data.classType}`);
+        console.log(`Has subject scores: ${['math', 'chemistry', 'physics', 'biology', 'history', 'khmer', 'geometry', 'earth', 'geography', 'moral'].some(subject => data[subject] !== undefined)}`);
+      });
+    }
+    
     // Inspect mockResults if it exists
     if (collections.includes('mockResults')) {
       console.log('\n\n📊 Inspecting first 3 documents from mockResults collection in detail...');
@@ -173,6 +343,12 @@ async function main() {
         console.log('---');
       });
     }
+    
+    // Create Grade 12E exam settings
+    await createGrade12ESettings();
+    
+    // Remove subject field from mockExam1 documents
+    await removeSubjectFieldFromMockExam1();
     
     console.log('\n✨ Inspection completed successfully!');
   } catch (error) {

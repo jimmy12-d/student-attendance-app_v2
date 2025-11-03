@@ -17,6 +17,8 @@ import {
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
+const customChartIcon = "M5.5 18C5.5 17.7239 5.72386 17.5 6 17.5H18C18.2761 17.5 18.5 17.7239 18.5 18C18.2761 18.5 18 18.5H6C5.72386 18.5 5.5 18.2761 5.5 18Z M6.5 11.5 L9.5 11.5 L9.5 18.5 L6.5 18.5 Z M10.5 5.5 L13.5 5.5 L13.5 18.5 L10.5 18.5 Z M14.5 8.5 L17.5 8.5 L17.5 18.5 L14.5 18.5 Z";
+
 const menuAside: MenuAsideItem[] = [
   {
     href: "/dashboard",
@@ -79,7 +81,7 @@ const menuAside: MenuAsideItem[] = [
       {
         href: "/dashboard/attendance-score",
         label: "Attendance Score",
-        icon: mdiChartLine,
+        icon: customChartIcon,
       },
     ]
   },

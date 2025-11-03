@@ -6,7 +6,6 @@ export const fetchCache = 'force-no-store';
 
 import React from 'react';
 import { mdiChartLine } from '@mdi/js';
-import { Toaster } from 'sonner';
 import SectionMain from '../../_components/Section/Main';
 import SectionTitleLineWithButton from '../../_components/Section/TitleLineWithButton';
 import { MockExamScoresTable } from './components';
@@ -14,7 +13,6 @@ import { MockExamScoresTable } from './components';
 const MockResultsPage = () => {
   return (
     <SectionMain>
-      <Toaster position="top-right" />
       <SectionTitleLineWithButton icon={mdiChartLine} title="Mock Exam Results" main>
       </SectionTitleLineWithButton>
 
