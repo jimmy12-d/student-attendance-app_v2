@@ -3,7 +3,6 @@
 import React, { useMemo, useState } from 'react';
 import { Radar } from 'react-chartjs-2';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTranslations } from 'next-intl';
 import {
   Chart as ChartJS,
   RadialLinearScale,
@@ -28,7 +27,7 @@ type ExamSettings = { [subject: string]: { maxScore: number } };
 type MockScores = { [subject: string]: number | 'absent' };
 type AllMockData = { [mockName: string]: MockScores };
 
-interface PerformanceRadarChartProps {
+interface PerformanceRadarChartPublicProps {
   allMockData: AllMockData;
   studentClassType?: string | null;
   allExamSettings?: { [mockName: string]: ExamSettings };
@@ -36,6 +35,25 @@ interface PerformanceRadarChartProps {
   studentName?: string | null;
   lastPaymentMonth?: string | null;
 }
+
+// Subject name mapping
+const SUBJECT_NAMES: { [key: string]: string } = {
+  khmer: 'Khmer',
+  math: 'Math',
+  english: 'English',
+  physics: 'Physics',
+  chemistry: 'Chemistry',
+  biology: 'Biology',
+  history: 'History',
+  geography: 'Geography',
+  moral: 'Moral',
+  physical_education: 'Physical Education',
+  earth_science: 'Earth Science',
+  earth: 'Earth Science',
+  homeroom: 'Homeroom',
+  science: 'Science',
+  geometry: 'Geometry'
+};
 
 // Default subject order, but will be dynamically determined based on examSettings
 // Order prioritizes: Grade 12S (khmer, math, history, moral, geography, earth), then science subjects
@@ -143,8 +161,7 @@ const CustomLegend = ({ datasets, totals, toggleDataset, hiddenDatasets }: any) 
     );
 };
 
-const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockData, studentClassType, allExamSettings, mockReadiness, studentName, lastPaymentMonth }) => {
-  const t = useTranslations('student.mockExam');
+const PerformanceRadarChartPublic: React.FC<PerformanceRadarChartPublicProps> = ({ allMockData, studentClassType, allExamSettings, mockReadiness, studentName, lastPaymentMonth }) => {
   const [hiddenDatasets, setHiddenDatasets] = useState<string[]>([]);
   const [isDark, setIsDark] = useState(true);
 
@@ -171,7 +188,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
   const toggleDataset = (label: string) => {
     setHiddenDatasets(prev => 
         prev.includes(label)
-            ? prev.filter(l => l !== label)
+            ? prev.filter(l => l !== l)
             : [...prev, label]
     );
   };
@@ -231,7 +248,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
     const SUBJECT_ORDER = subjectOrder.length > 0 ? subjectOrder : [];
     
     const labels = SUBJECT_ORDER.map(subject => {
-        return t(`subjects.${subject}`, { defaultValue: subject });
+        return SUBJECT_NAMES[subject] || subject.charAt(0).toUpperCase() + subject.slice(1);
     });
 
     const datasets: any[] = [];
@@ -248,7 +265,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
             return;
         }
 
-        // Don't display results if payment is not sufficient (< 2025-11), unless studen
+        // Don't display results if payment is not sufficient (< 2025-11), unless student name is test
         if (!hasNovemberPayment) {
             return;
         }
@@ -279,7 +296,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
     });
 
     return { labels, datasets };
-  }, [allMockData, hiddenDatasets, studentClassType, allExamSettings, mockReadiness, studentName, t]);
+  }, [allMockData, hiddenDatasets, studentClassType, allExamSettings, mockReadiness, studentName]);
   
   const chartOptions: any = useMemo(() => ({
     maintainAspectRatio: false,
@@ -328,7 +345,7 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
   if (chartData.datasets.length === 0) {
     return (
       <div className="relative bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-4 h-96 flex justify-center items-center">
-        <p className="text-gray-500 dark:text-slate-500">{t('notEnoughData')}</p>
+        <p className="text-gray-500 dark:text-slate-500">Not enough data to display chart</p>
       </div>
     );
   }
@@ -356,4 +373,4 @@ const PerformanceRadarChart: React.FC<PerformanceRadarChartProps> = ({ allMockDa
   );
 };
 
-export default PerformanceRadarChart; 
+export default PerformanceRadarChartPublic;

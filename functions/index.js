@@ -2060,6 +2060,62 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
 };
 
 /**
+ * Subject translations for Khmer display
+ */
+const SUBJECT_TRANSLATIONS = {
+    math: 'គណិតវិទ្យា',
+    khmer: 'ភាសាខ្មែរ',
+    chemistry: 'គីមីវិទ្យា',
+    physics: 'រូបវិទ្យា',
+    biology: 'ជីវវិទ្យា',
+    history: 'ប្រវត្តិវិទ្យា',
+    moral: 'សីលធម៌',
+    geography: 'ភូមិវិទ្យា',
+    earth: 'ផែនដីវិទ្យា',
+    geometry: 'ធរណីមាត្រ',
+    english: 'ភាសាអង់គ្លេស',
+};
+
+/**
+ * Calculate grade based on score and max score
+ */
+const calculateGrade = (score, maxScore) => {
+    if (!maxScore || maxScore === 0) return 'N/A';
+    const percentage = (score / maxScore) * 100;
+    
+    if (percentage >= 90) return 'A';
+    if (percentage >= 80) return 'B';
+    if (percentage >= 70) return 'C';
+    if (percentage >= 60) return 'D';
+    if (percentage >= 50) return 'E';
+    return 'F';
+};
+
+/**
+ * Calculate total grade based on all scores
+ */
+const calculateTotalGrade = (scores, maxScores) => {
+    const subjects = Object.keys(maxScores);
+    
+    if (subjects.length === 0) return 'N/A';
+    
+    let totalScore = 0;
+    let totalMaxScore = 0;
+    
+    subjects.forEach(subject => {
+        totalMaxScore += maxScores[subject] || 0;
+        
+        if (scores[subject] !== undefined && scores[subject] !== null && scores[subject] !== -1) {
+            totalScore += scores[subject];
+        }
+    });
+    
+    if (totalMaxScore === 0) return 'N/A';
+    
+    return calculateGrade(totalScore, totalMaxScore);
+};
+
+/**
  * Handle exam result selection
  */
 const handleExamResultSelection = async (bot, chatId, userId, messageId, callbackData) => {
@@ -2085,24 +2141,160 @@ const handleExamResultSelection = async (bot, chatId, userId, messageId, callbac
         const examData = examDoc.data();
         const examNameKhmer = examData.nameKhmer || examData.name || 'ប្រលងមិនដឹងឈ្មោះ';
 
-        // For now, return dummy text as requested
-        await bot.editMessageText(
-            `📊 **លទ្ធផលប្រលង: ${examNameKhmer}**\n\n` +
-            `🎯 នេះគឺជាទិន្នន័យសាកល្បង (Dummy Data)\n\n` +
-            `📈 **ព័ត៌មានលទ្ធផល:**\n` +
-            `• ពិន្ទុសរុប: ៨៥/១០០\n` +
-            `• ចំណាត់ថ្នាក់: A\n` +
-            `• ចំណាត់ថ្នាក់ក្នុងថ្នាក់: ៣/៤០\n` +
-            `• មតិយោបល់: សម្តែងបានល្អ\n\n` +
-            `📝 *ទិន្នន័យពិតប្រាកដនឹងត្រូវបានបន្ថែមនៅពេលក្រោយ*`,
-            {
-                chat_id: chatId,
-                message_id: messageId,
-                parse_mode: 'Markdown'
-            }
-        );
+        // Get parent's student information
+        const parentQuery = await db.collection('parentNotifications')
+            .where('telegramUserId', '==', userId.toString())
+            .where('isActive', '==', true)
+            .get();
 
-        logger.info(`Exam result ${examId} accessed by parent ${userId} for exam: ${examNameKhmer}`);
+        if (parentQuery.empty) {
+            await bot.editMessageText(
+                `❌ សូមទោស!\n\nបងមិនទាន់បានចុះឈ្មោះជាម្តាយឪពុកនៅឡើយទេ។`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown'
+                }
+            );
+            return;
+        }
+
+        // Get the first student ID (assuming parent has one student for now)
+        const parentData = parentQuery.docs[0].data();
+        const studentId = parentData.studentId;
+
+        // Get student data from mockExam1 collection
+        const mockExamQuery = await db.collection('mockExam1')
+            .where('studentId', '==', studentId)
+            .limit(1)
+            .get();
+
+        if (mockExamQuery.empty) {
+            await bot.editMessageText(
+                `📊 **លទ្ធផលប្រលង: ${examNameKhmer}**\n\n` +
+                `❌ មិនមានលទ្ធផលសម្រាប់សិស្សនេះនៅឡើយទេ។\n\n` +
+                `សូមទាក់ទងសាលាសម្រាប់ព័ត៌មានបន្ថែម។`,
+                {
+                    chat_id: chatId,
+                    message_id: messageId,
+                    parse_mode: 'Markdown'
+                }
+            );
+            return;
+        }
+
+        const mockExamData = mockExamQuery.docs[0].data();
+        const mock1Result = mockExamData.mock1Result || {};
+        
+        // Get student name and class
+        const studentName = mockExamData.fullName || mockExamData.khmerName || 'មិនដឹងឈ្មោះ';
+        const classType = mockExamData.classType || 'N/A';
+
+        // Fetch examSettings for max scores
+        const examSettingsQuery = await db.collection('examSettings')
+            .where('mock', '==', 'mock1')
+            .get();
+        
+        const examSettings = {};
+        examSettingsQuery.forEach(doc => {
+            const data = doc.data();
+            const key = `${data.type}_${data.subject}`;
+            examSettings[key] = data.maxScore;
+        });
+
+        // Helper function to get max score
+        const getMaxScore = (subject) => {
+            const normalizedClass = classType;
+            const key = `${normalizedClass}_${subject}`;
+            return examSettings[key] || 100;
+        };
+
+        // Process scores
+        const possibleSubjects = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'geometry', 'moral', 'geography', 'earth'];
+        const scores = {};
+        const maxScores = {};
+        let totalScore = 0;
+        let totalMaxScore = 0;
+        let subjectCount = 0;
+        let absentCount = 0;
+        let totalSubjectsInExam = 0; // Track total subjects in exam
+        
+        let resultMessage = `📊 **លទ្ធផលប្រលង: ${examNameKhmer}**\n\n`;
+        resultMessage += `👤 **សិស្ស:** ${studentName}\n`;
+        resultMessage += `🏫 **ថ្នាក់:** ${classType}\n\n`;
+
+        possibleSubjects.forEach(subject => {
+            if (mock1Result[subject] !== undefined) {
+                totalSubjectsInExam++; // Count total subjects in exam
+                const maxScore = getMaxScore(subject);
+                maxScores[subject] = maxScore;
+                
+                if (mock1Result[subject] === 'absent') {
+                    absentCount++;
+                    scores[subject] = 0; // Add 0 score for absent subjects
+                    totalScore += 0; // Add 0 for absent subjects
+                    totalMaxScore += maxScore;
+                    subjectCount++;
+                } else if (typeof mock1Result[subject] === 'number') {
+                    const score = mock1Result[subject];
+                    scores[subject] = score;
+                    totalScore += score;
+                    totalMaxScore += maxScore;
+                    subjectCount++;
+                }
+            }
+        });
+
+        // Check if all subjects are absent
+        if (totalSubjectsInExam > 0 && absentCount === totalSubjectsInExam) {
+            resultMessage += `⚠️ **កូនរបស់បងមិនបានប្រឡងនេះទេ**\n\n`;
+            resultMessage += `កូនរបស់បងអវត្តមានគ្រប់មុខវិជ្ជាទាំងអស់។\n`;
+            resultMessage += `សូមទាក់ទងគ្រូបង្រៀន ឬសាលាសម្រាប់ព័ត៌មានលម្អិត។`;
+        } else {
+            // Display subject results
+            resultMessage += `📈 **លទ្ធផលមុខវិជ្ជា:**\n`;
+            
+            possibleSubjects.forEach(subject => {
+                if (mock1Result[subject] !== undefined) {
+                    const maxScore = getMaxScore(subject);
+                    
+                    if (mock1Result[subject] === 'absent') {
+                        resultMessage += `• ${SUBJECT_TRANSLATIONS[subject] || subject}: ⚠️ អវត្តមាន\n`;
+                    } else if (typeof mock1Result[subject] === 'number') {
+                        const score = mock1Result[subject];
+                        const grade = calculateGrade(score, maxScore);
+                        resultMessage += `• ${SUBJECT_TRANSLATIONS[subject] || subject}: ${score}/${maxScore} - និទ្ទេស ${grade}\n`;
+                    }
+                }
+            });
+
+            // Add overall statistics
+            if (subjectCount > 0) {
+                const overallGrade = calculateTotalGrade(scores, maxScores);
+                const overallPercentage = ((totalScore / totalMaxScore) * 100).toFixed(1);
+                
+                resultMessage += `\n📊 **សង្ខេប:**\n`;
+                resultMessage += `• ពិន្ទុសរុប: ${totalScore.toFixed(1)}/${totalMaxScore}\n`;
+                resultMessage += `• ភាគរយ: ${overallPercentage}%\n`;
+                resultMessage += `• និទ្ទេសសរុប: ${overallGrade}\n`;
+                resultMessage += `• មុខវិជ្ជាសរុប: ${subjectCount}\n`;
+                
+                if (absentCount > 0) {
+                    resultMessage += `• អវត្តមាន: ${absentCount} មុខវិជ្ជា\n`;
+                }
+            } else {
+                resultMessage += `\n❌ មិនទាន់មានពិន្ទុនៅឡើយទេ។\n`;
+            }
+        }
+
+        await bot.editMessageText(resultMessage, {
+            chat_id: chatId,
+            message_id: messageId,
+            parse_mode: 'Markdown',
+            ...getParentBotMenuKeyboard()
+        });
+
+        logger.info(`Exam result ${examId} accessed by parent ${userId} for student ${studentId}: ${examNameKhmer}`);
 
     } catch (error) {
         logger.error('Error handling exam result selection:', error);
@@ -6584,8 +6776,8 @@ exports.scheduledAbsentParentNotifications = onSchedule({
         
         logger.info(`🕐 UTC time: ${now.toISOString()}, Phnom Penh time: ${phnomPenhTime.toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' })} (hour: ${currentHour})`);
         
-        // Get today's date in YYYY-MM-DD format for holiday check
-        const today = now.toISOString().split('T')[0];
+        // Get today's date in YYYY-MM-DD format for holiday check (using Phnom Penh timezone)
+        const today = `${phnomPenhTime.getFullYear()}-${String(phnomPenhTime.getMonth() + 1).padStart(2, '0')}-${String(phnomPenhTime.getDate()).padStart(2, '0')}`;
         
         // Check if today is a school day using centralized config
         if (!isSchoolDay(today)) {

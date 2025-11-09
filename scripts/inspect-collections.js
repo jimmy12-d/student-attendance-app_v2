@@ -281,75 +281,211 @@ async function removeSubjectFieldFromMockExam1() {
   }
 }
 
-async function main() {
+async function getAllUniqueFieldsInMockExam1() {
   try {
-    const collections = await listAllCollections();
+    console.log('\n🔍 Analyzing all unique fields in mockExam1 collection...\n');
     
-    // Check for mockResults or mockExam collections
-    const mockCollections = collections.filter(c => 
-      c.toLowerCase().includes('mock') || c.toLowerCase().includes('exam')
-    );
+    const mockExam1Ref = db.collection('mockExam1');
+    const snapshot = await mockExam1Ref.get();
     
-    console.log('\n📊 Mock/Exam related collections:', mockCollections);
+    const allFields = new Set();
     
-    // Inspect mockExam1 collection
-    if (collections.includes('mockExam1')) {
-      console.log('\n\n📊 Inspecting mockExam1 collection...');
-      await inspectCollection('mockExam1');
-    }
-    
-    // Inspect examSettings collection
-    if (collections.includes('examSettings')) {
-      console.log('\n\n📊 Inspecting examSettings collection...');
-      await inspectCollection('examSettings');
-      
-      // Also inspect a few examSettings documents in detail to see maxScore values
-      console.log('\n\n📊 Inspecting sample examSettings documents in detail...');
-      const examSettingsRef = db.collection('examSettings');
-      const sampleDocs = ['mock1_Grade 12_math', 'mock1_Grade 12_chemistry', 'mock1_Grade 12_physics', 'mock1_Grade 12_biology'];
-      
-      for (const docId of sampleDocs) {
-        const doc = await examSettingsRef.doc(docId).get();
-        if (doc.exists) {
-          console.log(`\n📄 Document ID: ${docId}`);
-          console.log(JSON.stringify(doc.data(), null, 2));
+    function extractFields(obj, prefix = '') {
+      for (const key in obj) {
+        const fullPath = prefix ? `${prefix}.${key}` : key;
+        allFields.add(fullPath);
+        
+        const value = obj[key];
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          // Check if it's a Firestore Timestamp
+          if (value.toDate && typeof value.toDate === 'function') {
+            // It's a timestamp, don't recurse
+            continue;
+          }
+          // Recurse into nested objects
+          extractFields(value, fullPath);
         }
       }
     }
     
-    // Inspect a few mockExam1 documents to see classType values
-    if (collections.includes('mockExam1')) {
-      console.log('\n\n📊 Inspecting sample mockExam1 documents to see classType values...');
-      const mockExam1Ref = db.collection('mockExam1');
-      const sampleSnapshot = await mockExam1Ref.limit(5).get();
-      
-      sampleSnapshot.forEach((doc) => {
-        console.log(`\n📄 Document ID: ${doc.id}`);
-        const data = doc.data();
-        console.log(`classType: ${data.classType}`);
-        console.log(`Has subject scores: ${['math', 'chemistry', 'physics', 'biology', 'history', 'khmer', 'geometry', 'earth', 'geography', 'moral'].some(subject => data[subject] !== undefined)}`);
-      });
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      extractFields(data);
+    });
+    
+    // Convert Set to sorted array
+    const sortedFields = Array.from(allFields).sort();
+    
+    console.log(`📊 Total unique fields found: ${sortedFields.length}\n`);
+    console.log('📋 List of all unique fields:\n');
+    
+    sortedFields.forEach((field, index) => {
+      console.log(`  ${index + 1}. ${field}`);
+    });
+    
+    // Categorize fields
+    console.log('\n\n📊 Field Categories:\n');
+    
+    const categories = {
+      basic: [],
+      schedule: [],
+      scores: [],
+      metadata: [],
+      other: []
+    };
+    
+    sortedFields.forEach(field => {
+      if (['fullName', 'studentId', 'khmerName', 'classType', 'uploadedAt'].includes(field)) {
+        categories.basic.push(field);
+      } else if (field.startsWith('day1') || field.startsWith('day2') || field.startsWith('day3')) {
+        categories.schedule.push(field);
+      } else if (field.includes('_teacher') || field.includes('_timestamp') || 
+                 ['math', 'chemistry', 'physics', 'biology', 'history', 'khmer', 'english', 
+                  'geometry', 'earth', 'geography', 'moral'].some(subject => field.startsWith(subject))) {
+        categories.scores.push(field);
+      } else if (['updatedAt', 'createdAt'].includes(field)) {
+        categories.metadata.push(field);
+      } else {
+        categories.other.push(field);
+      }
+    });
+    
+    console.log('🏷️  Basic Info Fields:', categories.basic.length);
+    categories.basic.forEach(f => console.log(`    - ${f}`));
+    
+    console.log('\n� Schedule Fields:', categories.schedule.length);
+    console.log(`    (${categories.schedule.length} schedule-related fields)`);
+    
+    console.log('\n📊 Score-related Fields:', categories.scores.length);
+    categories.scores.forEach(f => console.log(`    - ${f}`));
+    
+    console.log('\n⏰ Metadata Fields:', categories.metadata.length);
+    categories.metadata.forEach(f => console.log(`    - ${f}`));
+    
+    if (categories.other.length > 0) {
+      console.log('\n❓ Other Fields:', categories.other.length);
+      categories.other.forEach(f => console.log(`    - ${f}`));
     }
     
-    // Inspect mockResults if it exists
-    if (collections.includes('mockResults')) {
-      console.log('\n\n📊 Inspecting first 3 documents from mockResults collection in detail...');
-      const mockResultsRef = db.collection('mockResults');
-      const snapshot = await mockResultsRef.limit(3).get();
-      
-      snapshot.forEach((doc) => {
-        console.log(`\n📄 Document ID: ${doc.id}`);
-        console.log(JSON.stringify(doc.data(), null, 2));
-        console.log('---');
+    return sortedFields;
+    
+  } catch (error) {
+    console.error('❌ Error analyzing fields:', error.message);
+    return [];
+  }
+}
+
+async function countStudentsByClassAndShift() {
+  try {
+    console.log('\n🔍 Counting students in Class 12 with morning/afternoon shifts...\n');
+
+    const studentsRef = db.collection('students');
+
+    // First, let's get a sample of students to understand the classType format
+    console.log('🔍 Getting sample of students to understand data structure...\n');
+    const sampleSnapshot = await studentsRef.limit(10).get();
+
+    console.log('📋 Sample student records:');
+    sampleSnapshot.forEach((doc) => {
+      const data = doc.data();
+      console.log(`   ID: ${doc.id}`);
+      console.log(`   classType: "${data.classType || 'N/A'}"`);
+      console.log(`   shift: "${data.shift || 'N/A'}"`);
+      console.log(`   fullName: "${data.fullName || 'N/A'}"`);
+      console.log('   ---');
+    });
+
+    // Since Firestore requires composite indexes for complex queries,
+    // we'll fetch all students and filter client-side
+    console.log('\n🔍 Fetching all students for client-side filtering...\n');
+    const allSnapshot = await studentsRef.get();
+
+    console.log(`📊 Retrieved ${allSnapshot.size} total students from database\n`);
+
+    const matchingStudents = [];
+    const breakdown = {};
+
+    allSnapshot.forEach((doc) => {
+      const data = doc.data();
+      const classType = data.classType || '';
+      const shift = data.shift || '';
+
+      // Check if classType starts with "Grade 12" and shift is Morning or Afternoon
+      if (classType.startsWith('Grade 12') && (shift === 'Morning' || shift === 'Afternoon')) {
+        const key = `${classType} - ${shift}`;
+        if (!breakdown[key]) {
+          breakdown[key] = [];
+        }
+        breakdown[key].push({
+          id: doc.id,
+          fullName: data.fullName || 'N/A',
+          studentId: data.studentId || 'N/A'
+        });
+
+        matchingStudents.push({
+          id: doc.id,
+          data: data,
+          classType: classType,
+          shift: shift
+        });
+      }
+    });
+
+    const totalCount = matchingStudents.length;
+    console.log(`📊 Found ${totalCount} students matching the criteria:\n`);
+
+    // Display breakdown
+    Object.entries(breakdown).forEach(([category, students]) => {
+      console.log(`\n📚 ${category}: ${students.length} students`);
+      students.slice(0, 5).forEach(student => {  // Show first 5 students per category
+        console.log(`   - ${student.fullName} (${student.studentId})`);
       });
+      if (students.length > 5) {
+        console.log(`   ... and ${students.length - 5} more students`);
+      }
+    });
+
+    console.log(`\n📈 Total: ${totalCount} students across all matching classes and shifts`);
+
+    return {
+      total: totalCount,
+      breakdown: breakdown
+    };
+
+  } catch (error) {
+    console.error('❌ Error counting students:', error.message);
+    return { total: 0, breakdown: {} };
+  }
+}
+
+async function main() {
+  try {
+    const collections = await listAllCollections();
+
+    // Inspect students collection
+    if (collections.includes('students')) {
+      console.log('\n🔍 Inspecting students collection...\n');
+      await inspectCollection('students');
+    } else {
+      console.log('\n⚠️  students collection not found');
     }
-    
-    // Create Grade 12E exam settings
-    await createGrade12ESettings();
-    
-    // Remove subject field from mockExam1 documents
-    await removeSubjectFieldFromMockExam1();
-    
+
+    // Count students by class and shift
+    if (collections.includes('students')) {
+      console.log('\n🔍 Counting students collection...\n');
+      await countStudentsByClassAndShift();
+    } else {
+      console.log('\n⚠️  students collection not found');
+    }
+
+    // Inspect examSettings collection
+    if (collections.includes('examSettings')) {
+      console.log('\n🔍 Inspecting examSettings collection...\n');
+      await inspectCollection('examSettings');
+    } else {
+      console.log('\n⚠️  examSettings collection not found');
+    }
+
     console.log('\n✨ Inspection completed successfully!');
   } catch (error) {
     console.error('\n💥 Inspection failed:', error);
@@ -362,4 +498,4 @@ if (require.main === module) {
   main().then(() => process.exit(0));
 }
 
-module.exports = { inspectCollection, analyzeDocumentStructure, inspectFormDocument, listAllCollections };
+module.exports = { inspectCollection, analyzeDocumentStructure, inspectFormDocument, listAllCollections, countStudentsByClassAndShift };

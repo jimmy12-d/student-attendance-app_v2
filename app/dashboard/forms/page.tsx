@@ -62,6 +62,8 @@ const FormsListPage = () => {
   const [loading, setLoading] = useState(true);
   const [previewForm, setPreviewForm] = useState<Form | null>(null);
   const [deleteModal, setDeleteModal] = useState<{show: boolean, form: FormWithResponseStatus | null}>({show: false, form: null});
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   useEffect(() => {
     const formsQuery = query(
@@ -208,6 +210,16 @@ const FormsListPage = () => {
     return deadlineDate < new Date();
   };
 
+  // Pagination logic
+  const totalPages = Math.ceil(forms.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentForms = forms.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 nokora-font">
@@ -322,7 +334,7 @@ const FormsListPage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {forms.map((form, index) => {
+            {currentForms.map((form, index) => {
               const expired = isExpired(form.deadline);
               const hasResponses = (form.responseCount || 0) > 0;
               const formTypeConfig = getFormTypeConfig(form.formType || 'general');
@@ -544,6 +556,33 @@ const FormsListPage = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {forms.length > itemsPerPage && (
+          <div className="mt-6 flex justify-center">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
       </div>

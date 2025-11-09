@@ -12,8 +12,8 @@ import {
   mdiAccountPlus,
   mdiStar,
   mdiBellOutline,
+  mdiAccountTie,
   mdiFormSelect,
-  mdiAccountTie
 } from "@mdi/js";
 import { MenuAsideItem } from "../../_interfaces";
 
@@ -118,6 +118,16 @@ const menuAside: MenuAsideItem[] = [
         href: "/dashboard/events",
         label: "Events",
         icon: mdiBellOutline,
+      },
+      {
+        href: "/dashboard/forms",
+        label: "Forms",
+        icon: mdiFormSelect,
+      },
+      {
+        href: "/dashboard/appointments",
+        label: "Appointments",
+        icon: mdiCalendarClock,
       },
     ]
   },

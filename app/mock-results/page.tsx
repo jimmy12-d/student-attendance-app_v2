@@ -11,14 +11,14 @@ import dynamic from 'next/dynamic';
 // Reusable Components
 import CardBox from "@/app/_components/CardBox";
 import Button from "@/app/_components/Button";
-import MockExamResults from "@/app/student/mock-exam/_components/MockExamResults";
+import MockExamResultsPublic from "@/app/mock-results/_components/MockExamResultsPublic";
 import PerformanceRadarChartSkeleton from "@/app/student/mock-exam/_components/PerformanceRadarChartSkeleton";
 
 // Hooks
 import useCountUp from "@/app/_hooks/useCountUp";
 
 // Dynamic imports
-const PerformanceRadarChart = dynamic(() => import('@/app/student/mock-exam/_components/PerformanceRadarChart'), {
+const PerformanceRadarChartPublic = dynamic(() => import('@/app/mock-results/_components/PerformanceRadarChartPublic'), {
   ssr: false,
   loading: () => <PerformanceRadarChartSkeleton />
 });
@@ -68,13 +68,14 @@ const getGradeDependentStyles = (grade: string) => {
     }
 };
 
-const SUBJECT_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'english'];
+const SUBJECT_ORDER = ['math', 'khmer', 'geometry', 'chemistry', 'physics', 'biology', 'history', 'english'];
 const SOCIAL_STUDIES_LABELS: { [key: string]: string } = {
   math: 'Khmer',
   khmer: 'Math', 
+  geometry: 'Geometry',
   chemistry: 'History',
   physics: 'Moral',
-  biology: 'Geometry',
+  biology: 'Biology',
   history: 'Earth',
   english: 'English',
 };
@@ -116,6 +117,7 @@ export default function Mock3ResultPage() {
   const [mock4Ready, setMock4Ready] = useState(false);
   const [availableMocks, setAvailableMocks] = useState<string[]>([]);
   const [mockReadiness, setMockReadiness] = useState<{ [mockId: string]: boolean }>({});
+  const [lastPaymentMonth, setLastPaymentMonth] = useState<string | null>(null);
 
   const handleFetchResult = async () => {
     if (!id || !/^\d{4,5}$/.test(id.trim())) {
@@ -132,8 +134,8 @@ export default function Mock3ResultPage() {
     setAllExamSettings({});
 
     try {
-      // Direct document access - much faster!
-      const docRef = doc(db, "mockResults", id.trim());
+      // Direct document access from mockExam1 collection
+      const docRef = doc(db, "mockExam1", id.trim());
       const docSnap = await getDoc(docRef);
 
       if (!docSnap.exists()) {
@@ -141,7 +143,49 @@ export default function Mock3ResultPage() {
         return;
       }
 
-      const mockData = docSnap.data() as MockResultsData;
+      const rawData = docSnap.data();
+      
+      // Fetch student's actual class and shift from students collection
+      let actualClass = rawData.classType || 'N/A';
+      let actualShift = rawData.shift || 'N/A';
+      let studentLastPaymentMonth: string | null = null;
+      
+      try {
+        // Use studentId from mockExam1 document to fetch from students collection
+        const actualStudentId = rawData.studentId || id.trim();
+        const studentRef = doc(db, "students", actualStudentId);
+        const studentSnap = await getDoc(studentRef);
+        
+        if (studentSnap.exists()) {
+          const studentInfo = studentSnap.data();
+          actualClass = studentInfo.class || actualClass;
+          actualShift = studentInfo.shift || actualShift;
+          studentLastPaymentMonth = studentInfo.lastPaymentMonth || null;
+        }
+      } catch (error) {
+        console.warn('Could not fetch student details:', error);
+      }
+      
+      setLastPaymentMonth(studentLastPaymentMonth);
+      
+      // Transform mockExam1 data structure to match MockResultsData type
+      const mockData: MockResultsData = {
+        fullName: rawData.fullName || 'Unknown',
+        studentId: rawData.studentId || id.trim(),
+        phone: rawData.phone || 'N/A',
+        class: actualClass,
+        shift: actualShift,
+        room: rawData.room || 0,
+        roomLabel: rawData.roomLabel || 'N/A',
+        seat: rawData.seat || 'N/A',
+        mockResults: {
+          mock_1: rawData.mock1Result || {},
+          mock_2: rawData.mock2Result || {},
+          mock_3: rawData.mock3Result || {},
+          mock_4: rawData.mock4Result || {}
+        }
+      };
+      
       setStudentData(mockData);
 
       // Check which mocks are ready for students
@@ -191,26 +235,46 @@ export default function Mock3ResultPage() {
       }
 
       // Set current mock scores and all mock scores
-      const currentMockScores = mockData.mockResults.mock_3;
+      // Convert score values: handle "absent" strings by converting to 0 for display
+      const processScores = (scores: any) => {
+        const processed: ExamScores = {};
+        Object.keys(scores).forEach(subject => {
+          const score = scores[subject];
+          // Handle absent, -1, or invalid scores
+          if (score === 'absent' || score === -1 || score === null || score === undefined) {
+            processed[subject] = 0;
+          } else if (typeof score === 'number') {
+            processed[subject] = score;
+          } else {
+            processed[subject] = 0;
+          }
+        });
+        return processed;
+      };
+      
+      const currentMockScores = processScores(mockData.mockResults.mock_3 || {});
       setExamScores(currentMockScores);
       
       const allScores: AllMockScores = {
-        mock1: mockData.mockResults.mock_1,
-        mock2: mockData.mockResults.mock_2,
-        mock3: mockData.mockResults.mock_3
+        mock1: processScores(mockData.mockResults.mock_1 || {}),
+        mock2: processScores(mockData.mockResults.mock_2 || {}),
+        mock3: processScores(mockData.mockResults.mock_3 || {})
       };
       
       // Add mock4 if it exists in the data
-      if (mockData.mockResults && (mockData.mockResults as any).mock_4) {
-        (allScores as any).mock4 = (mockData.mockResults as any).mock_4;
+      if (mockData.mockResults && mockData.mockResults.mock_4) {
+        (allScores as any).mock4 = processScores(mockData.mockResults.mock_4 || {});
       }
       
       setAllMockScores(allScores);
 
-      // Determine student class type from class name
-      let studentClassType = 'Grade 12 Science'; // default
-      if (mockData.class) {
-        const className = mockData.class;
+      // Determine student class type for exam settings
+      // In mockExam1, classType already contains the grade type we need
+      let studentClassType = rawData.classType || 'Grade 12 Science';
+      
+      // If classType is not set or seems like a class name, derive it from actualClass
+      if (!rawData.classType || rawData.classType.startsWith('Class ')) {
+        const className = actualClass;
         
         if (className.startsWith('Class 7')) {
           studentClassType = "Grade 7";
@@ -265,7 +329,7 @@ export default function Mock3ResultPage() {
                        highestMock === 'mock3' ? 'mock_3' : 'mock_4';
         
         if (mockData.mockResults && (mockData.mockResults as any)[mockKey]) {
-          setExamScores((mockData.mockResults as any)[mockKey]);
+          setExamScores(processScores((mockData.mockResults as any)[mockKey]));
         }
       }
 
@@ -332,7 +396,23 @@ export default function Mock3ResultPage() {
                      tab === 'mock3' ? 'mock_3' : 'mock_4';
       
       if (studentData.mockResults && (studentData.mockResults as any)[mockKey]) {
-        setExamScores((studentData.mockResults as any)[mockKey]);
+        // Process scores to handle "absent" values
+        const processScores = (scores: any) => {
+          const processed: ExamScores = {};
+          Object.keys(scores).forEach(subject => {
+            const score = scores[subject];
+            if (score === 'absent' || score === -1 || score === null || score === undefined) {
+              processed[subject] = 0;
+            } else if (typeof score === 'number') {
+              processed[subject] = score;
+            } else {
+              processed[subject] = 0;
+            }
+          });
+          return processed;
+        };
+        
+        setExamScores(processScores((studentData.mockResults as any)[mockKey]));
         setExamSettings(allExamSettings[tab]);
       }
     }
@@ -399,86 +479,10 @@ export default function Mock3ResultPage() {
               <p className="text-slate-600 dark:text-slate-400">View your performance across all mock exams</p>
             </div>
 
-            {/* Mock 4 Preparation Section */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl px-6 py-4 border border-blue-200 dark:border-slate-600 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-blue-500 dark:bg-blue-600 rounded-full p-2">
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">Mock 4 Details</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Your exam arrangement details</p>
-                  </div>
-                </div>
-                <div className={`${mock4Ready ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200'} px-3 py-1 rounded-full text-sm font-medium`}>
-                  {mock4Ready ? 'Ready' : 'Pending'}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white dark:bg-slate-600 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-12-7z" />
-                    </svg>
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Student</span>
-                  </div>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{studentData.fullName}</p>
-                </div>
-                
-                <div className="bg-white dark:bg-slate-600 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 8h7" />
-                    </svg>
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Room</span>
-                  </div>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{studentData.roomLabel}</p>
-                </div>
-                
-                <div className="bg-white dark:bg-slate-600 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Phone (Pocket)</span>
-                  </div>
-                  <p className="font-bold text-slate-800 dark:text-slate-200 text-lg">{studentData.phone}</p>
-                </div>
-                
-                {mock4Ready ? (
-                  <div className="bg-white dark:bg-slate-600 rounded-lg p-4 shadow-sm">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Seat</span>
-                    </div>
-                    <p className="font-bold text-slate-800 dark:text-slate-200 text-xl">{studentData.seat}</p>
-                  </div>
-                ) : (
-                  <div className="bg-gray-100 dark:bg-slate-700 rounded-lg p-4 shadow-sm opacity-60">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="text-xs font-medium text-gray-400">Seat</span>
-                    </div>
-                    <p className="font-bold text-gray-400 text-sm">Will be shown on Monday</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Enhanced Results Section */}
             <div className="flex justify-center">
               <div className="w-full max-w-4xl">
-                <MockExamResults
+                <MockExamResultsPublic
                   availableTabs={availableTabs}
                   selectedTab={selectedTab}
                   handleTabChange={handleTabChange}
@@ -496,6 +500,7 @@ export default function Mock3ResultPage() {
                   phoneInfo={null}
                   studentName={studentData.fullName}
                   isReadyToPublishResult={mockReadiness[selectedTab] || false}
+                  lastPaymentMonth={lastPaymentMonth}
                 />
               </div>
             </div>
@@ -506,13 +511,15 @@ export default function Mock3ResultPage() {
               {isAllMocksLoading ? (
                   <PerformanceRadarChartSkeleton />
               ) : (
-                  <PerformanceRadarChart 
+                  <PerformanceRadarChartPublic 
                     allMockData={Object.fromEntries(
                       Object.entries(allMockScores).filter(([key]) => availableMocks.includes(key))
                     )}
                     studentClassType={studentData.class.includes('12R') || studentData.class.includes('12S') || studentData.class.includes('12T') ? "Grade 12 Social" : "Grade 12"} 
                     allExamSettings={allExamSettings}
                     mockReadiness={mockReadiness}
+                    studentName={studentData.fullName}
+                    lastPaymentMonth={lastPaymentMonth}
                   />
               )}
             </div>

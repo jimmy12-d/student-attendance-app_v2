@@ -185,7 +185,6 @@ export default function AsideMenuLayer({
         <div className="relative border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <div className="p-2">
             <ul className="flex flex-col space-y-0.5 list-none">
-              <AsideMenuItem item={formItem} onRouteChange={props.onRouteChange} />
               <AsideMenuItem item={paymentSummaryItem} onRouteChange={props.onRouteChange} />
               <AsideMenuItem item={notificationItem} onRouteChange={props.onRouteChange} />
               <AsideMenuItem item={logoutItem} onRouteChange={props.onRouteChange} />

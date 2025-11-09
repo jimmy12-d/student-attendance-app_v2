@@ -217,7 +217,7 @@ export const MarkAbsentView: React.FC<MarkAbsentViewProps> = ({
 
           // Convert subject names to lowercase for Firebase field names
           selectedSubjects.forEach(subject => {
-            updates[subject.toLowerCase()] = 'absent';
+            updates[`mock1Result.${subject.toLowerCase()}`] = 'absent';
           });
 
           batch.update(docRef, updates);

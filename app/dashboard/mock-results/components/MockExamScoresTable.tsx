@@ -18,6 +18,8 @@ import { toast } from 'sonner';
 import Button from '../../../_components/Button';
 import SimpleSubjectCompletionView from './SimpleSubjectCompletionView';
 import MarkAbsentView from './MarkAbsentView';
+import CustomCombobox from '../../../_components/CustomCombobox';
+import { sortGrades } from './subjectConfig';
 
 // Types
 interface FormResponse {
@@ -120,27 +122,64 @@ const SUBJECT_DISPLAY_NAMES: { [key: string]: string } = {
   'Earth': 'Earth',
 };
 
-// Determine subjects based on class with specific ordering
-const getSubjectsForClass = (classType: string): string[] => {
+// Determine subjects based on class - now dynamically from examSettings
+const getSubjectsForClass = (classType: string, examSettingsMap: { [key: string]: number } = {}): string[] => {
+  // Extract subjects from examSettings for this classType
+  const subjects: string[] = [];
   
-  const lowerClass = classType.toLowerCase();
+  // Get all keys that match this classType
+  Object.keys(examSettingsMap).forEach(key => {
+    // Key format: "Grade 12_math"
+    const parts = key.split('_');
+    if (parts.length >= 2) {
+      const keyClassType = parts[0]; // "Grade 12"
+      const subject = parts[1]; // "math"
+      
+      if (keyClassType === classType) {
+        // Capitalize first letter
+        const capitalizedSubject = subject.charAt(0).toUpperCase() + subject.slice(1);
+        if (!subjects.includes(capitalizedSubject)) {
+          subjects.push(capitalizedSubject);
+        }
+      }
+    }
+  });
   
-  // Check for Grade 12 Social
-  if (lowerClass.includes('grade 12 social') || 
-      (lowerClass.includes('12') && lowerClass.includes('social'))) {
-    return ['Khmer', 'Math', 'History', 'Moral', 'Geography', 'Earth'];
-  } 
-  // Check for Grade 12, 11E, or 11 (Science)
-  else if (lowerClass.includes('grade 12') || lowerClass.includes('grade 11e') || 
-           lowerClass.includes('grade 11')) {
-    return ['Math', 'Khmer', 'Chemistry', 'Physics', 'Biology', 'History'];
-  } 
-  // Check for Grade 7-10
-  else if (lowerClass.match(/grade\s*[7-9]|grade\s*10/i)) {
-    return ['Math', 'Geometry', 'Chemistry', 'Physics'];
-  }
+  // Define subject ordering for consistent display
+  // Different ordering for Social (12S) vs Science classes
+  const isSocialClass = classType.toLowerCase().includes('12s') || 
+                        classType.toLowerCase().includes('social');
   
-  return [];
+  const subjectOrder: { [key: string]: number } = isSocialClass ? {
+    // Social class order: Khmer first, then Math
+    'Khmer': 1,
+    'Math': 2,
+    'History': 3,
+    'Moral': 4,
+    'Geography': 5,
+    'Earth': 6
+  } : {
+    // Science class order: Math first, then Khmer
+    'Math': 1,
+    'Khmer': 2,
+    'Chemistry': 3,
+    'Physics': 4,
+    'Biology': 5,
+    'History': 6,
+    'Geometry': 7,
+    'Moral': 8,
+    'Geography': 9,
+    'Earth': 10
+  };
+  
+  // Sort subjects by predefined order
+  subjects.sort((a, b) => {
+    const orderA = subjectOrder[a] || 999;
+    const orderB = subjectOrder[b] || 999;
+    return orderA - orderB;
+  });
+  
+  return subjects;
 };
 
 // Column label mapping based on subject position
@@ -154,53 +193,12 @@ const COLUMN_LABELS = [
 ];
 
 // Get column label for a subject based on class type
-const getColumnLabel = (subject: string, className: string): string => {
-  const subjects = getSubjectsForClass(className);
+const getColumnLabel = (subject: string, className: string, examSettingsMap: { [key: string]: number } = {}): string => {
+  const subjects = getSubjectsForClass(className, examSettingsMap);
   const position = subjects.indexOf(subject);
   
   if (position === -1) return subject;
   return COLUMN_LABELS[position] || subject;
-};
-
-// Normalize class type to match examSettings format
-const normalizeClassType = (classType: string): string => {
-  const lowerClass = classType.toLowerCase();
-  
-  // Check for Grade 12 Social
-  if (lowerClass.includes('grade 12 social') || 
-      (lowerClass.includes('12') && (lowerClass.includes('social') || lowerClass.includes('s')))) {
-    return 'Grade 12 Social';
-  }
-  // Check for Grade 12 (Science)
-  else if (lowerClass.includes('grade 12')) {
-    return 'Grade 12';
-  }
-  // Check for Grade 11E
-  else if (lowerClass.includes('grade 11e') || lowerClass.includes('11e')) {
-    return 'Grade 11E';
-  }
-  // Check for Grade 11A or Grade 11
-  else if (lowerClass.includes('grade 11')) {
-    return 'Grade 11A';
-  }
-  // Check for Grade 10
-  else if (lowerClass.includes('grade 10') || lowerClass.match(/\b10\b/)) {
-    return 'Grade 10';
-  }
-  // Check for Grade 9
-  else if (lowerClass.includes('grade 9') || lowerClass.match(/\b9\b/)) {
-    return 'Grade 9';
-  }
-  // Check for Grade 8
-  else if (lowerClass.includes('grade 8') || lowerClass.match(/\b8\b/)) {
-    return 'Grade 8';
-  }
-  // Check for Grade 7
-  else if (lowerClass.includes('grade 7') || lowerClass.match(/\b7\b/)) {
-    return 'Grade 7';
-  }
-  
-  return classType; // Return original if no match
 };
 
 // Grade calculation function
@@ -288,6 +286,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
   const [filteredData, setFilteredData] = useState<ScoreData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClassType, setSelectedClassType] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [sortField, setSortField] = useState<string>('');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -324,9 +323,8 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
 
   // Get maxScore for a specific subject and class type
   const getMaxScore = (classType: string, subject: string, settingsMap: { [key: string]: number }): number => {
-    const normalizedClass = normalizeClassType(classType);
     const normalizedSubject = subject.toLowerCase();
-    const key = `${normalizedClass}_${normalizedSubject}`;
+    const key = `${classType}_${normalizedSubject}`;
     
     const maxScore = settingsMap[key];
     if (maxScore !== undefined) {
@@ -395,7 +393,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
         let scoreCount = 0;
         
         // Get all subjects for this class to ensure maxScores includes all subjects
-        const allSubjects = getSubjectsForClass(classType);
+        const allSubjects = getSubjectsForClass(classType, settingsMap);
         
         // Initialize maxScores for all subjects in the class
         allSubjects.forEach(subject => {
@@ -466,7 +464,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
       const snapshot = await getDocs(mockExamQuery);
       const processedData: ScoreData[] = [];
       
-      // Subject fields that might contain scores in mockExam1
+      // Subject fields that might contain scores in mockExam1 - now in mock1Result
       const possibleSubjects = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'geometry', 'moral', 'geography', 'earth'];
       
       // Fetch all students at once and create a lookup map
@@ -502,7 +500,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
           ? studentsMap.get(data.studentId)! 
           : { class: data.classType || 'N/A', shift: 'N/A' };
         
-        // Extract scores from the document
+        // Extract scores from the document - now from mock1Result
         const scores: { [subject: string]: number } = {};
         const maxScores: { [subject: string]: number } = {};
         const teacherFields: { [key: string]: any } = {}; // Store teacher-related fields
@@ -512,7 +510,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
         const classType = data.classType || 'N/A';
         
         // Get all subjects for this class to ensure maxScores includes all subjects
-        const allSubjects = getSubjectsForClass(classType);
+        const allSubjects = getSubjectsForClass(classType, settingsMap);
         
         // Initialize maxScores for all subjects in the class
         allSubjects.forEach(subject => {
@@ -520,19 +518,22 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
           maxScores[subject] = getMaxScore(classType, subjectLower, settingsMap);
         });
         
+        // Read from mock1Result structure
+        const mock1Result = data.mock1Result || {};
+        
         possibleSubjects.forEach((subject) => {
-          if (data[subject] !== undefined) {
+          if (mock1Result[subject] !== undefined) {
             // Check if value is "absent" or a number
-            if (data[subject] === 'absent') {
+            if (mock1Result[subject] === 'absent') {
               // Store as special value to indicate absence
               const subjectName = subject.charAt(0).toUpperCase() + subject.slice(1);
               scores[subjectName] = -1; // Use -1 to indicate absent
               // maxScores already initialized above
-            } else if (typeof data[subject] === 'number') {
+            } else if (typeof mock1Result[subject] === 'number') {
               // Capitalize first letter for consistency
               const subjectName = subject.charAt(0).toUpperCase() + subject.slice(1);
-              scores[subjectName] = data[subject];
-              totalScore += data[subject];
+              scores[subjectName] = mock1Result[subject];
+              totalScore += mock1Result[subject];
               scoreCount++;
               
               // maxScores already initialized above
@@ -541,14 +542,14 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
             // Store teacher field if it exists (e.g., physics_teacher -> Physics_teacher)
             const subjectName = subject.charAt(0).toUpperCase() + subject.slice(1);
             const teacherFieldName = `${subject}_teacher`;
-            if (data[teacherFieldName]) {
-              teacherFields[`${subjectName}_teacher`] = data[teacherFieldName];
+            if (mock1Result[teacherFieldName]) {
+              teacherFields[`${subjectName}_teacher`] = mock1Result[teacherFieldName];
             }
             
             // Store timestamp field if it exists
             const timestampFieldName = `${subject}_timestamp`;
-            if (data[timestampFieldName]) {
-              teacherFields[`${subjectName}_timestamp`] = data[timestampFieldName];
+            if (mock1Result[timestampFieldName]) {
+              teacherFields[`${subjectName}_timestamp`] = mock1Result[timestampFieldName];
             }
           }
         });
@@ -606,12 +607,21 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
       );
     }
 
+    if (selectedClassType) {
+      filtered = filtered.filter(student => student.classType === selectedClassType);
+    }
+
     if (selectedClass) {
       filtered = filtered.filter(student => student.class === selectedClass);
     }
 
     setFilteredData(filtered);
-  }, [scoreData, searchTerm, selectedClass]);
+  }, [scoreData, searchTerm, selectedClassType, selectedClass]);
+
+  // Reset class filter when classType changes
+  useEffect(() => {
+    setSelectedClass('');
+  }, [selectedClassType]);
 
   // Sorting
   const handleSort = (field: string) => {
@@ -658,9 +668,14 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
           bValue = b.averageScore;
           break;
         default:
-          // Subject scores
-          aValue = a.scores[sortField] || 0;
-          bValue = b.scores[sortField] || 0;
+          // Subject scores - handle NC (undefined/null) and Absent (-1) as lowest values
+          const aScore = a.scores[sortField];
+          const bScore = b.scores[sortField];
+          
+          // Priority order for ascending: NC (-999) < Absent (-1) < 0 < actual scores
+          // NC (undefined/null) gets -999 to be sorted before Absent (-1)
+          aValue = (aScore === undefined || aScore === null) ? -999 : aScore;
+          bValue = (bScore === undefined || bScore === null) ? -999 : bScore;
       }
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
@@ -675,8 +690,33 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
     });
   }, [filteredData, sortField, sortDirection]);
 
-  // Get unique classes
-  const uniqueClasses = Array.from(new Set(scoreData.map(s => s.class))).sort();
+  // Get unique classTypes and classes
+  const uniqueClassTypes = sortGrades(Array.from(new Set(scoreData.map(s => s.classType))));
+  
+  // Get classes filtered by selected classType
+  const availableClasses = useMemo(() => {
+    let classesData = scoreData;
+    if (selectedClassType) {
+      classesData = scoreData.filter(s => s.classType === selectedClassType);
+    }
+    return Array.from(new Set(classesData.map(s => s.class))).sort();
+  }, [scoreData, selectedClassType]);
+
+  // Determine the subjects to display based on filtered data
+  const displayedSubjects = useMemo(() => {
+    // If we have a selected class type, use that
+    if (selectedClassType) {
+      return getSubjectsForClass(selectedClassType, examSettings);
+    }
+    
+    // Otherwise, try to find the most common class type in filtered data
+    if (filteredData.length > 0) {
+      // Get the first student's class type as default
+      return getSubjectsForClass(filteredData[0].classType, examSettings);
+    }
+    
+    return [];
+  }, [selectedClassType, filteredData, examSettings]);
 
   // Export to CSV
   const exportToCSV = () => {
@@ -687,7 +727,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
     headers.push('Total Score', 'Grade');
 
     const rows = sortedData.map(student => {
-      const subjects = getSubjectsForClass(student.classType);
+      const subjects = getSubjectsForClass(student.classType, examSettings);
       const classWithShift = student.shift && student.shift !== 'N/A' 
         ? `${student.class} - ${student.shift}` 
         : student.class;
@@ -699,7 +739,8 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
       
       // Add scores in organized order
       subjects.forEach(subject => {
-        row.push((student.scores[subject] || 0).toString());
+        const score = student.scores[subject];
+        row.push(score === -1 ? 'absent' : (score || 0).toString());
       });
       
       // Fill remaining columns
@@ -856,7 +897,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
             students={filteredData}
             onClose={() => setShowAbsentView(false)}
             onUpdate={() => fetchRealResults(true)}
-            getSubjectsForClass={getSubjectsForClass}
+            getSubjectsForClass={(classType) => getSubjectsForClass(classType, examSettings)}
           />
         )}
 
@@ -870,7 +911,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="group relative overflow-hidden">
+          <div className="group relative overflow-visible">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-blue-600/5 to-indigo-600/10 rounded-3xl"></div>
             <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/30 dark:border-slate-700/30 rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 group-hover:scale-105">
               <div className="flex items-center justify-between mb-4">
@@ -884,7 +925,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">students</div>
                 </div>
               </div>
-              <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Total Enrollment</h4>
+              <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Total Students</h4>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
                 <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-1.5 rounded-full transition-all duration-1000" 
                      style={{ width: '100%' }}></div>
@@ -892,7 +933,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
             </div>
           </div>
 
-          <div className="group relative overflow-hidden">
+          <div className="group relative overflow-visible">
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-teal-600/5 to-cyan-600/10 rounded-3xl"></div>
             <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/30 dark:border-slate-700/30 rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 group-hover:scale-105">
               <div className="flex items-center justify-between mb-4">
@@ -914,29 +955,81 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
             </div>
           </div>
 
-          <div className="group relative overflow-hidden">
+          <div className="group relative overflow-visible lg:col-span-2">
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-purple-600/5 to-pink-600/10 rounded-3xl"></div>
             <div className="relative bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl border border-white/30 dark:border-slate-700/30 rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 group-hover:scale-105">
               <div className="flex items-center justify-between mb-4">
                 <div className="p-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl shadow-lg">
-                  <Icon path={mdiPercent} className="text-white" size={24} />
+                  <Icon path={mdiChartBox} className="text-white" size={24} />
                 </div>
                 <div className="text-right">
                   <div className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                    {stats.passRate.toFixed(1)}%
+                    {(() => {
+                      const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+                      filteredData.forEach(student => {
+                        const grade = calculateTotalGrade(student.scores, student.maxScores);
+                        if (gradeCounts.hasOwnProperty(grade)) {
+                          gradeCounts[grade as keyof typeof gradeCounts]++;
+                        }
+                      });
+                      const totalGraded = Object.values(gradeCounts).reduce((a, b) => a + b, 0);
+                      const passingGrades = gradeCounts.A + gradeCounts.B + gradeCounts.C + gradeCounts.D + gradeCounts.E;
+                      const passRate = totalGraded > 0 ? (passingGrades / totalGraded) * 100 : 0;
+                      return passRate.toFixed(1) + '%';
+                    })()}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">success rate</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">pass rate</div>
                 </div>
               </div>
-              <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Pass Rate</h4>
-              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
-                <div className="bg-gradient-to-r from-violet-500 to-purple-600 h-1.5 rounded-full transition-all duration-1000" 
-                     style={{ width: `${stats.passRate}%` }}></div>
+              <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">Grade Distribution</h4>
+              <div className="grid grid-cols-6 gap-2">
+                {(() => {
+                  const gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
+                  const gradePercentages = { A: 0.90, B: 0.80, C: 0.70, D: 0.60, E: 0.50, F: 0 };
+                  
+                  // Calculate total max score across all students
+                  const totalMaxScore = filteredData.length > 0 
+                    ? Object.values(filteredData[0].maxScores).reduce((sum, score) => sum + (score || 0), 0)
+                    : 0;
+                  
+                  filteredData.forEach(student => {
+                    const grade = calculateTotalGrade(student.scores, student.maxScores);
+                    if (gradeCounts.hasOwnProperty(grade)) {
+                      gradeCounts[grade as keyof typeof gradeCounts]++;
+                    }
+                  });
+                  const totalGraded = Object.values(gradeCounts).reduce((a, b) => a + b, 0);
+                  return Object.entries(gradeCounts).map(([grade, count]) => {
+                    const percentage = totalGraded > 0 ? ((count / totalGraded) * 100).toFixed(1) : '0';
+                    const minScore = totalMaxScore > 0 ? (gradePercentages[grade as keyof typeof gradePercentages] * totalMaxScore).toFixed(0) : '0';
+                    const scoreDisplay = grade === 'F' ? `<${(0.50 * totalMaxScore).toFixed(0)}` : `≥${minScore}`;
+                    
+                    return (
+                      <div key={grade} className="group/grade relative flex flex-col items-center justify-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg transition-all duration-300 hover:scale-125 hover:z-10 hover:shadow-xl">
+                        <span className={`text-lg font-bold px-3 py-1 rounded-lg mb-1 ${getGradeStyles(grade)}`}>
+                          {grade}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                          {count}
+                        </span>
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full mb-2 invisible opacity-0 group-hover/grade:visible group-hover/grade:opacity-100 transition-all duration-200 bg-slate-900 dark:bg-slate-700 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-xl z-50 pointer-events-none">
+                          <div className="font-semibold mb-1">Score: {scoreDisplay}/{totalMaxScore}</div>
+                          <div>{percentage}% ({count}/{totalGraded} students)</div>
+                          {/* Arrow */}
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                            <div className="border-4 border-transparent border-t-slate-900 dark:border-t-slate-700"></div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           </div>
         </div>      {/* Filters */}
-        <div className="relative">
+        <div className="relative z-[10]">
           <div className="absolute inset-0 bg-gradient-to-r from-white/30 via-white/10 to-white/30 dark:from-slate-800/30 dark:via-slate-800/10 dark:to-slate-800/30 backdrop-blur-xl rounded-3xl"></div>
           <div className="relative bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/20 dark:border-slate-700/20 rounded-3xl p-8 shadow-xl">
             <div className="flex items-center space-x-4 mb-6">
@@ -950,9 +1043,9 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Search */}
-              <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+              {/* Search - Spans 2 columns */}
+              <div className="space-y-3 md:col-span-2">
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Search Students</label>
                 <div className="relative">
                   <input
@@ -970,19 +1063,40 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
                 </div>
               </div>
 
+              {/* ClassType Filter */}
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Filter by Grade</label>
+                <CustomCombobox
+                  options={[
+                    { value: '', label: 'All Grades' },
+                    ...uniqueClassTypes.map(ct => ({ value: ct, label: ct }))
+                  ]}
+                  selectedValue={selectedClassType}
+                  onChange={setSelectedClassType}
+                  placeholder="Select grade..."
+                  editable={false}
+                  fieldData={{
+                    className: "w-full px-4 py-3 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-sm transition-all duration-300 shadow-sm hover:shadow-md dark:text-white"
+                  }}
+                />
+              </div>
+
               {/* Class Filter */}
               <div className="space-y-3">
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Filter by Class</label>
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-sm transition-all duration-300 shadow-sm hover:shadow-md"
-                >
-                  <option value="">All Classes</option>
-                  {uniqueClasses.map(cls => (
-                    <option key={cls} value={cls}>{cls}</option>
-                  ))}
-                </select>
+                <CustomCombobox
+                  options={[
+                    { value: '', label: 'All Classes' },
+                    ...availableClasses.map(cls => ({ value: cls, label: cls }))
+                  ]}
+                  selectedValue={selectedClass}
+                  onChange={setSelectedClass}
+                  placeholder="Select class..."
+                  editable={false}
+                  fieldData={{
+                    className: "w-full px-4 py-3 bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-sm transition-all duration-300 shadow-sm hover:shadow-md dark:text-white"
+                  }}
+                />
               </div>
 
               {/* Export Button */}
@@ -1024,7 +1138,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
                 </div>
               </div>
             </div>       
-             <div className="overflow-x-auto max-h-[calc(125vh-300px)] overflow-y-auto">
+             <div className="overflow-x-auto max-h-[calc(120vh-300px)] overflow-y-auto">
           <table className="w-full">
             <thead className="sticky top-0 z-40 bg-gradient-to-r from-gray-50/95 to-gray-100/95 dark:from-slate-800/95 dark:to-slate-700/95 backdrop-blur-sm shadow-lg border-b border-gray-300 dark:border-slate-500">
               <tr>
@@ -1070,12 +1184,32 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
                     )}
                   </button>
                 </th>
-                {/* Organized subject columns based on column labels */}
-                {COLUMN_LABELS.map((label, index) => (
-                  <th key={label} className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600">
-                    <span>{label}</span>
-                  </th>
-                ))}
+                {/* Organized subject columns based on column labels - now clickable for sorting */}
+                {COLUMN_LABELS.map((label, index) => {
+                  // Get the actual subject name for this column based on displayed subjects
+                  const subjectForSorting = displayedSubjects[index] || '';
+                  
+                  return (
+                    <th key={label} className="px-4 py-4 text-center text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider border-b border-gray-200 dark:border-slate-600">
+                      {subjectForSorting ? (
+                        <button
+                          onClick={() => handleSort(subjectForSorting)}
+                          className="flex items-center justify-center space-x-1 hover:text-blue-600 transition-colors w-full"
+                        >
+                          <span>{label}</span>
+                          {sortField === subjectForSorting && (
+                            <Icon 
+                              path={sortDirection === 'asc' ? mdiSortAscending : mdiSortDescending} 
+                              size={16} 
+                            />
+                          )}
+                        </button>
+                      ) : (
+                        <span>{label}</span>
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
@@ -1090,7 +1224,7 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
                 </tr>
               ) : (
                 sortedData.map((student, index) => {
-                  const subjects = getSubjectsForClass(student.classType);
+                  const subjects = getSubjectsForClass(student.classType, examSettings);
                   
                   return (
                     <tr key={student.studentId} className={`group transition-colors hover:bg-slate-50 dark:hover:bg-slate-900 ${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-slate-800'}`}>
@@ -1104,14 +1238,17 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         {student.totalScore > 0 ? (
-                          <div className="flex flex-col items-center">
+                          <div className="flex flex-col items-center space-y-1">
                             <span className="inline-flex items-center px-3 py-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg font-semibold text-gray-900 dark:text-white border border-slate-200 dark:border-slate-600 shadow-sm">
                               {student.totalScore.toString().replace(/\.0$/, '')}
                             </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                              / {Object.values(student.maxScores).reduce((sum, score) => sum + (score || 0), 0)}
+                            </span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500 text-sm">
-                            {Object.values(student.scores).some(s => s === -1) ? 'Absent' : 'NC'}
+                          <span className="inline-flex items-center px-3 py-2 rounded-full font-bold bg-gray-400/90 text-white border-2 border-gray-500 shadow-sm">
+                            <span className="text-xs">{Object.values(student.scores).some(s => s === -1) ? 'Absent' : 'NC'}</span>
                           </span>
                         )}
                       </td>
@@ -1121,59 +1258,107 @@ export const MockExamScoresTable: React.FC<MockExamScoresTableProps> = ({
                             {calculateTotalGrade(student.scores, student.maxScores)}
                           </span>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500 text-sm">
-                            {Object.values(student.scores).some(s => s === -1) ? 'Absent' : 'NC'}
+                          <span className="inline-flex items-center px-3 py-2 rounded-full font-bold bg-gray-400/90 text-white border-2 border-gray-500 shadow-sm">
+                            <span className="text-xs">{Object.values(student.scores).some(s => s === -1) ? 'Absent' : 'NC'}</span>
                           </span>
                         )}
                       </td>
                       {/* Organized subject scores based on class type */}
-                      {subjects.map((subject, subjectIndex) => {
-                        const score = student.scores[subject];
-                        const maxScore = student.maxScores[subject] || 100;
-                        const hasScore = score !== undefined && score !== null;
-                        const isAbsent = score === -1; // Check if student is marked as absent
+                      {(() => {
+                        // Check if this is an evening class (Grade 12E or Grade 11E) - skip column 2 (index 1)
+                        const isEveningClass = student.classType === 'Grade 12E' || student.classType === 'Grade 11E';
+                        const isSocialClass = student.classType === 'Grade 12 Social';
+                        const cells: React.ReactNode[] = [];
                         
-                        let displayContent;
+                        // Map subjects to their proper column positions
+                        // For Grade 12S (Social): Khmer first, Math second
+                        // For Science classes: Math first, Khmer second
+                        const subjectToColumnIndex: { [key: string]: number } = isSocialClass ? {
+                          'Khmer': 0,  // Social class: Khmer in column 1
+                          'Math': 1,   // Social class: Math in column 2
+                          'History': 2,
+                          'Moral': 3,
+                          'Geography': 4,
+                          'Earth': 5
+                        } : {
+                          'Math': 0,    // Science class: Math in column 1
+                          'Khmer': 1,   // Science class: Khmer in column 2
+                          'Chemistry': 2,
+                          'Physics': 3,
+                          'Biology': 4,
+                          'History': 5,
+                          'Geometry': 1, // Shares column with Khmer
+                          'Moral': 3, // Shares column with Physics
+                          'Geography': 4, // Shares column with Biology
+                          'Earth': 5 // Shares column with History
+                        };
                         
-                        if (isAbsent) {
-                          // Display "Absent" badge
-                          displayContent = (
-                            <span className="inline-flex items-center px-3 py-2 rounded-full font-bold bg-red-500/90 text-white border-2 border-red-600 shadow-sm">
-                              <span className="text-xs">Absent</span>
-                            </span>
-                          );
-                        } else if (hasScore && score >= 0) {
-                          const grade = calculateGrade(score, maxScore);
-                          displayContent = (
-                            <span className={`inline-flex items-center px-3 py-2 rounded-full font-bold border-1 shadow-sm ${getGradeStyles(grade)}`}>
-                              <span className="text-base">{score.toFixed(0)}</span>
-                              <span className="ml-2 px-1.5 py-0.5 bg-white/20 rounded text-xs font-bold border border-white/30">
-                                {grade}
-                              </span>
-                            </span>
-                          );
-                        } else {
-                          displayContent = (
-                            <span className="inline-flex items-center px-3 py-2 rounded-full font-bold bg-gray-400/90 text-white border-2 border-gray-500 shadow-sm">
-                              <span className="text-xs">NC</span>
-                            </span>
-                          );
+                        // Create all 6 columns
+                        for (let colIndex = 0; colIndex < COLUMN_LABELS.length; colIndex++) {
+                          // Skip column 1 (Khmer/Math) for evening classes
+                          if (isEveningClass && colIndex === 1) {
+                            cells.push(
+                              <td key={`${student.studentId}-skip-${colIndex}`} className="px-4 py-3 whitespace-nowrap text-center">
+                                <span className="text-gray-400 dark:text-gray-500">-</span>
+                              </td>
+                            );
+                            continue;
+                          }
+                          
+                          // Find the subject that belongs in this column
+                          const subjectForColumn = subjects.find(subject => subjectToColumnIndex[subject] === colIndex);
+                          
+                          if (subjectForColumn) {
+                            const score = student.scores[subjectForColumn];
+                            const maxScore = student.maxScores[subjectForColumn] || 100;
+                            const hasScore = score !== undefined && score !== null;
+                            const isAbsent = score === -1;
+                            
+                            let displayContent;
+                            
+                            if (isAbsent) {
+                              displayContent = (
+                                <span className="inline-flex items-center px-3 py-2 rounded-full font-bold bg-gray-400/90 text-white border-2 border-gray-500 shadow-sm">
+                                  <span className="text-xs">Absent</span>
+                                </span>
+                              );
+                            } else if (hasScore && score >= 0) {
+                              const grade = calculateGrade(score, maxScore);
+                              displayContent = (
+                                <span className={`inline-flex items-center px-3 py-2 rounded-full font-bold border-1 shadow-sm ${getGradeStyles(grade)}`}>
+                                  <span className="text-base">{score.toFixed(0)}</span>
+                                  <span className="ml-2 px-1.5 py-0.5 bg-white/20 rounded text-xs font-bold border border-white/30">
+                                    {grade}
+                                  </span>
+                                </span>
+                              );
+                            } else {
+                              displayContent = (
+                                <span className="inline-flex items-center px-3 py-2 rounded-full font-bold bg-gray-400/90 text-white border-2 border-gray-500 shadow-sm">
+                                  <span className="text-xs">NC</span>
+                                </span>
+                              );
+                            }
+                            
+                            cells.push(
+                              <td key={`${student.studentId}-${subjectForColumn}-${colIndex}`} className="px-2 py-2 whitespace-nowrap text-center overflow-visible">
+                                <div className="flex flex-col items-center space-y-1">
+                                  {displayContent}
+                                </div>
+                              </td>
+                            );
+                          } else {
+                            // Empty column
+                            cells.push(
+                              <td key={`${student.studentId}-empty-${colIndex}`} className="px-4 py-3 whitespace-nowrap text-center">
+                                <span className="text-gray-400 dark:text-gray-500">-</span>
+                              </td>
+                            );
+                          }
                         }
                         
-                        return (
-                          <td key={`${student.studentId}-${subject}-${subjectIndex}`} className="px-2 py-2 whitespace-nowrap text-center overflow-visible">
-                            <div className="flex flex-col items-center space-y-1">
-                              {displayContent}
-                            </div>
-                          </td>
-                        );
-                      })}
-                      {/* Fill remaining columns if class has fewer subjects */}
-                      {Array(COLUMN_LABELS.length - subjects.length).fill(null).map((_, emptyIndex) => (
-                        <td key={`${student.studentId}-empty-${emptyIndex}`} className="px-4 py-3 whitespace-nowrap text-center">
-                          <span className="text-gray-400 dark:text-gray-500">-</span>
-                        </td>
-                      ))}
+                        return cells;
+                      })()}
                     </tr>
                   );
                 })

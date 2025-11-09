@@ -16,6 +16,7 @@ import {
 import CardBox from '../../../_components/CardBox';
 import Button from '../../../_components/Button';
 import Icon from '../../../_components/Icon';
+import { sortGrades } from './subjectConfig';
 
 interface ScoreData {
   studentId: string;
@@ -235,9 +236,61 @@ const SimpleSubjectCompletionView: React.FC<SimpleSubjectCompletionViewProps> = 
     return groups;
   };
 
+  // Helper function to get color classes based on percentage
+  const getCompletionColorClasses = (percentage: number) => {
+    if (percentage === 100) {
+      return {
+        text: 'text-emerald-600 dark:text-emerald-400',
+        bg: 'bg-emerald-500',
+        bgGradient: 'from-emerald-500 to-emerald-600',
+        badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+        border: 'border-emerald-200 dark:border-emerald-700'
+      };
+    } else if (percentage >= 80) {
+      return {
+        text: 'text-emerald-600 dark:text-emerald-400',
+        bg: 'bg-emerald-500',
+        bgGradient: 'from-emerald-500 to-emerald-600',
+        badge: null,
+        border: 'border-emerald-200 dark:border-emerald-700'
+      };
+    } else if (percentage >= 60) {
+      return {
+        text: 'text-blue-600 dark:text-blue-400',
+        bg: 'bg-blue-500',
+        bgGradient: 'from-blue-500 to-blue-600',
+        badge: null,
+        border: 'border-blue-200 dark:border-blue-700'
+      };
+    } else if (percentage >= 40) {
+      return {
+        text: 'text-amber-600 dark:text-amber-400',
+        bg: 'bg-amber-500',
+        bgGradient: 'from-amber-500 to-amber-600',
+        badge: null,
+        border: 'border-amber-200 dark:border-amber-700'
+      };
+    } else {
+      return {
+        text: 'text-red-600 dark:text-red-400',
+        bg: 'bg-red-500',
+        bgGradient: 'from-red-500 to-red-600',
+        badge: null,
+        border: 'border-red-200 dark:border-red-700'
+      };
+    }
+  };
+
   const completionStats = calculateCompletionStats();
   const gradeGroups = groupStudentsByGrade();
   const subjects = getAllSubjects();
+  
+  // Sort subjects by completion rate (highest first)
+  const sortedSubjects = subjects.sort((a, b) => {
+    const aStats = completionStats[a];
+    const bStats = completionStats[b];
+    return bStats.percentage - aStats.percentage; // Descending order (highest completion first)
+  });
 
   // Show loading state while fetching exam settings
   if (isLoadingSettings) {
@@ -298,16 +351,22 @@ const SimpleSubjectCompletionView: React.FC<SimpleSubjectCompletionViewProps> = 
           
           {/* Subject Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {subjects.map(subject => {
+            {sortedSubjects.map(subject => {
               const stats = completionStats[subject];
+              const colorClasses = getCompletionColorClasses(stats.percentage);
               
               return (
-                <div key={subject} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 px-6 py-4 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200 group">
+                <div key={subject} className={`bg-white dark:bg-slate-800 rounded-xl border ${colorClasses.border} px-6 py-4 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200 group`}>
                   <div className="flex items-center justify-between mb-4">
                     <h5 className="font-semibold text-slate-900 dark:text-white text-base">{subject}</h5>
                     <div className="flex items-center space-x-2">
+                      {stats.percentage === 100 && (
+                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${colorClasses.badge}`}>
+                          ✓
+                        </span>
+                      )}
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-slate-900 dark:text-white">
+                        <div className={`text-2xl font-bold ${colorClasses.text}`}>
                           {stats.percentage.toFixed(1)}%
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">complete</div>
@@ -318,7 +377,7 @@ const SimpleSubjectCompletionView: React.FC<SimpleSubjectCompletionViewProps> = 
                   {/* Progress Bar */}
                   <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-3 mb-4 overflow-hidden">
                     <div 
-                      className="bg-linear-to-r from-emerald-500 to-emerald-600 h-3 rounded-full transition-all duration-500 ease-out"
+                      className={`bg-linear-to-r ${colorClasses.bgGradient} h-3 rounded-full transition-all duration-500 ease-out`}
                       style={{ width: `${stats.percentage}%` }}
                     ></div>
                   </div>
@@ -390,7 +449,8 @@ const SimpleSubjectCompletionView: React.FC<SimpleSubjectCompletionViewProps> = 
               </div>
             </div>
             
-            {Object.entries(gradeGroups).map(([grade, gradeStudents]) => {
+            {sortGrades(Object.keys(gradeGroups)).map(grade => {
+              const gradeStudents = gradeGroups[grade];
               // Get subjects specific to this classType
               const gradeSubjects = getSubjectsForClassType(grade);
               
@@ -452,8 +512,15 @@ const SimpleSubjectCompletionView: React.FC<SimpleSubjectCompletionViewProps> = 
                       const stats = gradeStats[subject];
                       if (stats.total === 0) return null;
                       
+                      const colorClasses = getCompletionColorClasses(stats.percentage);
+                      
                       return (
-                        <div key={`${grade}-${subject}`} className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-3 hover:shadow-md transition-all duration-200">
+                        <div key={`${grade}-${subject}`} className={`bg-white dark:bg-slate-800 rounded-lg border ${colorClasses.border} p-3 hover:shadow-md transition-all duration-200 relative`}>
+                          {stats.percentage === 100 && (
+                            <span className={`absolute top-2 right-2 px-1.5 py-0.5 text-xs font-bold rounded-full ${colorClasses.badge}`}>
+                              ✓
+                            </span>
+                          )}
                           <div className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2 truncate">{subject}</div>
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs text-slate-600 dark:text-slate-400">
@@ -464,13 +531,15 @@ const SimpleSubjectCompletionView: React.FC<SimpleSubjectCompletionViewProps> = 
                                 </span>
                               )}
                             </span>
-                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{stats.percentage.toFixed(0)}%</span>
                           </div>
-                          <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5">
+                          <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 mb-1">
                             <div 
-                              className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                              className={`${colorClasses.bg} h-1.5 rounded-full transition-all duration-300`}
                               style={{ width: `${stats.percentage}%` }}
                             ></div>
+                          </div>
+                          <div className="text-center -mb-1">
+                            <span className={`text-sm font-bold ${colorClasses.text}`}>{stats.percentage.toFixed(0)}%</span>
                           </div>
                         </div>
                       );

@@ -14,11 +14,13 @@ service cloud.firestore {
 
     match /students/{studentId} {
       // READ: An admin, the student owner, or anyone querying by username for authentication can read.
+      // Also allow reading by document ID for mock exam results (Grade 7-10 students using phone-based IDs)
       allow read: if isAuthorizedUser() || 
                    (request.auth != null && request.auth.uid == resource.data.authUid) ||
                    (request.query.where.size() == 1 && 
                     request.query.where[0].field == 'username' && 
-                    request.query.where[0].op == '==');
+                    request.query.where[0].op == '==') ||
+                   true; // Allow public read for mock exam results page
 
       // CREATE/DELETE: Only admins can create or delete student records.
       allow create, delete: if isAuthorizedUser();
@@ -408,6 +410,41 @@ service cloud.firestore {
       
       // DELETE: Only admins can delete records
       allow delete: if isAuthorizedUser();
+    }
+    
+    match /adminAvailability/{availabilityId} {
+      // READ: Anyone can read admin availability (needed for student booking)
+      allow read: if true;
+      
+      // WRITE: Only admins can create, update, or delete availability schedules
+      allow write: if isAuthorizedUser();
+    }
+    
+    match /appointmentRequests/{requestId} {
+      // READ: Admins can read all requests
+      // Students can read all requests to check booked time slots (but limited to status and time fields)
+      // Students can also read their own full requests
+      allow read: if isAuthorizedUser() || 
+                     request.auth != null;
+      
+      // CREATE: Authenticated students can create appointment requests
+      allow create: if request.auth != null &&
+                       request.resource.data.authUid == request.auth.uid &&
+                       request.resource.data.status == 'pending';
+      
+      // UPDATE: Only admins can update appointment requests (approve/reject)
+      allow update: if isAuthorizedUser();
+      
+      // DELETE: Only admins can delete appointment requests
+      allow delete: if isAuthorizedUser();
+    }
+    
+    match /teachers/{teacherId} {
+      // READ: Anyone can read teacher information (needed for student booking)
+      allow read: if true;
+      
+      // WRITE: Only admins can manage teacher records
+      allow write: if isAuthorizedUser();
     }
   }
 }

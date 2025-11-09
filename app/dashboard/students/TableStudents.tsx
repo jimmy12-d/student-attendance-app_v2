@@ -589,7 +589,9 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         todayStr,
         attendanceRecord,
         allClassConfigs,
-        studentPermissions
+        studentPermissions,
+        classContext, // Pass class context so BP students use correct class config
+        shiftContext  // Pass shift context so BP students use correct shift config
       );
       
       // DEBUG: Log the final result for "Test Testing"

@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import ExamTabs from '../_components/ExamTabs';
-import CircularProgress from '../../_components/CircularProgress';
-import ScoreCard from '../_components/ScoreCard';
+import React from 'react';
+import ExamTabs from '@/app/student/mock-exam/_components/ExamTabs';
+import CircularProgress from '@/app/student/_components/CircularProgress';
+import ScoreCard from '@/app/student/mock-exam/_components/ScoreCard';
 import { motion } from 'framer-motion';
-import { useTranslations } from 'next-intl';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../../firebase-config';
 
 // Define types for our data
 type ExamSettings = { [subject: string]: { maxScore: number } };
@@ -20,7 +17,7 @@ type ExamResults = {
   totalGrade: string;
 };
 
-interface MockExamResultsProps {
+interface MockExamResultsPublicProps {
   availableTabs: string[];
   selectedTab: string;
   handleTabChange: (tab: string) => void;
@@ -29,7 +26,7 @@ interface MockExamResultsProps {
   examScores: ExamScores;
   examResults: ExamResults;
   animatedTotalScore: number;
-  studentId: string | null | undefined;
+  studentClassType: string | null;
   progressStatus: string;
   calculateGrade: (score: number | 'absent', maxScore: number) => string;
   SUBJECT_ORDER: string[];
@@ -46,7 +43,24 @@ const capitalize = (s: string) => {
     return s.charAt(0).toUpperCase() + s.slice(1);
 };
 
-const MockExamResults: React.FC<MockExamResultsProps> = ({
+// Subject name mapping
+const SUBJECT_NAMES: { [key: string]: string } = {
+  khmer: 'Khmer',
+  math: 'Math',
+  english: 'English',
+  physics: 'Physics',
+  chemistry: 'Chemistry',
+  biology: 'Biology',
+  history: 'History',
+  geography: 'Geography',
+  moral: 'Moral',
+  physical_education: 'Physical Education',
+  earth_science: 'Earth Science',
+  homeroom: 'Homeroom',
+  science: 'Science'
+};
+
+const MockExamResultsPublic: React.FC<MockExamResultsPublicProps> = ({
   availableTabs,
   selectedTab,
   handleTabChange,
@@ -55,7 +69,7 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
   examScores,
   examResults,
   animatedTotalScore,
-  studentId,
+  studentClassType,
   progressStatus,
   calculateGrade,
   SUBJECT_ORDER,
@@ -66,27 +80,6 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
   isReadyToPublishResult,
   lastPaymentMonth,
 }) => {
-  const t = useTranslations('student.mockExam');
-
-  const [studentData, setStudentData] = useState<any>(null);
-
-  useEffect(() => {
-    if (studentId) {
-      const fetchStudent = async () => {
-        try {
-          const docRef = doc(db, 'students', studentId);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setStudentData(docSnap.data());
-          }
-        } catch (error) {
-          console.error('Error fetching student data:', error);
-        }
-      };
-      fetchStudent();
-    }
-  }, [studentId]);
-
   // Real-time readiness is now managed by parent component
   
   // Check if payment is sufficient (>= 2025-11)
@@ -152,19 +145,19 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
     <div>
       <ExamTabs tabs={availableTabs} selectedTab={selectedTab} setSelectedTab={handleTabChange} disabled={isExamLoading} />
       {isExamLoading ? (
-        <div className="text-center text-gray-400 p-8">{t('loadingScores')}</div>
+        <div className="text-center text-gray-400 p-8">Loading scores...</div>
       ) : !isReadyToPublishResult && studentName !== "Test Testing" ? (
         <div className="text-center text-yellow-400 bg-yellow-500/10 py-8 px-6 border border-yellow-500/30 rounded-2xl">
-          <p className="font-bold text-lg">{t('resultsNotAvailable')}</p>
+          <p className="font-bold text-lg">Results Not Available</p>
           <p className="mt-2 text-sm">
-            {t('resultsNotReadyMessage')}
+            The results for this exam are not ready yet. Please check back later.
           </p>
         </div>
       ) : !hasNovemberPayment && studentName !== "Test Testing_" ? (
         <div className="text-center text-red-400 bg-red-500/10 py-8 px-6 border border-red-500/30 rounded-2xl">
-          <p className="font-bold text-lg">{t('novemberPaymentRequired')}</p>
+          <p className="font-bold text-lg">November Payment Required</p>
           <p className="mt-2 text-sm">
-            {t('novemberPaymentRequiredMessage')}
+            You need to have paid for November 2025 or later to view these results.
           </p>
         </div>
       ) : (
@@ -206,7 +199,7 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                                 <CircularProgress percentage={examResults.totalPercentage} progressColor={gradeStyles.progressColor} />
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                                     <div className="px-3 py-1 text-sm font-semibold text-gray-600 dark:text-slate-300">
-                                        {t('totalScore')}
+                                        Total Score
                                     </div>
                                     <span className="-mt-1 text-5xl font-bold text-gray-900 dark:text-white tracking-tighter">
                                         {animatedTotalScore % 1 === 0 ? animatedTotalScore.toString() : animatedTotalScore.toFixed(1)}
@@ -215,12 +208,7 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                             </div>
                             <div className="mt-4 text-center">
                                 <div className={`inline-block px-4 py-1.5 text-base font-semibold ${gradeStyles.gradeBadge} rounded-full backdrop-blur-sm`}>
-                                    {t('gradeLabel')} <span className="font-extrabold text-2xl align-middle">{examResults.totalGrade}</span>
-                                </div>
-                            </div>
-                            <div className="mt-3 flex justify-center">
-                                <div className="px-4 py-1.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium backdrop-blur-sm border border-blue-500/30">
-                                    {studentData?.class || 'N/A'} - {studentData?.shift || 'N/A'}
+                                    Grade <span className="font-extrabold text-2xl align-middle">{examResults.totalGrade}</span>
                                 </div>
                             </div>
                         </div>
@@ -228,8 +216,8 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                       {SUBJECT_ORDER.map(subjectKey => {
                         if (examSettings.hasOwnProperty(subjectKey)) {
-                          // Use translated subject names
-                          const displayLabel = t(`subjects.${subjectKey}`, { defaultValue: subjectKey });
+                          // Use subject name mapping
+                          const displayLabel = SUBJECT_NAMES[subjectKey] || capitalize(subjectKey);
                           const score = examScores[subjectKey];
                           const numericScore = score === 'absent' ? 0 : score;
 
@@ -248,7 +236,7 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                     </div>
                   </>
                 ) : (
-                  <div className="text-center text-gray-400 p-8">{t('noResultsFound')}</div>
+                  <div className="text-center text-gray-400 p-8">No results found</div>
                 )
               );
 
@@ -258,9 +246,9 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
                 } else {
                   return (
                     <div className="text-center text-yellow-400 bg-yellow-500/10 py-4 px-6 border border-yellow-500/30 rounded-2xl">
-                      <p className="font-bold text-lg animate-pulse">{t('paymentRequired')}</p>
+                      <p className="font-bold text-lg animate-pulse">Payment Required</p>
                       <p className="mt-2 text-sm animate-pulse">
-                        {t('paymentRequiredForMock3')}
+                        Mock Exam 3 results are only available to Star level students. Please upgrade your subscription.
                       </p>
                     </div>
                   );
@@ -276,4 +264,4 @@ const MockExamResults: React.FC<MockExamResultsProps> = ({
   );
 };
 
-export default MockExamResults; 
+export default MockExamResultsPublic;

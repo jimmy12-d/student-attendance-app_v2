@@ -21,7 +21,7 @@ import {
   arrayRemove
 } from "firebase/firestore";
 import { db } from "@/firebase-config";
-import { Form, FormResponse, ApprovalStatus } from "@/app/_interfaces/forms";
+import { Form, FormResponse, ApprovalStatus, Question } from "@/app/_interfaces/forms";
 import Icon from "@/app/_components/Icon";
 import ApprovalActionsConfig from "../../_components/ApprovalActionsConfig";
 import CardBoxModal from "@/app/_components/CardBox/Modal";
@@ -41,12 +41,9 @@ import {
   mdiChartBox,
   mdiClockOutline,
   mdiClose,
-  mdiShieldCheck,
-  mdiShieldOff,
   mdiDelete,
   mdiTrashCanOutline,
   mdiMagnify,
-  mdiCheckAll,
   mdiCheckboxBlankOutline,
   mdiCheckboxMarked,
   mdiFile
@@ -328,13 +325,15 @@ const FormResponsesPage = () => {
       return;
     }
 
+    const allQuestions = getAllQuestions();
+
     // Create CSV header
     const headers = [
       "Student Name",
       "Class",
       "Shift",
       "Submitted At",
-      ...form.questions.map(q => q.text)
+      ...allQuestions.map(q => q.text)
     ];
 
     // Create CSV rows
@@ -343,7 +342,7 @@ const FormResponsesPage = () => {
         ? response.submittedAt.toDate().toLocaleString()
         : new Date(response.submittedAt).toLocaleString();
 
-      const answerValues = form.questions.map(q => {
+      const answerValues = allQuestions.map(q => {
         const answer = response.answers.find(a => a.questionId === q.id);
         if (!answer) return '';
         if (Array.isArray(answer.answer)) {
@@ -378,7 +377,8 @@ const FormResponsesPage = () => {
   };
 
   const getQuestionStats = (questionId: string) => {
-    const question = form?.questions.find(q => q.id === questionId);
+    const allQuestions = getAllQuestions();
+    const question = allQuestions.find(q => q.id === questionId);
     if (!question) return null;
 
     const answers = getFilteredResponses().map(r => r.answers.find(a => a.questionId === questionId)?.answer).filter(Boolean);
@@ -412,6 +412,19 @@ const FormResponsesPage = () => {
     }
 
     return null;
+  };
+
+  // Helper function to get all questions from form (supports both old and new format)
+  const getAllQuestions = (): Question[] => {
+    if (!form) return [];
+    
+    // New format: questions in sections
+    if (form.sections && form.sections.length > 0) {
+      return form.sections.flatMap(section => section.questions || []);
+    }
+    
+    // Legacy format: direct questions array
+    return form.questions || [];
   };
 
   const formatDate = (timestamp: Timestamp | Date) => {
@@ -860,7 +873,7 @@ const FormResponsesPage = () => {
 
               {/* Response Answers */}
               <div className="space-y-4 sm:space-y-6">
-                {form.questions.map((question, index) => {
+                {getAllQuestions().map((question, index) => {
                   const answer = selectedResponse.answers.find(a => a.questionId === question.id);
                   return (
                     <div
@@ -988,7 +1001,7 @@ const FormResponsesPage = () => {
               </div>
 
               {/* Question Statistics */}
-              {form.questions.map((question, index) => {
+              {getAllQuestions().map((question, index) => {
                 const stats = getQuestionStats(question.id);
                 return (
                   <div

@@ -1,21 +1,18 @@
 // app/dashboard/layout.tsx
 "use client";
 
-import React, { ReactNode, useState, useEffect } from "react";
+import React, { ReactNode, useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 // Firebase
 import { db } from "../../firebase-config";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 
-// Redux
-import { useAppSelector } from "../_stores/hooks";
-
 // Auth Context
 import { useAuthContext } from "../_contexts/AuthContext";
 
 // Your existing imports
-import { mdiForwardburger, mdiBackburger, mdiMenu } from "@mdi/js";
+import { mdiForwardburger, mdiBackburger, mdiMenu, mdiTimerSand } from "@mdi/js";
 import menuAside from "./_lib/menuAside";
 import menuNavBar from "./_lib/menuNavBar";
 import Icon from "../_components/Icon";
@@ -45,6 +42,24 @@ export default function LayoutAuthenticated({ children }: Props) {
   const [pendingPermissionsCount, setPendingPermissionsCount] = useState(0);
   const [pendingPrintRequestsCount, setPendingPrintRequestsCount] = useState(0);
   const [pendingAbaApprovalsCount, setPendingAbaApprovalsCount] = useState(0);
+
+  // State for inactivity modal
+  const [showInactiveModal, setShowInactiveModal] = useState(false);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const INACTIVITY_TIMEOUT = 30000; // 30 seconds
+
+  // State for keyboard shortcuts help dialog
+  const [showHelpDialog, setShowHelpDialog] = useState(false);
+
+  const resetInactivityTimer = () => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    setShowInactiveModal(false);
+    inactivityTimerRef.current = setTimeout(() => {
+      setShowInactiveModal(true);
+    }, INACTIVITY_TIMEOUT);
+  };
 
   const handleRouteChange = () => {
     setIsAsideMobileExpanded(false);
@@ -128,6 +143,77 @@ export default function LayoutAuthenticated({ children }: Props) {
       }
     }
   }, [isAuthenticated, isAuthorizedAdmin, isAuthLoading, router]);
+
+  // Inactivity detection
+  useEffect(() => {
+    const handleActivity = () => {
+      resetInactivityTimer();
+    };
+
+    // Set initial timer
+    resetInactivityTimer();
+
+    // Add event listeners for user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity, true);
+    });
+
+    // Cleanup
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity, true);
+      });
+    };
+  }, []);
+
+  // Keyboard shortcuts navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts if Ctrl key is pressed
+      if (!event.ctrlKey) return;
+
+      const key = event.key.toLowerCase();
+
+      console.log('Key pressed:', key, 'Ctrl pressed:', event.ctrlKey);
+
+      // Prevent default browser behavior for our shortcuts
+      if (['d', 'r', 'p', 's', 'e', 'h', '?'].includes(key)) {
+        event.preventDefault();
+      }
+
+      switch (key) {
+        case 'd':
+          router.push('/dashboard');
+          break;
+        case 'r':
+          router.push('/dashboard/record');
+          break;
+        case 'p':
+          router.push('/dashboard/pos');
+          break;
+        case 's':
+          router.push('/dashboard/students');
+          break;
+        case 'e':
+          router.push('/dashboard/events');
+          break;
+        case 'h':
+          setShowHelpDialog(true);
+          console.log('Help dialog opened via keyboard shortcut');
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [router]);
   
   // --- RENDER LOGIC ---
 
@@ -208,6 +294,90 @@ export default function LayoutAuthenticated({ children }: Props) {
             </a>
           </FooterBar>
         </div>
+
+        {/* Inactive Screen Modal */}
+        {showInactiveModal && (
+          <div className="fixed inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-lg flex items-center justify-center z-110">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full mx-4 text-center">
+              <div className="mb-6">
+                <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icon path={mdiTimerSand} size={32} className="text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Session Inactive
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                  You have been inactive for 30 seconds. Please interact with the page to continue.
+                </p>
+              </div>
+              <button
+                onClick={() => resetInactivityTimer()}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200"
+              >
+                I'm Back
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Keyboard Shortcuts Help Dialog */}
+        {showHelpDialog && (
+          <div className="fixed inset-0 bg-[rgba(0,0,0,0.6)] flex items-center justify-center z-[120]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-lg w-full mx-4">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 text-center">
+                  Keyboard Shortcuts
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
+                    <span className="text-gray-700 dark:text-gray-300">Dashboard</span>
+                    <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-sm font-mono">
+                      Ctrl + D
+                    </kbd>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
+                    <span className="text-gray-700 dark:text-gray-300">Record Page</span>
+                    <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-sm font-mono">
+                      Ctrl + R
+                    </kbd>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
+                    <span className="text-gray-700 dark:text-gray-300">POS Page</span>
+                    <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-sm font-mono">
+                      Ctrl + P
+                    </kbd>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
+                    <span className="text-gray-700 dark:text-gray-300">Student Page</span>
+                    <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-sm font-mono">
+                      Ctrl + S
+                    </kbd>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
+                    <span className="text-gray-700 dark:text-gray-300">Event Page</span>
+                    <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-sm font-mono">
+                      Ctrl + E
+                    </kbd>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-700 dark:text-gray-300">Show Help</span>
+                    <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-sm font-mono">
+                      Ctrl + H
+                    </kbd>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowHelpDialog(false)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

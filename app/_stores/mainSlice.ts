@@ -24,7 +24,7 @@ export interface AppNotification {
 
 // Define types for mock exam data
 type ExamSettings = { [subject: string]: { maxScore: number } };
-type ExamScores = { [subject: string]: number };
+type ExamScores = { [subject: string]: number | 'absent' };
 
 export interface ExamSettingsData {
   settings: ExamSettings;
@@ -43,7 +43,7 @@ export interface ProgressData {
   lastFetched: string;
 }
 
-type AllMockScores = { [mockName: string]: { [subject: string]: number } };
+type AllMockScores = { [mockName: string]: { [subject: string]: number | 'absent' } };
 
 // Define a type for a single cache entry for the radar chart
 type RadarChartCacheEntry = {

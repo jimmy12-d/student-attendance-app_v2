@@ -3,6 +3,45 @@
  * Handles subject mapping, ordering, and labels for different grade types
  */
 
+// Grade sorting order
+const GRADE_ORDER = [
+  'Grade 12',
+  'Grade 12 Social',
+  'Grade 12E',
+  'Grade 11A',
+  'Grade 11E',
+  'Grade 10',
+  'Grade 9',
+  'Grade 8',
+  'Grade 7'
+];
+
+/**
+ * Sort grades in the preferred order
+ * @param grades - Array of grade names to sort
+ * @returns Sorted array of grades
+ */
+export const sortGrades = (grades: string[]): string[] => {
+  return grades.sort((a, b) => {
+    const aIndex = GRADE_ORDER.findIndex(order => 
+      order.toLowerCase() === a.toLowerCase()
+    );
+    const bIndex = GRADE_ORDER.findIndex(order => 
+      order.toLowerCase() === b.toLowerCase()
+    );
+    
+    // If both grades are in the preferred order, sort by their position
+    if (aIndex !== -1 && bIndex !== -1) {
+      return aIndex - bIndex;
+    }
+    // If only one is in preferred order, put it first
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    // If neither is in preferred order, sort alphabetically
+    return a.localeCompare(b);
+  });
+};
+
 // Define subject orders for different grade types
 export const GRADE_12_SCIENCE_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'english']; // Math, Khmer, Chemistry, Physics, Biology, History, English
 export const GRADE_12_SOCIAL_ORDER = ['math', 'khmer', 'chemistry', 'physics', 'biology', 'history', 'english']; // Math(khmer field), Khmer(math field), History, Moral, Geography, Earth, English

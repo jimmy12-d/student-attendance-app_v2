@@ -29,6 +29,10 @@ interface Student {
     mock_3?: any;
     mock_4?: any;
   };
+  mock1Result?: {
+    [subject: string]: number | string;
+  };
+  [key: string]: any; // Allow dynamic subject fields
 }
 
 // Subject mapping for Grade 12 Social Studies
@@ -567,8 +571,7 @@ const TeacherDashboard = () => {
               room: studentInfo.room,
               seat: studentInfo.seat,
               mockResults: mockResultsData,
-              // Include existing scores from mockExam1 document
-              ...studentData // Spread the studentData to include subject scores like 'math', 'physics', etc.
+              mock1Result: studentData.mock1Result // Include mock1Result from mockExam1
             });
           }
         }
@@ -607,10 +610,10 @@ const TeacherDashboard = () => {
     const maxScore = student.class ? await getMaxScore(student.class, activeSubject) : 100;
     setCurrentMaxScore(maxScore);
 
-    // Check if score already exists for this subject in mockExam1
+    // Check if score already exists for this subject in mock1Result
     const subjectKey = getSubjectKey(activeSubject);
-    if (student[subjectKey]) {
-      setMock4Score(student[subjectKey].toString());
+    if (student.mock1Result && student.mock1Result[subjectKey]) {
+      setMock4Score(student.mock1Result[subjectKey].toString());
     } else {
       setMock4Score('');
     }
@@ -722,7 +725,8 @@ const TeacherDashboard = () => {
           shift: foundShift,
           room: parseInt(foundRoom.replace('Room ', '')), // Convert "Room 101" to 101
           seat: foundSeat,
-          mockResults: mockResultsData
+          mockResults: mockResultsData,
+          mock1Result: studentData.mock1Result // Include mock1Result from mockExam1
         });
 
         // Update session stats
@@ -738,11 +742,11 @@ const TeacherDashboard = () => {
         const maxScore = studentData.classType ? await getMaxScore(studentData.classType, activeSubject) : 100; // Default max score
         setCurrentMaxScore(maxScore);
 
-        // Check if score already exists for this subject in mockExam1
+        // Check if score already exists for this subject in mock1Result
         const subjectKey = getSubjectKey(activeSubject);
-        if (studentData[subjectKey]) {
-          setMock4Score(studentData[subjectKey].toString());
-          setMessage({ type: 'success', text: `រកឃើញសិស្ស! ពិន្ទុ ${getTranslatedSubject(activeSubject)} បច្ចុប្បន្ន: ${studentData[subjectKey]}` });
+        if (studentData.mock1Result && studentData.mock1Result[subjectKey]) {
+          setMock4Score(studentData.mock1Result[subjectKey].toString());
+          setMessage({ type: 'success', text: `រកឃើញសិស្ស! ពិន្ទុ ${getTranslatedSubject(activeSubject)} បច្ចុប្បន្ន: ${studentData.mock1Result[subjectKey]}` });
         } else {
           setMock4Score('');
           setMessage({ type: 'success', text: `រកឃើញសិស្ស! ${studentData.khmerName} (${foundShift} - ${foundRoom}, Seat ${foundSeat})` });
@@ -813,10 +817,11 @@ const TeacherDashboard = () => {
       // Update the mockExam1 document directly using the student's document ID
       const docRef = doc(db, 'mockExam1', foundStudent.id);
       
+      // New structure: Save inside mock1Result map
       const updateData = {
-        [subjectKey]: Math.floor(score), // Save as integer
-        [`${subjectKey}_teacher`]: userName, // Track which teacher input this score
-        [`${subjectKey}_timestamp`]: Timestamp.now(), // Track when it was input
+        [`mock1Result.${subjectKey}`]: Math.floor(score), // Save score inside mock1Result.subject
+        [`mock1Result.${subjectKey}_teacher`]: userName, // Track which teacher input this score
+        [`mock1Result.${subjectKey}_timestamp`]: Timestamp.now(), // Track when it was input
         updatedAt: Timestamp.now()
       };
 
@@ -831,11 +836,13 @@ const TeacherDashboard = () => {
       // Update session stats
       setSessionStats(prev => ({ ...prev, scoresEntered: prev.scoresEntered + 1 }));
       
-      // Update local state - update the mockExam1 data in foundStudent
+      // Update local state - update the mock1Result in foundStudent
       setFoundStudent(prev => prev ? {
         ...prev,
-        // Add the score to the student data (this would be in the mockExam1 document)
-        [subjectKey]: Math.floor(score)
+        mock1Result: {
+          ...prev.mock1Result,
+          [subjectKey]: Math.floor(score)
+        }
       } : null);
       
     } catch (error) {

@@ -40,6 +40,7 @@ export default function SeatArrangement({ studentDocId, selectedTab, progressSta
   const [isLoading, setIsLoading] = useState(true);
   const [examDate, setExamDate] = useState<string | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
+  const [showAllDaysWhenCompleted, setShowAllDaysWhenCompleted] = useState(false);
 
   useEffect(() => {
     if (!studentDocId || !selectedTab) {
@@ -134,8 +135,20 @@ export default function SeatArrangement({ studentDocId, selectedTab, progressSta
   }, [selectedTab]);
 
   // Set default expanded state - expand "today" by default, but after 6pm expand next day
+  // When all exam days are past, collapse all by default unless user chooses to show them
   useEffect(() => {
     if (examDate) {
+      const allDaysPast = areAllExamDaysPast();
+      if (allDaysPast) {
+        // When exam is completed, only expand if user has chosen to show all days
+        if (showAllDaysWhenCompleted) {
+          setExpandedDays(new Set()); // Keep individual days collapsed when showing completed section
+        } else {
+          setExpandedDays(new Set()); // Collapse all
+        }
+        return;
+      }
+
       const newExpandedDays = new Set<number>();
       const now = new Date();
       const isAfter6PM = now.getHours() >= 18;
@@ -160,7 +173,7 @@ export default function SeatArrangement({ studentDocId, selectedTab, progressSta
       }
       setExpandedDays(newExpandedDays);
     }
-  }, [examDate]);
+  }, [examDate, showAllDaysWhenCompleted]);
 
   // Function to toggle expanded state of a day
   const toggleDayExpansion = (dayNumber: number) => {
@@ -272,6 +285,16 @@ export default function SeatArrangement({ studentDocId, selectedTab, progressSta
           borderColor: 'border-gray-300 dark:border-gray-600'
         };
     }
+  };
+
+  // Function to check if all exam days are past
+  const areAllExamDaysPast = () => {
+    for (let dayNumber = 1; dayNumber <= 3; dayNumber++) {
+      if (getDayStatus(dayNumber) !== 'past') {
+        return false;
+      }
+    }
+    return true;
   };
 
   // Render a shift card
@@ -543,23 +566,79 @@ export default function SeatArrangement({ studentDocId, selectedTab, progressSta
       transition={{ duration: 0.5 }}
       className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-500/10 dark:via-purple-500/10 dark:to-pink-500/10 backdrop-blur-md border border-gray-200 dark:border-white/20 rounded-2xl p-6 max-w-4xl mx-auto my-6 shadow-xl"
     >
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-200/50 to-purple-200/50 dark:from-indigo-500/30 dark:to-purple-500/30 rounded-lg blur-md"></div>
-          <div className="relative bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-500/20 dark:to-purple-500/20 p-2 rounded-lg">
-            <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-        </div>
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h3>
-      </div>
 
       {/* Day Sections */}
-      {renderDaySection(1, seatData?.day1)}
-      {renderDaySection(2, seatData?.day2)}
-      {renderDaySection(3, seatData?.day3)}
+      {areAllExamDaysPast() && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-200/50 to-purple-200/50 dark:from-indigo-500/30 dark:to-purple-500/30 rounded-lg blur-md"></div>
+                <div className="relative bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-500/20 dark:to-purple-500/20 p-2 rounded-lg">
+                  <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title')}</h3>
+            </div>
+
+            {/* Toggle Button to show/hide all days */}
+            <motion.button
+              onClick={() => setShowAllDaysWhenCompleted(!showAllDaysWhenCompleted)}
+              className="p-1.5 rounded-lg bg-white/10 dark:bg-black/10 backdrop-blur-sm border border-white/20 dark:border-white/10 hover:bg-white/20 dark:hover:bg-black/20 transition-colors duration-200"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <motion.svg
+                className="w-5 h-5 text-gray-600 dark:text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                animate={{ rotate: showAllDaysWhenCompleted ? 180 : 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </motion.svg>
+            </motion.button>
+          </div>
+
+          <AnimatePresence>
+            {showAllDaysWhenCompleted && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{
+                  duration: 0.4,
+                  ease: [0.4, 0.0, 0.2, 1],
+                  opacity: { duration: 0.2 }
+                }}
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="space-y-6"
+                >
+                  {renderDaySection(1, seatData?.day1)}
+                  {renderDaySection(2, seatData?.day2)}
+                  {renderDaySection(3, seatData?.day3)}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Show day sections normally when exam is not completed */}
+      {!areAllExamDaysPast() && (
+        <>
+          {renderDaySection(1, seatData?.day1)}
+          {renderDaySection(2, seatData?.day2)}
+          {renderDaySection(3, seatData?.day3)}
+        </>
+      )}
 
       {/* Status Messages */}
       {isNotRegistered && (

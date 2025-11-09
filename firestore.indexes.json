@@ -33,15 +33,15 @@
       ]
     },
     {
-      "collectionGroup": "attendance",
+      "collectionGroup": "adminAvailability",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "authUid",
+          "fieldPath": "date",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "date",
+          "fieldPath": "startTime",
           "order": "ASCENDING"
         }
       ]
@@ -381,6 +381,62 @@
         {
           "fieldPath": "formId",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "teacherAvailability",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isActive",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dayOfWeek",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "startTime",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "appointmentRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "authUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "requestedAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "appointmentRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "teacherId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "appointmentRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "requestedAt",
+          "order": "DESCENDING"
         }
       ]
     }

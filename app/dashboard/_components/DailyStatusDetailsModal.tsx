@@ -86,26 +86,15 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
       const startDate = `${yearMonth}-01`;
       const endDate = `${yearMonth}-31`;
       
-      // Build query with shift filter if viewing from 12BP context
-      let attendanceQuery;
-      if (targetShift) {
-        attendanceQuery = query(
-          collection(db, 'attendance'),
-          where('studentId', '==', studentId),
-          where('shift', '==', targetShift),
-          where('date', '>=', startDate),
-          where('date', '<=', endDate),
-          orderBy('date', 'asc')
-        );
-      } else {
-        attendanceQuery = query(
-          collection(db, 'attendance'),
-          where('studentId', '==', studentId),
-          where('date', '>=', startDate),
-          where('date', '<=', endDate),
-          orderBy('date', 'asc')
-        );
-      }
+      // DON'T filter by shift in the query - let getStudentDailyStatus handle shift compatibility
+      // This allows Morning/Afternoon flip-flop students to see all their records
+      const attendanceQuery = query(
+        collection(db, 'attendance'),
+        where('studentId', '==', studentId),
+        where('date', '>=', startDate),
+        where('date', '<=', endDate),
+        orderBy('date', 'asc')
+      );
       
       const snapshot = await getDocs(attendanceQuery);
       const records: RawAttendanceRecord[] = [];
@@ -121,6 +110,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
           shift: data.shift, // Include shift in the record
         });
       });
+      
       return records;
     } catch (error) {
       console.error('Error fetching attendance records:', error);
@@ -173,6 +163,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
         modalSelectedMonth, 
         targetShift // Pass the shift to filter attendance records
       );
+      
       setMonthlyAttendanceRecords(records);
       
       // Continue with calendar generation
@@ -222,6 +213,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
         allClassConfigs,
         approvedPermissions
       );
+      
       const cellData: CalendarCell = {
         dayOfMonth: dayCounter,
         fullDateStr: dateStr,
@@ -235,6 +227,7 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
       week.push(cellData);
       dayCounter++;
     }
+    
     while (week.length > 0 && week.length < 7) { week.push({ dayOfMonth: null }); }
     if (week.length > 0) grid.push(week);
 

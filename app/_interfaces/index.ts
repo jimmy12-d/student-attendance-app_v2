@@ -336,6 +336,51 @@ export interface StudentWithStars extends Student {
   claimedStars?: ClaimedStar[]; // Array of claimed stars
 }
 
+// Admin Appointment System Interfaces
+export interface AdminAvailability {
+  id: string; // Firestore document ID
+  date: string; // Specific date in YYYY-MM-DD format (e.g., "2025-11-08")
+  startTime: string; // Time in HH:mm format (e.g., "15:00")
+  endTime: string; // Time in HH:mm format (e.g., "17:00")
+  slotDuration: number; // Duration of each slot in minutes (e.g., 15, 30)
+  minPriorHours: number; // Minimum hours required before appointment (e.g., 2 means must book at least 2 hours before appointment time)
+  isActive: boolean; // Whether this availability is currently active
+  createdAt: Timestamp;
+  createdBy: string; // Admin who created it
+  updatedAt?: Timestamp;
+  updatedBy?: string;
+}
+
+export interface AppointmentRequest {
+  id: string; // Firestore document ID
+  studentId: string; // Student document ID
+  studentName: string; // Student name for display
+  studentClass?: string; // Student class
+  studentShift?: string; // Student shift
+  authUid: string; // Student auth UID
+  availabilityId: string; // Reference to adminAvailability document
+  appointmentDate: string; // Date in YYYY-MM-DD format
+  appointmentTime: string; // Time in HH:mm format
+  duration: number; // Duration in minutes
+  reason?: string; // Reason for the meeting (optional)
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'; // Request status
+  requestedAt: Timestamp;
+  processedAt?: Timestamp;
+  processedBy?: string; // Admin who approved/rejected
+  rejectionReason?: string; // Reason for rejection
+  notificationLogs?: NotificationLog[]; // Array of notification delivery logs
+  attendanceStatus?: 'met' | 'no-show'; // Track if student attended the appointment
+  attendanceMarkedAt?: Timestamp; // When attendance was marked
+  attendanceMarkedBy?: string; // Admin who marked attendance
+}
+
+// Helper type for displaying time slots in the calendar
+export interface TimeSlot {
+  time: string; // HH:mm format
+  available: boolean; // Whether the slot is available
+  appointmentId?: string; // If booked, the appointment ID
+}
+
 // Keep these interfaces here as they are specific to this component's view model
 export interface DailyStatusInfo {
   date: string;

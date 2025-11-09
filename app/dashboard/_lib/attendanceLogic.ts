@@ -61,7 +61,9 @@ export const getStudentDailyStatus = (
     checkDateStr: string,
     attendanceRecord: RawAttendanceRecord | undefined,
     allClassConfigs: AllClassConfigs | null,
-    approvedPermissionsForStudent?: PermissionRecord[]
+    approvedPermissionsForStudent?: PermissionRecord[],
+    classContext?: string, // Optional: Use this class for config lookup instead of student's class
+    shiftContext?: string  // Optional: Use this shift for config lookup instead of student's shift
 ): CalculatedStatus => {
     const checkDate = new Date(checkDateStr);
     checkDate.setHours(0,0,0,0);
@@ -80,9 +82,9 @@ export const getStudentDailyStatus = (
     if (!isSchoolDay(checkDate, classStudyDays)) return { status: "No School" };
 
     // Check attendance record first - prioritize actual attendance over permissions
-    // IMPORTANT: When an attendance record is provided, trust its status unless it's an Evening shift mismatch
-    // For Morning/Afternoon shifts, allow historical records even if shifts don't match (student may have changed shifts)
-    // Only enforce shift matching for Evening shifts to prevent incorrect attendance
+    // IMPORTANT: Shift matching rules:
+    // - Morning/Afternoon shifts are interchangeable (students flip-flop between them)
+    // - Evening shift requires exact match (different schedule/rules)
     if (attendanceRecord) {
         // Check if the attendance record has a valid status property
         if (!attendanceRecord.status) {
@@ -97,14 +99,26 @@ export const getStudentDailyStatus = (
             const recordShift = attendanceRecord.shift.toLowerCase();
             const studentShift = student.shift.toLowerCase();
             
-            // For Evening shifts, require exact match; for Morning/Afternoon, allow mismatches
-            const isEveningMismatch = recordShift === "evening" && recordShift !== studentShift;
+            // Helper function to check if shifts are compatible
+            const shiftsAreCompatible = (shift1: string, shift2: string): boolean => {
+                // Exact match is always compatible
+                if (shift1 === shift2) return true;
+                
+                // Morning and Afternoon are interchangeable (students flip-flop)
+                const morningAfternoonSet = new Set(['morning', 'afternoon']);
+                if (morningAfternoonSet.has(shift1) && morningAfternoonSet.has(shift2)) {
+                    return true;
+                }
+                
+                // Evening must match exactly
+                return false;
+            };
             
-            if (isEveningMismatch) {
-                // Don't trust Evening shift records that don't match - treat as no record
-                // This prevents incorrect attendance for Evening shifts
+            if (!shiftsAreCompatible(recordShift, studentShift)) {
+                // Shifts are incompatible - treat as no record
+                // This prevents Evening shift records from being shown for non-Evening students
             } else {
-                // Trust the record for Morning/Afternoon shifts or matching Evening shifts
+                // Shifts are compatible - trust the attendance record
                 const status = attendanceRecord.status === 'present' ? "Present" :
                                attendanceRecord.status === 'late'    ? "Late"    :
                                attendanceRecord.status === 'send-home' || attendanceRecord.status === 'send home' ? "Send Home" : "Unknown";
@@ -137,16 +151,28 @@ export const getStudentDailyStatus = (
         if (checkDate.getTime() === today.getTime()) {
             const studentShiftKey = student.shift;
             
-            // CRITICAL FIX: For 12BP students, use 12BP class config instead of their regular class config
-            // 12BP students have inBPClass=true and attend Evening shift with different start times
-            // Note: 12BP students keep their original shift value (e.g., "Afternoon") but actually attend Evening 12BP class
+            // CRITICAL FIX: Determine which class/shift config to use based on context
+            // Priority:
+            // 1. If classContext/shiftContext provided (viewing in specific class table) - use that
+            // 2. If student is in BP class and no context provided - use BP class config
+            // 3. Otherwise - use student's normal class/shift config
             let effectiveClassKey = studentClassKey;
             let effectiveClassConfig = classConfig;
             let effectiveShiftKey = studentShiftKey;
             
-            // If student is in BP class, they attend 12BP Evening shift regardless of their stored shift value
-            if ((student as any).inBPClass === true) {
-                // This student is in 12BP class - use 12BP config for start time
+            // If context is provided (viewing in specific class/shift table), use that context
+            if (classContext || shiftContext) {
+                // Use the provided context for determining start time
+                // This allows BP students to show correct status in their normal class table
+                if (classContext) {
+                    effectiveClassKey = classContext.replace(/^Class\s+/i, '');
+                    effectiveClassConfig = allClassConfigs ? allClassConfigs[effectiveClassKey] : undefined;
+                }
+                if (shiftContext) {
+                    effectiveShiftKey = shiftContext;
+                }
+            } else if ((student as any).inBPClass === true) {
+                // No context provided and student is in BP class - use BP class config
                 effectiveClassKey = '12BP';
                 effectiveClassConfig = allClassConfigs ? allClassConfigs['12BP'] : undefined;
                 effectiveShiftKey = 'Evening'; // 12BP is always Evening shift
