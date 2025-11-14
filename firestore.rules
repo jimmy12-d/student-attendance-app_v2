@@ -269,6 +269,12 @@ service cloud.firestore {
       // DELETE: Only admins can delete print requests.
       allow delete: if isAuthorizedUser();
     }
+
+    // Contact Tasks Collection - For tracking student follow-ups
+    match /contactTasks/{taskId} {
+      // Only authenticated admin users can read, write, update, and delete tasks
+      allow read, write: if isAuthorizedUser();
+    }
     
     match /absentFollowUps/{absentFollowUpId} {
       // READ/WRITE: Only admins can access absent follow-up records.

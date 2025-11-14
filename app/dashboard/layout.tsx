@@ -204,7 +204,7 @@ export default function LayoutAuthenticated({ children }: Props) {
       console.log('Key pressed:', key, 'Ctrl pressed:', event.ctrlKey);
 
       // Prevent default browser behavior for our shortcuts
-      if (['d', 'r', 'p', 's', 'e', 'h', '?'].includes(key)) {
+      if (['d', 'r', 'p', 's', 'e', 'h', '?', 't'].includes(key)) {
         event.preventDefault();
       }
 
@@ -223,6 +223,9 @@ export default function LayoutAuthenticated({ children }: Props) {
           break;
         case 'e':
           router.push('/dashboard/events');
+          break;
+        case 't':
+          router.push('/dashboard/to-do');
           break;
         case 'h':
           setShowHelpDialog(true);

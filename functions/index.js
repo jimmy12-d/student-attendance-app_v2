@@ -2296,6 +2296,9 @@ const handleExamResultSelection = async (bot, chatId, userId, messageId, callbac
                 
                 // Get student class
                 const classType = mockExamData.classType || 'N/A';
+                
+                // Format class name in Khmer
+                const classDisplay = containsEnglish(classType) ? formatClassInKhmer(classType) : classType;
 
                 // Helper function to get max score
                 const getMaxScore = (subject) => {
@@ -2315,7 +2318,7 @@ const handleExamResultSelection = async (bot, chatId, userId, messageId, callbac
                 let totalSubjectsInExam = 0; // Track total subjects in exam
                 
                 resultMessage += `👤 **សិស្ស:** ${studentName}\n`;
-                resultMessage += `🏫 **ថ្នាក់:** ${classType}\n\n`;
+                resultMessage += `🏫 **ថ្នាក់:** ${classDisplay}\n\n`;
 
                 possibleSubjects.forEach(subject => {
                     if (mock1Result[subject] !== undefined) {

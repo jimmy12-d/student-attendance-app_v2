@@ -22,6 +22,8 @@ const ConsecutiveAbsencesSection: React.FC<Props> = ({ students, attendanceRecor
   const [consecutiveAbsenceWarningList, setConsecutiveAbsenceWarningList] = useState<StudentAttendanceWarning[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   useEffect(() => {
     if (!students || !attendanceRecords || !allClassConfigs) {
@@ -47,7 +49,8 @@ const ConsecutiveAbsencesSection: React.FC<Props> = ({ students, attendanceRecor
       }
     });
 
-    setConsecutiveAbsenceWarningList(warnings.sort((a,b) => b.value - a.value).slice(0,5));
+    // Sort by highest count first, don't limit the list
+    setConsecutiveAbsenceWarningList(warnings.sort((a,b) => b.value - a.value));
     setIsLoading(false);
   }, [students, attendanceRecords, allClassConfigs]);
 
@@ -63,6 +66,13 @@ const ConsecutiveAbsencesSection: React.FC<Props> = ({ students, attendanceRecor
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
+
+  // Pagination logic
+  const totalPages = Math.ceil(consecutiveAbsenceWarningList.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = consecutiveAbsenceWarningList.slice(startIndex, endIndex);
+  const showPagination = consecutiveAbsenceWarningList.length > itemsPerPage;
 
   return (
     <div className="">
@@ -105,12 +115,13 @@ const ConsecutiveAbsencesSection: React.FC<Props> = ({ students, attendanceRecor
         }}
       >
         {consecutiveAbsenceWarningList.length > 0 ? (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-            {consecutiveAbsenceWarningList.map((studentWarning, index) => {
-              const studentSpecificAttendance = attendanceRecords.filter(att => att.studentId === studentWarning.id);
-              const studentObj = students.find(s => s.id === studentWarning.id);
-              if (!studentObj) return null;
-              return (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+              {currentItems.map((studentWarning, index) => {
+                const studentSpecificAttendance = attendanceRecords.filter(att => att.studentId === studentWarning.id);
+                const studentObj = students.find(s => s.id === studentWarning.id);
+                if (!studentObj) return null;
+                return (
                 <div
                   key={`${studentWarning.id}-consecutive`}
                   className={`transform transition-all duration-500 ease-out ${
@@ -157,6 +168,30 @@ const ConsecutiveAbsencesSection: React.FC<Props> = ({ students, attendanceRecor
               );
             })}
           </div>
+
+          {/* Pagination */}
+          {showPagination && (
+            <div className="flex items-center justify-center gap-2 mt-4 mb-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 bg-gradient-to-br from-gray-100/90 to-gray-200/70 dark:from-gray-700/90 dark:to-gray-600/70 backdrop-blur-md rounded-lg border border-gray-300/50 dark:border-gray-600/50 shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 bg-gradient-to-br from-gray-100/90 to-gray-200/70 dark:from-gray-700/90 dark:to-gray-600/70 backdrop-blur-md rounded-lg border border-gray-300/50 dark:border-gray-600/50 shadow-md hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
         ) : (
           <div className={`transition-all duration-500 ease-in-out ${isCollapsed ? 'opacity-0 transform translate-y-[-10px]' : 'opacity-100 transform translate-y-0'}`}>
             <NotificationBar color="info" icon={mdiCalendarRemoveOutline}>
