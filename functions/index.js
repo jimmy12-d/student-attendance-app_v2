@@ -959,10 +959,10 @@ exports.parentBotWebhook = onRequest({
             await bot.sendMessage(chatId, attendanceMessage, { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
         } else if (text === '/help') {
             // Send the standard bot info message with menu
-            await bot.sendMessage(chatId, getParentBotInfoMessage(), { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
+            await bot.sendMessage(chatId, getParentBotInfoMessage(), { parse_mode: 'Markdown', disable_web_page_preview: true, ...getParentBotMenuKeyboard() });
         } else {
             // Handle random/unknown text - send bot info message with menu
-            await bot.sendMessage(chatId, getParentBotInfoMessage(), { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
+            await bot.sendMessage(chatId, getParentBotInfoMessage(), { parse_mode: 'Markdown', disable_web_page_preview: true, ...getParentBotMenuKeyboard() });
         }
 
         res.status(200).send('OK');
@@ -1886,6 +1886,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
                 getParentBotInfoMessage(),
                 {
                     parse_mode: 'Markdown',
+                    disable_web_page_preview: true,
                     ...getParentBotMenuKeyboard()
                 }
             );
@@ -1960,6 +1961,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
                     chat_id: chatId,
                     message_id: messageId,
                     parse_mode: 'Markdown',
+                    disable_web_page_preview: true,
                     ...getParentBotMenuKeyboard()
                 }
             );
@@ -2143,6 +2145,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
                         chat_id: chatId,
                         message_id: messageId,
                         parse_mode: 'Markdown',
+                        disable_web_page_preview: true,
                         ...getParentBotMenuKeyboard()
                     }
                 );

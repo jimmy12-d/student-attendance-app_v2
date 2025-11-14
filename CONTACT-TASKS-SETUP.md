@@ -17,10 +17,10 @@ This guide explains how to set up the `contactTasks` Firebase collection for the
 | `taskType` | string | Yes | Type of task: 'consecutive' or 'warning' |
 | `reason` | string | Yes | Detailed reason for the contact task |
 | `assignedTo` | string | No | Assigned staff member: 'Jimmy', 'Jon', 'Jasper', 'Jason', or empty |
-| `status` | string | Yes | Current status: 'contacted', 'waiting', or 'done' |
+| `status` | string | Yes | Current status: 'unresolved', 'contacted', or 'resolved' |
 | `createdAt` | timestamp | Yes | When the task was created |
 | `updatedAt` | timestamp | Yes | When the task was last updated |
-| `completedAt` | timestamp | No | When the task was marked as done |
+| `completedAt` | timestamp | No | When the task was marked as resolved |
 | `notes` | string | No | Additional notes about the task |
 | `consecutiveDays` | number | No | Number of consecutive absence days (for consecutive type) |
 | `lastAbsentDate` | string | No | Last date of absence (YYYY-MM-DD format) |
@@ -139,21 +139,27 @@ The system automatically generates contact tasks for:
    - Includes number of consecutive days
    - Shows last absent date
 
-2. **Warning Students**: Students flagged with `warning: true` who are absent today
+2. **Warning Students**: Students flagged with `warning: true` who have absences in the last 7 days
    - Task Type: `warning`
    - Includes student note if available
-   - Created only for current day absences
+   - Checks recent 7-day period for any absences
 
 ### Task Workflow
 
-1. **Generate**: Click "Generate New Tasks" button to scan students and create tasks
-2. **Assign**: Assign tasks to staff members (Jimmy, Jon, Jasper, Jason)
-3. **Track**: Update status as you contact parents:
-   - `waiting` → Initial state, not yet contacted
+1. **Generate**: Click "Generate New Tasks" button to preview potential tasks
+2. **Preview**: Review all tasks in the preview modal
+   - See consecutive absence tasks (2+ days)
+   - See warning student tasks (absences in last 7 days)
+   - Select/deselect individual tasks using checkboxes
+   - Use "Select All" / "Deselect All" for bulk operations
+3. **Confirm**: Click "Create Tasks" to add only the selected tasks
+4. **Assign**: Assign tasks to staff members (Jimmy, Jon, Jasper, Jason)
+5. **Track**: Update status as you contact parents:
+   - `unresolved` → Initial state, not yet contacted
    - `contacted` → Parent has been contacted
-   - `done` → Issue resolved or task completed
-4. **Edit**: Update reason, notes, or reassign as needed
-5. **Delete**: Remove tasks that are no longer relevant
+   - `resolved` → Issue resolved or task completed
+6. **Edit**: Update reason, notes, or reassign as needed
+7. **Delete**: Remove tasks that are no longer relevant
 
 ### Filtering & Sorting
 
@@ -164,10 +170,12 @@ The system automatically generates contact tasks for:
 ## Best Practices
 
 1. **Regular Generation**: Run "Generate New Tasks" daily to catch new issues
-2. **Status Updates**: Update task status immediately after contacting parents
-3. **Add Notes**: Use the notes field to document conversation details
-4. **Assignment**: Assign tasks to specific staff members for accountability
-5. **Cleanup**: Mark tasks as "done" when resolved to keep the list manageable
+2. **Task Selection**: Review the preview modal and only create relevant tasks
+3. **Status Updates**: Update task status immediately after contacting parents
+4. **Add Reasons**: Fill in the reason field with contact details and outcomes
+5. **Add Notes**: The notes field contains auto-generated context about the absence
+6. **Assignment**: Assign tasks to specific staff members for accountability
+7. **Cleanup**: Mark tasks as "resolved" when completed to keep the list manageable
 
 ## Troubleshooting
 
@@ -201,7 +209,7 @@ The system automatically generates contact tasks for:
   "taskType": "consecutive",
   "reason": "3 consecutive school day absences. Last absent: 2025-01-14",
   "assignedTo": "Jimmy",
-  "status": "waiting",
+  "status": "unresolved",
   "createdAt": "2025-01-15T08:00:00.000Z",
   "updatedAt": "2025-01-15T08:00:00.000Z",
   "consecutiveDays": 3,

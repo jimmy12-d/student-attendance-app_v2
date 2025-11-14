@@ -200,12 +200,12 @@ export interface ContactTask {
   class: string;
   shift: string;
   taskType: 'consecutive' | 'warning'; // Type of issue requiring follow-up
-  reason: string; // Detailed reason for the task
+  reason: string; // Detailed reason for the task (admin fills in manually)
   assignedTo: 'Jimmy' | 'Jon' | 'Jasper' | 'Jason' | ''; // Assigned staff member
-  status: 'contacted' | 'waiting' | 'done'; // Current status of the task
+  status: 'unresolved' | 'contacted' | 'resolved'; // Current status of the task
   createdAt: Timestamp | Date; // When the task was created
   updatedAt: Timestamp | Date; // When the task was last updated
-  completedAt?: Timestamp | Date; // When the task was marked as done
+  completedAt?: Timestamp | Date; // When the task was marked as resolved
   notes?: string; // Additional notes about the task
   consecutiveDays?: number; // Number of consecutive absence days (for consecutive type)
   lastAbsentDate?: string; // Last date of absence (YYYY-MM-DD)
