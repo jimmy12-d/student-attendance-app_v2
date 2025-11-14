@@ -88,7 +88,7 @@ const AsideMenuItem = ({ item, isDropdownList = false, onRouteChange }: Props) =
           <Icon
             path={item.icon}
             className="transition-transform duration-300"
-            size="20"
+            size={item.iconSize || "20"}
           />
         </div>
       )}

@@ -7,8 +7,8 @@ import { MenuAsideItem } from "../../../_interfaces";
 import { useAppSelector } from "../../../_stores/hooks";
 import RodwellLogo from "../../../_components/JustboilLogo";
 import { mdiBellOutline } from "@mdi/js";
-import { mdiChartLine } from "@mdi/js";
 import { mdiFormSelect } from "@mdi/js";
+import { customPaymentSummaryIcon } from "../../_lib/menuAside";
 
 type Props = {
   menu: MenuAsideItem[];
@@ -40,8 +40,9 @@ export default function AsideMenuLayer({
 
   const paymentSummaryItem: MenuAsideItem = {
     label: "Payment Summary",
-    icon: mdiChartLine,
+    icon: customPaymentSummaryIcon,
     href: "/dashboard/payment-summary",
+    iconSize: 24,
   };
 
   const formItem: MenuAsideItem = {

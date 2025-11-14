@@ -25,11 +25,11 @@ interface TransactionManagerProps {
     subjects: string[];
     paymentMonth: string;
     displayPaymentMonth: string;
-    paymentMethod: 'Cash' | 'QR Payment';
+    paymentMethod: 'Cash' | 'QR Payment' | null;
     showMonthInput: boolean;
     isProcessing: boolean;
     joinDate: string;
-    onPaymentMethodChange: (method: 'Cash' | 'QR Payment') => void;
+    onPaymentMethodChange: (method: 'Cash' | 'QR Payment' | null) => void;
     onJoinDateSelect: (date: string) => void;
     classStudyDays?: number[] | null;
     fullAmount: number;
@@ -326,9 +326,11 @@ export const TransactionManager = ({
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                     paymentMethod === 'Cash' 
                                         ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200' 
-                                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                                        : paymentMethod === 'QR Payment'
+                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200'
+                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200'
                                 }`}>
-                                    {paymentMethod}
+                                    {paymentMethod || 'Not selected'}
                                 </span>
                             </div>
                         </div>

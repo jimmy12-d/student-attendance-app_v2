@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../../../firebase-config';
-import { collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, Timestamp, onSnapshot } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getStudentDailyStatus, RawAttendanceRecord, calculateMonthlyAbsencesLogic, getMonthDetailsForLogic } from '../../_lib/attendanceLogic';
 import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
@@ -123,7 +123,46 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
   };
 
   useEffect(() => {
+    if (!selectedDate) {
+      setFollowUps([]);
+      setLoading(false);
+      return;
+    }
+
+    // Set up real-time listener for attendance changes on the selected date
+    const attendanceQuery = query(collection(db, 'attendance'), where('date', '==', selectedDate));
+    const unsubscribeAttendance = onSnapshot(
+      attendanceQuery,
+      () => {
+        // When attendance changes, refresh the absent follow-ups list
+        fetchAbsentFollowUpsAndAbsentStudents();
+      },
+      (error) => {
+        console.error('Error listening to attendance changes:', error);
+      }
+    );
+
+    // Also set up listener for absentFollowUps changes
+    const followUpsQuery = query(collection(db, 'absentFollowUps'), where('date', '==', selectedDate));
+    const unsubscribeFollowUps = onSnapshot(
+      followUpsQuery,
+      () => {
+        // When follow-ups change, refresh the list
+        fetchAbsentFollowUpsAndAbsentStudents();
+      },
+      (error) => {
+        console.error('Error listening to follow-up changes:', error);
+      }
+    );
+
+    // Initial fetch
     fetchAbsentFollowUpsAndAbsentStudents();
+
+    // Cleanup listeners on unmount or when dependencies change
+    return () => {
+      unsubscribeAttendance();
+      unsubscribeFollowUps();
+    };
   }, [selectedDate, selectedClass, selectedShift]);
 
   const fetchAbsentFollowUpsAndAbsentStudents = async () => {
@@ -146,7 +185,12 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
         allStudents = allStudents.filter(s => s.class === selectedClass);
       }
       if (selectedShift) {
-        allStudents = allStudents.filter(s => s.shift === selectedShift);
+        // CRITICAL FIX: Handle BP students who attend Evening shift but have Morning/Afternoon stored shift
+        allStudents = allStudents.filter(s => {
+          const isBPStudent = (s as any).inBPClass === true;
+          const effectiveShift = isBPStudent ? 'Evening' : s.shift;
+          return effectiveShift === selectedShift;
+        });
       }
 
       // 2. Fetch all attendance records for the selected date
@@ -241,11 +285,15 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
           const attendanceRecord = attendanceRecords.find((rec: any) => {
             if (rec.studentId !== student.id) return false;
             
-            // Use effectiveShift for BP students when matching
-            const recordShift = rec.shift || effectiveShift;
+            // CRITICAL FIX: Match shifts correctly
+            // If both have shifts, they must match
+            // If attendance record has no shift, only match if student has no shift
+            if (rec.shift && effectiveShift) {
+              return rec.shift.toLowerCase() === effectiveShift.toLowerCase();
+            }
             
-            // Match using effectiveShift instead of student.shift
-            return !rec.shift || !effectiveShift || recordShift.toLowerCase() === effectiveShift.toLowerCase();
+            // If record has no shift, accept it as a match (legacy records or single-shift students)
+            return !rec.shift;
           }) as RawAttendanceRecord | undefined;
           
           // Find permissions for this student on selected date
@@ -322,46 +370,54 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
           // Find the student data for this follow-up
           const studentData = allStudents.find(s => s.id === fu.studentId);
           
+          // CRITICAL FIX: Skip if student data not found (e.g., filtered out by class/shift or not active)
+          if (!studentData) {
+            return; // Don't add follow-ups for students not in the filtered list
+          }
+          
           // Check if student is actually present now
-          if (studentData) {
-            // CRITICAL: Determine the student's effective shift for attendance matching
-            // BP students (inBPClass=true) have their stored shift as their original class shift (e.g., "Afternoon")
-            // but they actually attend Evening shift for 12BP class. We need to use "Evening" for matching.
-            const isBPStudent = (studentData as any).inBPClass === true;
-            const effectiveShift = isBPStudent ? 'Evening' : studentData.shift;
+          // CRITICAL: Determine the student's effective shift for attendance matching
+          // BP students (inBPClass=true) have their stored shift as their original class shift (e.g., "Afternoon")
+          // but they actually attend Evening shift for 12BP class. We need to use "Evening" for matching.
+          const isBPStudent = (studentData as any).inBPClass === true;
+          const effectiveShift = isBPStudent ? 'Evening' : studentData.shift;
 
-            // Find attendance record matching both studentId AND shift
-            const attendanceRecord = attendanceRecords.find((rec: any) => {
-              if (rec.studentId !== studentData.id) return false;
-              
-              // Use effectiveShift for BP students when matching
-              const recordShift = rec.shift || effectiveShift;
-              
-              // Match using effectiveShift instead of student.shift
-              return !rec.shift || !effectiveShift || recordShift.toLowerCase() === effectiveShift.toLowerCase();
-            }) as RawAttendanceRecord | undefined;
+          // Find attendance record matching both studentId AND shift
+          const attendanceRecord = attendanceRecords.find((rec: any) => {
+            if (rec.studentId !== studentData.id) return false;
             
-            const studentPermissions = allPermissions.filter(permission => 
-              permission.studentId === studentData.id && 
-              permission.status === 'approved' &&
-              selectedDate >= permission.permissionStartDate && 
-              selectedDate <= permission.permissionEndDate
-            );
-            
-            const result = getStudentDailyStatus(
-              studentData,
-              selectedDate,
-              attendanceRecord,
-              allClassConfigs,
-              studentPermissions
-            );
-            
-            const status = result.status?.toLowerCase() || '';
-            
-            // Skip if student is now present, on permission, or if it's not a school day
-            if (status === 'present' || status === 'permission' || status === 'no school') {
-              return; // Don't add this follow-up to the list
+            // CRITICAL FIX: Match shifts correctly
+            // If both have shifts, they must match
+            // If attendance record has no shift, only match if student has no shift
+            if (rec.shift && effectiveShift) {
+              return rec.shift.toLowerCase() === effectiveShift.toLowerCase();
             }
+            
+            // If record has no shift, accept it as a match (legacy records or single-shift students)
+            return !rec.shift;
+          }) as RawAttendanceRecord | undefined;
+          
+          const studentPermissions = allPermissions.filter(permission => 
+            permission.studentId === studentData.id && 
+            permission.status === 'approved' &&
+            selectedDate >= permission.permissionStartDate && 
+            selectedDate <= permission.permissionEndDate
+          );
+          
+          const result = getStudentDailyStatus(
+            studentData,
+            selectedDate,
+            attendanceRecord,
+            allClassConfigs,
+            studentPermissions
+          );
+          
+          const status = result.status?.toLowerCase() || '';
+          
+          // CRITICAL FIX: Skip if student is now present, on permission, or if it's not a school day
+          // This prevents adding follow-ups for students who have since marked their attendance as present
+          if (status === 'present' || status === 'permission' || status === 'no school') {
+            return; // Don't add this follow-up to the list
           }
           
           // Fix "Unknown" student name by looking up from students collection
@@ -376,7 +432,7 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
             nameKhmer: studentData?.nameKhmer, // Add Khmer name from student data
             daysSinceAbsent, 
             isUrgent,
-            student: studentData || {}, // Add student data for priority calculation
+            student: studentData, // Add student data for priority calculation
             monthlyAbsentCount: monthlyAbsenceCountsMap[fu.studentId] || 0
           });
         }

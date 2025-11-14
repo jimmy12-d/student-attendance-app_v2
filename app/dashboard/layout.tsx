@@ -21,6 +21,7 @@ import NavBarItemPlain from "./_components/NavBar/Item/Plain";
 import AsideMenu from "./_components/AsideMenu";
 import FooterBar from "./_components/FooterBar";
 import DashboardLoading from "../_components/DashboardLoading";
+import { getInactivitySettings, getTimeoutInMs, formatTimeout, type InactivitySettings } from "../_utils/inactivitySettings";
 
 type Props = {
   children: ReactNode;
@@ -46,7 +47,7 @@ export default function LayoutAuthenticated({ children }: Props) {
   // State for inactivity modal
   const [showInactiveModal, setShowInactiveModal] = useState(false);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const INACTIVITY_TIMEOUT = 30000; // 30 seconds
+  const [inactivitySettings, setInactivitySettings] = useState<InactivitySettings>(() => getInactivitySettings());
 
   // State for keyboard shortcuts help dialog
   const [showHelpDialog, setShowHelpDialog] = useState(false);
@@ -56,9 +57,31 @@ export default function LayoutAuthenticated({ children }: Props) {
       clearTimeout(inactivityTimerRef.current);
     }
     setShowInactiveModal(false);
-    inactivityTimerRef.current = setTimeout(() => {
-      setShowInactiveModal(true);
-    }, INACTIVITY_TIMEOUT);
+    
+    // Only set timer if inactivity detection is enabled
+    const timeoutMs = getTimeoutInMs(inactivitySettings);
+    if (timeoutMs > 0) {
+      inactivityTimerRef.current = setTimeout(() => {
+        setShowInactiveModal(true);
+      }, timeoutMs);
+    }
+  };
+
+  // Handler for when settings change
+  const handleInactivitySettingsChange = (newSettings: InactivitySettings) => {
+    setInactivitySettings(newSettings);
+    // Reset timer with new settings
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    setShowInactiveModal(false);
+    
+    const timeoutMs = getTimeoutInMs(newSettings);
+    if (timeoutMs > 0) {
+      inactivityTimerRef.current = setTimeout(() => {
+        setShowInactiveModal(true);
+      }, timeoutMs);
+    }
   };
 
   const handleRouteChange = () => {
@@ -168,7 +191,7 @@ export default function LayoutAuthenticated({ children }: Props) {
         document.removeEventListener(event, handleActivity, true);
       });
     };
-  }, []);
+  }, [inactivitySettings]); // Re-run when settings change
 
   // Keyboard shortcuts navigation
   useEffect(() => {
@@ -193,7 +216,7 @@ export default function LayoutAuthenticated({ children }: Props) {
           router.push('/dashboard/record');
           break;
         case 'p':
-          router.push('/dashboard/pos');
+          router.push('/dashboard/pos-student');
           break;
         case 's':
           router.push('/dashboard/students');
@@ -257,6 +280,7 @@ export default function LayoutAuthenticated({ children }: Props) {
           <NavBar
             menu={menuNavBar}
             className={`${layoutAsidePadding} ${isAsideMobileExpanded ? "ml-60 lg:ml-0" : ""}`}
+            onInactivitySettingsChange={handleInactivitySettingsChange}
           >
             <NavBarItemPlain
               display="flex lg:hidden"
@@ -296,7 +320,7 @@ export default function LayoutAuthenticated({ children }: Props) {
         </div>
 
         {/* Inactive Screen Modal */}
-        {showInactiveModal && (
+        {showInactiveModal && inactivitySettings.enabled && (
           <div className="fixed inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-lg flex items-center justify-center z-110">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full mx-4 text-center">
               <div className="mb-6">
@@ -307,7 +331,7 @@ export default function LayoutAuthenticated({ children }: Props) {
                   Session Inactive
                 </h2>
                 <p className="text-gray-600 dark:text-gray-400">
-                  You have been inactive for 30 seconds. Please interact with the page to continue.
+                  You have been inactive for {formatTimeout(inactivitySettings.timeoutSeconds)}. Please interact with the page to continue.
                 </p>
               </div>
               <button

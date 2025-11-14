@@ -14,6 +14,7 @@ interface ClassTypeAnalysisProps {
   transactionsData?: any[]; // Array of transaction data
   classesData?: { [classId: string]: { type: string } }; // Mapping of class ID to class data
   dateInterval: { type: 'interval' | 'monthly'; value: string; };
+  startDate?: string; // Selected date for filtering
   isLoading: boolean;
 }
 
@@ -22,7 +23,8 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
   studentsData = [],
   transactionsData = [],
   classesData = {},
-  dateInterval, 
+  dateInterval,
+  startDate,
   isLoading 
 }) => {
   const classColors = [
@@ -58,6 +60,9 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
     if (!studentsData || studentsData.length === 0) {
       return { paid: 0, unpaid: 0, onBreak: 0, dropped: 0, total: 0, existingStudents: 0, newStudents: 0 };
     }
+
+    // Use the selected date from the date picker, or fallback to current date
+    const targetDate = startDate ? new Date(startDate + 'T12:00:00') : new Date();
 
     let paid = 0;
     let unpaid = 0;
@@ -124,13 +129,15 @@ const ClassTypeAnalysis: React.FC<ClassTypeAnalysisProps> = ({
                               student.class?.includes(classType);
 
       if (matchesClassType) {
-        // Check for inactive students
-        if (student.onBreak) {
+        // Check for inactive students using the target date
+        const inactiveStatus = getInactiveStudentStatus(student, targetDate);
+        
+        if (inactiveStatus === 'onBreak') {
           onBreak++;
-        } else if (student.dropped) {
+        } else if (inactiveStatus === 'dropped') {
           dropped++;
         } else {
-          const paymentStatus = getPaymentStatus(student.lastPaymentMonth);
+          const paymentStatus = getPaymentStatus(student.lastPaymentMonth, targetDate);
           if (paymentStatus === 'paid') {
             paid++;
             // Count existing vs new students for paid students

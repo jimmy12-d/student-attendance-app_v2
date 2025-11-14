@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   other: {
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-status-bar-style": "default",
     "apple-mobile-web-app-title": "Rodwell Portal",
   },
 };
@@ -44,7 +44,6 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  viewportFit: "cover",
   themeColor: "#0f172a",
 };
 
@@ -59,7 +58,7 @@ export default function RootLayout({
         <DarkModeInit />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Rodwell Portal" />
         <link rel="manifest" href="/manifest.json" />
         {/* Inline splash screen that shows immediately */}

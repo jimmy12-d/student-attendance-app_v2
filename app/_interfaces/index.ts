@@ -16,6 +16,7 @@ export type MenuAsideItem = {
   menu?: MenuAsideItem[];
   onClick?: (item: MenuAsideItem) => void;
   notificationCount?: number; // Add this line
+  iconSize?: string | number;
 };
 
 export type MenuNavBarItem = {

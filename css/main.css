@@ -130,9 +130,8 @@ html, body {
   overflow-y: auto;
   height: auto;
   min-height: 100vh;
-  /* Use iOS safe areas in PWAs */
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Don't add padding to html/body - this causes gaps in PWA mode */
+  /* Safe area insets should be handled per component if needed */
 }
 
 /* Underlay color (beneath the app body). Keep on html so body utility classes can control page bg */

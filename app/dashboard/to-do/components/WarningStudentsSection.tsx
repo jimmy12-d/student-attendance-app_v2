@@ -1,4 +1,4 @@
-// app/dashboard/record/components/WarningStudentsSection.tsx
+// app/dashboard/to-do/components/WarningStudentsSection.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";

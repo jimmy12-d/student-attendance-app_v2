@@ -5,8 +5,10 @@ import { db } from "../../../../firebase-config";
 import { toast } from "sonner";
 import { getPaymentStatus } from "../../_lib/paymentLogic";
 import Icon from "../../../_components/Icon";
-import { mdiClockOutline } from "@mdi/js";
+import { mdiClockOutline, mdiCheckCircle, mdiCloseCircle, mdiBellRing, mdiSend } from "@mdi/js";
 import * as XLSX from 'xlsx';
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../../../../firebase-config";
 
 // Phone formatting utility (matching StudentRow)
 const formatPhoneNumber = (phone: string | undefined | null): string => {
@@ -32,6 +34,37 @@ const formatPhoneNumber = (phone: string | undefined | null): string => {
   return phone; // Return original if it doesn't match formats
 };
 
+// Helper function to format notification time
+const formatNotificationTime = (timestamp: any): string => {
+  if (!timestamp) return "Unknown";
+  let date: Date;
+  
+  if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+    date = timestamp.toDate();
+  } else if (timestamp instanceof Date) {
+    date = timestamp;
+  } else {
+    return "Unknown";
+  }
+  
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+interface NotificationLog {
+  chatId: string;
+  parentName?: string;
+  sentAt: any;
+  success: boolean;
+  errorMessage?: string;
+  errorCode?: number;
+  deactivated?: boolean;
+}
+
 interface UnpaidStudent {
   id: string;
   fullName: string;
@@ -49,12 +82,105 @@ interface UnpaidStudent {
   hasTelegramUsername: boolean;
   lateFeePermission: boolean;
   isNewStudent: boolean;
+  hasParentConnected: boolean;
+  parentCount: number;
+  paymentReminderLogs?: NotificationLog[];
+  lastReminderSent?: any;
 }
 
 interface UnpaidStudentsTabProps {
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
 }
+
+// Component to display notification delivery status
+const NotificationStatus: React.FC<{ logs?: NotificationLog[] }> = ({ logs }) => {
+  if (!logs || logs.length === 0) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+        <Icon path={mdiClockOutline} size={14} />
+        <span>No reminder sent yet</span>
+      </div>
+    );
+  }
+
+  const successCount = logs.filter(log => log.success).length;
+  const failedCount = logs.length - successCount;
+  const allSuccess = successCount === logs.length;
+  const allFailed = failedCount === logs.length;
+
+  return (
+    <div className="space-y-1">
+      {/* Summary */}
+      <div className={`flex items-center gap-1 text-xs font-medium ${
+        allSuccess 
+          ? 'text-green-600 dark:text-green-400' 
+          : allFailed 
+          ? 'text-red-600 dark:text-red-400'
+          : 'text-orange-600 dark:text-orange-400'
+      }`}>
+        <Icon 
+          path={allSuccess ? mdiCheckCircle : allFailed ? mdiCloseCircle : mdiBellRing} 
+          size={14} 
+        />
+        <span>
+          {allSuccess 
+            ? `✓ Sent to ${successCount} parent${successCount > 1 ? 's' : ''}` 
+            : allFailed
+            ? `✗ Failed for ${failedCount} parent${failedCount > 1 ? 's' : ''}`
+            : `${successCount} sent, ${failedCount} failed`
+          }
+        </span>
+      </div>
+
+      {/* Detailed logs - expandable */}
+      <details className="text-xs">
+        <summary className="cursor-pointer text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200">
+          View details
+        </summary>
+        <div className="mt-2 space-y-1 pl-2 border-l-2 border-gray-200 dark:border-gray-600">
+          {logs.map((log, index) => (
+            <div 
+              key={index} 
+              className={`flex items-start gap-2 ${
+                log.success 
+                  ? 'text-green-600 dark:text-green-400' 
+                  : 'text-red-600 dark:text-red-400'
+              }`}
+            >
+              <Icon 
+                path={log.success ? mdiCheckCircle : mdiCloseCircle} 
+                size={14} 
+                className="mt-0.5 flex-shrink-0"
+              />
+              <div className="flex-1">
+                <div className="font-medium">
+                  {log.success ? '✓ Delivered' : '✗ Failed'}
+                  {log.parentName && log.parentName !== 'Unknown' && (
+                    <span className="font-normal"> to {log.parentName}</span>
+                  )}
+                </div>
+                <div className="text-gray-500 dark:text-gray-400">
+                  {formatNotificationTime(log.sentAt)}
+                </div>
+                {log.errorMessage && (
+                  <div className="text-red-500 dark:text-red-400 text-xs">
+                    Error: {log.errorMessage}
+                  </div>
+                )}
+                {log.deactivated && (
+                  <div className="text-orange-500 dark:text-orange-400 text-xs">
+                    ⚠ Notification deactivated (bot blocked)
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </details>
+    </div>
+  );
+};
 
 const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsLoading }) => {
   const [unpaidStudents, setUnpaidStudents] = useState<UnpaidStudent[]>([]);
@@ -65,6 +191,7 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
   const [overdueFilter, setOverdueFilter] = useState("all");
   const [lateFeeFilter, setLateFeeFilter] = useState("all");
   const [trialPeriodFilter, setTrialPeriodFilter] = useState("all");
+  const [sendingReminders, setSendingReminders] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchUnpaidStudents();
@@ -107,6 +234,21 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
           ...data,
           date: new Date(data.date)
         });
+      });
+
+      // Fetch parent notification data to check if parents are connected
+      const parentNotificationsRef = collection(db, "parentNotifications");
+      const parentNotificationsSnapshot = await getDocs(parentNotificationsRef);
+      
+      // Create a map of student -> parent notifications
+      const studentParentMap = new Map<string, any[]>();
+      parentNotificationsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        const studentId = data.studentId;
+        if (!studentParentMap.has(studentId)) {
+          studentParentMap.set(studentId, []);
+        }
+        studentParentMap.get(studentId)!.push(data);
       });
 
       const unpaidList: UnpaidStudent[] = [];
@@ -257,6 +399,11 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
             }
           }
 
+          // Get parent notification data for this student
+          const parentNotifications = studentParentMap.get(studentId) || [];
+          const activeParents = parentNotifications.filter(p => p.isActive === true);
+          const hasParentConnected = activeParents.length > 0;
+
           unpaidList.push({
             id: studentId,
             fullName: studentData.fullName || 'Unknown Student',
@@ -273,7 +420,11 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
             telegramUsername: studentData.telegramUsername || '',
             hasTelegramUsername: studentData.hasTelegramUsername || false,
             lateFeePermission: studentData.lateFeePermission || false,
-            isNewStudent: isTrialPeriod
+            isNewStudent: isTrialPeriod,
+            hasParentConnected: hasParentConnected,
+            parentCount: activeParents.length,
+            paymentReminderLogs: studentData.paymentReminderLogs || [],
+            lastReminderSent: studentData.lastReminderSent || null
           });
         }
       });
@@ -422,6 +573,44 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
     XLSX.writeFile(wb, `unpaid-students-${new Date().toISOString().split('T')[0]}.xlsx`);
     
     toast.success("Unpaid students list exported successfully!");
+  };
+
+  const handleSendPaymentReminder = async (studentId: string, studentName: string) => {
+    if (sendingReminders.has(studentId)) {
+      toast.info("Reminder already sending for this student...");
+      return;
+    }
+
+    try {
+      setSendingReminders(prev => new Set(prev).add(studentId));
+      toast.loading(`Sending reminder to ${studentName}...`, { id: `reminder-${studentId}` });
+
+      const sendPaymentReminderFn = httpsCallable(functions, 'sendPaymentReminder');
+      const result = await sendPaymentReminderFn({ studentId });
+      const data = result.data as { success: boolean; notificationsSent: number; message: string; notificationLogs: NotificationLog[] };
+
+      if (data.success && data.notificationsSent > 0) {
+        toast.success(`Reminder sent to ${data.notificationsSent} parent${data.notificationsSent > 1 ? 's' : ''}`, { id: `reminder-${studentId}` });
+        
+        // Update the student in local state with the new notification logs
+        setUnpaidStudents(prev => prev.map(s => 
+          s.id === studentId 
+            ? { ...s, paymentReminderLogs: data.notificationLogs, lastReminderSent: new Date() }
+            : s
+        ));
+      } else {
+        toast.warning(data.message || "Unable to send reminder", { id: `reminder-${studentId}` });
+      }
+    } catch (error: any) {
+      console.error("Error sending payment reminder:", error);
+      toast.error(`Failed to send reminder: ${error.message}`, { id: `reminder-${studentId}` });
+    } finally {
+      setSendingReminders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(studentId);
+        return newSet;
+      });
+    }
   };
 
   return (
@@ -636,42 +825,57 @@ const UnpaidStudentsTab: React.FC<UnpaidStudentsTabProps> = ({ isLoading, setIsL
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between">
-                  {/* Contact Info */}
-                  <div className="min-w-0">
-                    {student.phone ? (
-                      student.hasTelegramUsername && student.telegramUsername ? (
-                        <a 
-                          href={`https://t.me/${student.telegramUsername}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 group-hover:bg-blue-200 dark:group-hover:bg-blue-600 hover:text-blue-900 dark:hover:text-blue-100 transition-colors duration-200 cursor-pointer whitespace-nowrap"
-                          title={`Contact ${student.fullName} on Telegram (@${student.telegramUsername})`}
-                        >
-                          <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                          </svg>
-                          <span className="truncate">{formatPhoneNumber(student.phone)}</span>
-                        </a>
-                      ) : student.hasTelegramUsername && !student.telegramUsername ? (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-700 group-hover:bg-orange-200 dark:group-hover:bg-orange-800/50 transition-colors duration-200 whitespace-nowrap"
-                              title={`${student.fullName} needs Telegram username setup`}>
-                          <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          <span className="truncate">{formatPhoneNumber(student.phone)}</span>
-                        </span>
+                {/* Parent Connection Status and Send Button */}
+                <div className="border-t border-gray-200 dark:border-gray-600 pt-3 mt-3">
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Parent Connection Indicator */}
+                    <div className="flex-1 min-w-0">
+                      {student.hasParentConnected ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-green-600 dark:text-green-400 font-medium">
+                              {student.parentCount} parent{student.parentCount > 1 ? 's' : ''} connected
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleSendPaymentReminder(student.id, student.fullName)}
+                            disabled={sendingReminders.has(student.id)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
+                              sendingReminders.has(student.id)
+                                ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/50 cursor-pointer'
+                            }`}
+                            title="Send payment reminder"
+                          >
+                            {sendingReminders.has(student.id) ? (
+                              <>
+                                <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                <span>Sending...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Icon path={mdiSend} size={14} />
+                                <span>Send Reminder</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 group-hover:bg-gray-200 dark:group-hover:bg-slate-600 transition-colors duration-200 whitespace-nowrap">
-                          <span className="truncate">{formatPhoneNumber(student.phone)}</span>
-                        </span>
-                      )
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 transition-colors duration-200 whitespace-nowrap">
-                        N/A
-                      </span>
-                    )}
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                          <span>No parent connected</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Notification Logs */}
+                  {student.paymentReminderLogs && student.paymentReminderLogs.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                      <NotificationStatus logs={student.paymentReminderLogs} />
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

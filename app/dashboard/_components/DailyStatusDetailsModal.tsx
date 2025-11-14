@@ -287,6 +287,35 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
     }
     return baseTitle;
   }, [student.fullName, student.class, student.shift, contextualStudent.class, contextualStudent.shift, allClassConfigs]);
+
+  // Calculate attendance status summary
+  const statusSummary = useMemo(() => {
+    const summary = {
+      present: 0,
+      late: 0,
+      absent: 0,
+      permission: 0,
+      pending: 0,
+      'send home': 0,
+      'no school': 0,
+      'not yet enrolled': 0,
+      total: 0
+    };
+
+    calendarGrid.forEach(week => {
+      week.forEach(cell => {
+        if (cell.dayOfMonth && cell.status) {
+          const status = cell.status.toLowerCase();
+          if (status in summary) {
+            summary[status as keyof typeof summary]++;
+          }
+          summary.total++;
+        }
+      });
+    });
+
+    return summary;
+  }, [calendarGrid]);
   
   return (
     <CardBoxModal
@@ -296,62 +325,159 @@ const DailyStatusDetailsModal: React.FC<Props> = ({
       onCancel={onClose}
       buttonLabel="Close"
       buttonColor="info"
-      modalClassName="w-11/12 md:w-4/5 lg:w-3/5 xl:max-w-4xl"
+      modalClassName="w-11/12 md:w-4/5 lg:w-3/5 xl:max-w-4xl py-6 pr-4"
     >
-      <div className="mb-4 flex justify-between items-center px-2 sm:px-4 py-2 border-b dark:border-slate-700">
-        <Button icon={mdiChevronLeft} onClick={() => handleMonthChange('prev')} small outline color="lightDark" aria-label="Previous Month" disabled={isPrevDisabled} />
-        <h3 className="text-md sm:text-lg text-gray-700 dark:text-gray-200">{currentModalMonthLabel}</h3>
-        <Button icon={mdiChevronRight} onClick={() => handleMonthChange('next')} small outline color="lightDark" aria-label="Next Month" disabled={isNextDisabled} />
+      {/* Modern Header with Navigation */}
+      <div className="mb-6 flex justify-between items-center px-6 py-4 bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800 dark:to-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm relative">
+        <Button 
+          icon={mdiChevronLeft} 
+          onClick={() => handleMonthChange('prev')} 
+          small 
+          outline 
+          color="lightDark" 
+          aria-label="Previous Month" 
+          disabled={isPrevDisabled}
+          className="hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors duration-200 rounded-lg"
+        />
+        <div className="relative group">
+          <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 tracking-wide">
+            {currentModalMonthLabel}
+          </h3>
+          {/* Tooltip */}
+          {!isLoading && calendarGrid.length > 0 && (
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-4 py-3 bg-slate-800 dark:bg-slate-700 text-white text-sm rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-10 min-w-[200px]">
+              <div className="font-semibold mb-2 text-center border-b border-slate-600 pb-1">Monthly Summary</div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-300">Present:</span>
+                  <span className="font-bold text-green-400">{statusSummary.present}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-300">Late:</span>
+                  <span className="font-bold text-amber-400">{statusSummary.late}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-300">Absent:</span>
+                  <span className="font-bold text-red-400">{statusSummary.absent}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-300">Permission:</span>
+                  <span className="font-bold text-purple-400">{statusSummary.permission}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        <Button 
+          icon={mdiChevronRight} 
+          onClick={() => handleMonthChange('next')} 
+          small 
+          outline 
+          color="lightDark" 
+          aria-label="Next Month" 
+          disabled={isNextDisabled}
+          className="hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors duration-200 rounded-lg"
+        />
       </div>
 
-      {isLoading ? ( <p className="p-4 text-center">Loading details...</p> ) :
-      calendarGrid.length === 0 ? ( <p className="p-4 text-center">No attendance details to display.</p> ) : (
-        <div className="text-sm p-1 md:p-2">
-          <table className="w-full table-fixed border-collapse text-center">
-            <thead>
-              <tr>
-                {daysOfWeek.map(day => (
-                  <th key={day} className="py-2 px-1 border dark:border-slate-700 text-xs text-center">{day}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {calendarGrid.map((week, weekIndex) => (
-                <tr key={weekIndex}>
-                  {week.map((cell, dayIndex) => (
-                    <td key={dayIndex} className={`py-1 px-1 border dark:border-slate-700 h-16 md:h-20 relative align-top text-left transition-colors duration-150 ease-in-out
-                      ${cell.isToday ? 'bg-sky-100 dark:bg-sky-700/60' : !cell.isSchoolDayCell && cell.dayOfMonth ? 'bg-gray-100 dark:bg-slate-800 opacity-70' : cell.dayOfMonth && cell.isPast ? 'bg-white dark:bg-slate-700/50' : cell.dayOfMonth && !cell.isPast ? 'bg-slate-50 dark:bg-slate-800/80' : 'bg-gray-50 dark:bg-slate-900'}`}>
-                      {cell.dayOfMonth && (
-                        <>
-                          <div className={`absolute top-1 left-1 text-s p-0.5 
-                            ${cell.isToday ? 'font-bold text-sky-600 dark:text-sky-200' : (cell.isPast || cell.status) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-400 dark:text-slate-500'}`}>
-                            {cell.dayOfMonth}
-                          </div>
-                          <div className="absolute inset-0 top-5 md:top-6 flex flex-col items-center justify-start pt-1 px-0.5 text-center">
-                            {cell.status && ["Present", "Late", "Absent", "Pending", "Permission", "Absent (Config Missing)", "Unknown", "Send Home"].includes(cell.status) && (
-                              <span className={`px-1.5 py-0.5 text-xs sm:text-xs rounded-full leading-tight whitespace-nowrap border ${getStatusColor(cell.status)}`}>
-                                {cell.status === "Absent (Config Missing)" ? "Absent_@" : cell.status}
-                              </span>
-                            )}
-                            {(cell.status === "Present" || cell.status === "Late") && cell.time && (
-                              <span className={`block text-xxs mt-0.5 pt-1 leading-tight ${cell.isToday ? 'text-sky-700 dark:text-sky-200' : 'text-gray-500 dark:text-gray-400'}`}>
-                                {cell.time ? `(${cell.time})` : ''}
-                              </span>
-                            )}
-                            {(cell.status === "No School" || cell.status === "Not Yet Enrolled") && (
-                               <span className={`text-[0.65rem] leading-tight px-1.5 py-0.5 rounded-full ${getStatusColor(cell.status)} ${cell.isToday ? 'font-medium' : ''}`}>
-                                   {cell.status === "No School" ? "Non-School" : "Not Enrolled"}
-                               </span>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </td>
-                  ))}
-                </tr>
+      {isLoading ? ( 
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          <span className="ml-3 text-slate-600 dark:text-slate-400">Loading attendance details...</span>
+        </div>
+      ) :
+      calendarGrid.length === 0 ? ( 
+        <div className="text-center py-12">
+          <div className="text-slate-500 dark:text-slate-400 text-lg">No attendance details available</div>
+        </div>
+      ) : (
+        <div className="px-2">
+          {/* Calendar Grid */}
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            {/* Days of Week Header */}
+            <div className="grid grid-cols-7 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600">
+              {daysOfWeek.map(day => (
+                <div key={day} className="py-3 px-2 text-center text-sm font-medium text-slate-600 dark:text-slate-300 border-r border-slate-200 dark:border-slate-600 last:border-r-0">
+                  {day}
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Calendar Body */}
+            <div className="grid grid-cols-7">
+              {calendarGrid.map((week, weekIndex) => (
+                week.map((cell, dayIndex) => (
+                  <div 
+                    key={`${weekIndex}-${dayIndex}`} 
+                    className={`
+                      min-h-[60px] md:min-h-[70px] p-2 border-r border-b border-slate-100 dark:border-slate-600 last:border-r-0
+                      transition-all duration-200 ease-in-out
+                      ${cell.dayOfMonth && cell.isPast && cell.isSchoolDayCell
+                        ? `bg-slate-300 dark:bg-[rgb(25,35,55)] hover:bg-slate-400 dark:hover:bg-slate-800 ${cell.isToday ? 'ring-2 ring-blue-300 dark:ring-blue-500 shadow-lg' : ''}`
+                        : cell.dayOfMonth
+                          ? `bg-white dark:bg-slate-700/30 hover:bg-slate-50 dark:hover:bg-slate-700/50 ${cell.isToday ? 'ring-2 ring-blue-300 dark:ring-blue-500 shadow-lg' : ''}`
+                          : `bg-white dark:bg-slate-700/30 ${cell.isToday ? 'ring-2 ring-blue-300 dark:ring-blue-500 shadow-lg' : ''}`
+                      }
+                    `}
+                  >
+                    {cell.dayOfMonth && (
+                      <div className="h-full flex flex-col">
+                        {/* Day Number */}
+                        <div className={`
+                          text-sm font-semibold mb-1
+                          ${cell.isToday 
+                            ? 'text-blue-600 dark:text-blue-300' 
+                            : (cell.isPast || cell.status) 
+                              ? 'text-slate-800 dark:text-slate-100' 
+                              : 'text-slate-400 dark:text-slate-500'
+                          }
+                        `}>
+                          {cell.dayOfMonth}
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="flex flex-col items-center justify-start">
+                          {cell.status && ["Present", "Late", "Absent", "Pending", "Permission", "Absent (Config Missing)", "Unknown", "Send Home"].includes(cell.status) && (
+                            <span className={`
+                              px-2 py-1 text-xs font-medium rounded-full shadow-sm border transition-all duration-200
+                              ${getStatusColor(cell.status)}
+                              hover:shadow-md hover:scale-105
+                            `}>
+                              {cell.status === "Absent (Config Missing)" ? "Config Missing" : cell.status}
+                            </span>
+                          )}
+
+                          {/* Time Display */}
+                          {((cell.status === "Present" || cell.status === "Late" || cell.status === "Send Home") && cell.time) && (
+                            <span className={`
+                              text-xs mt-1 px-1.5 py-0.5 rounded-md font-medium
+                              ${cell.isToday 
+                                ? 'text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30' 
+                                : 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700'
+                              }
+                            `}>
+                              {cell.time}
+                            </span>
+                          )}
+
+                          {/* Non-School Days */}
+                          {(cell.status === "No School" || cell.status === "Not Yet Enrolled") && (
+                            <span className={`
+                              text-xs px-2 py-1 rounded-full font-medium shadow-sm border transition-all duration-200
+                              ${getStatusColor(cell.status)}
+                              hover:shadow-md
+                            `}>
+                              {cell.status === "No School" ? "Non-School" : "Not Enrolled"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </CardBoxModal>

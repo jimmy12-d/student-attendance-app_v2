@@ -15,7 +15,8 @@ interface Event {
 }
 
 interface ClassTableProps {
-  studentList: Student[];
+  studentList: Student[]; // Filtered list for display
+  fullStudentList?: Student[]; // Unfiltered list for stats calculation
   enabledColumns: ColumnConfig[];
   onEdit: (student: Student) => void;
   onDelete: (student: Student) => void;
@@ -50,6 +51,7 @@ interface ClassTableProps {
 
 export const ClassTable: React.FC<ClassTableProps> = ({ 
   studentList, 
+  fullStudentList, 
   enabledColumns, 
   onEdit, 
   onDelete,
@@ -157,18 +159,71 @@ export const ClassTable: React.FC<ClassTableProps> = ({
     setIsClassCollapsed(forceCollapsed);
   }, [forceCollapsed]);
 
+  // Use fullStudentList for stats if provided, otherwise use studentList
+  const statsStudentList = fullStudentList || studentList;
+
+  // Filter students based on search query (same logic as parent component)
+  const displayedStudents = React.useMemo(() => {
+    if (!searchQuery || !searchQuery.trim()) return studentList;
+
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return studentList;
+
+    return studentList.filter(student => {
+      // Determine search priority based on query pattern
+      const isClassQuery = query.match(/^\d+[a-zA-Z]$/) || query.match(/^class\s+\d+[a-zA-Z]$/i);
+      const isPhoneQuery = query.replace(/\D/g, '').length >= 3;
+      const isNameQuery = !isClassQuery && !isPhoneQuery;
+
+      // Search by class
+      const classMatch = student.class && (() => {
+        const fullClass = student.class.toLowerCase();
+        const classId = student.class.replace(/^Class\s+/i, '').toLowerCase();
+        if (fullClass === query || fullClass.includes(`class ${query}`)) return true;
+        if (classId === query) return true;
+        if (isClassQuery) return classId === query || fullClass.includes(`class ${query}`);
+        if (query.match(/^\d+$/) && classId.startsWith(query)) return true;
+        return fullClass.includes(query);
+      })();
+
+      // Search by phone
+      const phoneMatch = student.phone && (() => {
+        const cleanPhone = student.phone.replace(/\D/g, '');
+        const cleanQuery = query.replace(/\D/g, '');
+        return cleanPhone.includes(cleanQuery);
+      })();
+
+      // Search by name
+      const nameMatch = (() => {
+        if (isNameQuery) {
+          const englishMatch = student.fullName && student.fullName.toLowerCase().includes(query);
+          const khmerMatch = student.nameKhmer && student.nameKhmer.toLowerCase().includes(query);
+          return englishMatch || khmerMatch;
+        }
+        const englishExact = student.fullName && student.fullName.toLowerCase() === query;
+        const khmerExact = student.nameKhmer && student.nameKhmer.toLowerCase() === query;
+        return englishExact || khmerExact;
+      })();
+
+      // Prioritize matches
+      if (isClassQuery) return classMatch;
+      else if (isPhoneQuery) return phoneMatch;
+      else return nameMatch || classMatch || phoneMatch;
+    });
+  }, [studentList, searchQuery]);
+
   // Check if all students in this class are selected
-  const allSelected = studentList.length > 0 && studentList.every(student => selectedStudents.has(student.id));
-  const someSelected = studentList.some(student => selectedStudents.has(student.id));
+  const allSelected = displayedStudents.length > 0 && displayedStudents.every(student => selectedStudents.has(student.id));
+  const someSelected = displayedStudents.some(student => selectedStudents.has(student.id));
 
   // Function to get highest performing students stats
   const getHighestStats = () => {
     const stats: Array<{ label: string; count: number; color: string; icon?: string }> = [];
     
-    // Count paid students for upcoming events
+    // Count paid students for upcoming events (using statsStudentList for class stats)
     if (upcomingEvents && getStudentEventStatus && upcomingEvents.length > 0) {
       upcomingEvents.slice(0, 2).forEach(event => {
-        const paidCount = studentList.filter(student => 
+        const paidCount = statsStudentList.filter(student => 
           getStudentEventStatus(student.id, event.id) === 'paid'
         ).length;
         
@@ -183,9 +238,9 @@ export const ClassTable: React.FC<ClassTableProps> = ({
       });
     }
     
-    // Count present students for today's attendance
-    if (getTodayAttendanceStatus && studentList.length > 0) {
-      const presentCount = studentList.filter(student => {
+    // Count present students for today's attendance (using statsStudentList for class stats)
+    if (getTodayAttendanceStatus && statsStudentList.length > 0) {
+      const presentCount = statsStudentList.filter(student => {
         const status = getTodayAttendanceStatus(student, className, shift);
         return status.status === 'Present';
       }).length;
@@ -207,10 +262,10 @@ export const ClassTable: React.FC<ClassTableProps> = ({
   const getColumnStatistics = () => {
     const stats: Array<{ label: string; count: number; color: string }> = [];
     
-    // Payment statistics (if payment column is enabled)
+    // Payment statistics (if payment column is enabled) - using statsStudentList for class stats
     const paymentColumnEnabled = enabledColumns.some(col => col.id === 'paymentStatus');
     if (paymentColumnEnabled) {
-      const paidCount = studentList.filter(student => 
+      const paidCount = statsStudentList.filter(student => 
         student.lastPaymentMonth && student.lastPaymentMonth.trim() !== ''
       ).length;
       stats.push({
@@ -220,13 +275,13 @@ export const ClassTable: React.FC<ClassTableProps> = ({
       });
     }
 
-    // Portal statistics (if portal column is enabled)
+    // Portal statistics (if portal column is enabled) - using statsStudentList for class stats
     const portalColumnEnabled = enabledColumns.some(col => col.id === 'portal');
     if (portalColumnEnabled) {
-      const registeredCount = studentList.filter(student => 
+      const registeredCount = statsStudentList.filter(student => 
         student.chatId && student.passwordHash
       ).length;
-      const qrReadyCount = studentList.filter(student => {
+      const qrReadyCount = statsStudentList.filter(student => {
         const getDateFromTimestamp = (timestamp: any): Date | null => {
           if (!timestamp) return null;
           if (timestamp instanceof Date) return timestamp;
@@ -255,10 +310,10 @@ export const ClassTable: React.FC<ClassTableProps> = ({
       }
     }
 
-    // Attendance statistics (if attendance column is enabled)
+    // Attendance statistics (if attendance column is enabled) - using statsStudentList for class stats
     const attendanceColumnEnabled = enabledColumns.some(col => col.id === 'todayAttendance');
     if (attendanceColumnEnabled && getTodayAttendanceStatus) {
-      const attendedCount = studentList.filter(student => {
+      const attendedCount = statsStudentList.filter(student => {
         // CRITICAL: Use className and shift context when checking attendance
         const status = getTodayAttendanceStatus(student, className, shift);
         return status.status === 'Present' || status.status === 'Late';
@@ -270,12 +325,12 @@ export const ClassTable: React.FC<ClassTableProps> = ({
       });
     }
 
-    // Type/Schedule statistics (if scheduleType column is enabled)
+    // Type/Schedule statistics (if scheduleType column is enabled) - using statsStudentList for class stats
     const typeColumnEnabled = enabledColumns.some(col => col.id === 'scheduleType');
     if (typeColumnEnabled) {
       // Count different schedule types
       const typeCounts: Record<string, number> = {};
-      studentList.forEach(student => {
+      statsStudentList.forEach(student => {
         const type = student.scheduleType || 'Unknown';
         typeCounts[type] = (typeCounts[type] || 0) + 1;
       });
@@ -307,10 +362,10 @@ export const ClassTable: React.FC<ClassTableProps> = ({
       }
     }
 
-    // Warning statistics (if warning column is enabled)
+    // Warning statistics (if warning column is enabled) - using statsStudentList for class stats
     const warningColumnEnabled = enabledColumns.some(col => col.id === 'warning');
     if (warningColumnEnabled) {
-      const warningCount = studentList.filter(student => student.warning === true).length;
+      const warningCount = statsStudentList.filter(student => student.warning === true).length;
       if (warningCount > 0) {
         stats.push({
           label: 'Warnings',
@@ -498,9 +553,9 @@ export const ClassTable: React.FC<ClassTableProps> = ({
             </button>
           </div>
           <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{className}</h3>
-          {isBatchEditMode && studentList.length > 0 && onSelectAll && (!isClassCollapsed || isExpanded) && (
+          {isBatchEditMode && displayedStudents.length > 0 && onSelectAll && (!isClassCollapsed || isExpanded) && (
             <button
-              onClick={() => onSelectAll(studentList.map(s => s.id), !allSelected)}
+              onClick={() => onSelectAll(displayedStudents.map(s => s.id), !allSelected)}
               className={`flex items-center space-x-1 px-2 py-1 rounded text-xs font-medium transition-colors duration-200 ${
                 allSelected 
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
@@ -545,8 +600,13 @@ export const ClassTable: React.FC<ClassTableProps> = ({
           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getBadgeColors()}`}>
             {/* Add the Icon component here */}
             <Icon path={mdiAccountSchool} size={18} className="mr-1" />
-            {studentCount || studentList.length} Students
-            {isFlipFlopPreviewMode && studentList.some(s => s.scheduleType?.toLowerCase() === 'flip-flop') && (
+            {statsStudentList.length} Students
+            {searchQuery && displayedStudents.length !== statsStudentList.length && (
+              <span className="ml-1 text-xs font-semibold bg-white/30 dark:bg-black/30 px-1.5 py-0.5 rounded-full">
+                {displayedStudents.length} shown
+              </span>
+            )}
+            {isFlipFlopPreviewMode && statsStudentList.some(s => s.scheduleType?.toLowerCase() === 'flip-flop') && (
               <span className="ml-1 text-xs font-semibold bg-white/30 dark:bg-black/30 px-1.5 py-0.5 rounded-full">
                 {displayShift} PREVIEW
               </span>
@@ -592,7 +652,7 @@ export const ClassTable: React.FC<ClassTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-              {studentList.map((student, index) => (
+              {displayedStudents.map((student, index) => (
                 <StudentRow
                   key={student.id}
                   student={student}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { mdiAccountAlert, mdiEye, mdiCheckCircle, mdiCloseCircle, mdiClockOutline, mdiBellRing } from "@mdi/js";
+import { mdiAccountAlert, mdiEye, mdiCheckCircle, mdiCloseCircle, mdiMinusCircle, mdiBellRing } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import Button from "../../../_components/Button";
 import CardBox from "../../../_components/CardBox";
@@ -119,7 +119,7 @@ const NotificationStatus: React.FC<{ logs?: NotificationLog[] }> = ({ logs }) =>
   if (!logs || logs.length === 0) {
     return (
       <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-        <Icon path={mdiClockOutline} size={16} />
+        <Icon path={mdiMinusCircle} size={16} />
         <span>No parent registered for notifications</span>
       </div>
     );

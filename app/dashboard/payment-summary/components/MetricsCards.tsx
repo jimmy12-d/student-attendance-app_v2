@@ -204,7 +204,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ summaryData, isLoading, sta
         const studentData = doc.data() as any;
 
         // Use central inactive student logic
-        const inactiveStatus = getInactiveStudentStatus(studentData);
+        const inactiveStatus = getInactiveStudentStatus(studentData, targetDate);
         
         if (inactiveStatus === 'dropped') {
           droppedCount++;

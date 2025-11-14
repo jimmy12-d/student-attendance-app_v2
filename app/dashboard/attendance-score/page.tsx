@@ -46,13 +46,13 @@ import {
   query,
   orderBy,
   where,
-  Timestamp
 } from "firebase/firestore";
 
 import { getStudentDailyStatus } from "../_lib/attendanceLogic";
 import { AllClassConfigs } from "../_lib/configForAttendanceLogic";
 import { PermissionRecord } from "../../_interfaces";
 import { RawAttendanceRecord } from "../_lib/attendanceLogic";
+import { StudentDetailsModal } from "../students/components/StudentDetailsModal";
 
 // Scoring system interface
 interface AttendanceScore {
@@ -95,6 +95,10 @@ const calculateAttendanceScore = (
     p.studentId === student.id && p.status?.toLowerCase() === 'approved'
   );
 
+  // Extract class config for this student
+  const studentClassKey = student.class?.replace(/^Class\s+/i, '') || '';
+  const classConfig = studentClassKey && allClassConfigs ? allClassConfigs[studentClassKey] : undefined;
+
   let earlyArrivals = 0;
   let onTimeArrivals = 0;
   let lateArrivals = 0;
@@ -117,6 +121,12 @@ const calculateAttendanceScore = (
       allClassConfigs,
       approvedPermissionsForStudent
     );
+
+    // Skip non-school days and not-yet-enrolled days (these shouldn't count towards scoring)
+    if (dailyStatus.status === "No School" || dailyStatus.status === "Not Yet Enrolled") {
+      currentDate.setDate(currentDate.getDate() + 1);
+      continue;
+    }
 
     if (dailyStatus.status === "Present" && attendanceRecord) {
       // Calculate if early, on time, or late
@@ -306,6 +316,10 @@ export default function AttendanceScorePage() {
   // Sorting state (true = worst first, false = best first)
   const [sortWorstFirst, setSortWorstFirst] = useState(false);
 
+  // Student details modal state
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Load data from Firestore
   useEffect(() => {
     // Only set up listeners if user is authenticated and authorized
@@ -373,19 +387,41 @@ export default function AttendanceScorePage() {
     unsubscribes.push(unsubscribePermissions);
 
     // Load class configurations
-    const classConfigsQuery = query(collection(db, 'classConfigs'));
-    const unsubscribeClassConfigs = onSnapshot(classConfigsQuery, (snapshot) => {
-      const configs: AllClassConfigs = {};
-      snapshot.docs.forEach(doc => {
-        configs[doc.id] = doc.data() as any;
-      });
-      setAllClassConfigs(configs);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching class configs:", error);
-      toast.error("Failed to load class configurations");
-      setLoading(false);
-    });
+    const classConfigsQuery = query(collection(db, 'classes'));
+    const unsubscribeClassConfigs = onSnapshot(
+      classConfigsQuery, 
+      (snapshot) => {
+        const configs: AllClassConfigs = {};
+        const classesWithMissingStudyDays: string[] = [];
+        
+        snapshot.docs.forEach(doc => {
+          const configData = doc.data() as any;
+          configs[doc.id] = configData;
+          
+          // Check if studyDays is missing or empty
+          if (!configData.studyDays || configData.studyDays.length === 0) {
+            classesWithMissingStudyDays.push(doc.id);
+          }
+        });
+        
+        setAllClassConfigs(configs);
+        
+        // Warn admin if some classes are missing studyDays configuration
+        if (classesWithMissingStudyDays.length > 0) {
+          toast.warning(
+            `Missing studyDays config for: ${classesWithMissingStudyDays.join(', ')}. These classes will default to Mon-Sat schedule.`,
+            { duration: 8000 }
+          );
+        }
+        
+        setLoading(false);
+      }, 
+      (error) => {
+        console.error("Error fetching class configs:", error);
+        toast.error("Failed to load class configurations");
+        setLoading(false);
+      }
+    );
     unsubscribes.push(unsubscribeClassConfigs);
 
     return () => {
@@ -826,6 +862,21 @@ export default function AttendanceScorePage() {
     );
   }
 
+  // Handler to open student details modal
+  const handleStudentClick = (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    if (student) {
+      setSelectedStudent(student);
+      setIsModalOpen(true);
+    }
+  };
+
+  // Handler to close student details modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedStudent(null);
+  };
+
   // Render function for each shift section
   const renderShiftSection = (shift: string, scores: AttendanceScore[]) => {
     const currentShiftPage = currentPage[shift] || 1;
@@ -891,12 +942,14 @@ export default function AttendanceScorePage() {
             {scores.map((score) => (
               <div
                 key={score.studentId}
-                className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 ${
+                onClick={() => handleStudentClick(score.studentId)}
+                className={`bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 cursor-pointer hover:scale-105 ${
                   score.rank === 1 ? 'border-yellow-400 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20' :
                   score.rank === 2 ? 'border-gray-400 bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20' :
                   score.rank === 3 ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20' :
                   'border-blue-400'
                 }`}
+                title="Click to view student details"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center">
@@ -1074,7 +1127,12 @@ export default function AttendanceScorePage() {
                 </thead>
                 <tbody className="bg-slate-800/50 divide-y divide-slate-600/30">
                   {paginatedScores.map((score) => (
-                    <tr key={score.studentId} className="hover:bg-slate-700/30 transition-all duration-200">
+                    <tr 
+                      key={score.studentId} 
+                      className="hover:bg-slate-700/30 transition-all duration-200 cursor-pointer"
+                      onClick={() => handleStudentClick(score.studentId)}
+                      title="Click to view student details"
+                    >
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {score.rank <= 3 && (
@@ -1631,6 +1689,16 @@ export default function AttendanceScorePage() {
           </div>
         </CardBox>
       )}
+
+      {/* Student Details Modal */}
+      <StudentDetailsModal
+        student={selectedStudent}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        hideActions={true}
+      />
     </SectionMain>
   );
 }

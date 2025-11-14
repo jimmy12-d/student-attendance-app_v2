@@ -15,13 +15,12 @@ import {
   mdiAccountRemove,
   mdiChartPie,
   mdiChartBar,
-  mdiCalendar,
-  mdiChevronLeft,
-  mdiChevronRight,
   mdiCheckCircle,
   mdiClockAlert,
   mdiAccountMultiple,
-  mdiClose
+  mdiServerSecurity,
+  mdiClose,
+  mdiDownload
 } from "@mdi/js";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
 import { Pie, Bar } from 'react-chartjs-2';
@@ -39,6 +38,8 @@ import { toast } from 'sonner';
 import ConsecutiveAbsencesSection from "./components/ConsecutiveAbsencesSection";
 import WarningStudentsSection from "./components/WarningStudentsSection";
 import { StudentDetailsModal } from "../students/components/StudentDetailsModal";
+import { exportAttendanceToExcel, filterRecordsByDateRange } from "../../_utils/exportToExcel";
+import ExportModal from "./components/ExportModal";
 
 import { db } from "../../../firebase-config";
 import {
@@ -132,6 +133,10 @@ export default function AttendanceRecordPage() {
   const [showAbsentModal, setShowAbsentModal] = useState(false);
   const [absentStudents, setAbsentStudents] = useState<Array<{ id: string; fullName: string; nameKhmer: string; class: string; shift: string; isBPStudent?: boolean }>>([]);
   const [loadingAbsent, setLoadingAbsent] = useState(false);
+
+  // State for export modal
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Loading states for table
   const [loadingRecords, setLoadingRecords] = useState<LoadingRecord[]>([]);
@@ -1125,6 +1130,65 @@ export default function AttendanceRecordPage() {
     setTimeout(() => setIsUpdating(false), 1000);
   };
 
+  // Export to Excel handler with date range support
+  const handleExportToExcel = async (days: number, customStartDate?: string, customEndDate?: string) => {
+    setIsExporting(true);
+    try {
+      // Filter records based on date range
+      const recordsToExport = filterRecordsByDateRange(
+        attendanceRecords, 
+        days, 
+        customStartDate, 
+        customEndDate
+      );
+
+      if (recordsToExport.length === 0) {
+        toast.error('No attendance records found for the selected date range');
+        setIsExporting(false);
+        return;
+      }
+
+      // Generate filename based on export type
+      let filename = 'attendance-records';
+      let rangeDescription = '';
+
+      if (customStartDate && customEndDate) {
+        filename += `_${customStartDate}_to_${customEndDate}`;
+        rangeDescription = `from ${customStartDate} to ${customEndDate}`;
+      } else if (days === 0) {
+        filename += '_today';
+        rangeDescription = 'for today';
+      } else if (days === -1) {
+        filename += '_this-month';
+        rangeDescription = 'for this month';
+      } else if (days === -2) {
+        filename += '_last-month';
+        rangeDescription = 'for last month';
+      } else {
+        filename += `_last-${days}-days`;
+        rangeDescription = `for the last ${days} days`;
+      }
+
+      // Add a small delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      exportAttendanceToExcel(
+        recordsToExport,
+        filename,
+        undefined, // Don't pass selectedDate for range exports
+        undefined  // Don't pass shift for range exports (include all shifts)
+      );
+
+      toast.success(`Exported ${recordsToExport.length} records to Excel ${rangeDescription}`);
+      setShowExportModal(false);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Failed to export to Excel');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <SectionMain>
       <SectionTitleLineWithButton
@@ -1160,6 +1224,16 @@ export default function AttendanceRecordPage() {
             placeholder="Select date"
             className="flex items-center gap-2"
           />
+          {/* Export to Excel Button */}
+          <button
+            onClick={() => setShowExportModal(true)}
+            disabled={attendanceRecords.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Export to Excel"
+          >
+            <Icon path={mdiDownload} size={18} />
+            <span className="hidden sm:inline">Export Excel</span>
+          </button>
         </div>
       </SectionTitleLineWithButton>
 
@@ -1435,25 +1509,45 @@ export default function AttendanceRecordPage() {
               </div>
             </div>
 
-            <div className="mt-8 bg-gradient-to-r from-blue-50/80 via-blue-100/60 to-indigo-100/40 dark:from-blue-900/30 dark:via-blue-800/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30 rounded-xl p-4 backdrop-blur-md shadow-lg shadow-blue-500/10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-gradient-to-br from-blue-100/90 to-blue-200/70 dark:from-blue-800/50 dark:to-blue-700/30 backdrop-blur-sm rounded-lg border border-blue-300/50 dark:border-blue-600/30 shadow-md shadow-blue-500/10">
-                    <Icon path={mdiClipboardListOutline} size={20} className="text-blue-600 dark:text-blue-400" />
+            {(() => {
+              // Filter today's attendance records
+              const todayRecords = attendanceRecords.filter(record => {
+                const recordDate = record.date.split('T')[0];
+                return recordDate === selectedDate;
+              });
+              
+              // Filter records where parent notifications were attempted (has parent)
+              const recordsWithParents = todayRecords.filter(record => 
+                record.parentNotificationStatus && record.parentNotificationStatus !== 'no_parent'
+              );
+              
+              // Count records where parent notifications were successfully sent
+              const completedLogs = recordsWithParents.filter(record => 
+                record.parentNotificationStatus === 'success' && (record.parentNotificationsSent || 0) > 0
+              ).length;
+              
+              const totalWithParents = recordsWithParents.length;
+              const isComplete = completedLogs === totalWithParents;
+              
+              return (
+                <div className={`mt-8 ${isComplete ? 'bg-gradient-to-r from-green-50/80 via-green-100/60 to-emerald-100/40 dark:from-green-900/30 dark:via-green-800/20 dark:to-emerald-900/20 border border-green-200/50 dark:border-green-700/30 shadow-lg shadow-green-500/10' : 'bg-gradient-to-r from-red-50/80 via-red-100/60 to-rose-100/40 dark:from-red-900/30 dark:via-red-800/20 dark:to-rose-900/20 border border-red-200/50 dark:border-red-700/30 shadow-lg shadow-red-500/10'} rounded-xl p-4 backdrop-blur-md`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 backdrop-blur-sm rounded-lg border shadow-md flex items-center justify-center ${isComplete ? 'bg-gradient-to-br from-green-100/90 to-green-200/70 dark:from-green-800/50 dark:to-green-700/30 border-green-300/50 dark:border-green-600/30 shadow-green-500/10' : 'bg-gradient-to-br from-red-100/90 to-red-200/70 dark:from-red-800/50 dark:to-red-700/30 border-red-300/50 dark:border-red-600/30 shadow-red-500/10'}`}>
+                        <Icon path={mdiServerSecurity} size={24} className={`${isComplete ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
+                      </div>
+                      <span className="font-medium text-blue-800 dark:text-blue-200">Parent Log Summary</span>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-xl font-bold ${isComplete ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                        {`${completedLogs} / ${totalWithParents}`}
+                      </div>
+                      <div className={`text-xs ${isComplete ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>sent / students</div>
+                    </div>
                   </div>
-                  <span className="font-medium text-blue-800 dark:text-blue-200">Total Records Today</span>
                 </div>
-                <div className="text-right">
-                  <div className="text-xl font-bold text-blue-800 dark:text-blue-200">
-                    {attendanceRecords.filter(record => {
-                      const recordDate = record.date.split('T')[0];
-                      return recordDate === selectedDate;
-                    }).length}
-                  </div>
-                  <div className="text-xs text-blue-600 dark:text-blue-400">records</div>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {attendanceStats.requested > 0 && (
               <div className="bg-gradient-to-r from-yellow-50/80 via-yellow-100/60 to-orange-100/40 dark:from-yellow-900/30 dark:via-yellow-800/20 dark:to-orange-900/20 border border-yellow-200/50 dark:border-yellow-700/30 rounded-xl p-4 backdrop-blur-md shadow-lg shadow-yellow-500/10">
@@ -1689,6 +1783,14 @@ export default function AttendanceRecordPage() {
           </div>
         </div>
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportToExcel}
+        isExporting={isExporting}
+      />
     </SectionMain>
   );
 }

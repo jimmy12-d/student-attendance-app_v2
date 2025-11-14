@@ -7,15 +7,18 @@ import Icon from "../../../_components/Icon";
 import NavBarItemPlain from "./Item/Plain";
 import NavBarMenuList from "./MenuList";
 import UserDisplay from "./UserDisplay";
+import InactivitySettingsPanel from "./InactivitySettingsPanel";
 import { MenuNavBarItem } from "../../../_interfaces";
+import type { InactivitySettings } from "../../../_utils/inactivitySettings";
 
 type Props = {
   menu: MenuNavBarItem[];
   className: string;
   children: ReactNode;
+  onInactivitySettingsChange?: (settings: InactivitySettings) => void;
 };
 
-export default function NavBar({ menu, className = "", children }: Props) {
+export default function NavBar({ menu, className = "", children, onInactivitySettingsChange }: Props) {
   const [isMenuNavBarActive, setIsMenuNavBarActive] = useState(false);
 
   const handleMenuNavBarToggleClick = () => {
@@ -45,6 +48,11 @@ export default function NavBar({ menu, className = "", children }: Props) {
 
         {/* Right Section - User Display and Menu */}
         <div className="flex items-center h-16 space-x-2">
+          {/* Inactivity Settings Panel (Desktop) */}
+          <div className="hidden lg:block">
+            <InactivitySettingsPanel onSettingsChange={onInactivitySettingsChange} />
+          </div>
+
           {/* Desktop User Display with enhanced styling */}
           <div className="hidden lg:block">
             <UserDisplay />
@@ -70,8 +78,11 @@ export default function NavBar({ menu, className = "", children }: Props) {
             isMenuNavBarActive ? "block" : "hidden"
           } max-h-screen-menu overflow-y-auto lg:overflow-visible absolute w-screen top-16 left-0 shadow-xl lg:w-auto lg:flex lg:static lg:shadow-none bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700`}
         >
-          {/* Mobile User Display */}
-          <div className="lg:hidden">
+          {/* Mobile Settings and User Display */}
+          <div className="lg:hidden p-4 border-b border-gray-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-4">
+              <InactivitySettingsPanel onSettingsChange={onInactivitySettingsChange} />
+            </div>
             <UserDisplay isMobile={true} />
           </div>
 

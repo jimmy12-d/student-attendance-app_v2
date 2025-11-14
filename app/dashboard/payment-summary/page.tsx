@@ -93,6 +93,7 @@ const PaymentSummaryPage = () => {
     
     setStartDate(formatDate(firstDay));
     setEndDate(formatDate(lastDay));
+    setDateInterval({ type: 'monthly', value: `${now.getFullYear()}-${now.getMonth()}` });
   }, []);
 
   useEffect(() => {
@@ -935,6 +936,7 @@ const PaymentSummaryPage = () => {
                 transactionsData={transactionsData}
                 classesData={classesData}
                 dateInterval={dateInterval}
+                startDate={startDate}
                 isLoading={isLoading}
               />
 

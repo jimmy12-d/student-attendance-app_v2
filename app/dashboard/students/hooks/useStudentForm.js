@@ -23,6 +23,7 @@ export const useStudentForm = (initialData) => {
   const [warning, setWarning] = useState(false);
   const [onWaitlist, setOnWaitlist] = useState(false); // Add waitlist state
   const [lateFeePermission, setLateFeePermission] = useState(false); // Add late fee permission state
+  const [gracePeriodMinutes, setGracePeriodMinutes] = useState(null); // Add grace period state (null = standard 15 min)
   const [hasTelegramUsername, setHasTelegramUsername] = useState(true);
   const [telegramUsername, setTelegramUsername] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -69,6 +70,7 @@ export const useStudentForm = (initialData) => {
       setWarning(initialData.warning || false);
       setOnWaitlist(initialData.onWaitlist || false); // Initialize waitlist from data
       setLateFeePermission(initialData.lateFeePermission || false); // Initialize late fee permission from data
+      setGracePeriodMinutes(initialData.gracePeriodMinutes !== undefined ? initialData.gracePeriodMinutes : null); // Initialize grace period from data
       setHasTelegramUsername(initialData.hasTelegramUsername !== undefined ? initialData.hasTelegramUsername : true);
       setTelegramUsername(initialData.telegramUsername || '');
       // Default to collapsed in edit mode
@@ -96,6 +98,7 @@ export const useStudentForm = (initialData) => {
       setNote('');
       setWarning(false);
       setLateFeePermission(false); // Default to false for new students
+      setGracePeriodMinutes(null); // Default to null (standard) for new students
       setHasTelegramUsername(true);
       setTelegramUsername('');
       setGradeTypeFilter('');
@@ -158,6 +161,11 @@ export const useStudentForm = (initialData) => {
     // Late fee permission is a boolean, so we always include it
     data.lateFeePermission = lateFeePermission;
     
+    // Grace period minutes - only include if it's not null (null means use default)
+    if (gracePeriodMinutes !== null && gracePeriodMinutes !== undefined) {
+      data.gracePeriodMinutes = gracePeriodMinutes;
+    }
+    
     // Combine birth date fields into dateOfBirth
     if (birthYear && birthMonth && birthDay) {
       data.dateOfBirth = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
@@ -206,6 +214,7 @@ export const useStudentForm = (initialData) => {
     warning, setWarning,
     onWaitlist, setOnWaitlist, // Add waitlist to exports
     lateFeePermission, setLateFeePermission, // Add late fee permission to exports
+    gracePeriodMinutes, setGracePeriodMinutes, // Add grace period to exports
     hasTelegramUsername, setHasTelegramUsername,
     telegramUsername, setTelegramUsername,
     isEditMode,

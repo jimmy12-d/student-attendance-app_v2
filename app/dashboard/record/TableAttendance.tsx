@@ -11,11 +11,13 @@ import {
   mdiHelpCircle,
   mdiPencil,
   mdiClockOutline,
-  mdiQrcode
+  mdiQrcode,
+  mdiSendCheck
 } from "@mdi/js";
 import TimestampEditModal from "./components/TimestampEditModal";
 import { Student } from "../../_interfaces";
 import { AllClassConfigs } from "../_lib/configForAttendanceLogic";
+import Icon from "../../_components/Icon";
 
 const formatDateToDDMMYYYY = (dateInput: string | Date | Timestamp | undefined): string => {
     if (!dateInput) return 'N/A';
@@ -733,9 +735,7 @@ const TableAttendance = ({ records, onDeleteRecord, onApproveRecord, onEditTimes
                   {/* Parent Notification Status */}
                   {record.parentNotificationStatus === 'success' ? (
                     <div className="inline-flex items-center space-x-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" title={`Sent to ${record.parentNotificationsSent || 0} parent(s)`}>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                        <polyline points="20,6 9,17 4,12"></polyline>
-                      </svg>
+                      <Icon path={mdiSendCheck} size={18} className="text-green-600 dark:text-green-400" />
                       <span className="text-xs font-medium">{record.parentNotificationsSent || 1}</span>
                     </div>
                   ) : record.parentNotificationStatus === 'no_parent' ? (

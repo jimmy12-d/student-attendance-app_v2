@@ -1,9 +1,7 @@
 import { OverlayConfig } from './OverlayTemplate';
 import { 
-  mdiAlertOctagon, 
-  mdiClockAlert, 
-  mdiAccountClock,
-  mdiAccountCheck,
+  mdiAlertOctagon,  
+  mdiCashClock,
   mdiAlertCircle 
 } from '@mdi/js';
 
@@ -41,6 +39,22 @@ export const OVERLAY_CONFIGS: Record<string, OverlayConfig> = {
     showHomeIcon: false,
     showPolicyNotice: true,
     policyText: 'Students who missed the co-learning must complete their assignment. Please see your teacher.',
+    dismissDelay: 3000,
+    showDismissButton: true,
+  },
+
+  // Condition 3: Unpaid Payment - Student has unpaid tuition fees
+  UNPAID_PAYMENT: {
+    id: 'unpaid-payment',
+    enabled: true,
+    type: 'warning',
+    title: 'PAYMENT REQUIRED',
+    message: 'PLEASE SETTLE YOUR TUITION',
+    subtitle: 'Your payment is overdue',
+    icon: mdiCashClock,
+    showHomeIcon: false,
+    showPolicyNotice: true,
+    policyText: 'Please contact the administration office to settle your outstanding tuition fees.',
     dismissDelay: 3000,
     showDismissButton: true,
   },

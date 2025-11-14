@@ -436,7 +436,7 @@ function AddStudentForm({ onStudentAdded, onCancel }) {
           </div>
           
           {/* Row 2: Phone */}
-          <div className="grid grid-cols-1 md:grid-cols-1 md:gap-x-8 gap-y-8 md:gap-y-0 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 md:gap-x-8 gap-y-8 md:gap-y-0 mt-2">
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Phone

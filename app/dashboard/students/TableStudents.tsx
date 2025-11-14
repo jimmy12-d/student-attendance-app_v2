@@ -533,15 +533,6 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
 
       const todayStr = new Date().toISOString().split('T')[0];
       
-      // DEBUG: Log for "Test Testing" student on October 11th
-      if (student.fullName === "Test Testing" && todayStr === "2025-10-11") {
-        console.log("🔍 getTodayAttendanceStatus DEBUG for Test Testing:");
-        console.log("  - shiftContext:", shiftContext);
-        console.log("  - All attendance records for this student today:", 
-          attendance.filter(r => r.studentId === student.id && r.date === todayStr)
-        );
-      }
-      
       // Find today's attendance record for this student with shift-aware filtering
       // CRITICAL: Only filter by SHIFT, not class!
       // Reason: BP class is always Evening, regular classes are Morning/Afternoon
@@ -550,32 +541,9 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         const matchesStudent = record.studentId === student.id;
         const matchesDate = record.date === todayStr;
         const matchesShift = !shiftContext || record.shift === shiftContext;
-        
-        // DEBUG: Log each record being checked for Test Testing
-        if (student.fullName === "Test Testing" && todayStr === "2025-10-11") {
-          console.log("  - Checking record:", {
-            recordId: record.id,
-            recordShift: record.shift,
-            recordStatus: record.status,
-            matchesStudent,
-            matchesDate,
-            matchesShift,
-            overallMatch: matchesStudent && matchesDate && matchesShift
-          });
-        }
-        
+           
         return matchesStudent && matchesDate && matchesShift;
       });
-
-      // DEBUG: Log the found record for "Test Testing"
-      if (student.fullName === "Test Testing" && todayStr === "2025-10-11") {
-        console.log("  - Found attendance record:", attendanceRecord);
-        console.log("  - Record matches context?", {
-          hasRecord: !!attendanceRecord,
-          recordShift: attendanceRecord?.shift,
-          matchesShift: !shiftContext || attendanceRecord?.shift === shiftContext
-        });
-      }
 
       // Find approved permissions for this student for today
       const studentPermissions = permissions.filter(
@@ -593,13 +561,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         classContext, // Pass class context so BP students use correct class config
         shiftContext  // Pass shift context so BP students use correct shift config
       );
-      
-      // DEBUG: Log the final result for "Test Testing"
-      if (student.fullName === "Test Testing" && todayStr === "2025-10-11") {
-        console.log("  - Final status result:", result);
-        console.log("---");
-      }
-            
+
       return result;
     } catch (error) {
       console.error('Error calculating today attendance status for', student.fullName, ':', error);
@@ -712,19 +674,6 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
   // Don't filter out BP students - they should appear in both their regular class and BP class
   const validStudents = filteredStudents.filter(student => student.class);
   
-  // DEBUG: Check Test Testing's original data on October 11th
-  if (new Date().toISOString().split('T')[0] === "2025-10-11") {
-    const testTestingOriginal = filteredStudents.find(s => s.fullName === "Test Testing");
-    if (testTestingOriginal) {
-      console.log("👤 Test Testing Original Student Data:");
-      console.log("  - id:", testTestingOriginal.id);
-      console.log("  - class:", testTestingOriginal.class);
-      console.log("  - shift:", testTestingOriginal.shift);
-      console.log("  - inBPClass:", testTestingOriginal.inBPClass);
-      console.log("  - Will be in validStudents?", !!testTestingOriginal.class);
-    }
-  }
-  
   // Get BP students separately, sort them, and override their shift to Evening and class to BP class ID
   const bpStudents = React.useMemo(() => {
     const bpList = filteredStudents
@@ -736,20 +685,22 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       }))
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
     
-    // DEBUG: Log Test Testing in BP students list on October 11th
-    if (new Date().toISOString().split('T')[0] === "2025-10-11") {
-      const testTesting = bpList.find(s => s.fullName === "Test Testing");
-      if (testTesting) {
-        console.log("📋 BP Students List - Test Testing found:");
-        console.log("  - Original class:", filteredStudents.find(s => s.fullName === "Test Testing")?.class);
-        console.log("  - Original shift:", filteredStudents.find(s => s.fullName === "Test Testing")?.shift);
-        console.log("  - BP override class:", testTesting.class);
-        console.log("  - BP override shift:", testTesting.shift);
-      }
-    }
-    
     return bpList;
   }, [filteredStudents, bpClassId]);
+
+  // Get unfiltered BP students for statistics
+  const unfilteredBpStudents = React.useMemo(() => {
+    const bpList = students
+      .filter(student => student.inBPClass)
+      .map(student => ({
+        ...student,
+        shift: 'Evening', // Override shift to Evening for BP class
+        class: bpClassId // Override class to BP class ID (e.g., '12BP')
+      }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName));
+    
+    return bpList;
+  }, [students, bpClassId]);
 
   // 1. Group students by class, then by shift
   const groupedStudents = React.useMemo(() => {
@@ -772,20 +723,26 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
         }
       });
     }
-    
-    // DEBUG: Log Test Testing in grouped students on October 11th
-    if (new Date().toISOString().split('T')[0] === "2025-10-11") {
-      const testTestingOriginal = validStudents.find(s => s.fullName === "Test Testing");
-      if (testTestingOriginal) {
-        console.log("📋 Grouped Students - Test Testing in regular class:");
-        console.log("  - Class:", testTestingOriginal.class);
-        console.log("  - Shift:", testTestingOriginal.shift);
-        console.log("  - Will appear in table:", `${testTestingOriginal.class} - ${testTestingOriginal.shift}`);
-      }
-    }
 
     return grouped;
   }, [validStudents, shiftOrder]);
+
+  // Create unfiltered grouped students for statistics (not affected by search)
+  const unfilteredGroupedStudents = React.useMemo(() => {
+    const allValidStudents = students.filter(student => student.class);
+    const grouped = allValidStudents.reduce((acc, student) => {
+      const { class: studentClass, shift } = student;
+      if (!acc[studentClass]) {
+        acc[studentClass] = { Morning: [], Afternoon: [], Evening: [] };
+      }
+      if (shift && shiftOrder.includes(shift as any)) {
+        acc[studentClass][shift as 'Morning' | 'Afternoon' | 'Evening'].push(student);
+      }
+      return acc;
+    }, {} as Record<string, { Morning: Student[]; Afternoon: Student[]; Evening: Student[] }>);
+
+    return grouped;
+  }, [students, shiftOrder]);
 
   // Group waitlist students by class and shift
   const groupedWaitlistStudents = React.useMemo(() => {
@@ -1131,26 +1088,6 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
       const attendanceData = attendanceSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter((record: any) => record.date === selectedAttendanceDate);
-      
-      // DEBUG: Log Test Testing's attendance records on October 11th
-      if (selectedAttendanceDate === "2025-10-11") {
-        const testTestingRecords = attendanceData.filter((record: any) => 
-          record.studentName === "Test Testing" || record.studentId === "test-testing-id"
-        );
-        console.log("📊 fetchAttendanceData - Test Testing records on 2025-10-11:");
-        console.log("  Total records loaded:", attendanceData.length);
-        console.log("  Test Testing records:", testTestingRecords);
-        testTestingRecords.forEach((record: any, index: number) => {
-          console.log(`  Record ${index + 1}:`, {
-            id: record.id,
-            studentName: record.studentName,
-            class: record.class,
-            shift: record.shift,
-            status: record.status,
-            date: record.date
-          });
-        });
-      }
       
       setAttendance(attendanceData);
     } catch (error) {
@@ -1804,6 +1741,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 {(selectedShift === 'All' || selectedShift === 'Morning') && (
                 <ClassTable 
                   studentList={groupedStudents[className]['Morning']} 
+                  fullStudentList={unfilteredGroupedStudents[className]?.['Morning']}
                   enabledColumns={enabledColumns}
                   onEdit={onEdit}
                   onDelete={onDelete}
@@ -1838,6 +1776,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
                 {(selectedShift === 'All' || selectedShift === 'Afternoon') && (
                 <ClassTable 
                   studentList={groupedStudents[className]['Afternoon']} 
+                  fullStudentList={unfilteredGroupedStudents[className]?.['Afternoon']}
                   enabledColumns={enabledColumns}
                   onEdit={onEdit}
                   onDelete={onDelete}
@@ -1906,6 +1845,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
               <ClassTable 
                 key={`${className}-evening`}
                 studentList={groupedStudents[className].Evening} 
+                fullStudentList={unfilteredGroupedStudents[className]?.['Evening']}
                 enabledColumns={enabledColumns}
                 onEdit={onEdit}
                 onDelete={onDelete}
@@ -1961,6 +1901,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
             <ClassTable 
               key={`${bpClassId}-evening`}
               studentList={bpStudents} 
+              fullStudentList={unfilteredBpStudents}
               enabledColumns={enabledColumns}
               onEdit={onEdit}
               onDelete={onDelete}

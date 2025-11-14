@@ -5,14 +5,14 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Webcam from 'react-webcam';
 import { toast } from 'sonner';
 import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../../firebase-config';
 import jsQR from 'jsqr';
 
-import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiCog, mdiInformation } from '@mdi/js';
+import { mdiFaceRecognition, mdiCamera, mdiCameraOff, mdiCheck, mdiCog, mdiInformation, mdiAccountPlus } from '@mdi/js';
 import CardBox from "../../_components/CardBox";
 import CustomDropdown from '../students/components/CustomDropdown';
 import Icon from '../../_components/Icon';
@@ -20,6 +20,7 @@ import Icon from '../../_components/Icon';
 // Import utilities
 import { Student } from '../../_interfaces';
 import { filterStudentsByShift, markAttendance, determineAttendanceStatus, isSchoolDay } from '../_lib/attendanceLogic';
+import { calculatePaymentStatus } from '../_lib/paymentLogic';
 import { TrackedFace, initializeFaceApi, detectAllFaces, calculateFaceDistance } from './utils/faceDetection';
 import ZoomModeOverlay from './components/ZoomModeOverlay';
 import RecognitionControls from './components/RecognitionControls';
@@ -37,6 +38,7 @@ const FaceApiAttendanceScanner = () => {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const searchParams = useSearchParams();
+  const router = useRouter();
   
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Initializing...');
@@ -123,7 +125,10 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
             shift: data.shift,
             class: data.class,
             inBPClass: data.inBPClass, // Make sure to include inBPClass field
-            authUid: data.authUid // Add authUid for student portal access
+            authUid: data.authUid, // Add authUid for student portal access
+            // Include payment-related fields for overlay checks
+            lastPaymentMonth: data.lastPaymentMonth,
+            lateFeePermission: data.lateFeePermission
           } as any);
         });
         
@@ -764,6 +769,97 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
       } else {
         // Regular attendance mode - mark attendance using the student's own shift (for QR code)
         // This allows students to mark attendance even when coming to a different shift
+        
+        // ============================================
+        // OVERLAY CHECKS FOR QR CODE SCAN (same as face scan)
+        // ============================================
+        
+        // 1. CHECK IF STUDENT SHOULD BE SENT HOME (too late)
+        const studentShift = student.shift || 'Morning';
+        const studentClass = (student as any).class;
+        const { status: attendanceCheckStatus, sendHomeCutoff } = determineAttendanceStatus(
+          student, 
+          studentShift, 
+          classConfigs || {},
+          studentClass
+        );
+        
+        if (attendanceCheckStatus === 'send-home') {
+          const sendHomeConfig = getOverlayConfig('SEND_HOME');
+          if (sendHomeConfig) {
+            setCurrentOverlay({
+              config: {
+                ...sendHomeConfig,
+                subtitle: sendHomeCutoff ? `Late arrival limit: ${sendHomeCutoff}` : sendHomeConfig.subtitle
+              },
+              studentName: student.fullName
+            });
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => setCurrentOverlay(null), 5000);
+          }
+          
+          toast.warning(`⛔ ${student.fullName} - Too Late (Send Home)`, { id: 'qr-verify' });
+          
+          // Still mark attendance with send-home status
+          await markAttendance(
+            student,
+            studentShift,
+            classConfigs,
+            () => {},
+            3,
+            undefined,
+            'qr-code',
+            studentClass
+          );
+          
+          // Show error state
+          const sendHomeTrackedFace: TrackedFace = {
+            id: `qr_${student.id}`,
+            box: { x: 0, y: 0, width: 0, height: 0 },
+            name: student.fullName,
+            status: 'recognized',
+            confidence: 100,
+            attendanceStatus: 'send-home',
+            message: 'Too Late - Send Home',
+            firstSeen: Date.now(),
+            lastSeen: Date.now(),
+          };
+          setTrackedFaces([sendHomeTrackedFace]);
+          setTimeout(() => setTrackedFaces([]), 3000);
+          
+          return; // Stop processing
+        }
+        
+        // 2. CHECK UNPAID PAYMENT STATUS
+        const unpaidPaymentConfig = getOverlayConfig('UNPAID_PAYMENT');
+        if (unpaidPaymentConfig) {
+          const paymentResult = calculatePaymentStatus(
+            (student as any).lastPaymentMonth,
+            new Date()
+          );
+          
+          const hasLateFeePermission = (student as any).lateFeePermission === true;
+          
+          if ((paymentResult.status === 'unpaid' || paymentResult.status === 'no-record') && !hasLateFeePermission) {
+            setCurrentOverlay({
+              config: {
+                ...unpaidPaymentConfig,
+                subtitle: paymentResult.reason,
+                message: paymentResult.status === 'no-record' 
+                  ? 'NO PAYMENT RECORD FOUND' 
+                  : 'PLEASE SETTLE YOUR TUITION'
+              },
+              studentName: student.fullName
+            });
+            
+            if (unpaidPaymentConfig.dismissDelay) {
+              setTimeout(() => setCurrentOverlay(null), unpaidPaymentConfig.dismissDelay);
+            }
+          }
+        }
+        
+        // Continue with normal attendance marking
         const attendanceStatus = await markAttendance(
           student,
           student.shift || 'Morning', // Use student's own shift for QR code
@@ -1304,7 +1400,40 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
                   return sendHomeUpdatedFace;
                 }
                 
-                // 📝 MISSED QUIZ CHECK: Check IMMEDIATELY (in parallel with attendance marking)
+                // � UNPAID PAYMENT CHECK: Check payment status IMMEDIATELY
+                const unpaidPaymentConfig = getOverlayConfig('UNPAID_PAYMENT');
+                if (unpaidPaymentConfig) {
+                  const paymentResult = calculatePaymentStatus(
+                    (bestMatch.student as any).lastPaymentMonth,
+                    new Date()
+                  );
+                  
+                  // Check if student has late fee permission - if yes, skip overlay
+                  const hasLateFeePermission = (bestMatch.student as any).lateFeePermission === true;
+                  
+                  if ((paymentResult.status === 'unpaid' || paymentResult.status === 'no-record') && !hasLateFeePermission) {
+                    // Show unpaid payment overlay
+                    setCurrentOverlay({
+                      config: {
+                        ...unpaidPaymentConfig,
+                        subtitle: paymentResult.reason,
+                        message: paymentResult.status === 'no-record' 
+                          ? 'NO PAYMENT RECORD FOUND' 
+                          : 'PLEASE SETTLE YOUR TUITION'
+                      },
+                      studentName: bestMatch.student.fullName
+                    });
+                    
+                    // Auto-dismiss overlay after configured delay
+                    if (unpaidPaymentConfig.dismissDelay) {
+                      setTimeout(() => {
+                        setCurrentOverlay(null);
+                      }, unpaidPaymentConfig.dismissDelay);
+                    }
+                  }
+                }
+                
+                // �📝 MISSED QUIZ CHECK: Check IMMEDIATELY (in parallel with attendance marking)
                 // This runs fast without waiting for attendance save to complete
                 const missedQuizConfig = getOverlayConfig('MISSED_QUIZ');
                 if (missedQuizConfig) {
@@ -1977,9 +2106,18 @@ const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Face-API.js Attendance System</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-6">
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-4">
             Advanced facial recognition using SSD MobileNet V1 model with automatic photo enrollment capabilities
           </p>
+          <div className="flex justify-center">
+            <button
+              onClick={() => router.push('/dashboard/face-enrollment')}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
+            >
+              <Icon path={mdiAccountPlus} className="w-5 h-5" />
+              <span>Face Enrollment</span>
+            </button>
+          </div>
         </div>
 
         {/* Status Cards */}

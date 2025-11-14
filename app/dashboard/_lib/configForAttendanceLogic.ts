@@ -66,4 +66,5 @@ export interface StudentAttendanceWarning {
   value: number;
   details?: string;
   note?: string; // Additional note field for flagged students
+  status?: string; // Today's attendance status
 }

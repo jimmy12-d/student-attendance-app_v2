@@ -25,7 +25,7 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
   const t = useTranslations('student.attendance.qrModal');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [token, setToken] = useState<string>('');
-  const [timeRemaining, setTimeRemaining] = useState<number>(30); // 30 seconds
+  const [timeRemaining, setTimeRemaining] = useState<number>(15); // 15 seconds
   const [isExpired, setIsExpired] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -69,7 +69,7 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
       // Reset state when modal closes
       setQrCodeDataUrl('');
       setToken('');
-      setTimeRemaining(30);
+      setTimeRemaining(15);
       setIsExpired(false);
       setError('');
       setErrorType('');
@@ -141,7 +141,7 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
     setError('');
     setErrorType('');
     setIsExpired(false);
-    setTimeRemaining(30);
+    setTimeRemaining(15);
 
     if (!isRetry) {
       setRetryCount(0);
@@ -430,7 +430,7 @@ const QRAttendanceModal: React.FC<QRAttendanceModalProps> = ({
                             timeRemaining <= 5 ? 'bg-red-500' : 'bg-purple-500'
                           }`}
                           initial={{ width: '100%' }}
-                          animate={{ width: `${(timeRemaining / 30) * 100}%` }}
+                          animate={{ width: `${(timeRemaining / 15) * 100}%` }}
                           transition={{ duration: 0.5 }}
                         />
                       </div>

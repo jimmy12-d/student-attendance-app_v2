@@ -103,7 +103,7 @@ const POSStudentPage = () => {
     const [displayPaymentMonth, setDisplayPaymentMonth] = useState(''); // For display
     const [showMonthInput, setShowMonthInput] = useState(false);
     const [isPostTransactionModalActive, setIsPostTransactionModalActive] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'QR Payment'>('QR Payment');
+    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'QR Payment' | null>(null);
     const [joinDate, setJoinDate] = useState('');
     const [classStudyDays, setClassStudyDays] = useState<number[]>([]);
     const [isUserInteractingWithDetails, setIsUserInteractingWithDetails] = useState(false); // Track user interaction
@@ -1203,7 +1203,7 @@ INSTRUCTIONS:
     };
 
     // Custom handler for payment method changes that auto-opens cash drawer for cash payments
-    const handlePaymentMethodChange = async (method: 'Cash' | 'QR Payment') => {
+    const handlePaymentMethodChange = async (method: 'Cash' | 'QR Payment' | null) => {
         setPaymentMethod(method);
     };
 
@@ -1422,6 +1422,22 @@ INSTRUCTIONS:
                                     <NotificationBar color="danger" icon={mdiAlertCircle}>
                                         Could not determine payment amount. Please check student's class configuration.
                                     </NotificationBar>
+                                ) : !paymentMethod ? (
+                                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-4 mb-4 shadow-sm">
+                                        <div className="flex items-start space-x-3">
+                                            <div className="flex-shrink-0">
+                                                <Icon path={mdiAlertCircle} size={20} className="text-amber-600 dark:text-amber-400 mt-0.5" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                                                    Payment Method Required
+                                                </p>
+                                                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                                                    Please select Cash or QR Payment to complete this transaction.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 ) : (
                                     <div className="flex items-center space-x-3">
                                         <Button 
@@ -1430,15 +1446,17 @@ INSTRUCTIONS:
                                                 ? "Processing..." 
                                                 : !selectedCashier 
                                                     ? "Select Cashier First"
-                                                    : `Charge $${calculateFinalChargeAmount().toFixed(2)}`
+                                                    : !paymentMethod
+                                                        ? "Select Payment Method"
+                                                        : `Charge $${calculateFinalChargeAmount().toFixed(2)}`
                                         } 
-                                        color={!selectedCashier ? "white" : "success"} 
+                                        color={!selectedCashier || !paymentMethod ? "white" : "success"} 
                                         onClick={() => {
-                                            if (!isProcessing && paymentAmount !== null && paymentMonth && joinDate && selectedCashier) {
+                                            if (!isProcessing && paymentAmount !== null && paymentMonth && joinDate && selectedCashier && paymentMethod) {
                                                 handleCharge();
                                             }
                                         }}
-                                        disabled={isProcessing || paymentAmount === null || !paymentMonth || !joinDate || !selectedCashier} 
+                                        disabled={isProcessing || paymentAmount === null || !paymentMonth || !joinDate || !selectedCashier || !paymentMethod} 
                                         className="flex-grow"
                                         icon={!selectedCashier ? mdiAccount : mdiCashRegister}
                                         />

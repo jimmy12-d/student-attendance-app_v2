@@ -36,6 +36,7 @@ import { getClassCapacityInfo, formatClassLabelWithCapacityAndSchedule, canEnrol
  * @property {string} [note]
  * @property {boolean} [warning]
  * @property {boolean} [lateFeePermission]
+ * @property {number|null} [gracePeriodMinutes]
  */
 
 /**
@@ -79,6 +80,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
     warning, setWarning,
     onWaitlist, setOnWaitlist, // Add waitlist functionality
     lateFeePermission, setLateFeePermission, // Add late fee permission variables
+    gracePeriodMinutes, setGracePeriodMinutes, // Add grace period variables
     hasTelegramUsername, setHasTelegramUsername,
     telegramUsername, setTelegramUsername,
     isStudentInfoCollapsed, setIsStudentInfoCollapsed,
@@ -512,7 +514,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
           </div>
 
           {/* Row 3: Schedule Type */}
-          <div className="grid grid-cols-1 md:grid-cols-1 md:gap-x-8 gap-y-8 md:gap-y-0 mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 md:gap-x-8 gap-y-8 md:gap-y-0 mt-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Schedule Type
@@ -899,7 +901,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2">
             {/* Discount */}
             <div className="space-y-2">
               <label htmlFor="discount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Discount Amount ($)</label>
@@ -984,6 +986,135 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
                 </div>
               </div>
             </div>
+
+            {/* Late Period (Grace Period) */}
+            <div className="flex flex-col justify-between">
+              <div className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+                gracePeriodMinutes === 30
+                  ? 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800 hover:border-blue-300 dark:hover:border-blue-700'
+                  : 'from-gray-50 to-gray-50 dark:from-gray-800 dark:to-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}>
+                <div className="flex items-start space-x-4">
+                  <div className="flex items-center">
+                    <div className="relative inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        id="gracePeriod"
+                        checked={gracePeriodMinutes === 30}
+                        onChange={(e) => setGracePeriodMinutes(e.target.checked ? 30 : null)}
+                        className="sr-only"
+                      />
+                      <label
+                        htmlFor="gracePeriod"
+                        className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                          gracePeriodMinutes === 30 ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                            gracePeriodMinutes === 30 ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Icon path={mdiClockOutline} size={20} className={`transition-colors duration-200 ${
+                        gracePeriodMinutes === 30 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400'
+                      }`} />
+                      <label htmlFor="gracePeriod" className={`text-sm font-medium cursor-pointer transition-colors duration-200 ${
+                        gracePeriodMinutes === 30
+                          ? 'text-blue-800 dark:text-blue-200'
+                          : 'text-gray-700 dark:text-gray-300'
+                      }`}>
+                        Extended Late Period
+                      </label>
+                      {gracePeriodMinutes === 30 && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 animate-in fade-in duration-300">
+                          30 min
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-xs transition-colors duration-200 ${
+                      gracePeriodMinutes === 30
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {gracePeriodMinutes === 30
+                        ? 'Student has 30 minutes grace period for late arrival'
+                        : 'Standard 15 minutes grace period applies'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Student Warning */}
+            <div className="flex flex-col justify-between">
+              <div className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
+                warning
+                  ? 'from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700'
+                  : 'from-gray-50 to-gray-50 dark:from-gray-800 dark:to-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+              }`}>
+                <div className="flex items-start space-x-4">
+                  <div className="flex items-center">
+                    <div className="relative inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        id="warning"
+                        name="warning"
+                        checked={warning}
+                        onChange={(e) => setWarning(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <label
+                        htmlFor="warning"
+                        className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${
+                          warning ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
+                            warning ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <Icon path={mdiAlertCircle} size={16} className={`transition-colors duration-200 ${
+                        warning ? 'text-red-600 dark:text-red-400' : 'text-gray-400'
+                      }`} />
+                      <label htmlFor="warning" className={`text-sm font-medium cursor-pointer transition-colors duration-200 ${
+                        warning
+                          ? 'text-red-800 dark:text-red-200'
+                          : 'text-gray-700 dark:text-gray-300'
+                      }`}>
+                        Student Warning
+                      </label>
+                      {warning && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 animate-in fade-in duration-300">
+                          ⚠️ Flagged
+                        </span>
+                      )}
+                    </div>
+                    <p className={`mt-1 text-xs transition-colors duration-200 ${
+                      warning
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {warning
+                        ? 'Student is flagged for special attention and close monitoring'
+                        : 'Enable this to flag students who need extra supervision or have behavioral concerns'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="mt-6">
@@ -999,69 +1130,7 @@ function EditStudentForm({ onStudentUpdated, onCancel, studentData }) {
             />
           </div>
 
-          <div className="mt-6">
-            <div className={`bg-gradient-to-r rounded-xl p-4 border transition-all duration-200 hover:shadow-md ${
-              warning
-                ? 'from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-700'
-                : 'from-gray-50 to-gray-50 dark:from-gray-800 dark:to-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-            }`}>
-              <div className="flex items-start space-x-4">
-                <div className="flex items-center">
-                  <div className="relative inline-flex items-center">
-                    <input
-                      type="checkbox"
-                      id="warning"
-                      name="warning"
-                      checked={warning}
-                      onChange={(e) => setWarning(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <label
-                      htmlFor="warning"
-                      className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${
-                        warning ? 'bg-red-600' : 'bg-gray-200 dark:bg-gray-700'
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out ${
-                          warning ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </label>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2">
-                    <Icon path={mdiAlertCircle} size={16} className={`transition-colors duration-200 ${
-                      warning ? 'text-red-600 dark:text-red-400' : 'text-gray-400'
-                    }`} />
-                    <label htmlFor="warning" className={`text-sm font-medium cursor-pointer transition-colors duration-200 ${
-                      warning
-                        ? 'text-red-800 dark:text-red-200'
-                        : 'text-gray-700 dark:text-gray-300'
-                    }`}>
-                      Student Warning
-                    </label>
-                    {warning && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 animate-in fade-in duration-300">
-                        ⚠️ Flagged
-                      </span>
-                    )}
-                  </div>
-                  <p className={`mt-1 text-xs transition-colors duration-200 ${
-                    warning
-                      ? 'text-red-600 dark:text-red-400'
-                      : 'text-gray-500 dark:text-gray-400'
-                  }`}>
-                    {warning
-                      ? 'Student is flagged for special attention and close monitoring'
-                      : 'Enable this to flag students who need extra supervision or have behavioral concerns'
-                    }
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+
         </div>
       {error && <p className="text-red-500 text-sm mb-3 -mt-2">{error}</p>}
       

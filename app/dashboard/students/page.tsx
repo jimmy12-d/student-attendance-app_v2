@@ -1044,6 +1044,7 @@ export default function StudentsPage() {
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         students={students}
+        droppedStudents={droppedStudents}
         title="Export Students to Excel"
       />
     </section>

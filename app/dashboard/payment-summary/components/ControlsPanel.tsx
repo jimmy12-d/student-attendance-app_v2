@@ -39,27 +39,76 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
   handleExportData
 }) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
 
-  const handleMonthChange = (monthOffset: number) => {
+  // Generate list of months from September 2025 to current month
+  const generateMonthOptions = () => {
+    const months: Array<{ value: string; label: string; year: number; month: number }> = [];
     const now = new Date();
-    // For "This Month" (monthOffset = 0), we want current month
-    // For "Last Month" (monthOffset = 1), we want previous month
-    const targetYear = now.getFullYear();
-    const targetMonth = now.getMonth() - monthOffset;
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
     
-    const firstDay = new Date(targetYear, targetMonth, 1);
-    const lastDay = new Date(targetYear, targetMonth + 1, 0);
+    // Start from September 2025
+    const startYear = 2025;
+    const startMonth = 8; // September (0-indexed)
+    
+    let year = startYear;
+    let month = startMonth;
+    
+    // Generate months from September 2025 to current month
+    while (year < currentYear || (year === currentYear && month <= currentMonth)) {
+      const date = new Date(year, month, 1);
+      months.push({
+        value: `${year}-${month}`,
+        label: date.toLocaleDateString('en-US', { month: 'long' }),
+        year: year,
+        month: month
+      });
+      
+      month++;
+      if (month > 11) {
+        month = 0;
+        year++;
+      }
+    }
+    
+    return months.reverse(); // Most recent first
+  };
+
+  const monthOptions = generateMonthOptions();
+  
+  // Get the 2 latest months for default display
+  const latestTwoMonths = monthOptions.slice(0, 2);
+
+  // Close dropdowns when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.month-dropdown-container') && !target.closest('.export-dropdown-container')) {
+        setShowMonthDropdown(false);
+        setShowExportMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleMonthChange = (year: number, month: number) => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
     
     // Format dates manually to avoid timezone issues
     const formatDate = (date: Date) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     };
     
     setStartDate(formatDate(firstDay));
     setEndDate(formatDate(lastDay));
+    setDateInterval({ type: 'monthly', value: `${year}-${month}` });
   };
 
   return (
@@ -114,26 +163,62 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </div>
             ) : (
               /* Monthly Selector */
-            <div className="flex gap-2 flex-wrap">
-            {[
-                { months: 0, label: "This Month", color: "from-green-500 to-emerald-600" },
-                { months: 1, label: "Last Month", color: "from-blue-500 to-cyan-600" }
-            ].map(({ months, label, color }) => (
-                <button
-                key={months}
-                onClick={() => {
-                    handleMonthChange(months);
-                    setDateInterval({ type: 'monthly', value: months.toString() });
-                }}
-                className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 ${
-                    dateInterval.value === months.toString()
-                    ? `text-white bg-gradient-to-r ${color} shadow-lg`
-                    : 'text-gray-600 dark:text-gray-400 bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-700'
-                }`}
-                >
-                {label}
-                </button>
-            ))}
+            <div className="flex gap-2 flex-wrap items-center">
+              {/* Show 2 latest months */}
+              {latestTwoMonths.map((monthOption, index) => {
+                const colors = [
+                  "from-green-500 to-emerald-600",
+                  "from-blue-500 to-cyan-600"
+                ];
+                return (
+                  <button
+                    key={monthOption.value}
+                    onClick={() => handleMonthChange(monthOption.year, monthOption.month)}
+                    className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 ${
+                      dateInterval.value === monthOption.value
+                        ? `text-white bg-gradient-to-r ${colors[index]} shadow-lg`
+                        : 'text-gray-600 dark:text-gray-400 bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {monthOption.label}
+                  </button>
+                );
+              })}
+              
+              {/* Dropdown for older months */}
+              {monthOptions.length > 2 && (
+                <div className="relative month-dropdown-container">
+                  <button
+                    onClick={() => setShowMonthDropdown(!showMonthDropdown)}
+                    className="px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 text-gray-600 dark:text-gray-400 bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-700 flex items-center gap-1"
+                  >
+                    <span>More Months</span>
+                    <Icon path={mdiChevronDown} size={16} className={`transition-transform duration-300 ${showMonthDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {/* Dropdown Menu */}
+                  {showMonthDropdown && (
+                    <div className="absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 max-h-96 overflow-y-auto">
+                      {monthOptions.slice(2).map((monthOption) => (
+                        <button
+                          key={monthOption.value}
+                          onClick={() => {
+                            handleMonthChange(monthOption.year, monthOption.month);
+                            setShowMonthDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 ${
+                            dateInterval.value === monthOption.value
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold'
+                              : 'text-gray-900 dark:text-white'
+                          }`}
+                        >
+                          {monthOption.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             )}
           
@@ -154,20 +239,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
                 onClick={() => {
                   // Always reset to current month when switching to monthly mode
                   const now = new Date();
-                  const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-                  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                  
-                  // Format dates manually to avoid timezone issues
-                  const formatDate = (date: Date) => {
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
-                  };
-                  
-                  setStartDate(formatDate(firstDay));
-                  setEndDate(formatDate(lastDay));
-                  setDateInterval({ type: 'monthly', value: '0' });
+                  handleMonthChange(now.getFullYear(), now.getMonth());
                 }}
                 className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 ${
                   dateInterval.type === 'monthly'
@@ -191,7 +263,7 @@ const ControlsPanel: React.FC<ControlsPanelProps> = ({
               </button>
               
               {/* Export Dropdown */}
-              <div className="relative">
+              <div className="relative export-dropdown-container">
                 <button
                   onClick={() => setShowExportMenu(!showExportMenu)}
                   disabled={isLoading || !summaryData}
