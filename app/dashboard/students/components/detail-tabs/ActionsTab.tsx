@@ -14,7 +14,7 @@ import Webcam from 'react-webcam';
 import { 
   mdiCalendar, 
   mdiFaceRecognition,
-  mdiSend,
+  mdiRobotHappy,
 } from '@mdi/js';
 
 interface ActionsTabProps {
@@ -81,7 +81,7 @@ export const ActionsTab: React.FC<ActionsTabProps> = ({
     <div className="space-y-6">
       {/* Action Buttons Section */}
       <div className="bg-white dark:bg-slate-700 rounded-xl border border-gray-200 dark:border-slate-600 overflow-hidden shadow-sm">
-        <div className="px-6 py-6">
+        <div className="px-6 py-4">
           <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -152,16 +152,27 @@ export const ActionsTab: React.FC<ActionsTabProps> = ({
             {/* Parent Telegram Registration Button */}
             <button
               onClick={() => {
-                const botUsername = 'rodwell_attendnace_bot'; // Your actual bot username
+                const botUsername = 'rodwell_sams_bot'; // Your actual bot username
                 const token = btoa(`parent_${student.id}_${Date.now()}`); // Generate unique token
                 const telegramUrl = `https://t.me/${botUsername}?start=parent_${token}`;
                 
+                // Create Khmer message template
+                const studentName = student.nameKhmer || student.fullName;
+                const khmerMessage = `សួស្តីបង,
+
+ខាងក្រោមនេះជាលីងតភ្ជាប់ទៅ SAMS របស់សិស្សឈ្មោះ ${studentName}
+
+សូមចុចលើលីងនេះ
+${telegramUrl}
+
+ទាំងម៉ាក់ ទាំងប៉ា អាចប្រើលីងតែមួយនេះបាន។ ប្រសិនបើបងមានសំណួរទាក់ទងនឹងការប្រើប្រាស់ បងអាចទាក់ទងមកពួកខ្ញុំបាន។`;
+                
                 // Copy to clipboard and show instructions
-                navigator.clipboard.writeText(telegramUrl).then(() => {
-                  toast.success('Parent Telegram link copied! Share this with the parent to receive notifications about their child.');
+                navigator.clipboard.writeText(khmerMessage).then(() => {
+                  toast.success('SAMS message copied! Share this with the parent.');
                 }).catch(() => {
-                  // Fallback: show the URL in a modal or alert
-                  alert(`Parent Telegram URL: ${telegramUrl}\n\nShare this link with the parent to receive notifications.`);
+                  // Fallback: show the message in a modal or alert
+                  alert(khmerMessage);
                 });
               }}
               className={`group relative inline-flex items-center justify-center w-full px-5 py-4 text-white text-sm font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 focus:outline-none focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-700 ${
@@ -170,8 +181,8 @@ export const ActionsTab: React.FC<ActionsTabProps> = ({
                   : 'bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700'
               }`}
             >
-              <Icon path={mdiSend} size={20} />
-              <span className="ml-3">Parent Telegram</span>
+              <Icon path={mdiRobotHappy} size={20} />
+              <span className="ml-3">SAMS Link</span>
               <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </button>
           </div>

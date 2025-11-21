@@ -357,6 +357,15 @@ export interface StudentWithStars extends Student {
   claimedStars?: ClaimedStar[]; // Array of claimed stars
 }
 
+// Appointment Question Interface
+export interface AppointmentQuestion {
+  id: string; // Unique question ID
+  question: string; // The question text
+  minWordCount: number; // Minimum total word count (Khmer + English combined)
+  required: boolean; // Whether this question is required
+  order: number; // Order of questions
+}
+
 // Admin Appointment System Interfaces
 export interface AdminAvailability {
   id: string; // Firestore document ID
@@ -365,11 +374,23 @@ export interface AdminAvailability {
   endTime: string; // Time in HH:mm format (e.g., "17:00")
   slotDuration: number; // Duration of each slot in minutes (e.g., 15, 30)
   minPriorHours: number; // Minimum hours required before appointment (e.g., 2 means must book at least 2 hours before appointment time)
+  downtimeStart?: string; // Downtime/break start time in HH:mm format (e.g., "12:00") - optional
+  downtimeEnd?: string; // Downtime/break end time in HH:mm format (e.g., "13:00") - optional
+  questions?: AppointmentQuestion[]; // Array of questions for this appointment
   isActive: boolean; // Whether this availability is currently active
   createdAt: Timestamp;
   createdBy: string; // Admin who created it
   updatedAt?: Timestamp;
   updatedBy?: string;
+}
+
+// Answer to appointment question
+export interface QuestionAnswer {
+  questionId: string;
+  question: string;
+  answer: string;
+  wordCount: number;
+  meetsRequirement: boolean;
 }
 
 export interface AppointmentRequest {
@@ -384,6 +405,7 @@ export interface AppointmentRequest {
   appointmentTime: string; // Time in HH:mm format
   duration: number; // Duration in minutes
   reason?: string; // Reason for the meeting (optional)
+  answers?: QuestionAnswer[]; // Answers to appointment questions
   status: 'pending' | 'approved' | 'rejected' | 'cancelled'; // Request status
   requestedAt: Timestamp;
   processedAt?: Timestamp;

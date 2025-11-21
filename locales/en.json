@@ -280,6 +280,7 @@
           "rewardDetails": "Reward Details",
           "starsToEarn": "Stars to Earn",
           "claimLimit": "Claim Limit",
+          "starColor": "Star Color",
           "timesYouClaimed": "Times You've Claimed",
           "noLimit": "No Limit",
           "alreadyClaimed": "Already claimed maximum times",
@@ -414,6 +415,39 @@
           "availableSlots": "Available time slots",
           "fullyBooked": "Fully booked",
           "noSlotsAvailable": "No slots available on this date"
+        },
+        "steps": {
+          "dateAndTime": "Date & Time",
+          "questions": "Questions",
+          "confirm": "Confirm"
+        },
+        "form": {
+          "bookAppointment": "Book Appointment",
+          "selectDateTitle": "Select Date",
+          "selectTimeTitle": "Select Time",
+          "answerQuestionsTitle": "Answer Questions",
+          "answerQuestionsDescription": "Please answer all required questions",
+          "answerPlaceholder": "Type your answer here...",
+          "confirmTitle": "Confirm Your Appointment",
+          "confirmDescription": "Please review your appointment details before submitting",
+          "appointmentDetails": "Appointment Details",
+          "yourAnswers": "Your Answers",
+          "noAnswerProvided": "(No answer provided)",
+          "wordsRequired": "words",
+          "valid": "✓ Valid",
+          "noAvailableTimeSlots": "No available time slots",
+          "bookInAdvance": "Book at least {days} day(s) in advance",
+          "bookInAdvanceHours": "Book at least {hours} hour(s) in advance",
+          "previousMonth": "Previous Month",
+          "nextMonth": "Next Month",
+          "next": "Next",
+          "back": "Back",
+          "cancel": "Cancel",
+          "confirmAndSubmit": "Confirm & Submit",
+          "submitting": "Submitting...",
+          "dateAndTimeValidation": "Please select both date and time",
+          "answerValidation": "Please answer: {question}",
+          "wordCountValidation": "Answer needs at least {count} words"
         }
       }
     },

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 import React, { useState, useEffect } from "react";
-import { mdiClipboardCheckOutline, mdiPlus, mdiRefresh } from "@mdi/js";
+import { mdiClipboardCheckOutline, mdiPlus, mdiRefresh, mdiFilter, mdiClose } from "@mdi/js";
 import SectionMain from "../../_components/Section/Main";
 import SectionTitleLineWithButton from "../../_components/Section/TitleLineWithButton";
 import NotificationBar from "../../_components/NotificationBar";
@@ -14,6 +14,7 @@ import DashboardLoading from "../../_components/DashboardLoading";
 import ContactTasksTable from "./components/ContactTasksTable";
 import { TaskPreviewModal } from "./components/TaskPreviewModal";
 import { StudentDetailsModal } from "../students/components/StudentDetailsModal";
+import DatePicker from "../../_components/DatePicker";
 import { Student, PermissionRecord, ContactTask } from "../../_interfaces";
 import { AllClassConfigs } from "../_lib/configForAttendanceLogic";
 import { RawAttendanceRecord, calculateConsecutiveAbsences, getStudentDailyStatus } from "../_lib/attendanceLogic";
@@ -42,6 +43,10 @@ export default function ToDoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingTasks, setIsGeneratingTasks] = useState(false);
+  const [filterDate, setFilterDate] = useState<string>(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
   
   // State for student detail modal
   const [isDetailModalActive, setIsDetailModalActive] = useState(false);
@@ -49,7 +54,7 @@ export default function ToDoPage() {
   
   // State for task preview modal
   const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [previewTasks, setPreviewTasks] = useState<Array<Omit<ContactTask, 'id'> & { previewId: string }>>([]);
+  const [previewTasks, setPreviewTasks] = useState<Array<Omit<ContactTask, 'id'> & { previewId: string; isUpdate?: boolean; existingTaskId?: string }>>([]);
 
   // Fetch students from Firebase (only active students)
   useEffect(() => {
@@ -205,19 +210,61 @@ export default function ToDoPage() {
     }
 
     const today = new Date().toISOString().split('T')[0];
-    const newTasks: Array<Omit<ContactTask, 'id'> & { previewId: string }> = [];
-    const existingTaskStudentIds = new Set(contactTasks.map(t => t.studentId));
+    const newTasks: Array<(Omit<ContactTask, 'id'> & { previewId: string; isUpdate?: boolean; existingTaskId?: string })> = [];
+    
+    // Create a map of ALL existing unresolved tasks by studentId (for checking if created today)
+    const allExistingUnresolvedTaskMap = new Map(
+      contactTasks
+        .filter(t => t.status === 'unresolved')
+        .map(t => [t.studentId, t])
+    );
+    
+    // Create a helper function to check if task was created today
+    const wasCreatedToday = (task: ContactTask): boolean => {
+      if (!task.createdAt) return false;
+      
+      let date: Date | null = null;
+      if (typeof (task.createdAt as any).toDate === 'function') {
+        date = (task.createdAt as any).toDate();
+      } else if (task.createdAt instanceof Date) {
+        date = task.createdAt;
+      } else if (typeof task.createdAt === 'string') {
+        date = new Date(task.createdAt);
+      }
+      
+      if (!date) return false;
+      
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const taskCreatedDate = `${year}-${month}-${day}`;
+      
+      return taskCreatedDate === today;
+    };
+    
+    // Create a map of existing unresolved tasks that were NOT created today (for updates)
+    const existingUnresolvedTaskMap = new Map(
+      contactTasks
+        .filter(t => t.status === 'unresolved' && !wasCreatedToday(t))
+        .map(t => [t.studentId, t])
+    );
 
     // Find students with consecutive absences (2+ days)
     students.forEach(student => {
-      // Skip if task already exists for this student
-      if (existingTaskStudentIds.has(student.id)) return;
+      // Skip if task was already created TODAY
+      const existingTaskCreatedToday = allExistingUnresolvedTaskMap.get(student.id);
+      if (existingTaskCreatedToday && wasCreatedToday(existingTaskCreatedToday)) {
+        return;
+      }
 
       const studentAttendance = rawAttendanceRecords.filter(att => att.studentId === student.id);
       const studentPermissions = permissions.filter(p => p.studentId === student.id);
       const result = calculateConsecutiveAbsences(student, studentAttendance, allClassConfigs, studentPermissions, 20);
       
       if (result.count >= 2) {
+        const existingTask = existingUnresolvedTaskMap.get(student.id);
+        const isUpdate = !!existingTask;
+        
         newTasks.push({
           previewId: `consecutive-${student.id}`,
           studentId: student.id,
@@ -225,15 +272,17 @@ export default function ToDoPage() {
           class: student.class,
           shift: student.shift,
           taskType: 'consecutive',
-          reason: '', // Empty string - admin will fill in manually
-          assignedTo: '',
+          reason: existingTask?.reason || '',
+          assignedTo: existingTask?.assignedTo || '',
           status: 'unresolved',
-          createdAt: new Date(),
+          createdAt: existingTask?.createdAt || new Date(),
           updatedAt: new Date(),
           consecutiveDays: result.count,
           lastAbsentDate: result.details || today,
           notes: `${result.count} consecutive school day absences. Last absent: ${result.details || 'Unknown'}`,
-          autoGenerated: true
+          autoGenerated: true,
+          isUpdate: isUpdate,
+          existingTaskId: existingTask?.id
         });
       }
     });
@@ -241,8 +290,12 @@ export default function ToDoPage() {
     // Find warning students with absent status today
     students.forEach(student => {
       if (student.warning !== true) return;
-      // Skip if task already exists for this student
-      if (existingTaskStudentIds.has(student.id)) return;
+      
+      // Skip if task was already created TODAY
+      const existingTaskCreatedToday = allExistingUnresolvedTaskMap.get(student.id);
+      if (existingTaskCreatedToday && wasCreatedToday(existingTaskCreatedToday)) {
+        return;
+      }
 
       const studentAttendance = rawAttendanceRecords.filter(att => att.studentId === student.id);
       const studentPermissions = permissions.filter(p => p.studentId === student.id);
@@ -268,6 +321,9 @@ export default function ToDoPage() {
       
       // Create task only if warning student is absent today
       if (todayStatus.status === "Absent") {
+        const existingTask = existingUnresolvedTaskMap.get(student.id);
+        const isUpdate = !!existingTask;
+        
         newTasks.push({
           previewId: `warning-${student.id}`,
           studentId: student.id,
@@ -275,13 +331,15 @@ export default function ToDoPage() {
           class: student.class,
           shift: student.shift,
           taskType: 'warning',
-          reason: '', // Empty string - admin will fill in manually
-          assignedTo: '',
+          reason: existingTask?.reason || '',
+          assignedTo: existingTask?.assignedTo || '',
           status: 'unresolved',
-          createdAt: new Date(),
+          createdAt: existingTask?.createdAt || new Date(),
           updatedAt: new Date(),
           notes: `Warning student absent today (${today}). ${student.note || ''}`,
-          autoGenerated: true
+          autoGenerated: true,
+          isUpdate: isUpdate,
+          existingTaskId: existingTask?.id
         });
       }
     });
@@ -296,20 +354,28 @@ export default function ToDoPage() {
     setShowPreviewModal(true);
   };
 
-  // Confirm and create selected tasks
+  // Confirm and create/update selected tasks
   const handleConfirmTasks = async (selectedIds: string[]) => {
     setIsGeneratingTasks(true);
     setShowPreviewModal(false);
 
     try {
-      const tasksToCreate = previewTasks.filter(task => selectedIds.includes(task.previewId));
+      const tasksToProcess = previewTasks.filter(task => selectedIds.includes(task.previewId));
       
-      for (const task of tasksToCreate) {
-        const { previewId, ...taskData } = task;
-        await addDoc(collection(db, "contactTasks"), taskData);
+      for (const task of tasksToProcess) {
+        const { previewId, isUpdate, existingTaskId, ...taskData } = task;
+        
+        if (isUpdate && existingTaskId) {
+          // Update existing task
+          await updateDoc(doc(db, "contactTasks", existingTaskId), {
+            ...taskData,
+            updatedAt: Timestamp.now()
+          });
+        } else {
+          // Create new task
+          await addDoc(collection(db, "contactTasks"), taskData);
+        }
       }
-      
-      console.log(`Created ${tasksToCreate.length} new contact tasks`);
       setPreviewTasks([]);
     } catch (error) {
       console.error("Error generating tasks:", error);
@@ -361,10 +427,52 @@ export default function ToDoPage() {
     }
   };
 
+  // Filter students by the same class and shift as the selected student
+  const filteredStudentsForModal = React.useMemo(() => {
+    if (!studentForDetailModal) return [];
+    return students.filter(
+      s => s.class === studentForDetailModal.class && s.shift === studentForDetailModal.shift
+    );
+  }, [students, studentForDetailModal]);
+
   const handleCloseDetailsModal = () => {
     setIsDetailModalActive(false);
     setStudentForDetailModal(null);
   };
+
+  // Filter tasks based on selected date
+  const filteredTasks = React.useMemo(() => {
+    if (!filterDate) return contactTasks;
+
+    return contactTasks.filter(task => {
+      let taskDateStr = '';
+      let date: Date | null = null;
+      
+      if (task.createdAt) {
+        // Handle Firestore Timestamp
+        if (typeof (task.createdAt as any).toDate === 'function') {
+          date = (task.createdAt as any).toDate();
+        } 
+        // Handle JS Date
+        else if (task.createdAt instanceof Date) {
+          date = task.createdAt;
+        }
+        // Handle string (fallback)
+        else if (typeof task.createdAt === 'string') {
+           date = new Date(task.createdAt);
+        }
+      }
+
+      if (date) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          taskDateStr = `${year}-${month}-${day}`;
+      }
+      
+      return taskDateStr === filterDate;
+    });
+  }, [contactTasks, filterDate]);
 
   if (loading) {
     return <DashboardLoading />;
@@ -406,9 +514,40 @@ export default function ToDoPage() {
           </NotificationBar>
         </div>
 
+        <div className="mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d={mdiFilter} />
+            </svg>
+            <span className="font-medium">Filter by Date:</span>
+          </div>
+          
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="w-full md:w-64">
+              <DatePicker
+                selectedDate={filterDate}
+                onDateChange={setFilterDate}
+                placeholder="All Dates"
+              />
+            </div>
+            
+            {filterDate && (
+              <button
+                onClick={() => setFilterDate("")}
+                className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                title="Clear filter"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d={mdiClose} />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Contact Tasks Table */}
         <ContactTasksTable
-          tasks={contactTasks}
+          tasks={filteredTasks}
           onUpdateTask={handleUpdateTask}
           onDeleteTask={handleDeleteTask}
           onViewStudent={handleOpenDetailsModal}
@@ -430,15 +569,17 @@ export default function ToDoPage() {
           isOpen={isDetailModalActive}
           onClose={handleCloseDetailsModal}
           student={studentForDetailModal}
+          students={filteredStudentsForModal}
+          currentIndex={filteredStudentsForModal.findIndex(s => s.id === studentForDetailModal.id)}
           onEdit={(updatedStudent) => {
             // Refresh will happen automatically via Firebase listeners
-            console.log("Student updated:", updatedStudent);
           }}
           onDelete={(deletedStudent) => {
             // Refresh will happen automatically via Firebase listeners
-            console.log("Student deleted:", deletedStudent);
             handleCloseDetailsModal();
           }}
+          hideActions={true}
+          defaultTab="basic"
         />
       )}
     </>

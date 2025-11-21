@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { db } from '@/firebase-config';
-import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, Timestamp, doc, getDoc, getDocs } from 'firebase/firestore';
 import Icon from '@/app/_components/Icon';
 import { mdiCalendarStar, mdiTicket, mdiClose, mdiCalendar, mdiFormSelect, mdiCheckCircle, mdiCloseCircle, mdiClockOutline, mdiChevronRight, mdiLock, mdiAlertCircle, mdiImage, mdiEye } from '@mdi/js';
 import { useTranslations } from 'next-intl';

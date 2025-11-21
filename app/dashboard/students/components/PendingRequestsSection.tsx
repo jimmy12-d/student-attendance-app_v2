@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { mdiAccountAlert, mdiEye, mdiCheckCircle, mdiCloseCircle, mdiMinusCircle, mdiBellRing } from "@mdi/js";
+import { mdiAccountAlert, mdiEye, mdiCheckCircle, mdiCloseCircle, mdiMinusCircle, mdiBellRing, mdiBellCheck, mdiBellCancel } from "@mdi/js";
 import Icon from "../../../_components/Icon";
 import Button from "../../../_components/Button";
 import CardBox from "../../../_components/CardBox";
@@ -366,8 +366,49 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
                 <span className="ml-3 text-gray-600 dark:text-gray-400">Loading pending requests...</span>
               </div>
             ) : (
-              <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
+              <>
+                {/* SAMS Log Summary for Pending Requests */}
+                {!loading && combinedRequests.length > 0 && (
+                  <div className="bg-gradient-to-r from-blue-50/80 via-blue-100/60 to-indigo-100/40 dark:from-blue-900/30 dark:via-blue-800/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30 rounded-lg p-4 backdrop-blur-md shadow-lg shadow-blue-500/10">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 backdrop-blur-sm rounded-lg border shadow-md flex items-center justify-center bg-gradient-to-br from-blue-100/90 to-blue-200/70 dark:from-blue-800/50 dark:to-blue-700/30 border-blue-300/50 dark:border-blue-600/30 shadow-blue-500/10">
+                          <Icon path={(() => {
+                            const totalLogs = combinedRequests.reduce((sum, req) => sum + (req.notificationLogs?.length || 0), 0);
+                            const successLogs = combinedRequests.reduce((sum, req) => sum + (req.notificationLogs?.filter(log => log.success).length || 0), 0);
+                            return successLogs === totalLogs && totalLogs > 0 ? mdiBellCheck : mdiBellCancel;
+                          })()} size={20} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <span className="font-medium text-blue-800 dark:text-blue-200">SAMS Pending Requests Notifications</span>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-xl font-bold ${
+                          (() => {
+                            const totalLogs = combinedRequests.reduce((sum, req) => sum + (req.notificationLogs?.length || 0), 0);
+                            const successLogs = combinedRequests.reduce((sum, req) => sum + (req.notificationLogs?.filter(log => log.success).length || 0), 0);
+                            return successLogs === totalLogs && totalLogs > 0 ? 'text-green-800 dark:text-green-200' : 'text-orange-800 dark:text-orange-200';
+                          })()
+                        }`}>
+                          {(() => {
+                            const totalLogs = combinedRequests.reduce((sum, req) => sum + (req.notificationLogs?.length || 0), 0);
+                            const successLogs = combinedRequests.reduce((sum, req) => sum + (req.notificationLogs?.filter(log => log.success).length || 0), 0);
+                            return `${successLogs} / ${totalLogs}`;
+                          })()}
+                        </div>
+                        <div className={`text-xs ${
+                          (() => {
+                            const totalLogs = combinedRequests.reduce((sum, req) => sum + (req.notificationLogs?.length || 0), 0);
+                            const successLogs = combinedRequests.reduce((sum, req) => sum + (req.notificationLogs?.filter(log => log.success).length || 0), 0);
+                            return successLogs === totalLogs && totalLogs > 0 ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400';
+                          })()
+                        }`}>sent / total</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Requests Grid - 2 Column Layout with Notification Logs */}
+                <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
                 <div className="grid grid-cols-2 gap-3">
                   {combinedRequests.map((request) => {
                     const student = studentsMap.get(request.studentId);
@@ -458,7 +499,8 @@ const PendingRequestsSection: React.FC<PendingRequestsSectionProps> = ({
                     );
                   })}
                 </div>
-              </div>
+                </div>
+              </>
             )}
           </div>
         )}

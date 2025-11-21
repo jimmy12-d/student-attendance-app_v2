@@ -618,14 +618,15 @@ export default function StudentsPage() {
     // Determine which student list this student belongs to
     let studentList: Student[] = [];
     if (students.find(s => s.id === student.id)) {
-      studentList = students;
+      // Filter by class and shift to show only relevant students
+      studentList = students.filter(s => s.class === student.class && s.shift === student.shift);
     } else if (waitlistStudents.find(s => s.id === student.id)) {
       studentList = waitlistStudents;
     } else if (droppedStudents.find(s => s.id === student.id)) {
       studentList = droppedStudents;
     } else {
       // Fallback to students if not found in any list
-      studentList = students;
+      studentList = students.filter(s => s.class === student.class && s.shift === student.shift);
     }
 
     const index = studentList.findIndex(s => s.id === student.id);

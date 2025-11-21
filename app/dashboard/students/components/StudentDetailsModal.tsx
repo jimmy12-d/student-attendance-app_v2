@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Student } from '../../../_interfaces';
 import DailyStatusDetailsModal from '../../_components/DailyStatusDetailsModal';
-import StarManagementSection from './StarManagementSection';
-import ClaimedStarsHistory from './ClaimedStarsHistory';
 import BasicInfoTab from './detail-tabs/BasicInfoTab';
 import ActionsTab from './detail-tabs/ActionsTab';
 import RequestsTab from './detail-tabs/RequestsTab';
@@ -12,54 +10,14 @@ import { RawAttendanceRecord } from '../../_lib/attendanceLogic';
 import { PermissionRecord, ClaimedStar } from '../../../_interfaces';
 import { AllClassConfigs } from '../../_lib/configForAttendanceLogic';
 import { toast } from 'sonner';
-import { 
-  initializeFaceApi, 
-  generateFaceDescriptor
-} from '../../face-scan-faceapi/utils/faceDetection';
-import { 
-  analyzeImageQuality,
-  convertGoogleDriveUrl 
-} from '../../face-scan-faceapi/utils/imageQualityAnalysis';
+import { initializeFaceApi,  generateFaceDescriptor } from '../../face-scan-faceapi/utils/faceDetection';
+import { analyzeImageQuality } from '../../face-scan-faceapi/utils/imageQualityAnalysis';
 import Webcam from 'react-webcam';
 import Button from '../../../_components/Button';
 import Icon from '../../../_components/Icon';
 import CustomDropdown from './CustomDropdown';
-import { 
-  mdiFaceRecognition, 
-  mdiCamera, 
-  mdiCheckCircle,
-  mdiCalendar,
-  mdiClockAlertOutline,
-  mdiCheck,
-  mdiClose
-} from '@mdi/js';
+import { mdiCamera, mdiCheckCircle,} from '@mdi/js';
 
-// Utility function to convert Google Drive share URL to thumbnail URL
-const getDisplayableImageUrl = (url: string): string | null => {
-  if (!url || typeof url !== 'string') {
-    return null;
-  }
-
-  if (url.includes("drive.google.com")) {
-    // Regex to find the file ID from various Google Drive URL formats
-    // Handles /file/d/FILE_ID/, open?id=FILE_ID, and id=FILE_ID
-    const regex = /(?:drive\.google\.com\/(?:file\/d\/([a-zA-Z0-9_-]+)|.*[?&]id=([a-zA-Z0-9_-]+)))/;
-    const match = url.match(regex);
-    
-    if (match) {
-      // The file ID could be in either capture group
-      const fileId = match[1] || match[2];
-      if (fileId) {
-        // Return the preview URL for iframe embedding (same as AddStudentForm)
-        const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-        return previewUrl;
-      }
-    }
-  }
-  
-  // If it's not a Google Drive link or no ID was found, return it as is
-  return url;
-};
 
 interface StudentDetailsModalProps {
   student: Student | null;
@@ -860,15 +818,15 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Student Details
                 </h3>
-                {students.length > 1 && (
-                  <div className="flex flex-col items-center space-y-1">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {currentIndex + 1} of {students.length} in {student.class} - {student.shift}
-                    </p>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {student.fullName}
-                    </p>
-                    {/* Progress dots */}
+                <div className="flex flex-col items-center space-y-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {currentIndex + 1} of {students.length > 0 ? students.length : 1} in {student.class} - {student.shift}
+                  </p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {student.fullName}
+                  </p>
+                  {/* Progress dots */}
+                  {students.length > 1 && (
                     <div className="flex space-x-1">
                       {students.slice(Math.max(0, currentIndex - 2), Math.min(students.length, currentIndex + 3)).map((_, idx) => {
                         const actualIndex = Math.max(0, currentIndex - 2) + idx;
@@ -884,14 +842,14 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                         );
                       })}
                     </div>
-                    {/* Loading indicator during transition */}
-                    {isTransitioning && (
-                      <div className="flex items-center ml-2">
-                        <div className="w-3 h-3 border border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                  )}
+                  {/* Loading indicator during transition */}
+                  {isTransitioning && (
+                    <div className="flex items-center ml-2">
+                      <div className="w-3 h-3 border border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Right Arrow */}

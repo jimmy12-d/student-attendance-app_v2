@@ -752,7 +752,7 @@ exports.parentBotWebhook = onRequest({
                 `⚠️ **ដែនកំណត់ប្រចាំថ្ងៃ**\n\n` +
                 `អ្នកបានប្រើប្រាស់ Bot លើសពីដែនកំណត់ប្រចាំថ្ងៃ (10 សារក្នុងមួយថ្ងៃ)។\n\n` +
                 `សូមព្យាយាមម្តងទៀតថ្ងៃស្អែក។\n\n` +
-                `ប្រសិនបើមានបញ្ហាបន្ទាន់ សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
+                `ប្រសិនបើមានបញ្ហាបន្ទាន់ សូមទាក់ទងផ្ទាល់មក \\@RodwellLC096`,
                 { parse_mode: 'Markdown' }
             );
             return res.status(200).send('OK');
@@ -803,7 +803,7 @@ exports.parentBotWebhook = onRequest({
                     `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា\n` +
                     `• មើលលទ្ធផលប្រលង\n\n` +
                     `ប្រសិនបើបងត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែម សូមស្នើសុំតំណចុះឈ្មោះថ្មីពីសាលា។\n\n` +
-                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
+                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC096`,
                     { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() }
                 );
                 return res.status(200).send('OK');
@@ -823,7 +823,7 @@ exports.parentBotWebhook = onRequest({
                 `• ការស្នើសុំអនុញ្ញាតត្រូវបានយល់ព្រម ឬបដិសេធ\n` +
                 `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សារបស់កូន\n` +
                 `• មើលលទ្ធផលប្រលងរបស់កូន\n\n` +
-                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
+                `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC096`,
                 { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() }
             );
         } else if (text === '/parent' || text === '/parentinfo') {
@@ -959,10 +959,18 @@ exports.parentBotWebhook = onRequest({
             await bot.sendMessage(chatId, attendanceMessage, { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
         } else if (text === '/help') {
             // Send the standard bot info message with menu
-            await bot.sendMessage(chatId, getParentBotInfoMessage(), { parse_mode: 'Markdown', disable_web_page_preview: true, ...getParentBotMenuKeyboard() });
+            await bot.sendMessage(chatId, getParentBotInfoMessage(), { 
+                parse_mode: 'Markdown', 
+                disable_web_page_preview: true,
+                ...getParentBotMenuKeyboard() 
+            });
         } else {
             // Handle random/unknown text - send bot info message with menu
-            await bot.sendMessage(chatId, getParentBotInfoMessage(), { parse_mode: 'Markdown', disable_web_page_preview: true, ...getParentBotMenuKeyboard() });
+            await bot.sendMessage(chatId, getParentBotInfoMessage(), { 
+                parse_mode: 'Markdown', 
+                disable_web_page_preview: true,
+                ...getParentBotMenuKeyboard() 
+            });
         }
 
         res.status(200).send('OK');
@@ -1651,20 +1659,6 @@ const getCalendarMessage = () => {
  * Get attendance notification keyboard (reusable component)
  * @returns {Object} Inline keyboard markup for attendance notifications
  */
-const getAttendanceNotificationKeyboard = () => {
-    return {
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: '💰 ពិនិត្យបង់ថ្លៃ', callback_data: 'check_payment' },
-                    { text: '📝 ពិនិត្យប្រលង', callback_data: 'check_mock_exam' },
-                    { text: '📅 ពិនិត្យវត្តមាន', callback_data: 'check_attendance' }
-                ]
-            ]
-        }
-    };
-};
-
 /**
  * Get help menu keyboard (reusable component)
  * @returns {Object} Inline keyboard markup for help menu
@@ -1773,7 +1767,7 @@ const handleParentStartCommand = async (bot, chatId, userId, token) => {
 📝 កូនរបស់បងស្នើសុំការអនុញ្ញាតចាកចេញមុន
 🚪 ការស្នើសុំអនុញ្ញាតរបស់កូនរបស់បងត្រូវបានយល់ព្រម/បដិសេធ
 
-🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076
+🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC096
 
 វាយ /help ដើម្បីមើលពាក្យបញ្ជាដែលអាចប្រើបាន។`;
 
@@ -2092,7 +2086,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
                         `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សា\n` +
                         `• មើលលទ្ធផលប្រលង\n\n` +
                         `ប្រសិនបើបងត្រូវការចុះឈ្មោះសម្រាប់សិស្សបន្ថែម សូមស្នើសុំតំណចុះឈ្មោះថ្មីពីសាលា។\n\n` +
-                        `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
+                        `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC096`,
                         { parse_mode: 'Markdown' }
                     );
                     return;
@@ -2112,7 +2106,7 @@ const handleParentCallbackQuery = async (bot, callbackQuery) => {
                     `• ការស្នើសុំអនុញ្ញាតត្រូវបានយល់ព្រម ឬបដិសេធ\n` +
                     `• ពិនិត្យស្ថានភាពបង់ថ្លៃសិក្សារបស់កូន\n` +
                     `• មើលលទ្ធផលប្រលងរបស់កូន\n\n` +
-                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC076`,
+                    `🤖 នេះគ្រាន់តែជា Bot ធម្មតា។ ប្រសិនបើត្រូវការជំនួយផ្ទាល់ខ្លួន សូមទាក់ទងផ្ទាល់មក \\@RodwellLC096`,
                     { parse_mode: 'Markdown' }
                 );
             } else if (command === 'parent') {
@@ -4515,7 +4509,7 @@ ${attendanceStatus.statusIcon} **ស្ថានភាព:** ${attendanceStatus.
 
 ✅ កូនរបស់បងបានមកដល់សាលាដោយសុវត្ថិភាព!`;
 
-                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...getAttendanceNotificationKeyboard() });
+                await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...getParentBotMenuKeyboard() });
                 notificationsSent++;
                 
                 logger.info(`Attendance notification sent to parent chat ${chatId} for student ${studentId}`);

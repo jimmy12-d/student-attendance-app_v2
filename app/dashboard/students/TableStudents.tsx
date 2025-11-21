@@ -70,7 +70,7 @@ const TableStudents = ({ students, onEdit, onDelete, isBatchEditMode = false, is
     { id: 'notificationVersion', label: 'Notif Version', enabled: false },
     { id: 'paymentStatus', label: 'Payment', enabled: false },
     { id: 'scheduleType', label: 'Type', enabled: false },
-    { id: 'warning', label: 'Warning', enabled: false },
+    { id: 'samsLink', label: 'SAMS Link', enabled: false },
     { id: 'todayAttendance', label: 'Attendance', enabled: false },
     { id: 'averageArrivalTime', label: 'Avg Arrival', enabled: false },
   ];

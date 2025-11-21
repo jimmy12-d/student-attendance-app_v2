@@ -8,7 +8,8 @@ import { AbsentFollowUp, AbsentStatus, PermissionRecord } from '../../../_interf
 import { AbsentStatusTracker } from './AbsentStatusTracker';
 import CardBox from '../../../_components/CardBox';
 import SectionTitleLineWithButton from '../../../_components/Section/TitleLineWithButton';
-import { mdiAccountOff } from '@mdi/js';
+import { mdiAccountOff, mdiBellCheck, mdiBellCancel } from '@mdi/js';
+import Icon from '../../../_components/Icon';
 import { toast } from 'sonner';
 
 // Phone formatting utility (same as StudentRow)
@@ -273,11 +274,19 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
 
       const absentStudents: AbsentFollowUpWithDetails[] = allStudents.map(student => {
         try {
-          // CRITICAL: Determine the student's effective shift for attendance matching
-          // BP students (inBPClass=true) have their stored shift as their original class shift (e.g., "Afternoon")
-          // but they actually attend Evening shift for 12BP class. We need to use "Evening" for matching.
+          // CRITICAL FIX: For BP students checking their regular class attendance
+          // When selectedShift is not "Evening", check their regular class shift (student.shift)
+          // When selectedShift is "Evening", check BP class attendance (shift="Evening")
+          // BP students have TWO attendance records: one for regular class, one for BP class
           const isBPStudent = (student as any).inBPClass === true;
-          const effectiveShift = isBPStudent ? 'Evening' : student.shift;
+          
+          // Determine which shift to check based on what the dashboard is filtering for
+          let effectiveShift = student.shift;
+          if (isBPStudent && selectedShift?.toLowerCase() === 'evening') {
+            // When viewing Evening shift dashboard, check BP class attendance
+            effectiveShift = 'Evening';
+          }
+          // Otherwise, use student's regular shift (Morning/Afternoon) even for BP students
 
           // Find attendance record for this student on selected date AND matching shift
           // This is critical for students with multiple classes/shifts (e.g., 12B afternoon + 12BP evening)
@@ -376,11 +385,19 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
           }
           
           // Check if student is actually present now
-          // CRITICAL: Determine the student's effective shift for attendance matching
-          // BP students (inBPClass=true) have their stored shift as their original class shift (e.g., "Afternoon")
-          // but they actually attend Evening shift for 12BP class. We need to use "Evening" for matching.
+          // CRITICAL FIX: For BP students checking their regular class attendance
+          // When selectedShift is not "Evening", check their regular class shift (student.shift)
+          // When selectedShift is "Evening", check BP class attendance (shift="Evening")
+          // BP students have TWO attendance records: one for regular class, one for BP class
           const isBPStudent = (studentData as any).inBPClass === true;
-          const effectiveShift = isBPStudent ? 'Evening' : studentData.shift;
+          
+          // Determine which shift to check based on what the dashboard is filtering for
+          let effectiveShift = studentData.shift;
+          if (isBPStudent && selectedShift?.toLowerCase() === 'evening') {
+            // When viewing Evening shift dashboard, check BP class attendance
+            effectiveShift = 'Evening';
+          }
+          // Otherwise, use student's regular shift (Morning/Afternoon) even for BP students
 
           // Find attendance record matching both studentId AND shift
           const attendanceRecord = attendanceRecords.find((rec: any) => {
@@ -974,6 +991,46 @@ export const AbsentFollowUpDashboard: React.FC<AbsentFollowUpDashboardProps> = (
         icon={mdiAccountOff} 
         title="Absent Students Follow-up Dashboard"
       />
+      
+      {/* SAMS Log Summary for Absent Students */}
+      {sortedFollowUps.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-50/80 via-blue-100/60 to-indigo-100/40 dark:from-blue-900/30 dark:via-blue-800/20 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/30 rounded-lg p-4 backdrop-blur-md shadow-lg shadow-blue-500/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 backdrop-blur-sm rounded-lg border shadow-md flex items-center justify-center bg-gradient-to-br from-blue-100/90 to-blue-200/70 dark:from-blue-800/50 dark:to-blue-700/30 border-blue-300/50 dark:border-blue-600/30 shadow-blue-500/10">
+                <Icon path={(() => {
+                  const totalAbsent = sortedFollowUps.length;
+                  const withNotifications = sortedFollowUps.filter(f => f.parentNotificationStatus === 'success').length;
+                  return withNotifications === totalAbsent ? mdiBellCheck : mdiBellCancel;
+                })()} size={20} className="text-blue-600 dark:text-blue-400" />
+              </div>
+              <span className="font-medium text-blue-800 dark:text-blue-200">Absent Students Notifications</span>
+            </div>
+            <div className="text-right">
+              <div className={`text-xl font-bold ${
+                (() => {
+                  const totalAbsent = sortedFollowUps.length;
+                  const withNotifications = sortedFollowUps.filter(f => f.parentNotificationStatus === 'success').length;
+                  return withNotifications === totalAbsent ? 'text-green-800 dark:text-green-200' : 'text-orange-800 dark:text-orange-200';
+                })()
+              }`}>
+                {(() => {
+                  const totalAbsent = sortedFollowUps.length;
+                  const withNotifications = sortedFollowUps.filter(f => f.parentNotificationStatus === 'success').length;
+                  return `${withNotifications} / ${totalAbsent}`;
+                })()}
+              </div>
+              <div className={`text-xs ${
+                (() => {
+                  const totalAbsent = sortedFollowUps.length;
+                  const withNotifications = sortedFollowUps.filter(f => f.parentNotificationStatus === 'success').length;
+                  return withNotifications === totalAbsent ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400';
+                })()
+              }`}>notified / total</div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Filters */}
       <CardBox>

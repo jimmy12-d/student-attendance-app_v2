@@ -11,7 +11,9 @@ import DatePicker from '../../_components/DatePicker';
 import { getTodayLocalString, formatDateForDisplay } from '../../_utils/dateUtils';
 import { StudentDetailsModal as StudentDetailsModalLegacy } from '../students/components/StudentDetailsModal';
 import { Student } from '../../_interfaces';
-import { AppointmentStudentDetailModal } from './_components/AppointmentStudentDetailsModal';
+import AdminAvailabilityTab from './_components/AdminAvailabilityTab';
+import ScheduleViewTab from './_components/ScheduleViewTab';
+import { StudentDetailsModal } from './_components/StudentDetailsModal';
 
 interface SlotInfo {
   time: string;
@@ -207,11 +209,11 @@ const AppointmentScheduleGrid: React.FC<AppointmentScheduleGridProps> = ({
 
   const getSlotColor = (status: string) => {
     switch (status) {
-      case 'free': return 'bg-gray-50/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50 hover:bg-gray-100/70 dark:hover:bg-gray-700/70';
-      case 'pending': return 'bg-yellow-50/30 dark:bg-yellow-900/10 border-yellow-200/50 dark:border-yellow-700/50';
-      case 'approved': return 'bg-green-50/30 dark:bg-green-900/10 border-green-200/50 dark:border-green-700/50';
-      case 'rejected': return 'bg-red-50/30 dark:bg-red-900/10 border-red-200/50 dark:border-red-700/50';
-      default: return 'bg-gray-50/50 dark:bg-gray-800/50 border-gray-200/50 dark:border-gray-700/50';
+      case 'free': return 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700';
+      case 'pending': return 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700';
+      case 'approved': return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700';
+      case 'rejected': return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700';
+      default: return 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700';
     }
   };
 
@@ -254,7 +256,7 @@ const AppointmentScheduleGrid: React.FC<AppointmentScheduleGridProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
             {slotsByDate[date].map((slot, index) => {
               const slotKey = `${slot.date}-${slot.time}-${index}`;
               const isExpanded = expandedSlots.has(slotKey);
@@ -262,22 +264,22 @@ const AppointmentScheduleGrid: React.FC<AppointmentScheduleGridProps> = ({
               return (
                 <div
                   key={slotKey}
-                  className={`relative border rounded-lg p-2 transition-all duration-200 ${getSlotColor(slot.status)} ${
+                  className={`relative border rounded-xl p-3 transition-all duration-200 ${getSlotColor(slot.status)} ${
                     slot.status !== 'free' ? 'cursor-default' : 'cursor-pointer'
                   }`}
                 >
                   <div className="text-center">
-                    <div className="text-xs font-medium text-slate-800 dark:text-slate-200 mb-1">
+                    <div className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-1">
                       {slot.time}
                     </div>
                     
                     {slot.status !== 'free' && slot.request && (
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         <div className="flex items-center justify-center gap-1">
                           {getSlotIcon(slot.status) && (
                             <Icon 
                               path={getSlotIcon(slot.status)!} 
-                              size={10} 
+                              size={12} 
                               className={`${
                                 slot.status === 'approved' ? 'text-green-600' :
                                 slot.status === 'rejected' ? 'text-red-600' :
@@ -307,18 +309,18 @@ const AppointmentScheduleGrid: React.FC<AppointmentScheduleGridProps> = ({
                         {slot.status === 'approved' && (
                           <button
                             onClick={() => toggleSlot(slotKey)}
-                            className="w-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs px-1 py-0.5 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-1"
+                            className="w-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs px-2 py-1 rounded hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-1"
                           >
-                            <Icon path={isExpanded ? mdiChevronUp : mdiChevronDown} size={10} />
+                            <Icon path={isExpanded ? mdiChevronUp : mdiChevronDown} size={12} />
                             {isExpanded ? 'Hide' : 'Show'} Actions
                           </button>
                         )}
                         
                         {/* Expanded Content - Only for approved slots */}
                         {slot.status === 'approved' && isExpanded && (
-                          <div className="space-y-1 pt-1 border-t border-slate-300 dark:border-slate-600">
+                          <div className="space-y-2 pt-2 border-t border-slate-300 dark:border-slate-600">
                             {slot.request.attendanceStatus ? (
-                              <div className={`text-xs font-medium px-1 py-0.5 rounded ${
+                              <div className={`text-xs font-medium px-2 py-1 rounded ${
                                 slot.request.attendanceStatus === 'met' 
                                   ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
                                   : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
@@ -326,50 +328,50 @@ const AppointmentScheduleGrid: React.FC<AppointmentScheduleGridProps> = ({
                                 {slot.request.attendanceStatus === 'met' ? '✓ Met' : '✕ No Show'}
                               </div>
                             ) : (
-                              <div className="space-y-0.5">
+                              <div className="space-y-1">
                                 <button
                                   onClick={() => onMarkAttendance(slot.request!, 'met')}
-                                  className="w-full bg-green-600 text-white text-xs px-1 py-0.5 rounded hover:bg-green-700 transition-colors flex items-center justify-center gap-1"
+                                  className="w-full bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700 transition-colors flex items-center justify-center gap-1"
                                   title="Mark as Met"
                                 >
-                                  <Icon path={mdiAccountCheck} size={10} />
+                                  <Icon path={mdiAccountCheck} size={12} />
                                   Met
                                 </button>
                                 <button
                                   onClick={() => onMarkAttendance(slot.request!, 'no-show')}
-                                  className="w-full bg-red-600 text-white text-xs px-1 py-0.5 rounded hover:bg-red-700 transition-colors flex items-center justify-center gap-1"
+                                  className="w-full bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 transition-colors flex items-center justify-center gap-1"
                                   title="Mark as No Show"
                                 >
-                                  <Icon path={mdiAccountRemove} size={10} />
+                                  <Icon path={mdiAccountRemove} size={12} />
                                   No Show
                                 </button>
                               </div>
                               )}
                             
-                            <div className="border-t border-slate-300 dark:border-slate-600 my-0.5"></div>
+                            <div className="border-t border-slate-300 dark:border-slate-600 my-1"></div>
                             
                             <button
                               onClick={() => onEditMeeting(slot.request!)}
-                              className="w-full bg-blue-600 text-white text-xs px-1 py-0.5 rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                              className="w-full bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
                               title="Edit Meeting Time"
                             >
-                              <Icon path={mdiPencil} size={10} />
+                              <Icon path={mdiPencil} size={12} />
                               Edit Time
                             </button>
                             
                             <button
                               onClick={() => fetchStudentDetails(slot.request!.studentId)}
-                              className="w-full bg-purple-600 text-white text-xs px-1 py-0.5 rounded hover:bg-purple-700 transition-colors flex items-center justify-center gap-1"
+                              className="w-full bg-purple-600 text-white text-xs px-2 py-1 rounded hover:bg-purple-700 transition-colors flex items-center justify-center gap-1"
                               title="View Student Details"
                             >
-                              <Icon path={mdiAccount} size={10} />
+                              <Icon path={mdiAccount} size={12} />
                               View Student
                             </button>                            <button
                               onClick={() => fetchExamResults(slot.request!.studentId, slot.request!.studentName, slot.request!)}
-                              className="w-full bg-indigo-600 text-white text-xs px-1 py-0.5 rounded hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1"
+                              className="w-full bg-indigo-600 text-white text-xs px-2 py-1 rounded hover:bg-indigo-700 transition-colors flex items-center justify-center gap-1"
                               title="View Details"
                             >
-                              <Icon path={mdiChartLine} size={10} />
+                              <Icon path={mdiChartLine} size={12} />
                               View Details
                             </button>
                           </div>
@@ -377,18 +379,18 @@ const AppointmentScheduleGrid: React.FC<AppointmentScheduleGridProps> = ({
                         
                         {/* Pending status buttons */}
                         {slot.status === 'pending' && (
-                          <div className="flex gap-1 mt-1 flex-col">
+                          <div className="flex gap-1 mt-2 flex-col">
                             <div className="flex gap-1">
                               <button
                                 onClick={() => onApproveRequest(slot.request!)}
-                                className="flex-1 bg-green-600 text-white text-xs px-1 py-0.5 rounded hover:bg-green-700 transition-colors"
+                                className="flex-1 bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700 transition-colors"
                                 title="Approve"
                               >
                                 ✓
                               </button>
                               <button
                                 onClick={() => onRejectRequest(slot.request!)}
-                                className="flex-1 bg-red-600 text-white text-xs px-1 py-0.5 rounded hover:bg-red-700 transition-colors"
+                                className="flex-1 bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700 transition-colors"
                                 title="Reject"
                               >
                                 ✕
@@ -396,10 +398,10 @@ const AppointmentScheduleGrid: React.FC<AppointmentScheduleGridProps> = ({
                             </div>
                             <button
                               onClick={() => onEditMeeting(slot.request!)}
-                              className="w-full bg-blue-600 text-white text-xs px-1 py-0.5 rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
+                              className="w-full bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 transition-colors flex items-center justify-center gap-1"
                               title="Edit Meeting Time"
                             >
-                              <Icon path={mdiPencil} size={10} />
+                              <Icon path={mdiPencil} size={12} />
                               Edit
                             </button>
                           </div>
@@ -428,7 +430,7 @@ const AppointmentScheduleGrid: React.FC<AppointmentScheduleGridProps> = ({
       ))}
       
       {/* Student Details Modal */}
-      <StudentDetailsModalLegacy
+      <StudentDetailsModal
         student={selectedStudent}
         isOpen={showStudentModal}
         onClose={() => {
@@ -444,27 +446,267 @@ const AppointmentScheduleGrid: React.FC<AppointmentScheduleGridProps> = ({
       />
       
       {/* Unified Detail Modal */}
-      <AppointmentStudentDetailModal
-        isOpen={showDetailModal}
-        detailData={detailData}
-        loadingDetail={loadingDetail}
-        expandedDetailSections={expandedDetailSections}
-        onClose={() => {
-          setShowDetailModal(false);
-          setDetailData(null);
-        }}
-        onToggleSection={(section) => {
-          setExpandedDetailSections(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(section)) {
-              newSet.delete(section);
-            } else {
-              newSet.add(section);
-            }
-            return newSet;
-          });
-        }}
-      />
+      {showDetailModal && detailData && (
+        <div className="fixed inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-sm flex items-center justify-center z-120 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Icon path={mdiChartLine} size={24} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Student Details</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{detailData.studentName}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setDetailData(null);
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <Icon path={mdiClose} size={20} className="text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {loadingDetail ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">Loading details...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Exam Results Section */}
+                {detailData.examResults && (
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => toggleDetailSection('exam')}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 hover:from-indigo-100 hover:to-purple-100 dark:hover:from-indigo-900/30 dark:hover:to-purple-900/30 flex items-center justify-between transition-all duration-300"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon 
+                          path={expandedDetailSections.has('exam') ? mdiChevronUp : mdiChevronDown} 
+                          size={20} 
+                          className="text-indigo-600 dark:text-indigo-400" 
+                        />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Mock Exam Results</h3>
+                      </div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {detailData.examResults.classType}
+                      </span>
+                    </button>
+                    
+                    {expandedDetailSections.has('exam') && (
+                      <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        {detailData.examResults.noData ? (
+                          <div className="text-center py-8">
+                            <Icon path={mdiAlertCircle} size={32} className="mx-auto text-gray-400 dark:text-gray-600 mb-2" />
+                            <p className="text-gray-600 dark:text-gray-400">No exam results found</p>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Subject Scores */}
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Subject Scores</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {Object.keys(detailData.examResults.scores).length > 0 ? (
+                                  Object.entries(detailData.examResults.scores).map(([subject, score]: [string, any]) => {
+                                    const maxScoreKey = `${detailData.examResults.classType}_${subject}`;
+                                    const maxScore = detailData.examResults.maxScoresMap[maxScoreKey] || 100;
+                                    const actualScore = score === -1 ? 0 : (score || 0);
+                                    const percentage = maxScore > 0 ? (actualScore / maxScore) * 100 : 0;
+                                    const grade = percentage >= 90 ? 'A' : percentage >= 80 ? 'B' : percentage >= 70 ? 'C' : percentage >= 60 ? 'D' : percentage >= 50 ? 'E' : 'F';
+                                    
+                                    const getGradeColor = (g: string) => {
+                                      switch(g) {
+                                        case 'A': return 'from-green-500 to-emerald-500';
+                                        case 'B': return 'from-blue-500 to-cyan-500';
+                                        case 'C': return 'from-purple-500 to-pink-500';
+                                        case 'D': return 'from-yellow-500 to-amber-500';
+                                        case 'E': return 'from-orange-500 to-red-400';
+                                        case 'F': return 'from-red-500 to-rose-500';
+                                        default: return 'from-gray-500 to-slate-500';
+                                      }
+                                    };
+
+                                    return (
+                                      <div key={subject} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <h5 className="font-medium text-gray-900 dark:text-white capitalize text-sm">{subject}</h5>
+                                          <span className={`px-4 py-2 rounded-full text-base font-bold text-white bg-gradient-to-r ${getGradeColor(grade)} shadow-md`}>
+                                            {grade}
+                                          </span>
+                                        </div>
+                                        <div className="text-sm">
+                                          <span className="text-gray-600 dark:text-gray-400">
+                                            {score === -1 ? 'Absent' : `${score || 0} / ${maxScore}`}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="col-span-2 text-center py-4 text-gray-500 dark:text-gray-400">
+                                    No subject scores available
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Overall Performance */}
+                            {Object.keys(detailData.examResults.scores).length > 0 && (() => {
+                              const scores = Object.values(detailData.examResults.scores) as number[];
+                              const totalScore = scores.reduce((sum, s) => sum + (s === -1 ? 0 : (s || 0)), 0);
+                              const subjects = Object.keys(detailData.examResults.scores);
+                              let totalMaxScore = 0;
+                              subjects.forEach(subject => {
+                                const maxScoreKey = `${detailData.examResults.classType}_${subject}`;
+                                totalMaxScore += detailData.examResults.maxScoresMap[maxScoreKey] || 100;
+                              });
+                              
+                              const percentage = totalMaxScore > 0 ? (totalScore / totalMaxScore) * 100 : 0;
+                              const totalGrade = percentage >= 90 ? 'A' : percentage >= 80 ? 'B' : percentage >= 70 ? 'C' : percentage >= 60 ? 'D' : percentage >= 50 ? 'E' : 'F';
+                              
+                              const getGradeColor = (g: string) => {
+                                switch(g) {
+                                  case 'A': return 'from-green-500 to-emerald-500';
+                                  case 'B': return 'from-blue-500 to-cyan-500';
+                                  case 'C': return 'from-purple-500 to-pink-500';
+                                  case 'D': return 'from-yellow-500 to-amber-500';
+                                  case 'E': return 'from-orange-500 to-red-400';
+                                  case 'F': return 'from-red-500 to-rose-500';
+                                  default: return 'from-gray-500 to-slate-500';
+                                }
+                              };
+                              
+                              return (
+                                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg p-4 border border-indigo-200 dark:border-indigo-700">
+                                  <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Performance</h4>
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Score</p>
+                                      <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+                                        {totalScore} / {totalMaxScore}
+                                      </p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        {percentage.toFixed(1)}%
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Total Grade</p>
+                                      <span className={`inline-block px-4 py-2 rounded-lg text-lg font-bold text-white bg-gradient-to-r ${getGradeColor(totalGrade)}`}>
+                                        {totalGrade}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Student Answers Section */}
+                {detailData.appointmentRequest && detailData.appointmentRequest.answers && detailData.appointmentRequest.answers.length > 0 && (
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => toggleDetailSection('answers')}
+                      className="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 hover:from-blue-100 hover:to-cyan-100 dark:hover:from-blue-900/30 dark:hover:to-cyan-900/30 flex items-center justify-between transition-all duration-300"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon 
+                          path={expandedDetailSections.has('answers') ? mdiChevronUp : mdiChevronDown} 
+                          size={20} 
+                          className="text-blue-600 dark:text-blue-400" 
+                        />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Student Answers</h3>
+                      </div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {detailData.appointmentRequest.answers.filter((a: any) => a.meetsRequirement).length} / {detailData.appointmentRequest.answers.length} valid
+                      </span>
+                    </button>
+                    
+                    {expandedDetailSections.has('answers') && (
+                      <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        {detailData.appointmentRequest.answers.map((answer: any, index: number) => (
+                          <div key={index} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h4 className="font-medium text-gray-900 dark:text-white text-sm">Question {index + 1}</h4>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{answer.question}</p>
+                              </div>
+                              <div className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ml-2 ${
+                                answer.meetsRequirement 
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                              }`}>
+                                {answer.meetsRequirement ? '✓ Valid' : '✗ Invalid'}
+                              </div>
+                            </div>
+
+                            <div className="bg-white dark:bg-gray-800 rounded p-2 mb-2 text-xs text-gray-900 dark:text-gray-100 line-clamp-3">
+                              {answer.answer}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 text-center">
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Words</p>
+                                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">{answer.wordCount || 0}</p>
+                              </div>
+                              <div className="bg-purple-50 dark:bg-purple-900/20 rounded p-2 text-center">
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Status</p>
+                                <p className="text-sm font-bold text-purple-600 dark:text-purple-400">{answer.meetsRequirement ? 'Valid' : 'Invalid'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Answers Summary */}
+                        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-2">Summary</h4>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="text-center">
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Total</p>
+                              <p className="text-lg font-bold text-blue-600 dark:text-blue-400">{detailData.appointmentRequest.answers.length}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Valid</p>
+                              <p className="text-lg font-bold text-green-600 dark:text-green-400">{detailData.appointmentRequest.answers.filter((a: any) => a.meetsRequirement).length}</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-xs text-gray-600 dark:text-gray-400">Avg Words</p>
+                              <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                                {(detailData.appointmentRequest.answers.reduce((sum: number, a: any) => sum + (a.wordCount || 0), 0) / detailData.appointmentRequest.answers.length).toFixed(0)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setDetailData(null);
+                }}
+                className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
 
     </div>
@@ -511,14 +753,6 @@ const AppointmentsManagementPage = () => {
     question: '',
     minWordCount: 0,
   });
-
-  // State for detail modal
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [detailData, setDetailData] = useState<any>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [expandedDetailSections, setExpandedDetailSections] = useState<Set<string>>(new Set(['exam', 'answers']));
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [showStudentModal, setShowStudentModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -1394,10 +1628,11 @@ const AppointmentsManagementPage = () => {
                   ) : (
                     <div className="max-h-40 overflow-y-auto space-y-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
                       {availableDaysForEdit.map((date) => {
-                        // Format date for better readability
-                        const dateObj = new Date(date + 'T00:00:00');
-                        const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-                        const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        // Convert date string to dd-mm-yyyy format
+                        const dateParts = date.split('-');
+                        const formattedDate = dateParts.length === 3 
+                          ? `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}` 
+                          : date;
                         
                         return (
                           <button
@@ -1410,10 +1645,7 @@ const AppointmentsManagementPage = () => {
                             }`}
                           >
                             <div className="flex items-center justify-between">
-                              <div className="flex flex-col">
-                                <p className="font-medium text-gray-900 dark:text-white">{formattedDate}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{dayOfWeek}</p>
-                              </div>
+                              <p className="font-medium text-gray-900 dark:text-white">{formattedDate}</p>
                               {editMeetingDate === date && (
                                 <Icon path={mdiCheck} size={20} className="text-blue-600 dark:text-blue-400" />
                               )}

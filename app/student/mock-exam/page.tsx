@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 
 // Firebase and Data Handling
 import { db } from '../../../firebase-config';
@@ -19,9 +20,7 @@ import SeatArrangement from './_components/SeatArrangement';
 import PerformanceRadarChartSkeleton from './_components/PerformanceRadarChartSkeleton';
 
 // Appointment Components
-import AppointmentBookingForm from './_components/appointments/AppointmentBookingForm'; // eslint-disable-line
 import MyAppointments from './_components/appointments/MyAppointments';
-import { AdminAvailability } from '../../_interfaces';
 
 // Internationalization
 import { useTranslations } from 'next-intl';
@@ -43,6 +42,7 @@ const isCacheFresh = (lastFetched: string | undefined) => {
 
 const MockExamPage = () => {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const studentDocId = useAppSelector((state) => state.main.studentDocId);
   const studentName = useAppSelector((state) => state.main.userName);
   const studentUid = useAppSelector((state) => state.main.userUid);
@@ -79,41 +79,11 @@ const MockExamPage = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Appointment state
-  const [showBookingForm, setShowBookingForm] = useState(false);
-  const [adminAvailability, setAdminAvailability] = useState<AdminAvailability[]>([]);
   const [appointmentRefreshTrigger, setAppointmentRefreshTrigger] = useState(0);
   const [bookingDisabled, setBookingDisabled] = useState(false);
 
-  // Fetch admin availability on mount
-  useEffect(() => {
-    const fetchAdminAvailability = async () => {
-      try {
-        const availabilityQuery = query(
-          collection(db, 'adminAvailability'),
-          where('isActive', '==', true)
-        );
-        const snapshot = await getDocs(availabilityQuery);
-        const availability = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as AdminAvailability[];
-        setAdminAvailability(availability);
-      } catch (error) {
-        console.error('Error fetching admin availability:', error);
-      }
-    };
-    fetchAdminAvailability();
-  }, []);
-
-  const handleCloseBookingForm = () => {
-    setShowBookingForm(false);
-  };
-
-  const handleBookingSuccess = () => {
-    setShowBookingForm(false);
-    // Trigger refresh of appointments list
-    setAppointmentRefreshTrigger(prev => prev + 1);
-  };
+  // Remove: Fetch admin availability on mount - no longer needed since using appointments page
+  // Remove: handleCloseBookingForm and handleBookingSuccess - moved to appointments page
 
 
   // Fetch student registration status for the selected tab (for Mock 3 check)
@@ -611,7 +581,7 @@ const MockExamPage = () => {
         <MyAppointments authUid={studentUid || ''} refreshTrigger={appointmentRefreshTrigger} onBookingDisabled={setBookingDisabled} />
         
         <button
-          onClick={() => setShowBookingForm(true)}
+          onClick={() => router.push('/student/appointments')}
           disabled={bookingDisabled}
           className={`w-full mt-4 px-4 py-3 rounded-lg transition-colors ${
             bookingDisabled
@@ -621,18 +591,6 @@ const MockExamPage = () => {
         >
           {t('appointments.bookWithAdmin')}
         </button>
-        
-        {showBookingForm && (
-          <AppointmentBookingForm
-            availability={adminAvailability}
-            studentDocId={studentDocId || ''}
-            studentName={studentName || ''}
-            studentClass={studentClassType || undefined}
-            authUid={studentUid || ''}
-            onClose={handleCloseBookingForm}
-            onSuccess={handleBookingSuccess}
-          />
-        )}
             
         <hr className="my-4 border-slate-800" />
         <h2 className="text-xl font-bold -mb-2">{t('resultsTitle')}</h2>

@@ -26,6 +26,7 @@ export default function AsideMenuList({
             item={item}
             isDropdownList={isDropdownList}
             onRouteChange={props.onRouteChange}
+            shouldOpenDropdown={(item as any)?._hasSearchResults ?? false}
           />
         )
       ))}

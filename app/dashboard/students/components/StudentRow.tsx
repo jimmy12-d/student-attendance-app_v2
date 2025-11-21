@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student } from '../../../_interfaces';
 import { ColumnConfig } from './ColumnToggle';
 import { toast } from 'sonner';
@@ -7,7 +7,8 @@ import { getStatusStyles } from '../../_lib/statusStyles';
 import { getPaymentStatus } from '../../_lib/paymentLogic';
 import { mdiTrophy, mdiMedal } from '@mdi/js';
 import Icon from "../../../_components/Icon";
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../../../firebase-config';
 
 // Event interface for upcoming events
 interface Event {
@@ -85,6 +86,25 @@ export const StudentRow: React.FC<StudentRowProps> = ({
   upcomingEvents = [],
   getStudentEventStatus
 }) => {
+  const [hasParentLink, setHasParentLink] = useState(false);
+
+  useEffect(() => {
+    const checkParentLink = async () => {
+      if (!student?.id) return;
+      try {
+        const q = query(
+          collection(db, 'parentNotifications'),
+          where('studentId', '==', student.id)
+        );
+        const querySnapshot = await getDocs(q);
+        setHasParentLink(!querySnapshot.empty);
+      } catch (error) {
+        console.error('Error checking parent link:', error);
+      }
+    };
+    checkParentLink();
+  }, [student?.id]);
+
   // DEBUG: Log the full student object for Test Testing on October 11th
   if (student.fullName === "Test Testing" && new Date().toISOString().split('T')[0] === "2025-10-11") {
     console.log("🔍 StudentRow - Full student object for Test Testing:");
@@ -397,28 +417,49 @@ export const StudentRow: React.FC<StudentRowProps> = ({
               </td>
             );
 
-          case 'warning':
+          case 'samsLink':
             return (
-              <td key="warning" className="p-3 whitespace-nowrap">
+              <td key="samsLink" className="p-3 whitespace-nowrap">
                 <div className="flex items-center justify-center">
-                  {student.warning ? (
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${
-                      isWarningAbsent 
-                        ? 'bg-red-200 dark:bg-red-800/50 text-red-900 dark:text-red-200 border-red-300 dark:border-red-600 animate-pulse shadow-lg' 
-                        : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'
-                    }`}>
+                  {hasParentLink ? (
+                    // Link sent state - badge style with tick icon
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800 cursor-default">
                       <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
-                      {isWarningAbsent ? 'URGENT' : 'Warning'}
+                      Connected
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
-                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    // Copy button state - interactive button style
+                    <button
+                      onClick={() => {
+                        const botUsername = 'rodwell_sams_bot';
+                        const token = btoa(`parent_${student.id}_${Date.now()}`);
+                        const telegramUrl = `https://t.me/${botUsername}?start=parent_${token}`;
+                        
+                        const studentName = student.nameKhmer || student.fullName;
+                        const khmerMessage = `សួស្តីបង,
+
+ខាងក្រោមនេះជាលីងតភ្ជាប់ទៅ SAMS របស់សិស្សឈ្មោះ ${studentName}
+
+សូមចុចលើលីងនេះ
+${telegramUrl}
+
+ទាំងម៉ាក់ ទាំងប៉ា អាចប្រើលីងតែមួយនេះបាន។ ប្រសិនបើបងមានសំណួរទាក់ទងនឹងការប្រើប្រាស់ បងអាចទាក់ទងមកពួកខ្ញុំបាន។`;
+                        
+                        navigator.clipboard.writeText(khmerMessage).then(() => {
+                          toast.success('SAMS message copied!');
+                        }).catch(() => {
+                          alert(khmerMessage);
+                        });
+                      }}
+                      className="group relative inline-flex items-center px-3 py-1 text-xs font-medium rounded-full shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-700 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white focus:ring-teal-500/25"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
                       </svg>
-                      Normal
-                    </span>
+                      SAMS Link
+                    </button>
                   )}
                 </div>
               </td>

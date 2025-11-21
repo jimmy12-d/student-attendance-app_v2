@@ -18,7 +18,9 @@ import {
   mdiCheckCircle,
   mdiClockAlert,
   mdiAccountMultiple,
-  mdiServerSecurity,
+  mdiBellRing,
+  mdiBellCancel,
+  mdiBellCheck,
   mdiClose,
   mdiDownload
 } from "@mdi/js";
@@ -119,6 +121,7 @@ export default function AttendanceRecordPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isUpdating, setIsUpdating] = useState(false);
+  const [attendanceLoading, setAttendanceLoading] = useState(true);
 
   // State for modal
   const [isModalActive, setIsModalActive] = useState(false);
@@ -795,11 +798,13 @@ export default function AttendanceRecordPage() {
           setRawAttendanceRecords(rawRecords);
           setAttendanceRecords([...requestedRecords, ...otherRecords]);
           setLastUpdated(new Date());
+          setAttendanceLoading(false);
           setLoading(false);
           setIsUpdating(false);
         }, (error) => {
           console.error("Error with real-time listener: ", error);
           setError("Failed to listen for attendance updates.");
+          setAttendanceLoading(false);
           setLoading(false);
           setIsUpdating(false);
         });
@@ -808,6 +813,7 @@ export default function AttendanceRecordPage() {
       } catch (error) {
         console.error("Error setting up listeners:", error);
         setError("Failed to initialize dashboard.");
+        setAttendanceLoading(false);
         setLoading(false);
         setIsUpdating(false);
       }
@@ -1529,14 +1535,48 @@ export default function AttendanceRecordPage() {
               const totalWithParents = recordsWithParents.length;
               const isComplete = completedLogs === totalWithParents;
               
+              // Get students who failed to send notifications
+              const failedNotificationStudents = recordsWithParents
+                .filter(record => record.parentNotificationStatus !== 'success' || (record.parentNotificationsSent || 0) === 0)
+                .map(record => ({
+                  name: record.studentName,
+                  status: record.parentNotificationStatus,
+                  error: record.parentNotificationError
+                }));
+              
+              const [showFailedTooltip, setShowFailedTooltip] = useState(false);
+              
               return (
-                <div className={`mt-8 ${isComplete ? 'bg-gradient-to-r from-green-50/80 via-green-100/60 to-emerald-100/40 dark:from-green-900/30 dark:via-green-800/20 dark:to-emerald-900/20 border border-green-200/50 dark:border-green-700/30 shadow-lg shadow-green-500/10' : 'bg-gradient-to-r from-red-50/80 via-red-100/60 to-rose-100/40 dark:from-red-900/30 dark:via-red-800/20 dark:to-rose-900/20 border border-red-200/50 dark:border-red-700/30 shadow-lg shadow-red-500/10'} rounded-xl p-4 backdrop-blur-md`}>
+                <div 
+                  className={`mt-8 relative group ${isComplete ? 'bg-gradient-to-r from-green-50/80 via-green-100/60 to-emerald-100/40 dark:from-green-900/30 dark:via-green-800/20 dark:to-emerald-900/20 border border-green-200/50 dark:border-green-700/30 shadow-lg shadow-green-500/10' : 'bg-gradient-to-r from-red-50/80 via-red-100/60 to-rose-100/40 dark:from-red-900/30 dark:via-red-800/20 dark:to-rose-900/20 border border-red-200/50 dark:border-red-700/30 shadow-lg shadow-red-500/10'} rounded-xl p-4 backdrop-blur-md transition-all duration-300`}
+                  onMouseEnter={() => !isComplete && setShowFailedTooltip(true)}
+                  onMouseLeave={() => setShowFailedTooltip(false)}
+                >
+                  {!isComplete && showFailedTooltip && failedNotificationStudents.length > 0 && (
+                    <div className="absolute bottom-full left-0 mb-3 w-64 bg-white dark:bg-gray-900 border border-red-300 dark:border-red-600 rounded-lg shadow-xl z-50 p-3">
+                      <div className="mb-2 font-semibold text-red-700 dark:text-red-300 text-sm">Failed to Send Notifications:</div>
+                      <div className="max-h-48 overflow-y-auto space-y-1">
+                        {failedNotificationStudents.map((student, idx) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <span className="text-red-500 mt-0.5">•</span>
+                            <div className="flex-1">
+                              <div className="text-xs text-gray-900 dark:text-gray-100 font-medium">{student.name}</div>
+                              {student.error && (
+                                <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{student.error}</div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="absolute bottom-0 left-4 w-2 h-2 bg-white dark:bg-gray-900 border-r border-b border-red-300 dark:border-red-600 transform rotate-45 translate-y-1"></div>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className={`p-2 backdrop-blur-sm rounded-lg border shadow-md flex items-center justify-center ${isComplete ? 'bg-gradient-to-br from-green-100/90 to-green-200/70 dark:from-green-800/50 dark:to-green-700/30 border-green-300/50 dark:border-green-600/30 shadow-green-500/10' : 'bg-gradient-to-br from-red-100/90 to-red-200/70 dark:from-red-800/50 dark:to-red-700/30 border-red-300/50 dark:border-red-600/30 shadow-red-500/10'}`}>
-                        <Icon path={mdiServerSecurity} size={24} className={`${isComplete ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
+                        <Icon path={isComplete ? mdiBellCheck : mdiBellCancel} size={24} className={`${isComplete ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
                       </div>
-                      <span className="font-medium text-blue-800 dark:text-blue-200">Parent Log Summary</span>
+                      <span className="font-medium text-blue-800 dark:text-blue-200">SAMS Log Summary</span>
                     </div>
                     <div className="text-right">
                       <div className={`text-xl font-bold ${isComplete ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
@@ -1639,7 +1679,7 @@ export default function AttendanceRecordPage() {
 
         </div>
         
-        {loading ? (
+        {attendanceLoading && attendanceRecords.length === 0 ? (
           <div className="p-12 text-center bg-gradient-to-br from-white/80 via-white/60 to-white/40 dark:from-gray-800/80 dark:via-gray-800/60 dark:to-gray-800/40 backdrop-blur-xl rounded-b-3xl border-t border-white/30 dark:border-gray-600/30">
             <LoadingSpinner size="lg" className="mx-auto mb-4" />
             <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">Loading Attendance Records</h4>

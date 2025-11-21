@@ -64,8 +64,14 @@ export default function AsideMenuLayer({
           // If item has submenu, filter submenu
           if (item.menu) {
             const filteredSubMenu = filterItems(item.menu);
+            // If submenu has results, include parent and keep submenu expanded
             if (filteredSubMenu.length > 0 || itemMatches) {
-              return { ...item, menu: filteredSubMenu };
+              return { 
+                ...item, 
+                menu: filteredSubMenu,
+                // Add a marker to indicate this item has search results in its children
+                _hasSearchResults: filteredSubMenu.length > 0
+              };
             }
           }
 
@@ -149,6 +155,39 @@ export default function AsideMenuLayer({
                 placeholder="Search navigation..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    
+                    if (searchTerm.trim()) {
+                      // If searching, focus the first item that matches the search term
+                      const allMenuItems = document.querySelectorAll('aside [role="button"][tabindex="0"]');
+                      const searchLower = searchTerm.toLowerCase();
+                      
+                      for (const item of Array.from(allMenuItems)) {
+                        const itemText = (item as HTMLElement).textContent?.toLowerCase() || '';
+                        if (itemText.includes(searchLower)) {
+                          (item as HTMLElement).focus();
+                          return;
+                        }
+                      }
+                      
+                      // Fallback: focus first visible item if no text match found
+                      if (allMenuItems.length > 0) {
+                        (allMenuItems[0] as HTMLElement).focus();
+                      }
+                    } else {
+                      // No search term, focus the first visible menu item
+                      const firstMenuItem = document.querySelector('aside [role="button"][tabindex="0"]') as HTMLElement;
+                      if (firstMenuItem) {
+                        firstMenuItem.focus();
+                      }
+                    }
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setSearchTerm('');
+                  }
+                }}
                 className="w-full pl-10 pr-10 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 dark:placeholder-gray-500"
               />
               {searchTerm && (

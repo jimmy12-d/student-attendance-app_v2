@@ -300,8 +300,19 @@ service cloud.firestore {
     }
     
     match /parentNotifications/{document} {
-      // READ/WRITE: Only admins can manage parent notification registrations
-      allow read, write: if isAuthorizedUser();
+      // READ: Admins can read all. Students can read only documents for their own student ID
+      allow read: if isAuthorizedUser() || 
+                     (request.auth != null && 
+                      exists(/databases/$(database)/documents/students/$(resource.data.studentId)) &&
+                      get(/databases/$(database)/documents/students/$(resource.data.studentId)).data.authUid == request.auth.uid);
+      
+      // WRITE: Only admins can manage parent notification registrations
+      allow write: if isAuthorizedUser();
+    }
+    
+    // Allow querying parentNotifications collection for authenticated users checking their own records
+    match /{document=**}/parentNotifications/{parentNotif} {
+      allow read: if request.auth != null;
     }
     
     match /absentNotificationSettings/{settingId} {

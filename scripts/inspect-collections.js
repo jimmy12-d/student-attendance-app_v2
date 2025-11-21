@@ -458,9 +458,83 @@ async function countStudentsByClassAndShift() {
   }
 }
 
+async function listStudentsWithParentBot() {
+  try {
+    console.log('\n🔍 Listing students with parents connected to the bot...\n');
+
+    // Get all active parent notifications
+    const parentNotificationsRef = db.collection('parentNotifications');
+    const parentSnapshot = await parentNotificationsRef.where('isActive', '==', true).get();
+
+    if (parentSnapshot.empty) {
+      console.log('📭 No active parent notifications found');
+      return;
+    }
+
+    console.log(`📊 Found ${parentSnapshot.size} active parent notification(s):\n`);
+
+    // Collect unique student IDs
+    const studentIds = new Set();
+    parentSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.studentId) {
+        studentIds.add(data.studentId);
+      }
+    });
+
+    console.log(`👥 Found ${studentIds.size} unique student(s) with parent connections:\n`);
+
+    // Query students collection for these student IDs
+    const studentsRef = db.collection('students');
+    const studentPromises = Array.from(studentIds).map(studentId =>
+      studentsRef.doc(studentId).get()
+    );
+
+    const studentDocs = await Promise.all(studentPromises);
+
+    studentDocs.forEach((doc, index) => {
+      if (doc.exists) {
+        const studentData = doc.data();
+        console.log(`Student ${index + 1}:`);
+        console.log(`  ID: ${doc.id}`);
+        console.log(`  Name: ${studentData.fullName || 'N/A'}`);
+        console.log(`  Khmer Name: ${studentData.khmerName || studentData.fullNameKhmer || studentData.nameKhmer || 'N/A'}`);
+        console.log(`  Class: ${studentData.class || 'N/A'}`);
+        console.log(`  Shift: ${studentData.shift || 'N/A'}`);
+        console.log(`  Grade: ${studentData.grade || 'N/A'}`);
+        console.log('---');
+      } else {
+        console.log(`Student ${index + 1}: ID ${Array.from(studentIds)[index]} - Document not found in students collection`);
+        console.log('---');
+      }
+    });
+
+    return {
+      totalParents: parentSnapshot.size,
+      uniqueStudents: studentIds.size,
+      studentDetails: studentDocs.filter(doc => doc.exists).map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+    };
+
+  } catch (error) {
+    console.error('❌ Error listing students with parent bot:', error.message);
+    return { totalParents: 0, uniqueStudents: 0, studentDetails: [] };
+  }
+}
+
 async function main() {
   try {
     const collections = await listAllCollections();
+
+    // Inspect parentNotifications collection
+    if (collections.includes('parentNotifications')) {
+      console.log('\n🔍 Inspecting parentNotifications collection...\n');
+      await inspectCollection('parentNotifications');
+    } else {
+      console.log('\n⚠️  parentNotifications collection not found');
+    }
 
     // Inspect students collection
     if (collections.includes('students')) {
@@ -468,6 +542,14 @@ async function main() {
       await inspectCollection('students');
     } else {
       console.log('\n⚠️  students collection not found');
+    }
+
+    // List students with parents connected to bot
+    if (collections.includes('parentNotifications') && collections.includes('students')) {
+      console.log('\n🔍 Listing students with parents connected to the bot...\n');
+      await listStudentsWithParentBot();
+    } else {
+      console.log('\n⚠️  Required collections (parentNotifications and students) not found');
     }
 
     // Count students by class and shift
@@ -498,4 +580,4 @@ if (require.main === module) {
   main().then(() => process.exit(0));
 }
 
-module.exports = { inspectCollection, analyzeDocumentStructure, inspectFormDocument, listAllCollections, countStudentsByClassAndShift };
+module.exports = { inspectCollection, analyzeDocumentStructure, inspectFormDocument, listAllCollections, countStudentsByClassAndShift, listStudentsWithParentBot };

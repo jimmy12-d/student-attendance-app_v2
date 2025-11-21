@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAppSelector } from '../../../_stores/hooks';
 import { db } from '../../../../firebase-config';
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { mdiStar, mdiClose, mdiCheckCircle } from '@mdi/js';
 import Icon from '@/app/_components/Icon';
@@ -31,11 +31,29 @@ export const StudentStarRequestForm = ({ availableRewards, studentClass, student
   const [requestStatuses, setRequestStatuses] = useState<Record<string, StarRequest>>({});
   const [selectedReward, setSelectedReward] = useState<StarReward | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasParentLink, setHasParentLink] = useState(false);
+  const [filteredRewards, setFilteredRewards] = useState<StarReward[]>([]);
 
   // Fetch claim counts and request statuses for each reward
   useEffect(() => {
     const fetchClaimCountsAndRequests = async () => {
       if (!studentDocId || !studentAuthUid) return;
+
+      // First, check if student has a parent link in parentNotifications
+      let parentLinkExists = false;
+      try {
+        const parentNotificationsQuery = query(
+          collection(db, 'parentNotifications'),
+          where('studentId', '==', studentDocId)
+        );
+        const parentSnapshot = await getDocs(parentNotificationsQuery);
+        parentLinkExists = !parentSnapshot.empty;
+      } catch (error) {
+        // If there's a permission error, default to false
+        console.warn('Could not verify parent link status:', error);
+        parentLinkExists = false;
+      }
+      setHasParentLink(parentLinkExists);
 
       const counts: Record<string, number> = {};
       const requests: Record<string, StarRequest> = {};
@@ -79,6 +97,18 @@ export const StudentStarRequestForm = ({ availableRewards, studentClass, student
 
     fetchClaimCountsAndRequests();
   }, [studentDocId, studentAuthUid, availableRewards]);
+
+  // Filter rewards based on parent link status
+  useEffect(() => {
+    const filtered = availableRewards.filter((reward) => {
+      // Only hide the "Parent Telegram Group" reward (pEzxGtH3gCc8GYrknBX6) if student has no parent link
+      if (reward.id === 'pEzxGtH3gCc8GYrknBX6' && !hasParentLink) {
+        return false;
+      }
+      return true;
+    });
+    setFilteredRewards(filtered);
+  }, [availableRewards, hasParentLink]);
 
   const handleRewardClick = (reward: StarReward) => {
     const claimCount = claimCounts[reward.id] || 0;
@@ -192,7 +222,7 @@ export const StudentStarRequestForm = ({ availableRewards, studentClass, student
   return (
     <>
       <div className="space-y-3">
-        {availableRewards.map((reward) => {
+        {filteredRewards.map((reward) => {
               const claimCount = claimCounts[reward.id] || 0;
               const requestStatus = requestStatuses[reward.id];
               const isApproved = claimCount >= 1;
@@ -352,6 +382,33 @@ export const StudentStarRequestForm = ({ availableRewards, studentClass, student
                     <p className={`${locale === 'kh' ? 'khmer-font' : ''} text-sm ${getColorClasses(selectedReward.color).text}`}>
                       {selectedReward.amount} ⭐ {t('starsToEarn')}
                     </p>
+                  </div>
+                </div>
+
+                {/* Star Color and Amount Display */}
+                <div className="flex items-center justify-between p-3 bg-white dark:bg-slate-700 rounded-xl mb-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <span className={`${locale === 'kh' ? 'khmer-font' : ''} text-sm font-semibold text-gray-700 dark:text-gray-300`}>
+                      {t('starColor') || 'Star Color'}:
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-5 h-5 rounded-full shadow-md ${
+                        selectedReward.color === 'pink' ? 'bg-pink-500' :
+                        selectedReward.color === 'yellow' ? 'bg-yellow-500' :
+                        selectedReward.color === 'orange' ? 'bg-orange-500' :
+                        selectedReward.color === 'blue' ? 'bg-blue-500' :
+                        'bg-gray-400'
+                      }`}></div>
+                      <span className={`${locale === 'kh' ? 'khmer-font' : ''} font-bold capitalize ${getColorClasses(selectedReward.color).text}`}>
+                        {selectedReward.color}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/20 dark:to-orange-900/20 px-3 py-1.5 rounded-lg">
+                    <span className={`${locale === 'kh' ? 'khmer-font' : ''} font-bold text-lg text-yellow-600 dark:text-yellow-400`}>
+                      {selectedReward.amount}
+                    </span>
+                    <span className="text-xl">⭐</span>
                   </div>
                 </div>
                 
